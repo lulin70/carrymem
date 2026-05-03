@@ -22,10 +22,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 from .base import StorageAdapter
+from ..utils.helpers import escape_like, content_hash
 
-
-def _escape_like(value: str) -> str:
-    return value.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
 
 
 _OBSIDIAN_SCHEMA_SQL = """
@@ -116,10 +114,6 @@ def _extract_tags(content: str, frontmatter: Dict[str, Any]) -> List[str]:
 
 def _extract_wiki_links(content: str) -> List[str]:
     return sorted(set(m.group(1).strip() for m in _WIKI_LINK_RE.finditer(content)))
-
-
-def _content_hash(content: str) -> str:
-    return hashlib.sha256(content.encode()).hexdigest()[:16]
 
 
 class ObsidianAdapter(StorageAdapter):
@@ -218,7 +212,7 @@ class ObsidianAdapter(StorageAdapter):
                 skipped_count += 1
                 continue
 
-            c_hash = _content_hash(content)
+            c_hash = content_hash(content)
 
             existing = self._conn.execute(
                 "SELECT content_hash FROM notes WHERE file_path = ?",
@@ -321,7 +315,7 @@ class ObsidianAdapter(StorageAdapter):
             tag_list = filters["tags"] if isinstance(filters["tags"], list) else [filters["tags"]]
             for tag in tag_list:
                 conditions.append("tags LIKE ? ESCAPE '\\'")
-                params.append(f'%"{_escape_like(tag)}"%')
+                params.append(f'%"{escape_like(tag)}"%')
 
         where_clause = ""
         if conditions:
@@ -391,13 +385,13 @@ class ObsidianAdapter(StorageAdapter):
 
     def _fallback_search(self, query: str, filters: Dict[str, Any], limit: int) -> list:
         conditions = ["(title LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')"]
-        params = [f'%{_escape_like(query)}%', f'%{_escape_like(query)}%']
+        params = [f'%{escape_like(query)}%', f'%{escape_like(query)}%']
 
         if filters.get("tags"):
             tag_list = filters["tags"] if isinstance(filters["tags"], list) else [filters["tags"]]
             for tag in tag_list:
                 conditions.append("tags LIKE ? ESCAPE '\\'")
-                params.append(f'%"{_escape_like(tag)}"%')
+                params.append(f'%"{escape_like(tag)}"%')
 
         where_clause = "WHERE " + " AND ".join(conditions)
 
@@ -413,11 +407,11 @@ class ObsidianAdapter(StorageAdapter):
             tag_list = filters["tags"] if isinstance(filters["tags"], list) else [filters["tags"]]
             for tag in tag_list:
                 conditions.append("tags LIKE ? ESCAPE '\\'")
-                params.append(f'%"{_escape_like(tag)}"%')
+                params.append(f'%"{escape_like(tag)}"%')
 
         if filters.get("title"):
             conditions.append("title LIKE ? ESCAPE '\\'")
-            params.append(f'%{_escape_like(filters["title"])}%')
+            params.append(f'%{escape_like(filters["title"])}%')
 
         where_clause = ""
         if conditions:
@@ -477,7 +471,7 @@ class ObsidianAdapter(StorageAdapter):
     def get_linked_notes(self, note_title: str) -> List[Dict[str, Any]]:
         rows = self._conn.execute(
             "SELECT * FROM notes WHERE wiki_links LIKE ? ESCAPE '\\'",
-            (f'%"{_escape_like(note_title)}"%',),
+            (f'%"{escape_like(note_title)}"%',),
         ).fetchall()
         return [self._row_to_dict(row) for row in rows]
 

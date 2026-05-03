@@ -275,8 +275,8 @@ carrymem doctor                # 诊断安装
 ### 规则命令
 
 ```bash
-carrymem add-rule "触发器" "动作" [--scope personal] [--type avoid] [--override]
-carrymem list-rules [--scope company] [--status active]
+carrymem add-rule "触发器" "动作" [--type avoid] [--soft]
+carrymem list-rules [--status active] [--type avoid]
 carrymem edit-rule <id> [--trigger "新"] [--action "新"]
 carrymem delete-rule <id>
 carrymem match-rules "场景描述"

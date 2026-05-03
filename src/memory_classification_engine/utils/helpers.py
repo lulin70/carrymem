@@ -1,6 +1,8 @@
 import re
 import time
 import json
+import hashlib
+from datetime import timedelta
 from typing import Dict, Any, Optional
 
 MEMORY_TYPES = {
@@ -26,9 +28,9 @@ def generate_memory_id() -> str:
     Returns:
         A unique memory ID.
     """
-    import random
+    import secrets
     timestamp = int(time.time() * 1000)
-    random_suffix = random.randint(1000, 9999)
+    random_suffix = secrets.randbelow(9000) + 1000
     return f"mem_{timestamp}_{random_suffix}"
 
 def get_current_time() -> str:
@@ -144,3 +146,30 @@ def save_json_file(file_path: str, data: Dict[str, Any]):
             json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception as e:
         print(f"Error saving JSON file: {e}")
+
+
+def escape_like(value: str) -> str:
+    """Escape special characters in LIKE pattern for SQL queries."""
+    return value.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+
+
+def content_hash(content: str, prefix: str = "") -> str:
+    """Generate a SHA-256 content hash.
+
+    Args:
+        content: The content to hash.
+        prefix: Optional prefix to include in the hash (e.g., memory type).
+
+    Returns:
+        The first 16 characters of the hex digest.
+    """
+    data = f"{prefix}:{content}" if prefix else content
+    return hashlib.sha256(data.encode()).hexdigest()[:16]
+
+
+TIER_TTL = {
+    1: timedelta(hours=24),
+    2: timedelta(days=90),
+    3: timedelta(days=365),
+    4: None,
+}

@@ -184,7 +184,7 @@ carrymem setup-mcp --tool all
 
 ## トラブルシューティング
 
-インストールに関する問題は[トラブルシューティングガイド](TROUBLESHOOTING.md)を参照してください。
+インストールに関する問題は[トラブルシューティングガイド](../TROUBLESHOOTING.md)を参照してください。
 
 一般的な問題：
 - **command not found**: PATH設定を確認

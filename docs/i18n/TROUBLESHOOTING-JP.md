@@ -692,7 +692,7 @@ carrymem rules list
 
 2. 適切なスコープでルールを作成:
    ```bash
-   carrymem rules add --trigger "コーディングスタイル" --action "4スペースインデントを使用" --scope personal
+   carrymem add-rule --trigger "コーディングスタイル" --action "4スペースインデントを使用"
    ```
 
 3. 競合を確認:
@@ -748,7 +748,7 @@ carrymem skill-verify <skillファイル>
 
 2. Skill の作成者の場合、再パック:
    ```bash
-   carrymem skill-pack --name "my-skill" --output my-skill.json
+   carrymem skill-pack my-skill.json --name "my-skill"
    ```
 
 3. バージョン互換性を確認:

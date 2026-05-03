@@ -701,7 +701,7 @@ carrymem rules list
 
 2. Create a rule in the appropriate scope:
    ```bash
-   carrymem rules add --trigger "coding style" --action "Use 4-space indentation" --scope personal
+   carrymem add-rule --trigger "coding style" --action "Use 4-space indentation"
    ```
 
 3. Check for conflicts:
@@ -757,7 +757,7 @@ carrymem skill-verify <skill-file>
 
 2. If you created the skill, re-pack it:
    ```bash
-   carrymem skill-pack --name "my-skill" --output my-skill.json
+   carrymem skill-pack my-skill.json --name "my-skill"
    ```
 
 3. Check version compatibility:

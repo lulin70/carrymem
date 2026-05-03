@@ -740,7 +740,7 @@ $ carrymem add-rule "normal" --trigger "*" --type prefer
 ## 🎯 Next Steps After Installation
 
 1. ✅ **Create 3-5 core rules** for your most common tasks
-2. ✅ **Test matching** with `carrymem match` to verify they activate correctly
+2. ✅ **Test matching** with `carrymem match-rules` to verify they activate correctly
 3. ✅ **Use with AI tool** (Cursor/Claude Code) and observe behavior changes
 4. ✅ **Run `carrymem rules-stats` after 1 week** to see which rules are most useful
 5. ✅ **Clean up stale rules** monthly with `carrymem check-rules`

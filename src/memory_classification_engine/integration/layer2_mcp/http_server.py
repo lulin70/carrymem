@@ -20,11 +20,15 @@ import asyncio
 import hmac
 import json
 import os
+import re
 from memory_classification_engine.__version__ import __version__ as _version
 import uuid
 from typing import Any, Dict, Optional
 
 from .server import MCPServer
+
+_MAX_REQUEST_SIZE = 10 * 1024 * 1024
+_MAX_SSE_CLIENTS = 100
 
 
 class SSEClient:
@@ -74,7 +78,8 @@ class MCPHTTPServer:
             return ""
         for pattern in self._allowed_origins:
             if pattern.endswith("*"):
-                if request_origin.startswith(pattern[:-1]):
+                prefix = pattern[:-1]
+                if request_origin.startswith(prefix) and re.fullmatch(r'\d+', request_origin[len(prefix):]):
                     return request_origin
             elif request_origin == pattern:
                 return request_origin
@@ -113,6 +118,9 @@ class MCPHTTPServer:
 
             body = b""
             if content_length > 0:
+                if content_length > _MAX_REQUEST_SIZE:
+                    await self._send_response(writer, 413, {"error": "Request too large"}, request_origin)
+                    return
                 body = await reader.readexactly(content_length)
 
             if path == "/health":
@@ -132,7 +140,7 @@ class MCPHTTPServer:
 
         except Exception as e:
             try:
-                await self._send_response(writer, 500, {"error": str(e)}, "")
+                await self._send_response(writer, 500, {"error": "Internal server error"}, "")
             except Exception:
                 pass
         finally:
@@ -142,6 +150,10 @@ class MCPHTTPServer:
                 pass
 
     async def _handle_sse(self, writer, request_origin: str = ""):
+        if len(self._clients) >= _MAX_SSE_CLIENTS:
+            await self._send_response(writer, 503, {"error": "Too many SSE connections"}, request_origin)
+            return
+
         client_id = str(uuid.uuid4())
         client = SSEClient(client_id)
         self._clients[client_id] = client
@@ -201,7 +213,7 @@ class MCPHTTPServer:
                 await client.send(json.dumps(notification))
 
     async def _send_response(self, writer, status_code: int, body: Dict, request_origin: str = ""):
-        status_messages = {200: "OK", 400: "Bad Request", 401: "Unauthorized", 404: "Not Found", 500: "Internal Server Error"}
+        status_messages = {200: "OK", 400: "Bad Request", 401: "Unauthorized", 404: "Not Found", 413: "Payload Too Large", 500: "Internal Server Error", 503: "Service Unavailable"}
         status_msg = status_messages.get(status_code, "Unknown")
         body_bytes = json.dumps(body).encode("utf-8")
         cors_origin = self._get_cors_origin(request_origin)
@@ -227,6 +239,9 @@ class MCPHTTPServer:
         print(f"CarryMem MCP HTTP Server running on {addrs}")
         if self._api_key:
             print("API key authentication enabled")
+        else:
+            print("⚠️  WARNING: No API key set — server is open to all connections!")
+            print("   Set CARRYMEM_API_KEY env var or use --api-key flag")
 
         async with self._server:
             await self._server.serve_forever()

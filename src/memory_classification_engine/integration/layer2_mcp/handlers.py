@@ -634,7 +634,7 @@ def handle_my_profile(carrymem, args: Dict[str, Any]) -> Dict[str, Any]:
 
         profile = {
             "identity": "CarryMem User Profile",
-            "version": "0.4.0",
+            "version": _version,
         }
 
         if include_memories:

@@ -1,8 +1,12 @@
 # CarryMem - Core Dependencies
 # Install: pip install -r requirements.txt
 # Dev:     pip install -e ".[dev]"
+# Full:    pip install -e ".[full]"
 
 # Core (also in setup.py install_requires)
 PyYAML>=5.0
+
+# Language detection (optional, also in setup.py extras_require["language"])
+# Install with: pip install carrymem[language]
 pycld2>=0.41
 langdetect>=1.0.9

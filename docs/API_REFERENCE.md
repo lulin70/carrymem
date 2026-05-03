@@ -20,6 +20,7 @@ cm = CarryMem(
     knowledge_adapter=None,     # ObsidianAdapter for knowledge base
     namespace="default",        # Namespace for memory isolation
     config=None,                # Optional configuration dict
+    encryption_key=None,        # Optional encryption key for at-rest encryption
 )
 ```
 

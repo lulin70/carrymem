@@ -1696,6 +1696,18 @@ def cmd_check_rules(args):
     return 0 if health["is_healthy"] else 1
 
 
+def _validate_cli_path(path: str) -> str:
+    resolved = os.path.realpath(os.path.expanduser(path))
+    _DANGEROUS = [
+        '/etc', '/usr', '/bin', '/sbin', '/System',
+        '/Library', '/private/etc',
+    ]
+    for d in _DANGEROUS:
+        if resolved == d or resolved.startswith(d + os.sep):
+            raise ValueError(f"Path traversal: system directory not allowed: {resolved}")
+    return resolved
+
+
 def cmd_export_rules(args):
     parser = _make_parser("export-rules")
     parser.add_argument("path", help="Output file path (JSON)")
@@ -1709,9 +1721,10 @@ def cmd_export_rules(args):
     data = engine.export_rules(status=parsed.status)
 
     try:
-        with open(parsed.path, "w", encoding="utf-8") as f:
+        safe_path = _validate_cli_path(parsed.path)
+        with open(safe_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-    except OSError as e:
+    except (OSError, ValueError) as e:
         print(f"\n  {_red(f'Write error:')} {e}")
         return 1
 
@@ -1731,10 +1744,11 @@ def cmd_import_rules(args):
     import json
 
     try:
-        with open(parsed.path, "r", encoding="utf-8") as f:
+        safe_path = _validate_cli_path(parsed.path)
+        with open(safe_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-    except FileNotFoundError:
-        print(f"\n  {_red(f'File not found:')} {parsed.path}")
+    except (FileNotFoundError, ValueError) as e:
+        print(f"\n  {_red(f'File error:')} {e}")
         return 1
     except json.JSONDecodeError as e:
         print(f"\n  {_red(f'Invalid JSON:')} {e}")
@@ -1789,9 +1803,10 @@ def cmd_skill_pack(args):
     )
 
     try:
-        with open(parsed.path, "w", encoding="utf-8") as f:
+        safe_path = _validate_cli_path(parsed.path)
+        with open(safe_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-    except OSError as e:
+    except (OSError, ValueError) as e:
         print(f"\n  {_red(f'Write error:')} {e}")
         return 1
 
@@ -1817,10 +1832,11 @@ def cmd_skill_install(args):
     import json
 
     try:
-        with open(parsed.path, "r", encoding="utf-8") as f:
+        safe_path = _validate_cli_path(parsed.path)
+        with open(safe_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-    except FileNotFoundError:
-        print(f"\n  {_red(f'File not found:')} {parsed.path}")
+    except (FileNotFoundError, ValueError) as e:
+        print(f"\n  {_red(f'File error:')} {e}")
         return 1
     except json.JSONDecodeError as e:
         print(f"\n  {_red(f'Invalid JSON:')} {e}")

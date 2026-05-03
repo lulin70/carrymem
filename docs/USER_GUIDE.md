@@ -275,8 +275,8 @@ carrymem doctor                   # Diagnose installation
 ### Rule Commands
 
 ```bash
-carrymem add-rule "trigger" "action" [--scope personal] [--type avoid] [--override]
-carrymem list-rules [--scope company] [--status active]
+carrymem add-rule "trigger" "action" [--type avoid] [--soft]
+carrymem list-rules [--status active] [--type avoid]
 carrymem edit-rule <id> [--trigger "new"] [--action "new"]
 carrymem delete-rule <id>
 carrymem match-rules "scene description"

@@ -10,7 +10,7 @@ CarryMem 是一个轻量级、零依赖的 AI 记忆系统，存储**你是谁**
 
 <p align="center">
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI 版本"></a>
-  <img src="https://img.shields.io/badge/tests-2043%20passing-green" alt="测试">
+  <img src="https://img.shields.io/badge/tests-2056%20passing-green" alt="测试">
   <img src="https://img.shields.io/badge/coverage-78%25-green" alt="覆盖率">
   <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python">
 </p>
@@ -126,8 +126,8 @@ carrymem export backup.json             # 导出所有记忆
 carrymem import backup.json             # 导入记忆
 carrymem version                        # 显示版本
 # 规则引擎命令
-carrymem add-rule "数据库" "始终使用SSL" --scope company   # 添加规则
-carrymem list-rules --scope company                      # 列出公司规则
+carrymem add-rule "数据库" "始终使用SSL" --type avoid   # 添加规则
+carrymem list-rules --status active                      # 列出活跃规则
 carrymem skill-pack rules.json --name team-conventions   # 打包规则为 Skill
 carrymem skill-install team-conventions.json --scope company  # 安装 Skill
 carrymem skill-verify team-conventions.json              # 验证 Skill 完整性
@@ -329,7 +329,7 @@ carrymem tui
 | F1 分数 | **97.9%** |
 | 零成本分类 | **60%+** |
 | 召回延迟 (P50) | **~45ms** |
-| 测试通过 | **2043/2043** |
+| 测试通过 | **2056/2056** |
 | 测试覆盖率 | **78%** |
 
 ---
@@ -350,7 +350,7 @@ carrymem tui
 ## 项目状态
 
 **当前版本**：v0.1.5
-**测试**：2043/2043 通过
+**测试**：2056/2056 通过
 **覆盖率**：~78%
 
 **更新日志**：

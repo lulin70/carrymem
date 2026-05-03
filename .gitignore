@@ -58,6 +58,16 @@ build/
 
 # Sensitive: encryption keys
 config/encryption_keys.json
+.env
+*.pem
+*.key
+
+# Database files (user data)
+*.db
+*.sqlite
+
+# Node modules (VSCode extension)
+node_modules/
 
 # Development debug files (temporary)
 debug_*.py
@@ -94,10 +104,9 @@ demo/demo.gif
 # Disabled git directory
 .git_disabled/
 
-# SQLite memory DB artifacts
-:memory:
-:memory:-shm
-:memory:-wal
+# SQLite memory DB artifacts (in-memory connections, not files)
+# Note: :memory: is a SQLite connection string, not a file on disk
 
 # Deprecated
 .description
+:memory:*

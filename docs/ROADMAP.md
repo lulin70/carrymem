@@ -359,7 +359,7 @@ See CHANGELOG.md for detailed history.
 - [x] Conditional preference support — `condition` field for if-then rules
 - [x] Implicit preference inference — `_detect_implicit_preferences()` from memory patterns
 
-**MCP Tools** (16 → 22):
+**MCP Tools** (16 → 23):
 - Core: classify_message, get_classification_schema, batch_classify, mce_status
 - Storage: classify_and_remember, recall_memories, forget_memory
 - Knowledge: index_knowledge, recall_from_knowledge, recall_all

@@ -2,7 +2,7 @@
 
 CarryMem = MCE Classification Engine + SQLite Default Storage + Replaceable Adapters
 
-v0.8.0: Enhanced CLI, TUI, MCP setup, carrymem doctor, quality management
+v0.1.5: Version reset — Security hardening, thread safety, documentation reorganization
 
 Quick Start:
     from memory_classification_engine import CarryMem
@@ -18,8 +18,6 @@ CLI:
     carrymem setup-mcp --tool cursor
     carrymem doctor
 """
-
-import warnings
 
 from memory_classification_engine.carrymem import CarryMem, StorageNotConfiguredError, KnowledgeNotConfiguredError
 from memory_classification_engine.engine import MemoryClassificationEngine

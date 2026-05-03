@@ -31,11 +31,10 @@ class MemoryClassificationEngine:
     def __init__(self, config_path: str = None):
         self.config = ConfigManager(config_path)
         self.classification_pipeline = ClassificationPipeline(self.config)
-        self.working_memory = []
         self.max_work_memory_size = self.config.get(
             'storage.max_work_memory_size', 100
         )
-        # v0.4.2: Use deque with maxlen to prevent unbounded growth
+        self.working_memory = deque(maxlen=self.max_work_memory_size)
         self.max_message_history_size = self.config.get(
             'storage.max_message_history_size', 1000
         )
@@ -130,13 +129,9 @@ class MemoryClassificationEngine:
             'message': message,
             'timestamp': time.time(),
         })
-        if len(self.working_memory) > self.max_work_memory_size:
-            self.working_memory.pop(0)
-        if len(self.message_history) > 1000:
-            self.message_history.pop(0)
 
     def clear_working_memory(self):
-        self.working_memory = []
+        self.working_memory.clear()
 
     def to_memory_entry(self, message: str, context: str = None) -> Dict[str, Any]:
         """Convert process_message result to MemoryEntry Schema v1.0.

@@ -8,13 +8,13 @@
 ## 🚀 Quick Start (New Users)
 
 ### 1. Installation
-- **[One-Click Install](../install.sh)** - Recommended! Automatic setup
+- **[One-Click Install](../scripts/install.sh)** - Recommended! Automatic setup
 - **[Quick Start Guide](QUICK_START_GUIDE.md)** - Get started in 5 minutes
 
 ### 2. Basic Usage
 ```bash
 # Install
-bash install.sh
+bash scripts/install.sh
 
 # Initialize
 carrymem init
@@ -113,7 +113,7 @@ carrymem serve --port 8765
 ## 📖 Find Documentation by Scenario
 
 ### Scenario 1: New user, want to get started quickly
-1. Run `bash install.sh` for one-click install
+1. Run `bash scripts/install.sh` for one-click install
 2. Read [Quick Start Guide](QUICK_START_GUIDE.md)
 
 ### Scenario 2: Installation issues

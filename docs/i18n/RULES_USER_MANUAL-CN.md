@@ -719,11 +719,11 @@ $ carrymem add-rule "normal" --trigger "*" --type prefer
 ## 📚 Additional Resources
 
 ### Documentation Links
-- **Full README**: [README.md](../README.md)
-- **Architecture**: [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md)
-- **API Reference**: [docs/API_REFERENCE.md](../docs/API_REFERENCE.md)
-- **Roadmap**: [docs/ROADMAP.md](../docs/ROADMAP.md)
-- **Contributing**: [CONTRIBUTING.md](../CONTRIBUTING.md)
+- **Full README**: [README.md](../../README.md)
+- **Architecture**: [ARCHITECTURE.md](../ARCHITECTURE.md)
+- **API Reference**: [API_REFERENCE.md](../API_REFERENCE.md)
+- **Roadmap**: [ROADMAP.md](../ROADMAP.md)
+- **Contributing**: [CONTRIBUTING.md](../../CONTRIBUTING.md)
 
 ### Getting Help
 - **GitHub Issues**: https://github.com/lulin70/carrymem/issues
@@ -733,14 +733,14 @@ $ carrymem add-rule "normal" --trigger "*" --type prefer
 ### Version History
 - **v0.1.5** (Current): Version reset — security hardening, thread safety, documentation reorganization
 - **v0.1.5**: Memory layer foundation, Rules Engine, PyPI release
-- **Changelog**: See [CHANGELOG.md](../CHANGELOG.md)
+- **Changelog**: See [CHANGELOG.md](../../CHANGELOG.md)
 
 ---
 
 ## 🎯 Next Steps After Installation
 
 1. ✅ **Create 3-5 core rules** for your most common tasks
-2. ✅ **Test matching** with `carrymem match` to verify they activate correctly
+2. ✅ **Test matching** with `carrymem match-rules` to verify they activate correctly
 3. ✅ **Use with AI tool** (Cursor/Claude Code) and observe behavior changes
 4. ✅ **Run `carrymem rules-stats` after 1 week** to see which rules are most useful
 5. ✅ **Clean up stale rules** monthly with `carrymem check-rules`

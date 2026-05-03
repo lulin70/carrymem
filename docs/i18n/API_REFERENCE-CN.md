@@ -1126,7 +1126,7 @@ result = engine.accept_rules(
 
 ## API Stability Tiers
 
-See [API_STABILITY.md](API_STABILITY.md) for full details.
+See [API_STABILITY.md](../API_STABILITY.md) for full details.
 
 | Tier | Label | Breaking Changes |
 |------|-------|-----------------|

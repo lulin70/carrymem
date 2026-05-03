@@ -15,17 +15,14 @@ import hashlib
 import json
 import os
 import sqlite3
-import threading
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from .base import MemoryEntry, StorageAdapter, StoredMemory
 from ..exceptions import DatabaseError, DBConnectionError, QueryError
 from ..scoring import calculate_importance
+from ..utils.helpers import escape_like, content_hash, TIER_TTL
 
-
-def _escape_like(value: str) -> str:
-    return value.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
 
 try:
     from ..semantic.expander import SemanticExpander
@@ -127,17 +124,6 @@ CREATE TABLE IF NOT EXISTS memory_versions (
 CREATE INDEX IF NOT EXISTS idx_mv_memory_id ON memory_versions(memory_id);
 CREATE INDEX IF NOT EXISTS idx_mv_memory_version ON memory_versions(memory_id, version);
 """
-
-_TIER_TTL = {
-    1: timedelta(hours=24),
-    2: timedelta(days=90),
-    3: timedelta(days=365),
-    4: None,
-}
-
-
-def _content_hash(content: str, entry_type: str) -> str:
-    return hashlib.sha256(f"{entry_type}:{content}".encode()).hexdigest()[:16]
 
 
 def _default_db_path() -> str:
@@ -432,7 +418,7 @@ class SQLiteAdapter(StorageAdapter):
 
     def _remember_impl(self, entry: MemoryEntry, _skip_commit: bool = False) -> StoredMemory:
         conn = self._get_connection()
-        c_hash = _content_hash(entry.content, entry.type)
+        c_hash = content_hash(entry.content, entry.type)
 
         existing = conn.execute(
             "SELECT storage_key FROM memories WHERE content_hash = ? AND namespace = ?",
@@ -450,7 +436,7 @@ class SQLiteAdapter(StorageAdapter):
         storage_key = f"cm_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}_{c_hash[:8]}"
         now = datetime.now(timezone.utc)
 
-        ttl = _TIER_TTL.get(entry.tier)
+        ttl = TIER_TTL.get(entry.tier)
         expires_at = (now + ttl).isoformat() if ttl else None
 
         metadata_json = json.dumps(entry.metadata) if entry.metadata else "{}"
@@ -714,8 +700,8 @@ class SQLiteAdapter(StorageAdapter):
                 results.append(stored)
         if batch_updates:
             conn.executemany(
-                "UPDATE memories SET access_count = ?, importance_score = ?, last_accessed_at = ? WHERE storage_key = ?",
-                batch_updates,
+                "UPDATE memories SET access_count = access_count + 1, importance_score = ?, last_accessed_at = ? WHERE storage_key = ?",
+                [(score, ts, key) for (_, score, ts, key) in batch_updates],
             )
         conn.commit()
 
@@ -743,29 +729,30 @@ class SQLiteAdapter(StorageAdapter):
 
             conn = self._get_connection()
             try:
-                for exp_query in valid_expansions:
-                    if len(all_expanded_rows) >= limit:
-                        break
+                combined_query = " OR ".join(f'"{e}"' for e in valid_expansions)
+                all_expanded_rows = self._fts_search(combined_query, where_clause, params, limit)
+                seen_row_ids = set()
+                deduped = []
+                for row in all_expanded_rows:
+                    row_id = row["id"] if hasattr(row, "__getitem__") else None
+                    if row_id and row_id not in seen_row_ids:
+                        seen_row_ids.add(row_id)
+                        deduped.append(row)
+                        if len(deduped) >= limit:
+                            break
+                all_expanded_rows = deduped
 
-                    exp_rows = self._fts_search(exp_query, where_clause, params, limit)
-
-                    for row in exp_rows:
-                        row_id = row["id"] if hasattr(row, "__getitem__") else None
-                        if row_id and row_id not in seen_row_ids:
-                            seen_row_ids.add(row_id)
-                            all_expanded_rows.append(row)
-                            if len(all_expanded_rows) >= limit:
-                                break
-
-                    if self._has_cjk(exp_query) and len(all_expanded_rows) < limit:
-                        like_rows = self._like_search(exp_query, where_clause, params, limit)
-                        for row in like_rows:
-                            row_id = row["id"] if hasattr(row, "__getitem__") else None
-                            if row_id and row_id not in seen_row_ids:
-                                seen_row_ids.add(row_id)
-                                all_expanded_rows.append(row)
-                                if len(all_expanded_rows) >= limit:
-                                    break
+                if len(all_expanded_rows) < limit:
+                    for exp_query in valid_expansions:
+                        if self._has_cjk(exp_query):
+                            like_rows = self._like_search(exp_query, where_clause, params, limit)
+                            for row in like_rows:
+                                row_id = row["id"] if hasattr(row, "__getitem__") else None
+                                if row_id and row_id not in seen_row_ids:
+                                    seen_row_ids.add(row_id)
+                                    all_expanded_rows.append(row)
+                                    if len(all_expanded_rows) >= limit:
+                                        break
             finally:
                 pass
 
@@ -804,7 +791,7 @@ class SQLiteAdapter(StorageAdapter):
 
     def _like_search(self, query, where_clause, params, limit):
         conn = self._get_connection()
-        escaped = _escape_like(query)
+        escaped = escape_like(query)
         like_clause = " AND (content LIKE ? ESCAPE '\\' OR original_message LIKE ? ESCAPE '\\')"
         like_params = [f"%{escaped}%", f"%{escaped}%"]
         sql = f"""
@@ -899,7 +886,7 @@ class SQLiteAdapter(StorageAdapter):
              now.isoformat(), reason or f"Update to version {new_version}", self._namespace),
         )
 
-        new_c_hash = _content_hash(new_content, stored.type)
+        new_c_hash = content_hash(new_content, stored.type)
         new_imp_score = calculate_importance(
             confidence=stored.confidence,
             memory_type=stored.type,

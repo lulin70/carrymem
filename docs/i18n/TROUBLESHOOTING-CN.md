@@ -701,7 +701,7 @@ carrymem rules list
 
 2. 在适当作用域创建规则:
    ```bash
-   carrymem rules add --trigger "编码风格" --action "使用4空格缩进" --scope personal
+   carrymem add-rule --trigger "编码风格" --action "使用4空格缩进"
    ```
 
 3. 检查冲突:
@@ -757,7 +757,7 @@ carrymem skill-verify <skill文件>
 
 2. 如果你是 skill 创建者，重新打包:
    ```bash
-   carrymem skill-pack --name "my-skill" --output my-skill.json
+   carrymem skill-pack my-skill.json --name "my-skill"
    ```
 
 3. 检查版本兼容性:

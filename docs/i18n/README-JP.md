@@ -10,7 +10,7 @@ CarryMem は軽量・ゼロ依存の AI メモリシステムで、**あなた�
 
 <p align="center">
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI バージョン"></a>
-  <img src="https://img.shields.io/badge/tests-2043%20passing-green" alt="テスト">
+  <img src="https://img.shields.io/badge/tests-2056%20passing-green" alt="テスト">
   <img src="https://img.shields.io/badge/coverage-78%25-green" alt="カバレッジ">
   <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python">
 </p>
@@ -126,8 +126,8 @@ carrymem export backup.json             # 全メモリをエクスポート
 carrymem import backup.json             # メモリをインポート
 carrymem version                        # バージョン表示
 # ルールエンジンコマンド
-carrymem add-rule "データベース" "常にSSLを使用" --scope company   # ルール追加
-carrymem list-rules --scope company                            # 会社ルール一覧
+carrymem add-rule "データベース" "常にSSLを使用" --type avoid   # ルール追加
+carrymem list-rules --status active                            # アクティブルール一覧
 carrymem skill-pack rules.json --name team-conventions         # Skill としてパック
 carrymem skill-install team-conventions.json --scope company   # Skill インストール
 carrymem skill-verify team-conventions.json                    # Skill 検証
@@ -329,7 +329,7 @@ carrymem tui
 | F1 スコア | **97.9%** |
 | ゼロコスト分類 | **60%+** |
 | 検索レイテンシ (P50) | **~45ms** |
-| テスト通過 | **2043/2043** |
+| テスト通過 | **2056/2056** |
 | テストカバレッジ | **78%** |
 
 ---
@@ -350,7 +350,7 @@ carrymem tui
 ## プロジェクトステータス
 
 **現在のバージョン**: v0.1.5
-**テスト**: 2043/2043 通過
+**テスト**: 2056/2056 通過
 **カバレッジ**: ~78%
 
 **チェンジログ**:

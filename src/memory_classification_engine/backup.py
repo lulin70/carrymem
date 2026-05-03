@@ -79,7 +79,12 @@ class BackupManager:
         return backup_path
 
     def restore_backup(self, backup_path: str) -> None:
-        if not os.path.exists(backup_path):
+        resolved = os.path.realpath(backup_path)
+        backup_dir = os.path.realpath(self._backup_dir)
+        if not resolved.startswith(backup_dir + os.sep) and resolved != backup_dir:
+            raise ValueError(f"Backup path escapes backup directory: {backup_path}")
+
+        if not os.path.exists(resolved):
             raise FileNotFoundError(f"Backup not found: {backup_path}")
 
         try:

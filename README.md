@@ -12,7 +12,7 @@ CarryMem is a lightweight, zero-dependency AI memory system that stores **who yo
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-2043%20passing-green" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-2056%20passing-green" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-78%25-green" alt="Coverage">
   <img src="https://img.shields.io/badge/accuracy-90.6%25-green" alt="Accuracy">
   <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python">
@@ -106,7 +106,7 @@ print(cm.build_system_prompt())                        # Inject into any AI
 cm.close()
 ```
 
-### CLI (22+ commands)
+### CLI (40+ commands)
 
 ```bash
 carrymem init                           # Initialize
@@ -129,8 +129,8 @@ carrymem export backup.json             # Export all memories
 carrymem import backup.json             # Import memories
 carrymem version                        # Show version
 # Rule Engine commands
-carrymem add-rule "database" "use SSL" --scope company  # Add a rule
-carrymem list-rules --scope company                      # List company rules
+carrymem add-rule "database" "use SSL" --type avoid  # Add a rule
+carrymem list-rules --status active                      # List active rules
 carrymem skill-pack rules.json --name team-conventions   # Pack rules as Skill
 carrymem skill-install team-conventions.json --scope company  # Install Skill
 carrymem skill-verify team-conventions.json              # Verify Skill integrity
@@ -220,7 +220,7 @@ carrymem setup-mcp --tool claude-code
 carrymem setup-mcp --tool all
 ```
 
-12 MCP tools available: Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (1)
+23 MCP tools available: Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (1) · Rules (11)
 
 ### 8. Terminal UI
 
@@ -309,7 +309,7 @@ Rule management directly in your editor:
 | **Skill Format** | ✅ SHA-256 signed | ❌ | ❌ | ❌ |
 | **Merge Protocol** | ✅ 3 strategies | ❌ | ❌ | ❌ |
 | **VS Code Extension** | ✅ | ❌ | ❌ | ❌ |
-| **CLI** | ✅ 22+ commands | ❌ | ❌ | ❌ |
+| **CLI** | ✅ 40+ commands | ❌ | ❌ | ❌ |
 | **TUI** | ✅ textual | ❌ | ❌ | ✅ App |
 | **Encryption** | ✅ Built-in | ❌ | ❌ | ❌ |
 | **Version History** | ✅ Rollback | ❌ | ❌ | ❌ |
@@ -332,7 +332,7 @@ Rule management directly in your editor:
 | F1 Score | **97.9%** |
 | Zero-Cost Classification | **60%+** |
 | Recall Latency (P50) | **~45ms** |
-| Tests Passing | **2043/2043** |
+| Tests Passing | **2056/2056** |
 | Test Coverage | **78%** |
 
 ---
@@ -447,7 +447,7 @@ cm.import_memories(input_path="backup.json")
 ## Project Status
 
 **Current Version**: v0.1.5
-**Tests**: 2043/2043 passing
+**Tests**: 2056/2056 passing
 **Coverage**: ~78%
 
 **Changelog**:

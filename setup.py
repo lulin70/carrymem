@@ -59,11 +59,19 @@ def get_version():
         )
 
 
+def get_long_description():
+    readme_path = os.path.join(os.path.dirname(__file__), "README.md")
+    if os.path.exists(readme_path):
+        with open(readme_path, encoding="utf-8") as f:
+            return f.read()
+    return ""
+
+
 setup(
     name="carrymem",
     version=get_version(),
     description="Your portable AI memory layer. Classify, store, and recall what matters across models, tools, and devices.",
-    long_description=open("README.md", encoding="utf-8").read(),
+    long_description=get_long_description(),
     long_description_content_type="text/markdown",
     url="https://github.com/lulin70/carrymem",
     author="lulin70",

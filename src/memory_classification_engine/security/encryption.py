@@ -25,6 +25,7 @@ from typing import Optional
 
 _SALT_SIZE = 16
 _NONCE_SIZE = 16
+_AUTH_TAG_SIZE = 32
 _PBKDF2_ITERATIONS = 100000
 _KEY_SIZE = 32
 
@@ -156,7 +157,8 @@ class MemoryEncryption:
         keystream = self._generate_keystream(key, nonce, len(plaintext.encode("utf-8")))
         data = plaintext.encode("utf-8")
         encrypted = bytes(a ^ b for a, b in zip(data, keystream))
-        payload = nonce + encrypted
+        auth_tag = hmac.new(key, nonce + encrypted, hashlib.sha256).digest()
+        payload = nonce + encrypted + auth_tag
         return base64.b64encode(payload).decode("ascii")
 
     def _decrypt_stream(self, ciphertext: str) -> str:
@@ -165,12 +167,19 @@ class MemoryEncryption:
         except Exception as e:
             raise EncryptionError(f"Invalid ciphertext format: {e}") from e
 
-        if len(payload) < _NONCE_SIZE:
+        min_len = _NONCE_SIZE + _AUTH_TAG_SIZE
+        if len(payload) < min_len:
             raise EncryptionError("Ciphertext too short")
 
         nonce = payload[:_NONCE_SIZE]
-        encrypted = payload[_NONCE_SIZE:]
+        auth_tag = payload[-_AUTH_TAG_SIZE:]
+        encrypted = payload[_NONCE_SIZE:-_AUTH_TAG_SIZE]
         key = self._key
+
+        expected_tag = hmac.new(key, nonce + encrypted, hashlib.sha256).digest()
+        if not hmac.compare_digest(auth_tag, expected_tag):
+            raise EncryptionError("Integrity check failed: ciphertext has been tampered with")
+
         keystream = self._generate_keystream(key, nonce, len(encrypted))
         decrypted = bytes(a ^ b for a, b in zip(encrypted, keystream))
         try:

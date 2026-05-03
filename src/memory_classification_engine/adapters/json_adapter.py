@@ -15,27 +15,16 @@ Limitations:
 - No semantic recall (no FTS5 index)
 """
 
-import hashlib
 import json
 import os
 import threading
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from .base import MemoryEntry, StorageAdapter, StoredMemory
 from ..scoring import calculate_importance
+from ..utils.helpers import content_hash, TIER_TTL
 
-
-def _content_hash(content: str, memory_type: str) -> str:
-    return hashlib.sha256(f"{memory_type}:{content}".encode()).hexdigest()[:16]
-
-
-_TIER_TTL = {
-    1: timedelta(hours=24),
-    2: timedelta(days=90),
-    3: timedelta(days=365),
-    4: None,
-}
 
 
 class JSONAdapter(StorageAdapter):
@@ -94,7 +83,7 @@ class JSONAdapter(StorageAdapter):
     def remember(self, entry: MemoryEntry, _skip_commit: bool = False) -> StoredMemory:
         with self._lock:
             memories = self._get_memories()
-            c_hash = _content_hash(entry.content, entry.type)
+            c_hash = content_hash(entry.content, entry.type)
 
             existing = memories.get(c_hash)
             if existing:
@@ -102,7 +91,7 @@ class JSONAdapter(StorageAdapter):
 
             now = datetime.now(timezone.utc)
             storage_key = f"cm_{now.strftime('%Y%m%d%H%M%S')}_{c_hash[:8]}"
-            ttl = _TIER_TTL.get(entry.tier)
+            ttl = TIER_TTL.get(entry.tier)
             expires_at = (now + ttl).isoformat() if ttl else None
 
             imp_score = calculate_importance(
