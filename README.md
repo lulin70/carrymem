@@ -70,9 +70,30 @@ pip install carrymem
 >
 > **For development**: `git clone https://github.com/lulin70/carrymem.git && cd carrymem && pip install -e ".[dev]"`
 
+### Verify Installation
+
+```bash
+carrymem version
+```
+
+**If `command not found`**, add Python bin to PATH:
+
+```bash
+# macOS (add to ~/.zshrc)
+export PATH="$HOME/Library/Python/3.9/bin:$PATH"
+
+# Linux (add to ~/.bashrc)
+export PATH="$HOME/.local/bin:$PATH"
+
+# Or use Python module directly
+python3 -m memory_classification_engine.cli version
+```
+
+Then run `carrymem doctor` to check your setup.
+
 ### 5 Lines of Code
 
-> **Note**: The package is installed as `carrymem`, but the Python import uses the internal module name `memory_classification_engine`. This will be simplified in a future version.
+> ⚠️ **Package vs Import Name**: Install with `pip install carrymem`, but import as `from memory_classification_engine import CarryMem`. You can also use `from carrymem import CarryMem` (v0.4.2+). This will be fully unified in v1.0.0.
 
 ```python
 from memory_classification_engine import CarryMem

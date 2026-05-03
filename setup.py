@@ -1,6 +1,42 @@
 import os
 import re
+import sys
 from setuptools import setup, find_packages
+from setuptools.command.install import install
+from setuptools.command.develop import develop
+
+
+class PostInstallCommand(install):
+    def run(self):
+        install.run(self)
+        self._show_path_hint()
+
+    def _show_path_hint(self):
+        print("\n" + "=" * 60)
+        print("  CarryMem installed successfully!")
+        print("=" * 60)
+        print("\n  To use the 'carrymem' command, verify with:")
+        print("    carrymem version")
+        print("\n  If 'command not found', add Python bin to PATH:")
+        if sys.platform == "darwin":
+            py_ver = f"{sys.version_info.major}.{sys.version_info.minor}"
+            print(f'    export PATH="$HOME/Library/Python/{py_ver}/bin:$PATH"')
+            print(f"    # Add to ~/.zshrc for persistence")
+        elif sys.platform.startswith("linux"):
+            print('    export PATH="$HOME/.local/bin:$PATH"')
+            print("    # Add to ~/.bashrc for persistence")
+        else:
+            print("    # Add Python Scripts directory to your PATH")
+        print("\n  Or use: python3 -m memory_classification_engine.cli version")
+        print("\n  Quick start: carrymem tutorial")
+        print("=" * 60 + "\n")
+
+
+class PostDevelopCommand(develop):
+    def run(self):
+        develop.run(self)
+        print("\n  CarryMem development install complete!")
+        print("  Run: python3 -m memory_classification_engine.cli version\n")
 
 
 def get_version():
@@ -100,4 +136,8 @@ setup(
     ],
     python_requires=">=3.9",
     keywords="ai memory classification mcp agent persistence portable",
+    cmdclass={
+        "install": PostInstallCommand,
+        "develop": PostDevelopCommand,
+    },
 )

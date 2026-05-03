@@ -18,8 +18,37 @@ pip install carrymem
 验证安装：
 ```bash
 carrymem version
-carrymem doctor
 ```
+
+**如果提示 `command not found`**，说明 pip 脚本目录不在 PATH 中。修复方法：
+
+**macOS**：
+```bash
+# 添加到 ~/.zshrc
+export PATH="$HOME/Library/Python/3.9/bin:$PATH"
+
+# 重新加载
+source ~/.zshrc
+
+# 验证
+carrymem version
+```
+
+**Linux**：
+```bash
+# 添加到 ~/.bashrc
+export PATH="$HOME/.local/bin:$PATH"
+
+# 重新加载
+source ~/.bashrc
+```
+
+**通用替代方案**：
+```bash
+python3 -m memory_classification_engine.cli version
+```
+
+> ⚠️ **包名与导入名**：安装用 `pip install carrymem`，导入用 `from memory_classification_engine import CarryMem` 或 `from carrymem import CarryMem`（v0.4.2+）。
 
 ### 2. 开发模式安装
 

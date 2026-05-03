@@ -67,7 +67,30 @@ pip install carrymem
 >
 > **開発モード**: `git clone https://github.com/lulin70/carrymem.git && cd carrymem && pip install -e ".[dev]"`
 
+### インストール確認
+
+```bash
+carrymem version
+```
+
+**`command not found` の場合**、Python bin を PATH に追加：
+
+```bash
+# macOS（~/.zshrc に追加）
+export PATH="$HOME/Library/Python/3.9/bin:$PATH"
+
+# Linux（~/.bashrc に追加）
+export PATH="$HOME/.local/bin:$PATH"
+
+# または Python モジュールを直接使用
+python3 -m memory_classification_engine.cli version
+```
+
+その後 `carrymem doctor` で設定を確認。
+
 ### 5 行で始める
+
+> ⚠️ **パッケージ名とインポート名**: `pip install carrymem` でインストール、`from memory_classification_engine import CarryMem` または `from carrymem import CarryMem`（v0.4.2+）でインポート。v1.0.0 で統一予定。
 
 ```python
 from memory_classification_engine import CarryMem

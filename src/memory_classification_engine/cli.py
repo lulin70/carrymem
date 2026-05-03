@@ -1029,6 +1029,22 @@ def cmd_doctor(args):
     _record("auto_inject", "ok" if auto_inject else "info",
             f"Auto-inject: {'enabled' if auto_inject else 'disabled (set CARRYMEM_AUTO_INJECT=true)'}")
 
+    import shutil
+    carrymem_on_path = shutil.which("carrymem") is not None
+    if carrymem_on_path:
+        _record("cli_path", "ok", "CLI command 'carrymem' is on PATH")
+    else:
+        py_ver = f"{sys.version_info.major}.{sys.version_info.minor}"
+        if sys.platform == "darwin":
+            path_hint = f"export PATH=\"$HOME/Library/Python/{py_ver}/bin:$PATH\""
+        elif sys.platform.startswith("linux"):
+            path_hint = 'export PATH="$HOME/.local/bin:$PATH"'
+        else:
+            path_hint = "Add Python Scripts directory to your PATH"
+        _record("cli_path", "warn",
+                f"CLI command 'carrymem' NOT on PATH. Fix: {path_hint}",
+                {"fix": path_hint})
+
     if parsed.json:
         print(json.dumps({
             "version": __version__,

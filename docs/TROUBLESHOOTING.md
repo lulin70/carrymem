@@ -4,29 +4,53 @@
 
 **Problem**: `carrymem` command returns "command not found"
 
-**Solutions**:
+**Root Cause**: pip installs the `carrymem` script to a Python bin directory that is not in your PATH.
 
-1. Reinstall with pip:
-   ```bash
-   pip install --force-reinstall carrymem
-   ```
+**Quick Fix** (works everywhere):
+```bash
+python3 -m memory_classification_engine.cli version
+```
 
-2. Use the Python module directly:
-   ```bash
-   python3 -m memory_classification_engine.cli version
-   ```
+**Permanent Fix**:
 
-3. Add pip script directory to PATH:
-   ```bash
-   # macOS/Linux
-   export PATH="$HOME/Library/Python/3.9/bin:$PATH"
-   # Or add to ~/.zshrc / ~/.bashrc for persistence
-   ```
+**macOS** — find and add Python bin to PATH:
+```bash
+# Step 1: Find where pip installed the script
+python3 -c "import os, sys; print(os.path.join(os.path.dirname(sys.executable), '..', 'bin'))"
 
-4. Use the project bin script:
-   ```bash
-   python3 bin/carrymem version
-   ```
+# Step 2: Add to PATH (add to ~/.zshrc for persistence)
+export PATH="$HOME/Library/Python/3.9/bin:$PATH"
+
+# Step 3: Reload shell
+source ~/.zshrc
+
+# Step 4: Verify
+carrymem version
+```
+
+**Linux** — add user bin to PATH:
+```bash
+# Add to ~/.bashrc for persistence
+export PATH="$HOME/.local/bin:$PATH"
+
+# Reload
+source ~/.bashrc
+
+# Verify
+carrymem version
+```
+
+**Windows (WSL2)**:
+```bash
+# Add to ~/.bashrc
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+**Verify with doctor**:
+```bash
+carrymem doctor
+# The doctor will check if 'carrymem' is on PATH and show the fix command
+```
 
 ## Import Error
 

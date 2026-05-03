@@ -67,7 +67,30 @@ pip install carrymem
 >
 > **开发模式**: `git clone https://github.com/lulin70/carrymem.git && cd carrymem && pip install -e ".[dev]"`
 
+### 验证安装
+
+```bash
+carrymem version
+```
+
+**如果提示 `command not found`**，添加 Python bin 到 PATH：
+
+```bash
+# macOS（添加到 ~/.zshrc）
+export PATH="$HOME/Library/Python/3.9/bin:$PATH"
+
+# Linux（添加到 ~/.bashrc）
+export PATH="$HOME/.local/bin:$PATH"
+
+# 或直接使用 Python 模块
+python3 -m memory_classification_engine.cli version
+```
+
+然后运行 `carrymem doctor` 检查配置。
+
 ### 5 行代码
+
+> ⚠️ **包名与导入名**：安装用 `pip install carrymem`，导入用 `from memory_classification_engine import CarryMem` 或 `from carrymem import CarryMem`（v0.4.2+）。将在 v1.0.0 统一。
 
 ```python
 from memory_classification_engine import CarryMem

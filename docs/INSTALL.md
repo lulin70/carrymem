@@ -18,8 +18,43 @@ pip install carrymem
 Verify installation:
 ```bash
 carrymem version
-carrymem doctor
 ```
+
+**If `carrymem: command not found`**, the pip script directory is not in your PATH. Fix it:
+
+**macOS**:
+```bash
+# Find your Python bin directory
+python3 -c "import os, sys; print(os.path.join(os.path.dirname(sys.executable), '..', 'bin'))"
+
+# Add to PATH (add this line to ~/.zshrc)
+export PATH="$HOME/Library/Python/3.9/bin:$PATH"
+
+# Then reload
+source ~/.zshrc
+
+# Verify
+carrymem version
+```
+
+**Linux**:
+```bash
+# Add to PATH (add this line to ~/.bashrc)
+export PATH="$HOME/.local/bin:$PATH"
+
+# Then reload
+source ~/.bashrc
+
+# Verify
+carrymem version
+```
+
+**Alternative (works everywhere)**:
+```bash
+python3 -m memory_classification_engine.cli version
+```
+
+> ⚠️ **Package vs Import Name**: Install with `pip install carrymem`, import as `from memory_classification_engine import CarryMem` or `from carrymem import CarryMem` (v0.4.2+).
 
 ### 2. Development Install
 
