@@ -58,9 +58,14 @@ carrymem status
 | Document | EN | CN | JP |
 |----------|----|----|-----|
 | README | [EN](../README.md) | [CN](i18n/README-CN.md) | [JP](i18n/README-JP.md) |
-| Install Guide | [EN](INSTALL.md) | [CN](i18n/INSTALL-CN.md) | — |
-| User Guide | [EN](USER_GUIDE.md) | [CN](i18n/USER_GUIDE-CN.md) | — |
+| Install Guide | [EN](INSTALL.md) | [CN](i18n/INSTALL-CN.md) | [JP](i18n/INSTALL-JP.md) |
+| Quick Start | [EN](QUICK_START_GUIDE.md) | [CN](i18n/QUICK_START_GUIDE-CN.md) | [JP](i18n/QUICK_START_GUIDE-JP.md) |
+| User Guide | [EN](USER_GUIDE.md) | [CN](i18n/USER_GUIDE-CN.md) | [JP](i18n/USER_GUIDE-JP.md) |
 | Troubleshooting | [EN](TROUBLESHOOTING.md) | [CN](i18n/TROUBLESHOOTING-CN.md) | [JP](i18n/TROUBLESHOOTING-JP.md) |
+| Rules Manual | [EN](RULES_USER_MANUAL.md) | [CN](i18n/RULES_USER_MANUAL-CN.md) | [JP](i18n/RULES_USER_MANUAL-JP.md) |
+| Architecture | [EN](ARCHITECTURE.md) | [CN](i18n/ARCHITECTURE-CN.md) | [JP](i18n/ARCHITECTURE-JP.md) |
+| API Reference | [EN](API_REFERENCE.md) | [CN](i18n/API_REFERENCE-CN.md) | [JP](i18n/API_REFERENCE-JP.md) |
+| API Stability | [EN](API_STABILITY.md) | [CN](i18n/API_STABILITY-CN.md) | [JP](i18n/API_STABILITY-JP.md) |
 | Roadmap | [EN](ROADMAP.md) | [CN](i18n/ROADMAP-CN.md) | [JP](i18n/ROADMAP-JP.md) |
 
 ---
@@ -180,9 +185,21 @@ docs/
     ├── README-CN.md                   # Chinese README
     ├── README-JP.md                   # Japanese README
     ├── INSTALL-CN.md                  # Chinese install guide
+    ├── INSTALL-JP.md                  # Japanese install guide
+    ├── QUICK_START_GUIDE-CN.md        # Chinese quick start
+    ├── QUICK_START_GUIDE-JP.md        # Japanese quick start
+    ├── USER_GUIDE-CN.md               # Chinese user guide
+    ├── USER_GUIDE-JP.md               # Japanese user guide
     ├── TROUBLESHOOTING-CN.md          # Chinese troubleshooting
     ├── TROUBLESHOOTING-JP.md          # Japanese troubleshooting
-    ├── USER_GUIDE-CN.md               # Chinese user guide
+    ├── RULES_USER_MANUAL-CN.md        # Chinese rules manual
+    ├── RULES_USER_MANUAL-JP.md        # Japanese rules manual
+    ├── ARCHITECTURE-CN.md             # Chinese architecture
+    ├── ARCHITECTURE-JP.md             # Japanese architecture
+    ├── API_REFERENCE-CN.md            # Chinese API reference
+    ├── API_REFERENCE-JP.md            # Japanese API reference
+    ├── API_STABILITY-CN.md            # Chinese API stability
+    ├── API_STABILITY-JP.md            # Japanese API stability
     ├── ROADMAP-CN.md                  # Chinese roadmap
     └── ROADMAP-JP.md                  # Japanese roadmap
 ```
