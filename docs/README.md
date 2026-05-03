@@ -39,6 +39,8 @@ carrymem status
 |----------|-------------|----------|
 | [Quick Start Guide](QUICK_START_GUIDE.md) | Get started in 5 minutes | ⭐ All users |
 | [User Guide](USER_GUIDE.md) | Complete usage guide | All users |
+| [Troubleshooting](TROUBLESHOOTING.md) | Diagnose and fix common issues | All users |
+| [Install Guide](INSTALL.md) | Detailed installation instructions | All users |
 
 ### Developer Documentation
 
@@ -46,8 +48,20 @@ carrymem status
 |----------|-------------|----------|
 | [Architecture](ARCHITECTURE.md) | System architecture design | Developers |
 | [API Reference](API_REFERENCE.md) | API interface documentation | Developers |
+| [API Stability](API_STABILITY.md) | API stability guarantees | Developers |
+| [Rules User Manual](RULES_USER_MANUAL.md) | Rule engine usage guide | All users |
 | [Roadmap](ROADMAP.md) | Future plans | Contributors |
 | [Contributing Guide](../CONTRIBUTING.md) | How to contribute | Contributors |
+
+### Internationalized Documentation (i18n/)
+
+| Document | EN | CN | JP |
+|----------|----|----|-----|
+| README | [EN](../README.md) | [CN](i18n/README-CN.md) | [JP](i18n/README-JP.md) |
+| Install Guide | [EN](INSTALL.md) | [CN](i18n/INSTALL-CN.md) | — |
+| User Guide | [EN](USER_GUIDE.md) | [CN](i18n/USER_GUIDE-CN.md) | — |
+| Troubleshooting | [EN](TROUBLESHOOTING.md) | [CN](i18n/TROUBLESHOOTING-CN.md) | [JP](i18n/TROUBLESHOOTING-JP.md) |
+| Roadmap | [EN](ROADMAP.md) | [CN](i18n/ROADMAP-CN.md) | [JP](i18n/ROADMAP-JP.md) |
 
 ---
 
@@ -153,17 +167,24 @@ docs/
 ├── README.md                          # This document (docs index)
 ├── QUICK_START_GUIDE.md               # Quick start
 ├── USER_GUIDE.md                       # User guide
+├── TROUBLESHOOTING.md                  # Troubleshooting guide
+├── INSTALL.md                          # Install guide
 ├── ARCHITECTURE.md                    # Architecture
 ├── API_REFERENCE.md                   # API reference
+├── API_STABILITY.md                   # API stability guarantees
+├── RULES_USER_MANUAL.md               # Rules engine manual
 ├── ROADMAP.md                         # Roadmap
-├── guides/                            # Detailed guides
-├── planning/                          # Planning documents
-├── internal/                          # Internal documents
+├── archive/                           # Archived documents
+│   └── review/                        # Internal review documents
 └── i18n/                              # Internationalized documents
     ├── README-CN.md                   # Chinese README
     ├── README-JP.md                   # Japanese README
-    ├── CONTRIBUTING-CN.md             # Chinese contributing guide
-    └── ROADMAP-CN.md                  # Chinese roadmap
+    ├── INSTALL-CN.md                  # Chinese install guide
+    ├── TROUBLESHOOTING-CN.md          # Chinese troubleshooting
+    ├── TROUBLESHOOTING-JP.md          # Japanese troubleshooting
+    ├── USER_GUIDE-CN.md               # Chinese user guide
+    ├── ROADMAP-CN.md                  # Chinese roadmap
+    └── ROADMAP-JP.md                  # Japanese roadmap
 ```
 
 ---
@@ -172,7 +193,7 @@ docs/
 
 ### Having Issues?
 1. **Run diagnostics**: `carrymem doctor`
-2. **Check status**: `carrymem status`
+2. **Check troubleshooting**: [Troubleshooting Guide](TROUBLESHOOTING.md) | [中文版](i18n/TROUBLESHOOTING-CN.md) | [日本語版](i18n/TROUBLESHOOTING-JP.md)
 3. **Read docs**: [Quick Start Guide](QUICK_START_GUIDE.md)
 
 ### Report Issues
@@ -180,5 +201,5 @@ docs/
 
 ---
 
-**Last Updated**: 2026-04-28  
+**Last Updated**: 2026-05-03  
 **Maintainer**: CarryMem Team
