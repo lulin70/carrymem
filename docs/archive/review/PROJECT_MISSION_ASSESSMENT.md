@@ -100,8 +100,8 @@ profile = cm.build_system_prompt()
 
 **测试命令**：
 ```bash
-python3 -m memory_classification_engine.cli version
-python3 -m memory_classification_engine.cli whoami
+carrymem version
+carrymem whoami
 ```
 
 **验证结果**：
@@ -154,10 +154,10 @@ python3 -m memory_classification_engine.cli whoami
 pip install carrymem
 
 # 2. 添加偏好
-python3 -m memory_classification_engine.cli add "I prefer PostgreSQL"
+carrymem add "I prefer PostgreSQL"
 
 # 3. 查看身份
-python3 -m memory_classification_engine.cli whoami
+carrymem whoami
 ```
 
 **可用性评分**: ⭐⭐⭐⭐☆ (4/5)
@@ -171,7 +171,7 @@ python3 -m memory_classification_engine.cli whoami
 
 **场景**：团队统一编码规范
 
-**程**：
+**流程**：
 ```python
 from memory_classification_engine import CarryMem
 
@@ -198,13 +198,13 @@ cm.add_rule(
 **测试流程**：
 ```bash
 # 1. 导出身份
-python3 -m memory_classification_engine.cli profile export identity.json
+carrymem export identity.json
 
 # 2. 在新工具中导入
-python3 -m memory_classification_engine.cli profile import identity.json
+carrymem import identity.json
 
 # 3. 配置MCP
-pythmemory_classification_engine.cli setup-mcp --tool windsurf
+carrymem setup-mcp --tool cursor
 ```
 
 **可用性评分**: ⭐⭐⭐⭐⭐ (5/5)
@@ -239,7 +239,7 @@ cm.recall_memories("dark mode")                 # ✅ 匹配两者
 **测试结果**：
 ```python
 cm = CarryMem(encryption_key="your-key")  # ✅ 加密存储
-cm.export_profilee_sensitive=False) # ✅ 选择性导出
+cm.export_memories(output_path="backup.json")  # ✅ 导出
 ```
 
 **可用性评分**: ⭐⭐⭐⭐⭐ (5/5)
@@ -273,7 +273,7 @@ cm.export_profilee_sensitive=False) # ✅ 选择性导出
 - ❌ 缺少TROUBLESHOOTING文档
 - ❌ README无PATH配置说明
 
-用户体验**: ⭐⭐⭐☆☆ (3/5)
+**用户体验**: ⭐⭐⭐☆☆ (3/5)
 
 ---
 
@@ -308,7 +308,8 @@ cm.export_profilee_sensitive=False) # ✅ 选择性导出
 
 ### 性能指标
 
-| 指标 | 目标 | 实际 |n|------|------|------|------|
+| 指标 | 目标 | 实际 | 达成 |
+|------|------|------|------|
 | 记忆召回延迟 | <100ms | ~45ms | ✅ 222% |
 | 零成本分类率 | >50% | 60% | ✅ 120% |
 | 数据库大小 | <10MB | ~2.3MB | ✅ 435% |
@@ -347,7 +348,7 @@ cm.export_profilee_sensitive=False) # ✅ 选择性导出
 **可用性评估**：
 - ✅ 个人开发者：可用（4/5）
 - ✅ 团队协作：完全可用（5/5）
-- ✅换：完全可用（5/5）
+- ✅ AI工具切换：完全可用（5/5）
 - ✅ 多语言用户：完全可用（5/5）
 - ✅ 隐私安全：完全可用（5/5）
 
@@ -414,8 +415,7 @@ cm.export_profilee_sensitive=False) # ✅ 选择性导出
    - 性能优秀（P50延迟45ms）
 
 4. ✅ **持续改进**
-   - 项目组响应迅速
-速迭代
+   - 项目组响应迅速，快速迭代
    - 用户体验提升60%
 
 ---
@@ -429,8 +429,8 @@ cm.export_profilee_sensitive=False) # ✅ 选择性导出
 
 **短期优化（可选）**：
 1. 改进PATH配置体验（自动检测并提示）
-2. 创建`carrymem doctor`诊断命令
-3. 添加交互式教程
+2. `carrymem doctor`诊断命令已实现（`carrymem doctor --fix`）
+3. 交互式教程已实现（`carrymem tutorial`）
 
 **长期规划（v1.0.0）**：
 1. 统一包名为`carrymem`
