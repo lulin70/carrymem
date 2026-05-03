@@ -1,0 +1,153 @@
+{
+  "name": "vscode-carrymem",
+  "displayName": "CarryMem - AI Memory & Rules",
+  "description": "Manage AI memory rules with scope-aware context injection for LLM-assisted development",
+  "version": "0.4.0",
+  "publisher": "carrymem",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Machine Learning",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "AI",
+    "LLM",
+    "memory",
+    "rules",
+    "context"
+  ],
+  "activationEvents": [
+    "onView:carrymem-rules"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "carrymem",
+          "title": "CarryMem",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "carrymem": [
+        {
+          "id": "carrymem-rules",
+          "name": "Rules",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "carrymem.refreshRules",
+        "title": "CarryMem: Refresh Rules",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "carrymem.addRule",
+        "title": "CarryMem: Add Rule",
+        "icon": "$(add)"
+      },
+      {
+        "command": "carrymem.editRule",
+        "title": "CarryMem: Edit Rule",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "carrymem.deleteRule",
+        "title": "CarryMem: Delete Rule",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "carrymem.toggleRule",
+        "title": "CarryMem: Toggle Rule (Pause/Resume)",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "carrymem.matchRules",
+        "title": "CarryMem: Match Rules for Current File"
+      },
+      {
+        "command": "carrymem.showEffectivenessReport",
+        "title": "CarryMem: Show Effectiveness Report"
+      },
+      {
+        "command": "carrymem.skillPack",
+        "title": "CarryMem: Pack Rules as Skill"
+      },
+      {
+        "command": "carrymem.skillInstall",
+        "title": "CarryMem: Install Skill"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "carrymem.refreshRules",
+          "when": "view == carrymem-rules",
+          "group": "navigation"
+        },
+        {
+          "command": "carrymem.addRule",
+          "when": "view == carrymem-rules",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "carrymem.editRule",
+          "when": "view == carrymem-rules && viewItem =~ /rule/",
+          "group": "inline"
+        },
+        {
+          "command": "carrymem.toggleRule",
+          "when": "view == carrymem-rules && viewItem =~ /rule-active/",
+          "group": "inline"
+        },
+        {
+          "command": "carrymem.deleteRule",
+          "when": "view == carrymem-rules && viewItem =~ /rule/",
+          "group": "inline"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "CarryMem",
+      "properties": {
+        "carrymem.dbPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to CarryMem database (empty = default ~/.carrymem/carrymem.db)"
+        },
+        "carrymem.autoMatch": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically match rules when opening files"
+        },
+        "carrymem.defaultScope": {
+          "type": "string",
+          "default": "personal",
+          "enum": ["personal", "company", "negotiated"],
+          "description": "Default scope for new rules"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  }
+}

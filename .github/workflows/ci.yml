@@ -1,0 +1,490 @@
+name: CI Quality Gates
+
+on:
+  push:
+    branches: [new-main]
+    tags: ['v*']
+  pull_request:
+    branches: [new-main]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual run'
+        required: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  # ──────────────────────────────────────────────
+  # GATE 1: Code Quality (lint, format, type-check)
+  # ──────────────────────────────────────────────
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]" flake8 black isort mypy
+
+      - name: Lint — fatal errors only
+        run: |
+          flake8 src/ tests/ \
+            --count --select=E9,F63,F7,F82 \
+            --show-source --statistics
+
+      - name: Lint — warnings (non-blocking)
+        run: |
+          flake8 src/ tests/ \
+            --count --exit-zero \
+            --max-complexity=12 \
+            --max-line-length=127 \
+            --statistics
+
+      - name: Format check — Black
+        run: |
+          black --check --diff --color src/ tests/
+
+      - name: Format check — isort
+        run: |
+          isort --check-only --diff --color src/ tests/
+
+      - name: Type check — MyPy
+        run: |
+          mypy src/ --ignore-missing-imports --no-error-summary || true
+
+  # ──────────────────────────────────────────────
+  # GATE 2: Internationalization (i18n) Compliance
+  # ──────────────────────────────────────────────
+  i18n:
+    name: i18n Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check for Chinese comments in source code
+        run: |
+          python3 << 'EOF'
+          import os, re, sys
+
+          errors = []
+          # Files that are allowed to contain Chinese (i18n data)
+          i18n_whitelist = [
+              'language.py',       # Multi-language keyword lists
+              'context.py',         # Prompt templates for zh/ja locales
+              'pattern_analyzer.py',# CJK regex patterns & feedback phrases
+              'tools.py',           # Schema label_zh / zh_name fields
+              '__main__.py',        # Demo/test data with Chinese examples
+              '__init__.py',        # Docstring examples showing multilingual recall
+              'confirmation.py',   # Chinese confirmation regex patterns
+              'expander.py',       # Docstring examples for cross-language expansion
+              'merger.py',         # Docstring examples for cross-language merging
+              'failure_experience.py', # Chinese failure signal regex patterns
+              'sanitizer.py',      # Chinese example in docstring
+              'matcher.py',        # Chinese docstring examples
+              'injector.py',       # Chinese docstring examples
+              'templates.py',      # Chinese rule templates (i18n data)
+              'conflict_detector.py', # CJK punctuation in overlap detection
+              'pattern_detector.py',  # Chinese stop words list
+              'storage.py',         # Chinese docstring examples
+          ]
+
+          for root, dirs, files in os.walk('src'):
+              dirs[:] = [d for d in dirs if d not in ('__pycache__', '.pytest_cache')]
+              for f in files:
+                  if not f.endswith('.py'):
+                      continue
+                  filepath = os.path.join(root, f)
+                  relpath = os.path.relpath(filepath)
+
+                  # Skip whitelisted files
+                  if any(w in relpath for w in i18n_whitelist):
+                      continue
+
+                  try:
+                      with open(filepath, 'r', encoding='utf-8') as fh:
+                          for lineno, line in enumerate(fh, 1):
+                              # Skip strings inside i18n data structures
+                              stripped = line.strip()
+                              if (stripped.startswith("'zh-cn:") or 
+                                  stripped.startswith('"zh-cn:') or
+                                  stripped.startswith('# i18n') or
+                                  'label_zh=' in stripped or
+                                  'zh_name=' in stripped):
+                                  continue
+                              
+                              # Check for Chinese characters in comments and code
+                              if re.search(r'[\u4e00-\u9fff]', line):
+                                  # Allow Chinese in docstrings that are clearly i18n data
+                                  if '"""' in line or "'''" in line:
+                                      continue
+                                  errors.append(f"{relpath}:{lineno}: {line.rstrip()[:80]}")
+                  except Exception as e:
+                      print(f"Warning: Could not read {filepath}: {e}")
+
+          if errors:
+              print(f"\n❌ Found {len(errors)} lines with Chinese characters outside i18n data:")
+              for err in errors[:30]:
+                  print(f"  {err}")
+              if len(errors) > 30:
+                  print(f"  ... and {len(errors)-30} more")
+              sys.exit(1)
+          else:
+              print("✅ No Chinese characters found in non-i18n source code.")
+          EOF
+
+      - name: Check for mangled comments (# Comment in Chinese removed...)
+        run: |
+          if grep -r "# Comment in Chinese removed" src/ --include="*.py"; then
+            echo "::error::Found mangled '# Comment in Chinese removed' remnants"
+            exit 1
+          fi
+          echo "✅ No mangled comments found."
+
+      - name: Verify English display labels in helpers.py
+        run: |
+          python3 << 'EOF'
+          import ast, sys
+
+          with open('src/memory_classification_engine/utils/helpers.py') as f:
+              tree = ast.parse(f.read())
+
+          chinese_found = []
+          for node in ast.walk(tree):
+              if isinstance(node, ast.Assign):
+                  for target in node.targets:
+                      if isinstance(target, ast.Name) and target.id == 'MEMORY_TYPES':
+                          for kv in node.value.keys:
+                              if isinstance(kv.value, ast.Constant) and re.search(r'[\u4e00-\u9fff]', str(kv.value.s)):
+                                  chinese_found.append(f"  MEMORY_TYPES[{kv.value.s}]")
+                      if isinstance(target, ast.Name) and target.id == 'MEMORY_TIERS':
+                          for kv in node.value.keys:
+                              if isinstance(kv.value, ast.Constant) and re.search(r'[\u4e00-\u9fff]', str(kv.value.s)):
+                                  chinese_found.append(f"  MEMORY_TIERS[{kv.value.s}]")
+
+          if chinese_found:
+              print(f"❌ Chinese labels found in helpers.py:")
+              for c in chinese_found:
+                  print(c)
+              sys.exit(1)
+          else:
+              print("✅ All display labels in helpers.py are English.")
+          EOF
+
+  # ──────────────────────────────────────────────
+  # GATE 3: Unit Tests (matrix: Python × OS)
+  # ──────────────────────────────────────────────
+  test:
+    name: Tests (Python ${{ matrix.python-version }} on ${{ matrix.os }})
+    needs: [quality, i18n]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('setup.py', 'requirements.txt') }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run tests
+        run: |
+          python -m pytest tests/ \
+            --cov=memory_classification_engine \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            -v \
+            --tb=short \
+            2>&1 | tee pytest_output.txt
+
+      - name: Enforce minimum coverage
+        run: |
+          python3 << 'EOF'
+          import re, sys
+
+          with open('pytest_output.txt') as f:
+              content = f.read()
+
+          match = re.search(r'TOTAL\s+\d+\s+\d+\s+(\d+)%', content)
+          if match:
+              coverage = int(match.group(1))
+              print(f"\n📊 Coverage: {coverage}%")
+              if coverage < 55:
+                  print(f"❌ Coverage {coverage}% is below minimum threshold of 55%")
+                  sys.exit(1)
+              print(f"✅ Coverage {coverage}% meets minimum threshold of 55%")
+          else:
+              print("⚠️ Could not parse coverage from output")
+          EOF
+
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.11' && matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: |
+            ./coverage.xml
+            pytest_output.txt
+
+  # ──────────────────────────────────────────────
+  # GATE 4: Package Build + Fresh Install Verification
+  # ──────────────────────────────────────────────
+  build-and-install:
+    name: Build & Install Test
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build sdist and wheel
+        run: |
+          rm -rf dist/ build/ *.egg-info/
+          python -m build
+
+      - name: List build artifacts
+        run: |
+          echo "=== Build Artifacts ==="
+          ls -lh dist/
+          echo ""
+          echo "=== Wheel Contents ==="
+          unzip -l dist/carrymem-*.whl | head -40
+
+      - name: twine check
+        run: |
+          twine check dist/*
+
+      - name: "Fresh venv install from wheel"
+        run: |
+          python -m venv /tmp/carrymem_test_venv
+          source /tmp/carrymem_test_venv/bin/activate
+
+          echo "=== Installing from wheel ==="
+          WHEEL=$(ls dist/carrymem-*.whl 2>/dev/null | head -1)
+          pip install "$WHEEL"
+          
+          echo ""
+          echo "=== Verifying package metadata ==="
+          python -c "import memory_classification_engine; print('✅ Package importable')"
+          python -c "from memory_classification_engine.utils.helpers import MEMORY_TYPES; print('✅ utils importable')"
+          python -c "from memory_classification_engine.layers.pattern_analyzer import PatternAnalyzer; print('✅ layers importable')"
+          python -c "from memory_classification_engine.security.input_validator import InputValidator; print('✅ security importable')"
+          python -c "from memory_classification_engine.adapters.sqlite_adapter import SQLiteAdapter; print('✅ adapters importable')"
+          python -c "from memory_classification_engine.cli import main; print('✅ cli importable')"
+          
+          echo ""
+          echo "=== Version check ==="
+          carrymem version
+          
+          echo ""
+          echo "=== Init check ==="
+          carrymem init
+          
+          echo ""
+          echo "=== Add + Search smoke test ==="
+          carrymem add "CI test: I prefer dark mode"
+          carrymem search "dark"
+          
+          echo ""
+          echo "=== Whoami smoke test ==="
+          carrymem whoami
+          
+          echo ""
+          echo "=== Doctor smoke test ==="
+          carrymem doctor
+          
+          echo ""
+          echo "✅ ALL FRESH INSTALL CHECKS PASSED"
+
+      - name: Check all __init__.py exist in wheel
+        run: |
+          echo "=== Verifying __init__.py in wheel ==="
+          missing=$(unzip -l dist/carrymem-*.whl | grep "/__init__.py$" || true)
+          if [ -z "$missing" ]; then
+            echo "❌ No __init__.py files found in wheel!"
+            unzip -l dist/carrymem-*.whl | grep "/" | head -20
+            exit 1
+          fi
+          expected_dirs=("utils/" "layers/" "adapters/" "security/" "semantic/")
+          for dir in "${expected_dirs[@]}"; do
+            if ! unzip -l dist/carrymem-*.whl | grep -q "$dir/__init__.py$"; then
+              echo "❌ Missing __init__.py in $dir"
+              exit 1
+            fi
+            echo "✅ $dir has __init__.py"
+          done
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: dist/
+
+  # ──────────────────────────────────────────────
+  # GATE 5: Security Scan
+  # ──────────────────────────────────────────────
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check for secrets / hardcoded keys
+        run: |
+          echo "=== Checking for potential secrets ==="
+          # Common secret patterns (not exhaustive, but catches obvious cases)
+          if grep -rnE "(api_key|secret_key|password|token)\s*=\s*['\"][^']{8,}" src/ --include="*.py" | \
+             grep -v "test_" | \
+             grep -v "# " | \
+             grep -v "os.environ" | \
+             grep -v "getenv"; then
+            echo "::warning::Potential hardcoded secret detected above"
+          else
+            echo "✅ No obvious hardcoded secrets found"
+          fi
+
+      - name: "Check for bare except clauses"
+        run: |
+          if grep -rn "except:" src/ --include="*.py" | grep -v "except Exception" | grep -v "except ("; then
+            echo "::error::Found bare except: clause (should use except Exception)"
+            grep -rn "except:" src/ --include="*.py" | grep -v "except Exception" | grep -v "except ("
+            exit 1
+          fi
+          echo "✅ No bare except: clauses found"
+
+      - name: Check for SQL injection risk patterns
+        run: |
+          if grep -rnE '(f".*SELECT|f".*INSERT|f".*UPDATE|f".*DELETE).*(query|sql)' src/ --include="*.py" | \
+             grep -v "validate_query" | \
+             grep -v "_sanitize" | \
+             grep -v "# safe"; then
+            echo "::warning::Potential raw SQL query construction (review manually)"
+          else
+            echo "✅ No obvious SQL injection patterns"
+          fi
+
+  # ──────────────────────────────────────────────
+  # GATE 6: Documentation Build Check
+  # ──────────────────────────────────────────────
+  docs:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check README links
+        run: |
+          pip install mdformat-gfm 2>/dev/null || true
+          echo "=== Checking required docs exist ==="
+          for doc in README.md CONTRIBUTING.md LICENSE CHANGELOG.md docs/README.md; do
+            if [ ! -f "$doc" ]; then
+              echo "::error::Missing required document: $doc"
+              exit 1
+            fi
+            echo "✅ $doc exists"
+          done
+
+          echo ""
+          echo "=== Checking i18n docs exist ==="
+          for doc in docs/i18n/README-CN.md docs/i18n/README-JP.md; do
+            if [ ! -f "$doc" ]; then
+              echo "::error::Missing i18n document: $doc"
+              exit 1
+            fi
+            echo "✅ $doc exists"
+          done
+
+      - name: Verify version consistency
+        run: |
+          python3 << 'EOF'
+          import re, sys
+
+          # Read version from source
+          with open('src/memory_classification_engine/__version__.py') as f:
+              src_ver = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', f.read()).group(1)
+
+          # Read version from setup.py
+          with open('setup.py') as f:
+              content = f.read()
+              setup_ver = None
+              if '__version__' in content:
+                  pass  # Uses dynamic version from source
+              else:
+                  m = re.search(r'version=["\']([^"\']+)["\']', content)
+                  if m:
+                      setup_ver = m.group(1)
+
+          # Read version from README
+          with open('README.md') as f:
+              readme_ver = None
+              for line in f:
+                  if 'v0.' in line and ('version' in line.lower() or '**v' in line):
+                      m = re.search(r'v(\d+\.\d+\.\d+)', line)
+                      if m:
+                          readme_ver = m.group(1)
+                      break
+
+          print(f"Source version:     {src_ver}")
+          print(f"Setup.py version:   {setup_ver or '(dynamic)'}")
+          print(f"README version:     {readme_ver or '(not found)'}")
+
+          versions = [v for v in [src_ver, setup_ver, readme_ver] if v]
+          if len(set(versions)) > 1:
+              print(f"\n❌ Version inconsistency detected!")
+              sys.exit(1)
+          print(f"\n✅ Versions consistent: {src_ver}")
+          EOF

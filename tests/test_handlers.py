@@ -1,0 +1,557 @@
+"""
+Tests for MCP handlers module - targeting uncovered code paths.
+
+Covers: all handler functions, Handlers class, _safe_error,
+_clamp, _format_memory_entry, _build_summary.
+"""
+
+import asyncio
+import pytest
+from datetime import datetime, timezone
+from unittest.mock import MagicMock, patch
+
+from memory_classification_engine import CarryMem
+from memory_classification_engine.integration.layer2_mcp.handlers import (
+    handle_classify_message,
+    handle_get_classification_schema,
+    handle_batch_classify,
+    handle_mce_status,
+    handle_classify_and_remember,
+    handle_recall_memories,
+    handle_forget_memory,
+    handle_index_knowledge,
+    handle_recall_from_knowledge,
+    handle_recall_all,
+    handle_declare_preference,
+    handle_get_memory_profile,
+    handle_get_system_prompt,
+    Handlers,
+    _safe_error,
+    _clamp,
+    _format_memory_entry,
+    _build_summary,
+    handler_map,
+)
+
+
+@pytest.fixture
+def temp_db(tmp_path):
+    return str(tmp_path / "test_handlers.db")
+
+
+@pytest.fixture
+def cm(temp_db):
+    c = CarryMem(db_path=temp_db)
+    yield c
+    c.close()
+
+
+@pytest.fixture
+def engine():
+    from memory_classification_engine.engine import MemoryClassificationEngine
+    return MemoryClassificationEngine()
+
+
+class TestSafeError:
+    def test_storage_error(self):
+        from memory_classification_engine.exceptions import StorageNotConfiguredError
+        e = StorageNotConfiguredError()
+        assert _safe_error(e) == "storage_not_configured"
+
+    def test_value_error(self):
+        assert _safe_error(ValueError("test")) == "invalid_input"
+
+    def test_unknown_error(self):
+        assert _safe_error(RuntimeError("test")) == "internal_error"
+
+
+class TestClamp:
+    def test_within_range(self):
+        assert _clamp(5, 1, 10) == 5
+
+    def test_below_min(self):
+        assert _clamp(0, 1, 10) == 1
+
+    def test_above_max(self):
+        assert _clamp(20, 1, 10) == 10
+
+
+class TestFormatMemoryEntry:
+    def test_basic(self):
+        match = {
+            "memory_type": "user_preference",
+            "content": "I prefer dark mode",
+            "confidence": 0.9,
+            "tier": 2,
+            "source": "declaration",
+            "reasoning": "User preference",
+        }
+        result = _format_memory_entry(match, "I prefer dark mode")
+        assert result["type"] == "user_preference"
+        assert result["content"] == "I prefer dark mode"
+        assert result["confidence"] == 0.9
+        assert result["suggested_action"] == "store"
+
+    def test_low_confidence(self):
+        match = {
+            "type": "unknown",
+            "content": "test",
+            "confidence": 0.2,
+            "tier": 3,
+        }
+        result = _format_memory_entry(match, "test")
+        assert result["suggested_action"] == "ignore"
+
+    def test_medium_confidence(self):
+        match = {
+            "type": "unknown",
+            "content": "test",
+            "confidence": 0.4,
+            "tier": 3,
+        }
+        result = _format_memory_entry(match, "test")
+        assert result["suggested_action"] == "defer"
+
+    def test_no_content(self):
+        match = {"confidence": 0.8, "tier": 2}
+        result = _format_memory_entry(match, "original message here")
+        assert result["content"] == "original message here"
+
+
+class TestBuildSummary:
+    def test_basic(self):
+        entries = [
+            {"type": "user_preference", "tier": 2, "confidence": 0.9},
+            {"type": "decision", "tier": 1, "confidence": 0.7},
+        ]
+        result = _build_summary(entries, llm_calls=1)
+        assert result["total_entries"] == 2
+        assert result["by_type"]["user_preference"] == 1
+        assert result["by_tier"][2] == 1
+        assert result["llm_calls_used"] == 1
+
+    def test_empty(self):
+        result = _build_summary([])
+        assert result["total_entries"] == 0
+        assert result["avg_confidence"] == 0.0
+
+
+class TestHandleClassifyMessage:
+    def test_basic(self, engine):
+        result = handle_classify_message(engine, {"message": "I prefer dark mode"})
+        assert "schema_version" in result
+        assert "entries" in result
+
+    def test_empty_message(self, engine):
+        result = handle_classify_message(engine, {"message": "  "})
+        assert result["should_remember"] is False
+        assert "error" in result
+
+    def test_with_context(self, engine):
+        result = handle_classify_message(engine, {
+            "message": "I prefer dark mode",
+            "context": "User is configuring editor",
+        })
+        assert "entries" in result
+
+    def test_exception_handling(self, engine):
+        with patch.object(engine, "process_message", side_effect=RuntimeError("test")):
+            result = handle_classify_message(engine, {"message": "test"})
+            assert "error" in result
+
+
+class TestHandleGetClassificationSchema:
+    def test_json_format(self, engine):
+        result = handle_get_classification_schema(engine, {"format": "json"})
+        assert result["format"] == "json"
+        assert "schema" in result
+
+    def test_markdown_format(self, engine):
+        result = handle_get_classification_schema(engine, {"format": "markdown"})
+        assert result["format"] == "markdown"
+        assert "MCE Classification Schema" in result["schema"]
+
+
+class TestHandleBatchClassify:
+    def test_basic(self, engine):
+        result = handle_batch_classify(engine, {
+            "messages": [
+                {"message": "I prefer dark mode"},
+                {"message": "I use Python"},
+            ]
+        })
+        assert "results" in result
+        assert len(result["results"]) == 2
+
+    def test_empty(self, engine):
+        result = handle_batch_classify(engine, {"messages": []})
+        assert "error" in result
+
+
+class TestHandleMceStatus:
+    def test_basic(self, engine):
+        result = handle_mce_status(engine, {})
+        assert result["status"] == "active"
+        assert "version" in result
+
+
+class TestHandleClassifyAndRemember:
+    def test_basic(self, cm):
+        result = handle_classify_and_remember(cm, {"message": "I prefer dark mode"})
+        assert "should_remember" in result or "entries" in result or "error" not in result
+
+    def test_empty_message(self, cm):
+        result = handle_classify_and_remember(cm, {"message": "  "})
+        assert "error" in result
+
+    def test_with_context(self, cm):
+        result = handle_classify_and_remember(cm, {
+            "message": "I prefer dark mode",
+            "context": "User settings",
+        })
+        assert isinstance(result, dict)
+
+
+class TestHandleRecallMemories:
+    def test_basic(self, cm):
+        cm.classify_and_remember("I prefer dark mode")
+        result = handle_recall_memories(cm, {"query": "dark mode"})
+        assert "memories" in result
+
+    def test_with_limit(self, cm):
+        result = handle_recall_memories(cm, {"limit": 5})
+        assert "memories" in result
+
+    def test_with_filters(self, cm):
+        result = handle_recall_memories(cm, {
+            "query": "dark mode",
+            "filters": {"type": "user_preference"},
+        })
+        assert "memories" in result
+
+    def test_exception(self, cm):
+        with patch.object(cm, "recall_memories", side_effect=RuntimeError("test")):
+            result = handle_recall_memories(cm, {"query": "test"})
+            assert "error" in result
+
+
+class TestHandleForgetMemory:
+    def test_basic(self, cm):
+        cm.classify_and_remember("I prefer dark mode")
+        memories = cm.recall_memories(limit=1)
+        if memories:
+            result = handle_forget_memory(cm, {"memory_id": memories[0]["storage_key"]})
+            assert "deleted" in result
+
+    def test_empty_id(self, cm):
+        result = handle_forget_memory(cm, {"memory_id": ""})
+        assert "error" in result
+
+    def test_missing_id(self, cm):
+        result = handle_forget_memory(cm, {})
+        assert "error" in result
+
+    def test_exception(self, cm):
+        with patch.object(cm, "forget_memory", side_effect=RuntimeError("test")):
+            result = handle_forget_memory(cm, {"memory_id": "some_key"})
+            assert "error" in result
+
+
+class TestHandleIndexKnowledge:
+    def test_no_knowledge_adapter(self, cm):
+        result = handle_index_knowledge(cm, {})
+        assert "error" in result
+
+    def test_exception(self, cm):
+        with patch.object(cm, "index_knowledge", side_effect=RuntimeError("test")):
+            result = handle_index_knowledge(cm, {})
+            assert "error" in result
+
+
+class TestHandleRecallFromKnowledge:
+    def test_no_knowledge_adapter(self, cm):
+        result = handle_recall_from_knowledge(cm, {"query": "test"})
+        assert "error" in result
+
+    def test_empty_query(self, cm):
+        result = handle_recall_from_knowledge(cm, {"query": "  "})
+        assert "error" in result
+
+    def test_exception(self, cm):
+        with patch.object(cm, "recall_from_knowledge", side_effect=RuntimeError("test")):
+            result = handle_recall_from_knowledge(cm, {"query": "test"})
+            assert "error" in result
+
+
+class TestHandleRecallAll:
+    def test_basic(self, cm):
+        cm.classify_and_remember("I prefer dark mode")
+        result = handle_recall_all(cm, {"query": "dark mode"})
+        assert "memories" in result
+
+    def test_empty_query(self, cm):
+        result = handle_recall_all(cm, {"query": "  "})
+        assert "error" in result
+
+    def test_exception(self, cm):
+        with patch.object(cm, "recall_all", side_effect=RuntimeError("test")):
+            result = handle_recall_all(cm, {"query": "test"})
+            assert "error" in result
+
+
+class TestHandleDeclarePreference:
+    def test_basic(self, cm):
+        result = handle_declare_preference(cm, {"message": "I prefer dark mode"})
+        assert "declared" in result or "entries" in result
+
+    def test_empty_message(self, cm):
+        result = handle_declare_preference(cm, {"message": "  "})
+        assert "error" in result
+
+    def test_exception(self, cm):
+        with patch.object(cm, "declare", side_effect=RuntimeError("test")):
+            result = handle_declare_preference(cm, {"message": "test"})
+            assert "error" in result
+
+
+class TestHandleGetMemoryProfile:
+    def test_basic(self, cm):
+        result = handle_get_memory_profile(cm, {})
+        assert isinstance(result, dict)
+
+    def test_exception(self, cm):
+        with patch.object(cm, "get_memory_profile", side_effect=RuntimeError("test")):
+            result = handle_get_memory_profile(cm, {})
+            assert "error" in result
+
+
+class TestHandleGetSystemPrompt:
+    def test_basic(self, cm):
+        result = handle_get_system_prompt(cm, {})
+        assert "system_prompt" in result
+
+    def test_with_language(self, cm):
+        result = handle_get_system_prompt(cm, {"language": "en"})
+        assert result["language"] == "en"
+
+    def test_invalid_language(self, cm):
+        result = handle_get_system_prompt(cm, {"language": "fr"})
+        assert result["language"] == "en"
+
+    def test_with_params(self, cm):
+        result = handle_get_system_prompt(cm, {
+            "max_memories": 5,
+            "max_knowledge": 3,
+            "language": "zh",
+        })
+        assert "system_prompt" in result
+
+    def test_exception(self, cm):
+        with patch.object(cm, "build_system_prompt", side_effect=RuntimeError("test")):
+            result = handle_get_system_prompt(cm, {})
+            assert "error" in result
+
+
+class TestHandlerMap:
+    def test_all_handlers_present(self):
+        expected = [
+            "classify_message", "get_classification_schema", "batch_classify",
+            "mce_status", "classify_and_remember", "recall_memories",
+            "forget_memory", "index_knowledge", "recall_from_knowledge",
+            "recall_all", "declare_preference", "get_memory_profile",
+            "get_system_prompt",
+        ]
+        for name in expected:
+            assert name in handler_map
+
+
+class TestHandlersClass:
+    @pytest.mark.asyncio
+    async def test_init(self, temp_db):
+        handlers = Handlers(
+            storage="sqlite",
+            data_path=temp_db,
+            namespace="default",
+        )
+        assert handlers._carrymem is not None
+        await handlers.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_handle_tool_classify(self, temp_db):
+        handlers = Handlers(
+            storage="sqlite",
+            data_path=temp_db,
+            namespace="default",
+        )
+        result = await handlers.handle_tool(
+            "classify_message",
+            {"message": "I prefer dark mode"},
+        )
+        assert result.get("success") is True
+        await handlers.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_handle_tool_recall(self, temp_db):
+        handlers = Handlers(
+            storage="sqlite",
+            data_path=temp_db,
+            namespace="default",
+        )
+        handlers._carrymem.classify_and_remember("I prefer dark mode")
+        result = await handlers.handle_tool(
+            "recall_memories",
+            {"query": "dark mode"},
+        )
+        assert result.get("success") is True
+        await handlers.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_handle_tool_unknown(self, temp_db):
+        handlers = Handlers(
+            storage="sqlite",
+            data_path=temp_db,
+            namespace="default",
+        )
+        result = await handlers.handle_tool("unknown_tool", {})
+        assert "error" in result
+        await handlers.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_handle_tool_schema(self, temp_db):
+        handlers = Handlers(
+            storage="sqlite",
+            data_path=temp_db,
+            namespace="default",
+        )
+        result = await handlers.handle_tool(
+            "get_classification_schema",
+            {"format": "json"},
+        )
+        assert result.get("success") is True
+        await handlers.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_handle_tool_status(self, temp_db):
+        handlers = Handlers(
+            storage="sqlite",
+            data_path=temp_db,
+            namespace="default",
+        )
+        result = await handlers.handle_tool("mce_status", {})
+        assert result.get("success") is True
+        await handlers.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_handle_tool_batch(self, temp_db):
+        handlers = Handlers(
+            storage="sqlite",
+            data_path=temp_db,
+            namespace="default",
+        )
+        result = await handlers.handle_tool(
+            "batch_classify",
+            {"messages": [{"message": "I prefer dark mode"}]},
+        )
+        assert result.get("success") is True
+        await handlers.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_handle_tool_forget(self, temp_db):
+        handlers = Handlers(
+            storage="sqlite",
+            data_path=temp_db,
+            namespace="default",
+        )
+        result = await handlers.handle_tool(
+            "forget_memory",
+            {"memory_id": "nonexistent"},
+        )
+        assert result.get("success") is True
+        await handlers.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_handle_tool_declare(self, temp_db):
+        handlers = Handlers(
+            storage="sqlite",
+            data_path=temp_db,
+            namespace="default",
+        )
+        result = await handlers.handle_tool(
+            "declare_preference",
+            {"message": "I prefer dark mode"},
+        )
+        assert result.get("success") is True
+        await handlers.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_handle_tool_profile(self, temp_db):
+        handlers = Handlers(
+            storage="sqlite",
+            data_path=temp_db,
+            namespace="default",
+        )
+        result = await handlers.handle_tool("get_memory_profile", {})
+        assert result.get("success") is True
+        await handlers.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_handle_tool_system_prompt(self, temp_db):
+        handlers = Handlers(
+            storage="sqlite",
+            data_path=temp_db,
+            namespace="default",
+        )
+        result = await handlers.handle_tool("get_system_prompt", {})
+        assert result.get("success") is True
+        await handlers.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_handle_tool_knowledge(self, temp_db):
+        handlers = Handlers(
+            storage="sqlite",
+            data_path=temp_db,
+            namespace="default",
+        )
+        result = await handlers.handle_tool(
+            "index_knowledge",
+            {},
+        )
+        assert result.get("success") is True
+        await handlers.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_handle_tool_recall_from_knowledge(self, temp_db):
+        handlers = Handlers(
+            storage="sqlite",
+            data_path=temp_db,
+            namespace="default",
+        )
+        result = await handlers.handle_tool(
+            "recall_from_knowledge",
+            {"query": "test"},
+        )
+        assert result.get("success") is True
+        await handlers.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_handle_tool_recall_all(self, temp_db):
+        handlers = Handlers(
+            storage="sqlite",
+            data_path=temp_db,
+            namespace="default",
+        )
+        result = await handlers.handle_tool(
+            "recall_all",
+            {"query": "test"},
+        )
+        assert result.get("success") is True
+        await handlers.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_cleanup(self, temp_db):
+        handlers = Handlers(
+            storage="sqlite",
+            data_path=temp_db,
+            namespace="default",
+        )
+        await handlers.cleanup()

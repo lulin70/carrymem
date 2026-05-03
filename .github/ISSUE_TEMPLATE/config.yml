@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/lulin70/carrymem/blob/main/docs/API_REFERENCE.md
+    about: Check the API Reference before asking questions
+  - name: Roadmap
+    url: https://github.com/lulin70/carrymem/blob/main/docs/ROADMAP.md
+    about: See planned features and version timeline

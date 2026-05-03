@@ -1,0 +1,103 @@
+# Cache directories
+.cache/
+.test_cache/
+.test_smart_cache/
+.benchmarks/
+
+# Model downloads (large, ~1GB+)
+models/
+
+# Profiling
+profile.out
+
+# Backups (contain user data)
+*.bak
+backup/
+
+# Virtual environments
+.venv/
+env/
+
+# IDE config
+.vscode/
+.idea/
+.trae/
+
+# Logs
+*.log
+logs/
+src/logs/
+
+# Test artifacts
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+test_results*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Data directories (user data)
+data/
+src/data/
+
+# Python compiled files
+__pycache__/
+*.pyc
+
+# Egg info / build artifacts
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Type checking cache
+.mypy_cache/
+
+# Sensitive: encryption keys
+config/encryption_keys.json
+
+# Development debug files (temporary)
+debug_*.py
+/test_*.py
+verify_*.py
+monkey_patch.py
+simplest_test.py
+ultimate_test.py
+find_crash.py
+inspect_benchmark.py
+final_pipeline_test.py
+run_bench_reload.py
+force_reload.py
+final_verify.py
+
+# Temporary review/walkthrough reports
+CARRYMEM_PROJECT_REVIEW_*.md
+CODE_WALKTHROUGH_ISSUES_*.md
+
+# Benchmark results
+benchmarks/*.json
+mce_bench_*.json
+
+# Demo recordings
+demo/*.cast
+demo/demo.gif
+
+# Image assets (kept locally, not in repo)
+*.jpeg
+*.jpg
+!docs/**/*.jpeg
+!docs/**/*.jpg
+
+# Disabled git directory
+.git_disabled/
+
+# SQLite memory DB artifacts
+:memory:
+:memory:-shm
+:memory:-wal
+
+# Deprecated
+.description

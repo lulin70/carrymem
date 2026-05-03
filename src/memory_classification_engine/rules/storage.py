@@ -1,0 +1,639 @@
+"""
+CarryMem Rules Engine — Data Access Layer (SQLite)
+
+Provides CRUD operations for rules with:
+- SQLite persistence with FTS5 full-text search
+- Thread-safe operations
+- Automatic schema migration
+- Index optimization for performance
+"""
+
+import json
+import logging
+import sqlite3
+import threading
+from typing import List, Optional
+from pathlib import Path
+
+_logger = logging.getLogger(__name__)
+
+from .models import Rule
+from .sanitizer import RuleSanitizer
+
+
+class RuleStorage:
+    """
+    SQLite-backed storage for rules.
+
+    Manages the lifecycle of rule objects in a SQLite database,
+    providing thread-safe CRUD operations and FTS5-based search.
+
+    Usage:
+        storage = RuleStorage("~/.carrymem/memories.db")
+        rule = storage.create(trigger="写报告", action="控制在3页以内", rule_type="format")
+        rules = storage.search("报告")  # FTS5 search
+        storage.delete(rule_id)
+    """
+
+    def __init__(self, db_path: str):
+        """
+        Initialize storage with database connection.
+
+        Args:
+            db_path: Path to the SQLite database file
+        """
+        self.db_path = str(Path(db_path).expanduser().resolve())
+        self._local = threading.local()
+        self._ensure_schema()
+
+    def _get_connection(self) -> sqlite3.Connection:
+        if not hasattr(self._local, 'conn') or self._local.conn is None:
+            conn = sqlite3.connect(self.db_path, timeout=30.0)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA foreign_keys=ON")
+            self._local.conn = conn
+        else:
+            try:
+                self._local.conn.execute("SELECT 1")
+            except Exception:
+                conn = sqlite3.connect(self.db_path, timeout=30.0)
+                conn.row_factory = sqlite3.Row
+                conn.execute("PRAGMA journal_mode=WAL")
+                conn.execute("PRAGMA foreign_keys=ON")
+                self._local.conn = conn
+        return self._local.conn
+
+    def _ensure_schema(self):
+        """Create tables and indexes if they don't exist"""
+        conn = self._get_connection()
+        try:
+            # Main rules table
+            conn.executescript(
+                """
+                CREATE TABLE IF NOT EXISTS rules (
+                    id TEXT PRIMARY KEY,
+
+                    -- Core fields (NOT NULL)
+                    trigger TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    rule_type TEXT NOT NULL CHECK(rule_type IN ('avoid','always','prefer','forbid','format')),
+
+                    -- Metadata (JSON-encoded lists)
+                    source_memories TEXT DEFAULT '[]',
+                    derived_from TEXT NOT NULL DEFAULT 'manual',
+
+                    -- State management
+                    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','paused','deprecated')),
+                    override INTEGER NOT NULL DEFAULT 1,
+                    confidence REAL NOT NULL DEFAULT 0.8,
+                    trigger_count INTEGER NOT NULL DEFAULT 0,
+                    confirmed_by_user INTEGER NOT NULL DEFAULT 1,
+                    scope TEXT NOT NULL DEFAULT 'personal' CHECK(scope IN ('personal','company','negotiated')),
+
+                    -- Timestamps
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+
+                    -- Extension
+                metadata TEXT DEFAULT '{}'
+            );
+            """)
+
+            try:
+                pragma_cursor = conn.execute("PRAGMA table_info(rules)")
+                columns = [row[1] for row in pragma_cursor.fetchall()]
+                if 'expires_at' not in columns:
+                    conn.execute("ALTER TABLE rules ADD COLUMN expires_at TEXT DEFAULT ''")
+                if 'condition' not in columns:
+                    conn.execute("ALTER TABLE rules ADD COLUMN condition TEXT DEFAULT ''")
+            except Exception:
+                pass
+
+            conn.executescript("""
+                CREATE INDEX IF NOT EXISTS idx_rules_status ON rules(status);
+                CREATE INDEX IF NOT EXISTS idx_rules_trigger ON rules(trigger);
+                CREATE INDEX IF NOT EXISTS idx_rules_type ON rules(rule_type);
+                CREATE INDEX IF NOT EXISTS idx_rules_scope ON rules(scope);
+
+                -- Full-text search index for matching
+                CREATE VIRTUAL TABLE IF NOT EXISTS rules_fts USING fts5(
+                    id UNINDEXED,
+                    trigger,
+                    action,
+                    content='rules',
+                    content_rowid='rowid'
+                );
+
+                -- Triggers to keep FTS5 in sync
+                CREATE TRIGGER IF NOT EXISTS rules_ai AFTER INSERT ON rules BEGIN
+                    INSERT INTO rules_fts(rowid, id, trigger, action)
+                    VALUES (new.rowid, new.id, new.trigger, new.action);
+                END;
+
+                CREATE TRIGGER IF NOT EXISTS rules_ad AFTER DELETE ON rules BEGIN
+                    INSERT INTO rules_fts(rules_fts, rowid, id, trigger, action)
+                    VALUES('delete', old.rowid, old.id, old.trigger, old.action);
+                END;
+
+                CREATE TRIGGER IF NOT EXISTS rules_au AFTER UPDATE ON rules BEGIN
+                    INSERT INTO rules_fts(rules_fts, rowid, id, trigger, action)
+                    VALUES('delete', old.rowid, old.id, old.trigger, old.action);
+                    INSERT INTO rules_fts(rowid, id, trigger, action)
+                    VALUES (new.rowid, new.id, new.trigger, new.action);
+                END;
+                """
+            )
+            conn.commit()
+        finally:
+            pass
+
+    def _create_validated(
+        self,
+        trigger: str,
+        action: str,
+        rule_type: str = "avoid",
+        override: bool = True,
+        derived_from: str = "manual",
+        source_memories: Optional[List[str]] = None,
+        **kwargs,
+    ) -> Rule:
+        """
+        Create and store a new rule WITHOUT re-validating.
+
+        Used internally when validation has already been performed
+        by the caller (e.g., RuleEngine.add_rule).
+
+        Args:
+            trigger: Pre-validated trigger string
+            action: Pre-validated action string
+            rule_type: Pre-validated rule type
+            override: If True, AI cannot ignore this rule
+            derived_from: How this rule was created
+            source_memories: IDs of source memories if derived
+            **kwargs: Additional fields
+
+        Returns:
+            Created Rule object
+        """
+        rule = Rule(
+            trigger=trigger,
+            action=action,
+            rule_type=rule_type,
+            override=override,
+            derived_from=derived_from,
+            source_memories=source_memories or [],
+            **kwargs,
+        )
+
+        conn = self._get_connection()
+        try:
+            conn.execute(
+                """
+                INSERT INTO rules (
+                    id, trigger, action, rule_type,
+                    source_memories, derived_from,
+                    status, override, confidence, trigger_count, confirmed_by_user, scope,
+                    created_at, updated_at, expires_at, condition, metadata
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    rule.id,
+                    rule.trigger,
+                    rule.action,
+                    rule.rule_type,
+                    json.dumps(rule.source_memories),
+                    rule.derived_from,
+                    rule.status,
+                    1 if rule.override else 0,
+                    rule.confidence,
+                    rule.trigger_count,
+                    1 if rule.confirmed_by_user else 0,
+                    rule.scope,
+                    rule.created_at,
+                    rule.updated_at,
+                    rule.expires_at,
+                    rule.condition,
+                    json.dumps(rule.metadata),
+                ),
+            )
+            conn.commit()
+        finally:
+            pass
+
+        return rule
+
+    def create(
+        self,
+        trigger: str,
+        action: str,
+        rule_type: str = "avoid",
+        override: bool = True,
+        derived_from: str = "manual",
+        source_memories: Optional[List[str]] = None,
+        **kwargs,
+    ) -> Rule:
+        """
+        Create and store a new rule.
+
+        Args:
+            trigger: Scene description that activates this rule
+            action: Behavioral instruction to execute
+            rule_type: Type of rule (avoid/always/prefer/forbid/format)
+            override: If True, AI cannot ignore this rule
+            derived_from: How this rule was created
+            source_memories: IDs of source memories if derived
+            **kwargs: Additional fields (confidence, metadata, etc.)
+
+        Returns:
+            Created Rule object
+
+        Raises:
+            ValueError: If validation fails
+        """
+        # Validate input through sanitizer
+        trigger = RuleSanitizer.validate_trigger(trigger)
+        action = RuleSanitizer.validate_action(action)
+        RuleSanitizer.validate_rule_type(rule_type)
+
+        # Create rule object
+        rule = Rule(
+            trigger=trigger,
+            action=action,
+            rule_type=rule_type,
+            override=override,
+            derived_from=derived_from,
+            source_memories=source_memories or [],
+            **kwargs,
+        )
+
+        # Insert into database
+        conn = self._get_connection()
+        try:
+            conn.execute(
+                """
+                INSERT INTO rules (
+                    id, trigger, action, rule_type,
+                    source_memories, derived_from,
+                    status, override, confidence, trigger_count, confirmed_by_user, scope,
+                    created_at, updated_at, expires_at, condition, metadata
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    rule.id,
+                    rule.trigger,
+                    rule.action,
+                    rule.rule_type,
+                    json.dumps(rule.source_memories),
+                    rule.derived_from,
+                    rule.status,
+                    1 if rule.override else 0,
+                    rule.confidence,
+                    rule.trigger_count,
+                    1 if rule.confirmed_by_user else 0,
+                    rule.scope,
+                    rule.created_at,
+                    rule.updated_at,
+                    rule.expires_at,
+                    rule.condition,
+                    json.dumps(rule.metadata),
+                ),
+            )
+            conn.commit()
+        finally:
+            pass
+
+        return rule
+
+    def get(self, rule_id: str) -> Optional[Rule]:
+        """
+        Retrieve a rule by ID.
+
+        Args:
+            rule_id: Unique rule identifier
+
+        Returns:
+            Rule object or None if not found
+        """
+        conn = self._get_connection()
+        try:
+            cursor = conn.execute("SELECT * FROM rules WHERE id = ?", (rule_id,))
+            row = cursor.fetchone()
+            if row is None:
+                return None
+            return self._row_to_rule(row)
+        finally:
+            pass
+
+    def list_all(
+        self,
+        status: Optional[str] = None,
+        rule_type: Optional[str] = None,
+        scope: Optional[str] = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> List[Rule]:
+        """
+        List rules with optional filtering.
+
+        Args:
+            status: Filter by status (active/paused/deprecated)
+            rule_type: Filter by type
+            scope: Filter by scope (personal/company/negotiated)
+            limit: Maximum number of results
+            offset: Offset for pagination
+
+        Returns:
+            List of Rule objects
+        """
+        query = "SELECT * FROM rules WHERE 1=1"
+        params = []
+
+        if status:
+            query += " AND status = ?"
+            params.append(status)
+
+        if rule_type:
+            query += " AND rule_type = ?"
+            params.append(rule_type)
+
+        if scope:
+            query += " AND scope = ?"
+            params.append(scope)
+
+        query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+
+        conn = self._get_connection()
+        try:
+            cursor = conn.execute(query, params)
+            rows = cursor.fetchall()
+            return [self._row_to_rule(row) for row in rows]
+        finally:
+            pass
+
+    def search(self, query_text: str, limit: int = 20) -> List[Rule]:
+        conn = self._get_connection()
+        try:
+            cursor = conn.execute(
+                """
+                SELECT r.id, r.trigger, r.action, r.rule_type,
+                       r.source_memories, r.derived_from,
+                       r.status, r.override, r.confidence,
+                       r.trigger_count, r.confirmed_by_user, r.scope,
+                       r.created_at, r.updated_at, r.metadata
+                FROM rules r
+                JOIN rules_fts fts ON r.id = fts.id
+                WHERE fts MATCH ?
+                ORDER BY rank
+                LIMIT ?
+                """,
+                (query_text, limit),
+            )
+            rows = cursor.fetchall()
+            return [self._row_to_rule(row) for row in rows]
+        except sqlite3.OperationalError as e:
+            _logger.warning(f"FTS5 search failed ({e}), falling back to LIKE")
+            return self._fallback_search(query_text, limit)
+        finally:
+            pass
+
+    def search_with_rank(self, query_text: str, limit: int = 20) -> List[tuple]:
+        conn = self._get_connection()
+        try:
+            cursor = conn.execute(
+                """
+                SELECT r.id, r.trigger, r.action, r.rule_type,
+                       r.source_memories, r.derived_from,
+                       r.status, r.override, r.confidence,
+                       r.trigger_count, r.confirmed_by_user, r.scope,
+                       r.created_at, r.updated_at, r.metadata,
+                       -fts.rank as rank_score
+                FROM rules r
+                JOIN rules_fts fts ON r.id = fts.id
+                WHERE fts MATCH ?
+                ORDER BY rank
+                LIMIT ?
+                """,
+                (query_text, limit),
+            )
+            rows = cursor.fetchall()
+            results = []
+            for row in rows:
+                rule = self._row_to_rule(row[:15])
+                rank_score = row[15] if len(row) > 15 else 0.0
+                results.append((rule, rank_score))
+            return results
+        except sqlite3.OperationalError as e:
+            _logger.warning(f"FTS5 search_with_rank failed ({e}), falling back")
+            rules = self._fallback_search(query_text, limit)
+            return [(r, 0.0) for r in rules]
+        finally:
+            pass
+
+    def _fallback_search(self, query_text: str, limit: int) -> List[Rule]:
+        """Fallback to LIKE-based search if FTS5 fails"""
+        conn = self._get_connection()
+        try:
+            escaped = query_text.replace("%", "\\%").replace("_", "\\_")
+            like_pattern = f"%{escaped}%"
+            cursor = conn.execute(
+                """
+                SELECT * FROM rules
+                WHERE trigger LIKE ? ESCAPE '\\' OR action LIKE ? ESCAPE '\\'
+                ORDER BY updated_at DESC
+                LIMIT ?
+                """,
+                (like_pattern, like_pattern, limit),
+            )
+            rows = cursor.fetchall()
+            return [self._row_to_rule(row) for row in rows]
+        finally:
+            pass
+
+    def update(self, rule_id: str, **updates) -> Optional[Rule]:
+        """
+        Update an existing rule.
+
+        Args:
+            rule_id: ID of rule to update
+            **updates: Fields to update (trigger, action, status, etc.)
+
+        Returns:
+            Updated Rule object or None if not found
+
+        Raises:
+            ValueError: If validation fails for updated fields
+        """
+        # Get existing rule
+        existing = self.get(rule_id)
+        if existing is None:
+            return None
+
+        set_clauses = []
+        params = []
+        allowed_fields = {
+            "trigger": "trigger",
+            "action": "action",
+            "rule_type": "rule_type",
+            "status": "status",
+            "override": "override",
+            "confidence": "confidence",
+            "metadata": "metadata",
+            "source_memories": "source_memories",
+            "scope": "scope",
+            "expires_at": "expires_at",
+            "condition": "condition",
+        }
+
+        for field, col_name in allowed_fields.items():
+            if field in updates:
+                value = updates[field]
+                if field in ("metadata", "source_memories"):
+                    value = json.dumps(value)
+                elif field == "override":
+                    value = 1 if value else 0
+                set_clauses.append(f"{col_name} = ?")
+                params.append(value)
+
+        if not set_clauses:
+            return existing
+
+        # Always update timestamp
+        from datetime import datetime, timezone
+
+        set_clauses.append("updated_at = ?")
+        params.append(datetime.now(timezone.utc).isoformat())
+        params.append(rule_id)
+
+        conn = self._get_connection()
+        try:
+            conn.execute(
+                f"UPDATE rules SET {', '.join(set_clauses)} WHERE id = ?", params
+            )
+            conn.commit()
+        finally:
+            pass
+
+        return self.get(rule_id)
+
+    def delete(self, rule_id: str) -> bool:
+        """
+        Delete a rule by ID.
+
+        Args:
+            rule_id: ID of rule to delete
+
+        Returns:
+            True if deleted, False if not found
+        """
+        conn = self._get_connection()
+        try:
+            cursor = conn.execute("DELETE FROM rules WHERE id = ?", (rule_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+        finally:
+            pass
+
+    def count(self, status: Optional[str] = None) -> int:
+        """
+        Count total rules, optionally filtered by status.
+
+        Args:
+            status: Filter by status
+
+        Returns:
+            Count of rules
+        """
+        conn = self._get_connection()
+        try:
+            if status:
+                cursor = conn.execute(
+                    "SELECT COUNT(*) FROM rules WHERE status = ?", (status,)
+                )
+            else:
+                cursor = conn.execute("SELECT COUNT(*) FROM rules")
+            return cursor.fetchone()[0]
+        finally:
+            pass
+
+    def get_active_global_rules(self) -> List[Rule]:
+        """
+        Get all active global rules (trigger="*").
+
+        Returns:
+            List of active global rules
+        """
+        all_active = self.list_all(status="active", limit=1000)
+        return [r for r in all_active if r.trigger == "*"]
+
+    def increment_trigger_count(self, rule_id: str) -> bool:
+        """
+        Atomically increment the trigger_count of a rule.
+
+        Uses a single UPDATE statement for atomicity — no read-then-write race.
+
+        Args:
+            rule_id: ID of rule to increment
+
+        Returns:
+            True if rule was found and updated, False otherwise
+        """
+        from datetime import datetime, timezone
+
+        conn = self._get_connection()
+        try:
+            cursor = conn.execute(
+                """
+                UPDATE rules
+                SET trigger_count = trigger_count + 1,
+                    updated_at = ?
+                WHERE id = ?
+                """,
+                (datetime.now(timezone.utc).isoformat(), rule_id),
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+        finally:
+            pass
+
+    def batch_increment_trigger_counts(self, rule_ids: List[str]) -> int:
+        """
+        Atomically increment trigger_count for multiple rules.
+
+        Args:
+            rule_ids: List of rule IDs to increment
+
+        Returns:
+            Number of rules successfully updated
+        """
+        if not rule_ids:
+            return 0
+
+        from datetime import datetime, timezone
+
+        now = datetime.now(timezone.utc).isoformat()
+        updated = 0
+
+        conn = self._get_connection()
+        try:
+            for rule_id in rule_ids:
+                cursor = conn.execute(
+                    """
+                    UPDATE rules
+                    SET trigger_count = trigger_count + 1,
+                        updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (now, rule_id),
+                )
+                updated += cursor.rowcount
+            conn.commit()
+        finally:
+            pass
+
+        return updated
+
+    def _row_to_rule(self, sqlite3_row) -> Rule:
+        """Convert SQLite Row object to Rule dataclass"""
+        return Rule.from_dict(dict(sqlite3_row))

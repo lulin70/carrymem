@@ -1,0 +1,472 @@
+# CarryMem Product Roadmap
+
+**Last Updated**: 2026-05-02
+**Product Positioning**: AI Identity Layer — Memory + Rules + Knowledge
+**Version Scheme**: v0.2.x (Rules Engine) → v0.3.0 (GA) → v0.4.0 (Enterprise) → v0.4.1 (Core Loop Fix)
+
+---
+
+## Version Strategy
+
+```
+v0.2.0 ─── Design Baseline (Memory Foundation + Rules Design Docs)
+  │
+  ├── v0.2.1  Rules Engine Alpha   (Manual CRUD + FTS5 Match + Security) ✅
+  ├── v0.2.2  Rules Engine Alpha+  (Performance + Conflict Detection)    ✅
+  ├── v0.2.3  Rules Engine Alpha+  (Export/Import + Interactive CLI)     ✅
+  ├── v0.2.4  Scene Detection      (Pattern Recognition from Memories)   ✅
+  ├── v0.2.5  Auto-Promotion       (Memory → Rule Candidate Generation)  ✅
+  ├── v0.2.6  Experience Learning   (Failure → Avoidance Rules)          ✅
+  ├── v0.2.7  Q&A Refinement       (Multi-turn Rule Abstraction)         ✅
+  ├── v0.2.8  Rules Engine Beta    (Context Engineering + Hardened)      ✅
+  │
+  ├── v0.3.0  GA Release           (Production Ready + Knowledge Adapter) ✅
+  ├── v0.4.0  Enterprise           (Scopes + Skill + Merge + VS Code)     ✅
+  └── v0.4.1  Core Loop Fix        (Auto Rule Suggestion + Security)      ✅
+```
+
+**Versioning Rules**:
+- Third digit changes for incremental updates within a phase
+- Second digit changes for GA milestones (API stability guarantee)
+- No "v1.0.0 jump" — earn it through proven production usage
+
+---
+
+## Product Vision
+
+### Three-Layer Identity Architecture
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    CarryMem Identity Layer                │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  Layer 3: Rules (HOW to act)        ← v0.2.x DONE       │
+│  ┌──────────────────────────────────────────────────┐    │
+│  │  "When X happens, do Y"                          │    │
+│  │  • Manual rules (v0.2.1)                         │    │
+│  │  • Auto-promoted from patterns (v0.2.5)          │    │
+│  │  • Learned from failures (v0.2.6)                │    │
+│  │  • Refined through dialogue (v0.2.7)             │    │
+│  │  • Context-anchored injection (v0.2.8)           │    │
+│  └──────────────────────────────────────────────────┘    │
+│              ↑ reads from          ↑ injects into         │
+│  Layer 2: Memory (WHO you are)     ← v0.2.0 STABLE       │
+│  ┌──────────────────────────────────────────────────┐    │
+│  │  "You prefer X, decided Y, corrected Z"          │    │
+│  │  • 7 memory types + 4-tier hierarchy             │    │
+│  │  • Cross-language semantic recall (FTS5)          │    │
+│  │  • 2056 tests passing, 79% coverage              │    │
+│  └──────────────────────────────────────────────────┘    │
+│              ↑ reads from          ↑ injects into         │
+│  Layer 1: Knowledge (WHAT you know) ← v0.3.0 PLANNED     │
+│  ┌──────────────────────────────────────────────────┐    │
+│  │  "Your Obsidian vault, your docs, your notes"    │    │
+│  │  • Obsidian Markdown adapter (existing)          │    │
+│  │  • Memory + Knowledge joint retrieval            │    │
+│  └──────────────────────────────────────────────────┘    │
+│                                                          │
+│  Retrieval Priority: Rules(override) > Memory > Knowledge │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+```
+
+### The Key Distinction
+
+| Layer | Answers | Form | Trigger | Example |
+|-------|---------|------|---------|---------|
+| **Memory** | "Who are you?" | Declarative | Passive (context-relevant) | "I prefer PostgreSQL" |
+| **Rules** | "How do you act?" | Conditional → Action | Active (scene-matched) | "When choosing DB, use PostgreSQL" |
+| **Knowledge** | "What do you know?" | Reference | On-demand (retrieved) | "PostgreSQL vs MySQL comparison" |
+
+---
+
+## Context Engineering Insights (NEW — v0.2.8)
+
+### Lost-in-the-Middle Effect on Rule Injection
+
+LLM attention follows a U-curve: **high at start and end, low in the middle** (10-40% recall drop). This directly impacts rule injection reliability.
+
+**Current Problem** (v0.2.1-v0.2.7):
+```
+## Personal Rules (from CarryMem)
+Rule A (relevance=0.92, override=true)   ← Start: high attention
+Rule B (relevance=0.88, override=false)  ← Middle: attention collapse
+Rule C (relevance=0.85, override=true)   ← Middle: MOST IMPORTANT rule ignored!
+Rule D (relevance=0.80, avoid)           ← End: secondary attention
+```
+
+**v0.2.8 Solution**: Anchored layout mode
+```
+## Personal Rules (from CarryMem)
+
+### Absolute Prohibitions (never violate)
+- [forbid] Never cite competitor data without verification     ← HEAD ANCHOR
+
+### Recommended
+- [always] Confirm inventory by phone for Hamburg warehouse
+- [avoid] Prefer domestic warehouses for cross-border transfers
+
+### Mandatory Actions (never skip)
+- [always] All external quotes must include validity period     ← TAIL ANCHOR
+```
+
+### Context Budget Monitoring
+
+When rule injection exceeds 70% of context window, auto-compress:
+- Priority: keep override=true rules, compress avoid rules to summaries
+- Over threshold: one-line summaries per rule, no source attribution
+
+### DDD Language View
+
+CarryMem concepts map to DDD concepts, enabling enterprise architect dialogue:
+
+| CarryMem | DDD | Relationship |
+|----------|-----|-------------|
+| trigger | Bounded Context | Scope definition |
+| rule_type (forbid/avoid/always) | Aggregate Consistency Constraint | Invariant ≈ forbid, Guarantee ≈ always |
+| override | Invariant | Cannot be overridden by higher priority |
+| source_memories | Event Sourcing Chain | Rule traceable to originating experience |
+| refine process | Ubiquitous Language Refinement | Specific → General abstraction |
+
+Implementation: `style="ddd"` parameter in `format_rules_as_prompt()`, display-only, no storage change.
+
+---
+
+## Milestone Plan
+
+### ✅ v0.2.1 — v0.2.4 (DONE)
+
+See CHANGELOG.md for detailed history.
+
+---
+
+### ✅ v0.2.5 — Auto-Promotion (DONE)
+
+**Implemented Features**:
+- [x] PromotionPipeline: 5-stage pipeline (Collect→Detect→Generate→Queue→Confirm)
+- [x] Audit trail: `promotion_audit` table with full action logging
+- [x] CLI: `promote-rules`, `review-promotions`, `promotion-log`
+- [x] Queue size limit (50), configurable expiry (7 days)
+- [x] `_count_pending()` efficient COUNT query
+
+---
+
+### ✅ v0.2.6 — Experience Learning (DONE)
+
+**Implemented Features**:
+- [x] FailureExperienceExtractor: 5 signal types (mistake/regret/negative_outcome/lesson_learned/correction_from_failure)
+- [x] Bilingual pattern matching (EN + ZH)
+- [x] ExperienceRuleBridge: confirmation workflow with `experience_audit` table
+- [x] Domain inference: 7 domains
+- [x] CLI: `learn-experience`, `review-lessons`, `lesson-log`
+
+---
+
+### ✅ v0.2.7 — Q&A Refinement (DONE)
+
+**Implemented Features**:
+- [x] RuleRefiner: 4-phase refinement (Scope→Generality→Exception→Confirm)
+- [x] Specificity analysis: detect project/tool/time-specific rules
+- [x] RefinementSessionManager: session persistence + conversation tracking
+- [x] CLI: `refine-rule`, `refinement-sessions`
+- [x] Max 5 rounds, auto-forced confirm
+
+---
+
+### ✅ v0.2.8 — Rules Engine Beta (Context Engineering + Hardened)
+
+**Theme**: Production hardening + Context engineering optimization
+**LLM Dependency**: None (core features work without)
+
+**P0 — Context Engineering (from optimization memo)**:
+- [x] `format_rules_as_prompt()` anchored layout mode
+  - Head anchor: override=true + forbid rules
+  - Middle: normal rules by relevance
+  - Tail anchor: override=true + always rules
+- [x] `format_rules_as_prompt()` style="ddd" output
+  - DDD terminology: "Personal Context → Invariant/Consistency/Soft Constraint"
+  - Display-only, no storage layer change
+
+**P1 — Production Hardening**:
+- [x] Context budget monitoring (token-aware compression)
+- [x] Test coverage ≥ 80% (current: 80.70%, up from 68.61%)
+- [x] CLI coverage ≥ 70% (current: ~77%)
+- [x] Security audit: review all input paths (InputValidator integrated into CLI/MCP/import)
+- [x] API stability guarantee (no breaking changes in v0.3.x) — see API_STABILITY.md
+- [x] `carrymem doctor` comprehensive health check (14 checks + JSON output + --fix)
+- [x] Documentation complete (API_REFERENCE synchronized to v0.2.8)
+
+**P2 — Quality Improvements**:
+- [ ] source_memories confidence status (active/overridden/superseded)
+- [ ] Rule effectiveness metrics (trigger count, user satisfaction)
+
+---
+
+### 🎉 v0.3.0 — GA Release (Production Ready) ✅ **DONE**
+
+**Theme**: First production-ready release with Knowledge Adapter
+**LLM Dependency**: Optional (core works without)
+
+**P0 — Knowledge Adapter Enhancement**:
+- [x] ObsidianAdapter CJK full-text search upgrade
+  - Replace `unicode61` tokenizer with `trigram` for CJK character-level matching
+  - Content truncation: 500 → configurable (default 2000 chars, full via `full_content=True`)
+  - Auto-migration from `unicode61` → `trigram` on existing databases
+- [x] Knowledge relevance scoring
+  - Score based on: FTS5 rank (60%) + tag overlap (25%) + wiki-link proximity (15%)
+  - `relevance_score` field in recall results
+- [x] Knowledge + Rules + Memory three-layer retrieval orchestration
+  - Retrieval priority: Rules(override) > Memory > Knowledge
+  - `build_context()` unified budget allocation: Rules 30% / Memory 45% / Knowledge 25%
+  - `build_system_prompt()` structured output: Rules → Memory → Knowledge
+  - `recall_all()` now includes `rules` layer with `include_rules=True`
+
+**P1 — Production Hardening (from v0.2.8 P2)**:
+- [x] `trigger_count` activation — wire `increment_trigger_count()` into `RuleEngine.match()`
+  - `RuleStorage.increment_trigger_count(rule_id)` for atomic DB update
+  - `batch_increment_trigger_counts()` for multi-rule efficiency
+  - Frequency bonus in matcher now functional
+- [x] Rule effectiveness metrics
+  - `engine.get_effectiveness_report()` — trigger stats, confidence distribution, override usage
+  - Type breakdown, derivation sources, top-triggered/never-triggered lists
+- [x] source_memories confidence status
+  - `validate_source_memories(rule_id)` — check if source memories still exist
+  - Status tracking: active / deleted / superseded
+  - Auto-calculated confidence adjustment penalty
+
+**P2 — API Stability & Governance**:
+- [x] Promote Rules Engine API from Experimental → Stable
+  - `RuleEngine` CRUD + match + inject: `@stable`
+  - Promotion/Refinement/Experience: remain `@experimental`
+- [x] TypedDict return types for Stable APIs (dict-compatible)
+- [x] Community governance: CONTRIBUTING.md, issue templates, PR checklist
+
+**Existing Foundation** (already working):
+- ObsidianAdapter: read-only FTS5 index + search + wiki-link + frontmatter ✅
+- `recall_all()`: memory + knowledge unified retrieval ✅
+- `build_context()` / `build_system_prompt()`: knowledge injection ✅
+- DevSquadAdapter: Protocol-based integration ✅
+- API_STABILITY.md: Stable/Experimental/Internal tiers ✅
+
+---
+
+## v0.4.0 Enterprise Features — DONE ✅
+
+### v0.4.0 — Enterprise Features
+
+**Theme**: Multi-scope rules, portable Skill format, editor integration
+**Prerequisite**: v0.3.0 GA release
+
+**P0 — Rule Scope Dimension**:
+- [x] Rule model: add `scope` field (`personal` / `company` / `negotiated`)
+  - `RuleScope` enum: personal (user-created), company (org-mandated), negotiated (user-adapted from company)
+  - Default: `personal` (backward-compatible)
+  - Storage: new `scope` column in SQLite rules table
+  - Migration: existing rules default to `personal`
+- [x] Scope-aware matching and injection
+  - `RuleEngine.match()` accepts `scopes` filter (default: all)
+  - `RuleInjector` annotates output with scope labels
+  - Priority: `company(override) > negotiated > personal` when conflicts arise
+- [x] Scope-aware CRUD
+  - `add_rule(scope="personal")` — default
+  - `list_rules(scope="company")` — filter by scope
+  - Company rules: immutable by non-admin users (enforced at adapter layer)
+
+**P1 — Rule Skill Format**:
+- [x] Skill manifest specification (`carrymem-skill-v1`)
+  - Metadata: name, author, version, description, dependencies, scope
+  - Structure: rules + templates + config in single JSON bundle
+  - Signature: content hash for integrity verification
+- [x] Skill CLI commands
+  - `carrymem skill-pack <path>` — export rules as Skill bundle
+  - `carrymem skill-install <path>` — import Skill with scope assignment
+  - `carrymem skill-verify <path>` — verify Skill integrity
+- [x] Skill export/import upgrade
+  - Extend existing `export_rules()` / `import_rules()` to Skill format
+  - Backward-compatible: `carrymem-rules-v1` still supported for import
+
+**P2 — Rule Merge Protocol ("Customs Clearance")**:
+- [x] Scope-aware merge engine
+  - `RuleMergeEngine` with strategies: `company_overrides`, `negotiate`, `keep_both`
+  - Conflict detection: company rule vs personal rule on same trigger
+  - Auto-negotiation: personal rule adjusted to not violate company constraints
+- [x] "Customs clearance" flow
+  - When company rules enter personal space: review → adapt → confirm
+  - `engine.review_incoming_rules(rules, scope="company")` — preview conflicts
+  - `engine.accept_rules(rule_ids, merge_strategy="negotiate")` — accept with adaptation
+- [x] Merge audit trail
+  - All merge decisions logged with reason, timestamp, original values
+
+**P3 — VS Code Extension (stretch goal)**:
+- [x] Extension scaffold (TypeScript)
+  - Webview rule editor panel
+  - Sidebar: rule list with scope badges
+  - Commands: add/edit/delete/toggle rule
+- [x] Backend communication via CarryMem CLI
+  - CarryMemClient: subprocess-based communication
+  - All CRUD + match + effectiveness + skill operations
+- [x] Inline rule suggestions
+  - On command: match rules to current file type/context
+  - QuickPick with matched rules and scores
+
+**Existing Foundation** (already working):
+- `export_rules()` / `import_rules()` with 3 conflict modes ✅
+- Rule templates (10 predefined) ✅
+- Memory namespace isolation (reusable pattern) ✅
+- `validate_namespace()` (reusable for scope validation) ✅
+- Rule conflict detector (detect-only, extensible) ✅
+- MCP HTTP Server (reusable for VS Code backend) ✅
+
+### v0.4.1 — Core Loop Fix (Product初心 Review)
+
+**Theme**: Fix the broken core loop — memory→rule→injection pipeline
+**Prerequisite**: v0.4.0 enterprise features
+
+**P0 — Core Loop Repair** (product from unusable → usable):
+- [x] `_auto_suggest_rules()` implementation — memory→rule candidate generation
+  - PatternDetector + CandidateRuleGenerator integration
+  - Trigger extraction from natural language (tech keyword detection)
+  - Rule type inference from memory type (correction→avoid, decision→always)
+- [x] MCP rule tools target fix — shared RuleEngine instance
+  - Handlers init creates shared RuleEngine with correct db_path
+  - Rule tools target changed from None to self._rule_engine
+- [x] `get_system_prompt` auto-inject without context
+  - No-context path lists all active rules and formats them
+  - Global rules always injected into AI prompt
+- [x] User management MCP tools: `my_rules`, `delete_rule`
+- [x] Rule injection security filter — INJECTION_DANGER_PATTERNS regex
+- [x] Natural conversation preference extraction tests (23 cases)
+- [x] E2E user journey tests (conversation→store→rule→inject→verify)
+
+**P1 — Experience Optimization** (product from usable → good):
+- [x] Correction auto-updates old memories/rules (`_handle_correction`)
+- [x] `update_rule` MCP tool
+- [x] `my_profile` MCP tool — complete user identity view
+- [x] `onboard` MCP tool — first-time user guidance (EN/ZH/JA)
+- [x] Rule application feedback — `applied_rules` field in build_context
+- [x] Rule conflict detection on add_rule — `_conflict_warnings`
+- [x] FTS5 rank score optimization — `search_with_rank()` method
+- [x] MCP config auto-inject settings — `CARRYMEM_AUTO_INJECT` env var
+
+**P2 — Smart Enhancement** (product from good → smart):
+- [x] Rule expiry mechanism — `expires_at` field + `is_expired()` method
+- [x] CLI rule management enhancement — `--format table/compact/detail`
+- [x] `carrymem doctor` enhancement — rules engine + auto-inject checks
+- [x] Chinese tokenization optimization (jieba) — jieba segmentation with n-gram fallback
+- [x] Conditional preference support — `condition` field for if-then rules
+- [x] Implicit preference inference — `_detect_implicit_preferences()` from memory patterns
+
+**MCP Tools** (16 → 22):
+- Core: classify_message, get_classification_schema, batch_classify, mce_status
+- Storage: classify_and_remember, recall_memories, forget_memory
+- Knowledge: index_knowledge, recall_from_knowledge, recall_all
+- Profile: declare_preference, get_memory_profile
+- Prompt: get_system_prompt
+- Rules: add_rule, list_rules, match_rules, inject_rules
+- **New**: my_rules, delete_rule, suggest_rules, promote_rules, update_rule, my_profile, onboard
+
+### v0.5.0 — Intelligence Enhancement
+- Vector-based semantic matching (optional embedding model)
+- Rule recommendation engine
+- Cross-user rule sharing (with anonymization)
+- Ontology-based trigger matching
+
+### v1.0.0 — Autonomous Identity
+- Fully automatic rule learning
+- Predictive rule suggestion
+- Multi-agent coordination
+- Identity portability standard
+
+---
+
+## Test Coverage Progress
+
+| Version | Total Tests | Coverage | Key Addition |
+|---------|-------------|----------|--------------|
+| v0.2.0 | 490 | 57.6% | Memory layer |
+| v0.2.1 | 600+ | ~63% | +110 rules tests |
+| v0.2.4 | 718 | ~76% | +pattern detection |
+| v0.2.5 | 746 | ~77% | +auto-promotion |
+| v0.2.6 | 793 | ~59% | +experience learning (new modules lower %) |
+| v0.2.7 | 884 | ~68% | +Q&A refinement + cleanup |
+| **v0.2.8** | **1709** | **~81%** | **+Anchored injection +DDD view +coverage 80%+ +security audit +API stability +doctor** |
+| v0.2.9 | 1800+ | ~82% | +DevSquad integration adapter |
+| **v0.3.0** | **1900+** | **~85%** | **+Knowledge CJK +relevance scoring +trigger_count activation +effectiveness metrics** |
+| **v0.4.0** | **1814** | **~77%** | **+Rule Scopes +Skill Format +Merge Protocol +VS Code Extension** |
+| **v0.4.1** | **2056** | **79%** | **+Core Loop Fix +Auto Rule Suggestion +Security +Connection Pooling** |
+
+---
+
+## Security Strategy (Defense in Depth)
+
+### Layer 1: Input Validation (v0.2.1 ✅)
+- Prompt injection pattern detection (10+ patterns)
+- SQL injection character blocking
+- Template injection prevention
+- HTML/XSS tag stripping
+- Length limits (trigger: 200, action: 500)
+
+### Layer 2: Usage Limits (v0.2.1 ✅)
+- Global rule cap: max 3 trigger="*"
+- Total rule cap: max 200
+- Rate limiting: 20/hr, 50/day
+
+### Layer 3: Auto-Promotion Safety (v0.2.5 ✅)
+- Auto-promotion requires explicit user action
+- All auto-generated rules start as `override=false`
+- Unconfirmed candidates expire after 7 days
+- Queue size limit (50 pending)
+
+### Layer 4: Experience Learning Safety (v0.2.6 ✅)
+- Duplicate memory detection (skip already-processed)
+- Sanitizer validates all extracted triggers/actions
+- Audit trail for all experience→rule actions
+
+### Layer 5: Refinement Safety (v0.2.7 ✅)
+- Max 5 rounds per session
+- Session expiry (7 days)
+- All refined rules go through sanitizer
+
+### Layer 6: Context Engineering Safety (v0.2.8 ✅)
+- Context budget monitoring prevents prompt overflow
+- Anchored layout ensures critical rules are never lost-in-middle
+- Compression strategy preserves override=true rules
+
+### Layer 7: Knowledge Injection Safety (v0.3.0 PLANNED)
+- Knowledge content length limits before injection
+- Source vault path validation (no path traversal)
+- Knowledge recall results sanitized through InputValidator
+
+---
+
+## Priority Matrix
+
+| Feature | Impact | Effort | Priority | Version |
+|---------|--------|--------|----------|---------|
+| **Anchored layout mode** | **Critical** | **Low** | **P0** | **v0.2.8 ✅** |
+| **DDD style output** | **High** | **Low** | **P0** | **v0.2.8 ✅** |
+| **Context budget monitoring** | **High** | **Medium** | **P1** | **v0.2.8 ✅** |
+| **Test coverage ≥ 80%** | **High** | **Medium** | **P1** | **v0.2.8 ✅** |
+| **Obsidian CJK trigram search** | **High** | **Low** | **P0** | **v0.3.0** |
+| **Knowledge relevance scoring** | **High** | **Medium** | **P0** | **v0.3.0** |
+| **Three-layer retrieval orchestration** | **Critical** | **Medium** | **P0** | **v0.3.0** |
+| **trigger_count activation** | **High** | **Low** | **P1** | **v0.3.0** |
+| **Rule effectiveness metrics** | **Medium** | **Medium** | **P1** | **v0.3.0** |
+| **source_memories confidence** | **Medium** | **Medium** | **P1** | **v0.3.0** |
+| **Rules API Stable promotion** | **High** | **Low** | **P2** | **v0.3.0 ✅** |
+| **TypedDict return types** | **Medium** | **Medium** | **P2** | **v0.3.0 ✅** |
+| **Rule scope dimension** | **Critical** | **Medium** | **P0** | **v0.4.0** |
+| **Scope-aware matching/injection** | **High** | **Medium** | **P0** | **v0.4.0** |
+| **Skill manifest specification** | **High** | **Medium** | **P1** | **v0.4.0** |
+| **Skill CLI commands** | **Medium** | **Medium** | **P1** | **v0.4.0** |
+| **Rule merge protocol** | **High** | **High** | **P2** | **v0.4.0** |
+| **VS Code extension** | **Medium** | **High** | **P3** | **v0.4.0** |
+| **Ontology trigger matching** | **Medium** | **High** | **P3** | **v0.5.0** |
+
+---
+
+**Last Updated**: 2026-05-02
+**Maintainer**: CarryMem Team
+**Next Milestone**: v0.5.0 Intelligence Enhancement (Auto-tuning + Cross-scope Learning)
+**Status**: ✅ **v0.4.1 complete (2056 tests, 79% coverage)**

@@ -1,0 +1,5 @@
+src/**
+tsconfig.json
+.vscode/**
+.vscode-test/**
+resources/icon.svg

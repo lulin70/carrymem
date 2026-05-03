@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+"""CarryMem CLI entry point.
+
+This script ensures the 'carrymem' command works regardless of
+whether the pip-installed script is on PATH.
+"""
+import sys
+
+
+def main():
+    try:
+        from memory_classification_engine.cli import main as cli_main
+    except ImportError as e:
+        if 'memory_classification_engine' not in str(e):
+            raise
+        print("Error: CarryMem is not installed.")
+        print("Install with: pip install carrymem")
+        print("Or: pip install -e .")
+        sys.exit(1)
+    cli_main()
+
+
+if __name__ == "__main__":
+    main()
