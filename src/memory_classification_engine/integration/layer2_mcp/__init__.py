@@ -20,14 +20,19 @@ from .handlers import Handlers
 from memory_classification_engine.__version__ import __version__
 
 
+import threading as _threading
+
 _cm_instance = None
+_cm_lock = _threading.Lock()
 
 
 def _get_carrymem():
     global _cm_instance
     if _cm_instance is None:
-        from memory_classification_engine import CarryMem
-        _cm_instance = CarryMem()
+        with _cm_lock:
+            if _cm_instance is None:
+                from memory_classification_engine import CarryMem
+                _cm_instance = CarryMem()
     return _cm_instance
 
 

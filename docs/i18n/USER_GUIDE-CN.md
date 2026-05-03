@@ -229,7 +229,7 @@ print(f"已替换：{result['replaced_count']}")
 ### 安装
 
 1. 打开 VS Code
-2. 从 VSIX 安装：`code --install-extension vscode-carrymem-0.4.0.vsix`
+2. 从 VSIX 安装：`code --install-extension vscode-carrymem-0.1.5.vsix`
 3. 或在扩展目录中按 F5 以调试模式运行
 
 ### 功能

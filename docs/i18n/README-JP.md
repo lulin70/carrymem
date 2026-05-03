@@ -90,7 +90,7 @@ python3 -m memory_classification_engine.cli version
 
 ### 5 行で始める
 
-> ⚠️ **パッケージ名とインポート名**: `pip install carrymem` でインストール、`from memory_classification_engine import CarryMem` または `from carrymem import CarryMem`（v0.4.2+）でインポート。v1.0.0 で統一予定。
+> ⚠️ **パッケージ名とインポート名**: `pip install carrymem` でインストール、`from memory_classification_engine import CarryMem` または `from carrymem import CarryMem` でインポート。v1.0.0 で統一予定。
 
 ```python
 from memory_classification_engine import CarryMem
@@ -125,7 +125,7 @@ carrymem tui                            # ターミナル UI
 carrymem export backup.json             # 全メモリをエクスポート
 carrymem import backup.json             # メモリをインポート
 carrymem version                        # バージョン表示
-# v0.4.0 ルールエンジンコマンド
+# ルールエンジンコマンド
 carrymem add-rule "データベース" "常にSSLを使用" --scope company   # ルール追加
 carrymem list-rules --scope company                            # 会社ルール一覧
 carrymem skill-pack rules.json --name team-conventions         # Skill としてパック
@@ -219,7 +219,7 @@ carrymem setup-mcp --tool all
 
 12のMCPツール：コア(3) · ストレージ(3) · ナレッジ(3) · プロファイル(2) · プロンプト(1)
 
-### 8. ルールエンジンとスコープ（v0.4.0）
+### 8. ルールエンジンとスコープ
 
 行動ルールは3つのスコープレベルをサポートし、チーム/組織のアラインメントを実現：
 
@@ -244,7 +244,7 @@ results = engine.match("データベース設計", scopes=["company"])
 | `negotiated` | 2 | 会社ルールから適応 |
 | `personal` | 1（最低） | ユーザーの好み |
 
-### 9. Skill フォーマット — ポータブルルールバンドル（v0.4.0）
+### 9. Skill フォーマット — ポータブルルールバンドル
 
 暗号整合性検証付きでチーム間ルールセットを共有：
 
@@ -265,7 +265,7 @@ assert result["valid"] is True
 engine.skill_install(bundle, scope_override="company", mode="skip")
 ```
 
-### 10. マージプロトコル — 競合解決（v0.4.0）
+### 10. マージプロトコル — 競合解決
 
 異なるソースからのルールを3つの戦略でマージ：
 
@@ -275,7 +275,7 @@ engine.skill_install(bundle, scope_override="company", mode="skip")
 | `negotiate` | 競合ルールを "negotiated" スコープに適応 |
 | `keep_both` | 両方のルールを保持、ユーザーが手動レビュー |
 
-### 11. VS Code 拡張機能（v0.4.0）
+### 11. VS Code 拡張機能
 
 エディタ内でルールを直接管理：
 
@@ -315,7 +315,7 @@ carrymem tui
 | **5行統合** | ✅ | ⚠️ SDK必要 | ❌ | ❌ |
 | **多言語検索** | ✅ 日/中/英 | ❌ | ❌ | ❌ |
 
-> **注**：比較は v0.4.0 の公開情報に基づきます。製品は急速に進化するため、最新機能をご確認ください。
+> **注**：比較は公開情報に基づきます。製品は急速に進化するため、最新機能をご確認ください。
 
 **核心の違い**：他の製品は*あなたが読んだもの*を保存します。CarryMem は*あなたが誰であるか*を保存します。
 
@@ -349,12 +349,12 @@ carrymem tui
 
 ## プロジェクトステータス
 
-**現在のバージョン**: v0.4.2
+**現在のバージョン**: v0.1.5
 **テスト**: 2043/2043 通過
 **カバレッジ**: ~78%
 
 **チェンジログ**:
-- **v0.4.2**: UX改善 — CLI修正、ルール提案品質、インポート互換、チュートリアル、トラブルシューティング
+- **v0.1.5**: バージョンリセット — セキュリティ強化（FTS5サニタイズ、パス検証、ルールコンテンツフィルタリング）、スレッドセーフ、ドキュメント整理、テストクリーンアップ
 - **v0.4.1**: コアループ修正 — 自動ルール提案、MCP ルールツール、プロンプト注入防御、コネクションプーリング
 - **v0.4.0**: エンタープライズ機能 — ルールスコープ、Skill フォーマット（SHA-256）、マージプロトコル、VS Code 拡張
 - **v0.3.0**: GA リリース — ナレッジアダプター、有効性レポート、コンテキストエンジニアリング

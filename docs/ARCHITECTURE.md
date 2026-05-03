@@ -1,6 +1,6 @@
 # CarryMem Architecture
 
-**Version**: v0.4.0-dev
+**Version**: v0.1.5
 **Date**: 2026-05-01
 **Status**: Stable
 
@@ -242,7 +242,7 @@ Query → FTS5 Search → Semantic Expansion → Result Fusion → Sort → Retu
 Validate  Exact match  Synonym expand    Dedup     Relevance  Top-K
 ```
 
-#### 5.2 Semantic Expansion (v0.4.0)
+#### 5.2 Semantic Expansion
 
 Zero-dependency semantic expansion:
 - **Synonym expansion**: YAML-based synonym graph (470+ terms, CN/EN/JP)

@@ -48,7 +48,7 @@ source ~/.bashrc
 python3 -m memory_classification_engine.cli version
 ```
 
-> ⚠️ **包名与导入名**：安装用 `pip install carrymem`，导入用 `from memory_classification_engine import CarryMem` 或 `from carrymem import CarryMem`（v0.4.2+）。
+> ⚠️ **包名与导入名**：安装用 `pip install carrymem`，导入用 `from memory_classification_engine import CarryMem` 或 `from carrymem import CarryMem`。
 
 ### 2. 开发模式安装
 
@@ -97,11 +97,11 @@ npm run compile
 运行安装验证测试套件：
 
 ```bash
-python -m pytest tests/test_rules/test_v040_installation.py -v
+python -m pytest tests/test_rules/test_installation.py -v
 ```
 
 验证内容：
-- 所有 v0.4.0 模块可导入
+- 所有模块可导入
 - 版本号正确
 - 数据库支持 scope 字段初始化
 - CLI skill 命令已注册

@@ -1,4 +1,4 @@
-"""Tests for v0.7.0 Phase 3 features.
+"""Tests for MCP server, JSON adapter, and async API.
 
 Covers:
 - 3.1 MCP HTTP/SSE server

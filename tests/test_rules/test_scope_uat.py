@@ -1,5 +1,5 @@
 """
-User Acceptance Tests for CarryMem v0.4.0
+User Acceptance Tests for CarryMem
 
 Simulates real user scenarios to validate the product works as expected:
 - New user onboarding flow

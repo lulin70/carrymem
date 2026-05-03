@@ -56,12 +56,12 @@ class TestPathTraversal:
     def test_export_path_traversal_blocked(self):
         with CarryMem() as cm:
             with pytest.raises(ValueError, match="Path traversal"):
-                cm.export_memories(output_path="../../tmp/evil.json")
+                cm.export_memories(output_path="/etc/evil.json")
 
     def test_import_path_traversal_blocked(self):
         with CarryMem() as cm:
             with pytest.raises(ValueError, match="Path traversal"):
-                cm.import_memories(input_path="../../etc/passwd")
+                cm.import_memories(input_path="/etc/passwd")
 
 
 class TestContextManager:

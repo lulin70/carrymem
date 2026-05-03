@@ -2,7 +2,7 @@
 
 **Last Updated**: 2026-05-02
 **Product Positioning**: AI Identity Layer — Memory + Rules + Knowledge
-**Version Scheme**: v0.2.x (Rules Engine) → v0.3.0 (GA) → v0.4.0 (Enterprise) → v0.4.1 (Core Loop Fix)
+**Version Scheme**: v0.1.5 (Version Reset — Security + Quality) → v0.2.0 (Next)
 
 ---
 

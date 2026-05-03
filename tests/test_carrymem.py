@@ -960,7 +960,7 @@ class TestEdgeCases(unittest.TestCase):
 
 
 # ============================================================
-# Part 11: v0.4.0 Semantic Recall Tests (58 new tests)
+# Part 11: Semantic Recall Tests (58 new tests)
 # ============================================================
 
 class TestSemanticExpanderInit(unittest.TestCase):

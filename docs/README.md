@@ -1,7 +1,7 @@
 # CarryMem Documentation Hub
 
-**Version**: v0.2.0  
-**Last Updated**: 2026-04-28
+**Version**: v0.1.5  
+**Last Updated**: 2026-05-03
 
 ---
 
@@ -51,7 +51,7 @@ carrymem status
 
 ---
 
-## 🛠️ Core Features (v0.2.0)
+## 🛠️ Core Features
 
 ### 1. Smart Memory Classification
 ```bash

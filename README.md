@@ -93,7 +93,7 @@ Then run `carrymem doctor` to check your setup.
 
 ### 5 Lines of Code
 
-> ⚠️ **Package vs Import Name**: Install with `pip install carrymem`, but import as `from memory_classification_engine import CarryMem`. You can also use `from carrymem import CarryMem` (v0.4.2+). This will be fully unified in v1.0.0.
+> ⚠️ **Package vs Import Name**: Install with `pip install carrymem`, but import as `from memory_classification_engine import CarryMem`. You can also use `from carrymem import CarryMem`. This will be fully unified in v1.0.0.
 
 ```python
 from memory_classification_engine import CarryMem
@@ -128,7 +128,7 @@ carrymem tui                            # Terminal UI
 carrymem export backup.json             # Export all memories
 carrymem import backup.json             # Import memories
 carrymem version                        # Show version
-# v0.4.0 Rule Engine commands
+# Rule Engine commands
 carrymem add-rule "database" "use SSL" --scope company  # Add a rule
 carrymem list-rules --scope company                      # List company rules
 carrymem skill-pack rules.json --name team-conventions   # Pack rules as Skill
@@ -231,7 +231,7 @@ carrymem tui
 
 Interactive terminal interface with sidebar filters, search, and add mode.
 
-### 9. Rule Engine with Scopes (v0.4.0)
+### 9. Rule Engine with Scopes
 
 Behavioral rules with three scope levels for team/organization alignment:
 
@@ -256,7 +256,7 @@ results = engine.match("database design", scopes=["company"])
 | `negotiated` | 2 | Adapted from company rules |
 | `personal` | 1 (lowest) | User-created preferences |
 
-### 10. Skill Format — Portable Rule Bundles (v0.4.0)
+### 10. Skill Format — Portable Rule Bundles
 
 Share rule sets across teams with cryptographic integrity:
 
@@ -277,7 +277,7 @@ assert result["valid"] is True
 engine.skill_install(bundle, scope_override="company", mode="skip")
 ```
 
-### 11. Merge Protocol — Conflict Resolution (v0.4.0)
+### 11. Merge Protocol — Conflict Resolution
 
 Three strategies for merging rules from different sources:
 
@@ -287,7 +287,7 @@ Three strategies for merging rules from different sources:
 | `negotiate` | Conflicting rules adapted to "negotiated" scope |
 | `keep_both` | Both rules kept for manual review |
 
-### 12. VS Code Extension (v0.4.0)
+### 12. VS Code Extension
 
 Rule management directly in your editor:
 
@@ -318,7 +318,7 @@ Rule management directly in your editor:
 | **5-Line Integration** | ✅ | ⚠️ SDK required | ❌ | ❌ |
 | **Cross-Language Recall** | ✅ EN/CN/JP | ❌ | ❌ | ❌ |
 
-> **Note**: Comparison based on publicly available information as of v0.4.0. Products evolve rapidly — please verify latest features.
+> **Note**: Comparison based on publicly available information. Products evolve rapidly — please verify latest features.
 
 **Key Difference**: Other products store *what you read*. CarryMem stores *who you are*.
 
@@ -446,12 +446,12 @@ cm.import_memories(input_path="backup.json")
 
 ## Project Status
 
-**Current Version**: v0.4.2
+**Current Version**: v0.1.5
 **Tests**: 2043/2043 passing
 **Coverage**: ~78%
 
 **Changelog**:
-- **v0.4.2**: UX remediation — CLI fix, rule suggestion quality, import compatibility, tutorial, troubleshooting
+- **v0.1.5**: Version reset — security hardening (FTS5 sanitization, path validation, rule content filtering), thread safety, documentation reorganization, test cleanup
 - **v0.4.1**: Core loop fix — auto rule suggestion, MCP rule tools, prompt injection protection, connection pooling
 - **v0.4.0**: Enterprise features — Rule Scopes, Skill Format (SHA-256), Merge Protocol, VS Code Extension
 - **v0.3.0**: GA Release — Knowledge Adapter, Effectiveness Report, Context Engineering

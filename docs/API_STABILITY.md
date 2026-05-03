@@ -1,7 +1,7 @@
 # CarryMem API Stability Policy
 
 **Version**: 1.1
-**Effective**: v0.4.0+
+**Effective**: v0.1.5+
 **Last Updated**: 2026-05-02
 
 ## 1. API Classification
@@ -119,17 +119,17 @@ CarryMem.review_lessons(...) -> List
 CarryMem.refine_rule(...) -> Rule
 CarryMem.refinement_sessions(...) -> List
 
-# Experimental - Skill Format (v0.4.0)
+# Experimental - Skill Format
 CarryMem.skill_pack(name, version="1.0.0", scope="personal", ...) -> Dict
 CarryMem.skill_verify(data) -> Dict
 CarryMem.skill_install(data, scope_override=None, mode="skip") -> Dict
 
-# Experimental - Merge Protocol (v0.4.0)
+# Experimental - Merge Protocol
 CarryMem.review_incoming_rules(incoming, target_scope=None) -> Dict
 CarryMem.accept_rules(incoming, strategy="negotiate", target_scope=None) -> Dict
 MergeStrategy / MergeDecision / MergeConflict / MergeResult
 
-# Experimental - Rule Scope types (v0.4.0)
+# Experimental - Rule Scope types
 RuleScope / VALID_RULE_SCOPES / SCOPE_PRIORITY
 
 # Experimental - Advanced features
@@ -198,7 +198,7 @@ CarryMem follows Semantic Versioning (SemVer) with the following convention:
 
 ### Historical Note
 
-Early development used 0.4.x-0.8.x version numbers that were later consolidated into the 0.2.x series. The current v0.4.0 is a new, official release following v0.3.0, introducing Rule Scope, Skill Format, and Merge Protocol.
+Early development used various version numbering schemes. The current v0.1.5 is a version reset that consolidates all features with security hardening and quality improvements.
 
 ## 7. Conditional Imports
 

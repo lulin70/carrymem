@@ -69,7 +69,7 @@ carrymem doctor
    pip install -e .
    ```
 
-3. Use compatible import path (v0.4.2+):
+3. Use compatible import path:
    ```python
    from carrymem import CarryMem  # equivalent to from memory_classification_engine
    ```

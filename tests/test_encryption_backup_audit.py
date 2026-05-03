@@ -1,4 +1,4 @@
-"""Tests for v0.6.0 Phase 2 features.
+"""Tests for encryption, backup, and audit features.
 
 Covers:
 - 2.1 Data encryption (MemoryEncryption, NoEncryption)

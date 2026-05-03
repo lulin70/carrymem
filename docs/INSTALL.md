@@ -54,7 +54,7 @@ carrymem version
 python3 -m memory_classification_engine.cli version
 ```
 
-> ⚠️ **Package vs Import Name**: Install with `pip install carrymem`, import as `from memory_classification_engine import CarryMem` or `from carrymem import CarryMem` (v0.4.2+).
+> ⚠️ **Package vs Import Name**: Install with `pip install carrymem`, import as `from memory_classification_engine import CarryMem` or `from carrymem import CarryMem`.
 
 ### 2. Development Install
 
@@ -103,11 +103,11 @@ Then in VS Code: Extensions → "Install from VSIX" or press F5 to run in debug 
 Run the installation verification test suite:
 
 ```bash
-python -m pytest tests/test_rules/test_v040_installation.py -v
+python -m pytest tests/test_rules/test_installation.py -v
 ```
 
 This verifies:
-- All v0.4.0 modules are importable
+- All modules are importable
 - Version number is correct
 - Database initializes with scope support
 - CLI skill commands are registered

@@ -1,4 +1,4 @@
-"""Tests for CarryMem CLI v0.8.0 — Enhanced command-line interface.
+"""Tests for CarryMem CLI — Enhanced command-line interface.
 
 Covers: add, list, search, show, edit, forget, clean, export, import, stats, doctor, setup-mcp, init, version
 """

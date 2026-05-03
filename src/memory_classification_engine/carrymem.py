@@ -40,8 +40,13 @@ def _validate_file_path(path: str, allowed_base: str = None) -> str:
         if not resolved.startswith(allowed + os.sep) and resolved != allowed:
             raise ValueError(f"Path escapes allowed directory: {path}")
     else:
-        if ".." in path:
-            raise ValueError(f"Path traversal not allowed: {path}")
+        _DANGEROUS = [
+            '/etc', '/usr', '/bin', '/sbin', '/System',
+            '/Library', '/private/etc',
+        ]
+        for d in _DANGEROUS:
+            if resolved == d or resolved.startswith(d + os.sep):
+                raise ValueError(f"Path traversal: system directory not allowed: {resolved}")
     return resolved
 
 
@@ -581,9 +586,10 @@ class CarryMem:
                 overlap = sum(1 for kw in keywords if kw in rule_content and len(kw) > 1)
                 if overlap >= 2:
                     try:
-                        engine.update_rule(rule.id, action=content[:200])
+                        safe_action = self._sanitize_rule_content(content[:200])
+                        engine.update_rule(rule.id, action=safe_action)
                         if updated_info is None:
-                            updated_info = {"rule_updated": rule.id, "new_action": content[:100]}
+                            updated_info = {"rule_updated": rule.id, "new_action": safe_action[:100]}
                         else:
                             updated_info["rule_updated"] = rule.id
                     except Exception:
@@ -739,6 +745,23 @@ class CarryMem:
                     })
 
         return implicit
+
+    def _sanitize_rule_content(self, text: str) -> str:
+        import re
+        danger_pattern = re.compile(
+            r'(?:ignore\s+(?:previous|above|all)\s+(?:instructions?|rules?)|'
+            r'system\s*[:：]\s*|'
+            r'forget\s+(?:all\s+)?(?:rules?|instructions?)|'
+            r'you\s+are\s+now|'
+            r'(?:DAN|jailbreak|developer)\s+mode|'
+            r'bypass\s+(?:all\s+)?(?:restrictions?|filters?|safety)|'
+            r'\$\{.*?\}|\{\{.*?\}\}|'
+            r'eval\(|exec\(|__import__)',
+            re.IGNORECASE,
+        )
+        if danger_pattern.search(text):
+            return "[filtered: potentially unsafe content]"
+        return text
 
     def _extract_trigger(self, content: str, mem_type: str) -> str:
         import re

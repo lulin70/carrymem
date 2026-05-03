@@ -1,5 +1,5 @@
 """
-Installation Verification Tests for CarryMem v0.4.0
+Installation Verification Tests for CarryMem
 
 Validates:
 - Package importability and API surface
@@ -19,9 +19,11 @@ import os
 import importlib
 import tempfile
 
+from memory_classification_engine.__version__ import __version__
+
 
 class TestPackageImports:
-    """Verify all v0.4.0 modules are importable"""
+    """Verify all core modules are importable"""
 
     def test_import_carrymem(self):
         from memory_classification_engine import CarryMem
@@ -146,16 +148,18 @@ class TestPackageImports:
 class TestVersionConsistency:
     """Verify version numbers are consistent"""
 
-    def test_version_is_040_dev(self):
+    def test_version_format(self):
         from memory_classification_engine import __version__
-        assert __version__.startswith("0.4"), f"Version is {__version__}, expected 0.4.x"
+        parts = __version__.split(".")
+        assert len(parts) >= 2, f"Version {__version__} should have at least major.minor"
+        assert parts[0].isdigit() and parts[1].isdigit(), f"Version {__version__} should be numeric"
 
     def test_version_accessible_via_cli(self):
         result = subprocess.run(
             [sys.executable, "-m", "memory_classification_engine", "version"],
             capture_output=True, text=True, timeout=10,
         )
-        assert "0.4" in result.stdout or "0.4" in result.stderr
+        assert __version__ in result.stdout or __version__ in result.stderr
 
     def test_version_module_exists(self):
         from memory_classification_engine.__version__ import __version__
@@ -215,7 +219,7 @@ class TestDatabaseInitialization:
 
 
 class TestCLIEntryPoints:
-    """Verify CLI commands are registered for v0.4.0 features"""
+    """Verify CLI commands are registered for core features"""
 
     def test_skill_commands_in_cli_module(self):
         from memory_classification_engine import cli

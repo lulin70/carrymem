@@ -1,4 +1,4 @@
-"""Tests for CarryMem v0.8.0 — Quality management, TUI, CI integration.
+"""Tests for CarryMem — Quality management, TUI, CI integration.
 
 Covers: check_conflicts, check_quality, list_expired, cmd_check
 """
@@ -17,7 +17,7 @@ from memory_classification_engine.cli import cmd_check
 
 @pytest.fixture
 def temp_db(tmp_path):
-    return str(tmp_path / "test_v080.db")
+    return str(tmp_path / "test_quality.db")
 
 
 class TestCheckConflicts:

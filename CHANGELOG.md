@@ -5,6 +5,46 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2026-05-03
+
+### Changed — Version Reset
+- Version reset to 0.1.5 to reflect actual product maturity (early beta)
+- All user-facing documentation unified with consistent version references
+- Renamed version-specific test files to feature-based names (12 files)
+- Moved internal review documents to docs/archive/review/
+- Removed duplicate script scripts/ci_check_local.py
+
+### Fixed — Security Hardening (Three-Dimensional Code Review)
+- FTS5 query injection: added `_sanitize_fts_query()` in storage.py to escape special characters and operators
+- Path traversal: fixed `_validate_file_path()` to check resolved path against home directory
+- Rule content injection: added `_sanitize_rule_content()` with prompt injection detection
+- Thread safety: added double-checked locking for MCP module singleton
+- Missing validation: added field sanitization in storage.py `update()` method
+- setup.py: replaced hardcoded version fallback with descriptive RuntimeError
+
+### Fixed — UX Remediation
+- CLI command not found: added `bin/carrymem` script + `setup.py scripts` field
+- pip version mismatch: `get_version()` reads `__version__.py` via regex
+- Rule suggestion quality: rewrote `_extract_trigger()` and `_extract_action()` with domain-specific triggers and behavior-extraction actions
+- CLI aliases: `carrymem remember` = `carrymem add`, `carrymem save` = `carrymem add`
+- `carrymem rules` sub-command hub: `carrymem rules list/add/delete/match/edit/...`
+- `carrymem tutorial`: 5-minute interactive quick-start guide
+- `rule_suggestions` field: unified return field name (with `auto_rules` backward compat)
+- `from carrymem import CarryMem`: compatible import path
+- `build_system_prompt()` convenience function in `layer2_mcp` module
+- `carrymem doctor` now checks if `carrymem` is on PATH and shows fix command
+- PostInstallCommand in setup.py: shows PATH hint after pip install
+
+### Fixed — Security
+- Regex: `javascript` before `java` (prevent shadowing), word boundaries (`\b`)
+- `_validate_file_path`: added `allowed_base` parameter for resolved path check
+- `export_profile`: added `_validate_file_path()` call
+- `bin/carrymem`: narrow ImportError catch to avoid masking dependency errors
+
+### Added
+- TROUBLESHOOTING.md: comprehensive troubleshooting guide with PATH configuration
+- PATH configuration docs in README/INSTALL (EN/CN/JP)
+
 ## [0.4.2] - 2026-05-02
 
 ### Fixed — UX Remediation (User Experience Review)
@@ -352,7 +392,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Fix f-string backslash syntax error in Python 3.9 (cmd_suggest_rules)
-- Fix test collection errors in test_v080_cli.py and test_v080_quality.py
+- Fix test collection errors in test_cli_enhanced.py and test_quality_management.py
 
 ### Tests
 - 718/718 passing (680 existing + 38 pattern detection)

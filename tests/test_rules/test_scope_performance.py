@@ -1,5 +1,5 @@
 """
-Performance Benchmark Tests for CarryMem v0.4.0
+Performance Benchmark Tests for Scope-aware Rules
 
 Validates:
 - Rule creation throughput

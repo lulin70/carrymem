@@ -1,5 +1,5 @@
 """
-Comprehensive Integration Tests for CarryMem v0.4.0
+Comprehensive Integration Tests for Scope and Skill
 
 Extended end-to-end tests covering:
 - Multi-engine Skill distribution workflow

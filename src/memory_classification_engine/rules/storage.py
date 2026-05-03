@@ -10,6 +10,7 @@ Provides CRUD operations for rules with:
 
 import json
 import logging
+import re
 import sqlite3
 import threading
 from typing import List, Optional
@@ -63,6 +64,14 @@ class RuleStorage:
                 conn.execute("PRAGMA foreign_keys=ON")
                 self._local.conn = conn
         return self._local.conn
+
+    def close(self):
+        if hasattr(self._local, 'conn') and self._local.conn is not None:
+            try:
+                self._local.conn.close()
+            except Exception:
+                pass
+            self._local.conn = None
 
     def _ensure_schema(self):
         """Create tables and indexes if they don't exist"""
@@ -372,7 +381,34 @@ class RuleStorage:
         finally:
             pass
 
+    @staticmethod
+    def _sanitize_field(value: str, field_name: str) -> str:
+        danger_pattern = re.compile(
+            r'(?:ignore\s+(?:previous|above|all)\s+(?:instructions?|rules?)|'
+            r'system\s*[:：]\s*|'
+            r'forget\s+(?:all\s+)?(?:rules?|instructions?)|'
+            r'you\s+are\s+now|'
+            r'(?:DAN|jailbreak|developer)\s+mode|'
+            r'bypass\s+(?:all\s+)?(?:restrictions?|filters?|safety)|'
+            r'\$\{.*?\}|\{\{.*?\}\}|'
+            r'eval\(|exec\(|__import__)',
+            re.IGNORECASE,
+        )
+        if danger_pattern.search(value):
+            raise ValueError(f"Potentially unsafe content in {field_name}")
+        return value[:500]
+
+    @staticmethod
+    def _sanitize_fts_query(query_text: str) -> str:
+        cleaned = re.sub(r'[{}():^!|*]', ' ', query_text)
+        cleaned = re.sub(r'\b(NEAR|NOT|OR|AND|COLUMN)\b', ' ', cleaned, flags=re.IGNORECASE)
+        terms = cleaned.split()
+        return ' '.join(f'"{t}"' for t in terms[:20] if t.strip())
+
     def search(self, query_text: str, limit: int = 20) -> List[Rule]:
+        safe_query = self._sanitize_fts_query(query_text)
+        if not safe_query.strip():
+            return []
         conn = self._get_connection()
         try:
             cursor = conn.execute(
@@ -388,7 +424,7 @@ class RuleStorage:
                 ORDER BY rank
                 LIMIT ?
                 """,
-                (query_text, limit),
+                (safe_query, limit),
             )
             rows = cursor.fetchall()
             return [self._row_to_rule(row) for row in rows]
@@ -399,6 +435,9 @@ class RuleStorage:
             pass
 
     def search_with_rank(self, query_text: str, limit: int = 20) -> List[tuple]:
+        safe_query = self._sanitize_fts_query(query_text)
+        if not safe_query.strip():
+            return []
         conn = self._get_connection()
         try:
             cursor = conn.execute(
@@ -415,7 +454,7 @@ class RuleStorage:
                 ORDER BY rank
                 LIMIT ?
                 """,
-                (query_text, limit),
+                (safe_query, limit),
             )
             rows = cursor.fetchall()
             results = []
@@ -452,23 +491,14 @@ class RuleStorage:
             pass
 
     def update(self, rule_id: str, **updates) -> Optional[Rule]:
-        """
-        Update an existing rule.
-
-        Args:
-            rule_id: ID of rule to update
-            **updates: Fields to update (trigger, action, status, etc.)
-
-        Returns:
-            Updated Rule object or None if not found
-
-        Raises:
-            ValueError: If validation fails for updated fields
-        """
-        # Get existing rule
         existing = self.get(rule_id)
         if existing is None:
             return None
+
+        if "trigger" in updates and updates["trigger"]:
+            updates["trigger"] = self._sanitize_field(updates["trigger"], "trigger")
+        if "action" in updates and updates["action"]:
+            updates["action"] = self._sanitize_field(updates["action"], "action")
 
         set_clauses = []
         params = []

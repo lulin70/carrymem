@@ -1,5 +1,5 @@
 """
-Test Suite for v0.4.0 Features: Scope, Skill Format, Merge Protocol
+Test Suite for Scope, Skill Format, Merge Protocol
 
 Validates:
 - Rule scope creation, validation, serialization

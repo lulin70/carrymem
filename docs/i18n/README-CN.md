@@ -90,7 +90,7 @@ python3 -m memory_classification_engine.cli version
 
 ### 5 行代码
 
-> ⚠️ **包名与导入名**：安装用 `pip install carrymem`，导入用 `from memory_classification_engine import CarryMem` 或 `from carrymem import CarryMem`（v0.4.2+）。将在 v1.0.0 统一。
+> ⚠️ **包名与导入名**：安装用 `pip install carrymem`，导入用 `from memory_classification_engine import CarryMem` 或 `from carrymem import CarryMem`。将在 v1.0.0 统一。
 
 ```python
 from memory_classification_engine import CarryMem
@@ -125,7 +125,7 @@ carrymem tui                            # 终端界面
 carrymem export backup.json             # 导出所有记忆
 carrymem import backup.json             # 导入记忆
 carrymem version                        # 显示版本
-# v0.4.0 规则引擎命令
+# 规则引擎命令
 carrymem add-rule "数据库" "始终使用SSL" --scope company   # 添加规则
 carrymem list-rules --scope company                      # 列出公司规则
 carrymem skill-pack rules.json --name team-conventions   # 打包规则为 Skill
@@ -219,7 +219,7 @@ carrymem setup-mcp --tool all
 
 提供 12 个 MCP 工具：核心(3) · 存储(3) · 知识库(3) · 画像(2) · 提示(1)
 
-### 8. 规则引擎与作用域（v0.4.0）
+### 8. 规则引擎与作用域
 
 行为规则支持三个作用域级别，实现团队/组织对齐：
 
@@ -244,7 +244,7 @@ results = engine.match("数据库设计", scopes=["company"])
 | `negotiated` | 2 | 从公司规则适配而来 |
 | `personal` | 1（最低） | 用户创建的偏好 |
 
-### 9. Skill 格式 — 便携规则包（v0.4.0）
+### 9. Skill 格式 — 便携规则包
 
 通过加密完整性验证跨团队共享规则集：
 
@@ -265,7 +265,7 @@ assert result["valid"] is True
 engine.skill_install(bundle, scope_override="company", mode="skip")
 ```
 
-### 10. 合并协议 — 冲突解决（v0.4.0）
+### 10. 合并协议 — 冲突解决
 
 三种策略合并来自不同来源的规则：
 
@@ -275,7 +275,7 @@ engine.skill_install(bundle, scope_override="company", mode="skip")
 | `negotiate` | 冲突规则适配为 "negotiated" 作用域 |
 | `keep_both` | 两条规则都保留，用户手动审查 |
 
-### 11. VS Code 扩展（v0.4.0）
+### 11. VS Code 扩展
 
 直接在编辑器中管理规则：
 
@@ -315,7 +315,7 @@ carrymem tui
 | **5 行代码接入** | ✅ | ⚠️ 需要 SDK | ❌ | ❌ |
 | **跨语言召回** | ✅ 中/英/日 | ❌ | ❌ | ❌ |
 
-> **注**：对比基于 v0.4.0 公开信息。产品迭代迅速，请核实最新功能。
+> **注**：对比基于公开信息。产品迭代迅速，请核实最新功能。
 
 **核心差异**：其他产品存储*你读了什么*。CarryMem 存储*你是谁*。
 
@@ -349,12 +349,12 @@ carrymem tui
 
 ## 项目状态
 
-**当前版本**：v0.4.2
+**当前版本**：v0.1.5
 **测试**：2043/2043 通过
 **覆盖率**：~78%
 
 **更新日志**：
-- **v0.4.2**：UX整改 — CLI修复、规则建议质量、导入兼容、教程、故障排查
+- **v0.1.5**：版本重置 — 安全加固（FTS5查询净化、路径验证、规则内容过滤）、线程安全、文档整理、测试清理
 - **v0.4.1**：核心循环修复 — 自动规则建议、MCP 规则工具、提示注入防护、连接池
 - **v0.4.0**：企业功能 — 规则作用域、Skill 格式（SHA-256）、合并协议、VS Code 扩展
 - **v0.3.0**：GA 发布 — 知识适配器、有效性报告、上下文工程

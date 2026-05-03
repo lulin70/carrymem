@@ -1,4 +1,4 @@
-"""Tests for v0.5.0 Phase 1 features.
+"""Tests for context injection and scoring features.
 
 Covers:
 - 1.1 Smart context injection (build_context, build_system_prompt)
