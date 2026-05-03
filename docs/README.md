@@ -151,7 +151,7 @@ carrymem stats                   # Statistics
 ```bash
 carrymem doctor                  # System diagnostics
 carrymem status                  # System status
-carrymem setup-mcp --tool claude # MCP configuration
+carrymem setup-mcp --tool claude-code # MCP configuration
 ```
 
 ### Management Commands
