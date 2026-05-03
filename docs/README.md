@@ -116,7 +116,7 @@ carrymem serve --port 8765
 2. Check [Quick Start Guide](QUICK_START_GUIDE.md) FAQ section
 
 ### Scenario 3: Configure MCP integration
-1. Run `carrymem setup-mcp --tool claude`
+1. Run `carrymem setup-mcp --tool claude-code`
 2. Check integration configs in `integrations/` directory
 
 ### Scenario 4: Check system status

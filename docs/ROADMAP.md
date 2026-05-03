@@ -1,6 +1,6 @@
 # CarryMem Product Roadmap
 
-**Last Updated**: 2026-05-02
+**Last Updated**: 2026-05-03
 **Product Positioning**: AI Identity Layer — Memory + Rules + Knowledge
 **Version Scheme**: v0.1.5 (Version Reset — Security + Quality) → v0.2.0 (Next)
 
@@ -29,6 +29,8 @@ v0.2.0 ─── Design Baseline (Memory Foundation + Rules Design Docs)
 - Third digit changes for incremental updates within a phase
 - Second digit changes for GA milestones (API stability guarantee)
 - No "v1.0.0 jump" — earn it through proven production usage
+
+> **Note**: The v0.2.0–v0.4.1 versions listed above represent the project's development history. The version was reset to v0.1.5 to accurately reflect the product's current maturity (early beta). All features from those versions are included in v0.1.5 with security hardening and quality improvements. The next release will be v0.2.0.
 
 ---
 
@@ -466,7 +468,7 @@ See CHANGELOG.md for detailed history.
 
 ---
 
-**Last Updated**: 2026-05-02
+**Last Updated**: 2026-05-03
 **Maintainer**: CarryMem Team
 **Next Milestone**: v0.5.0 Intelligence Enhancement (Auto-tuning + Cross-scope Learning)
 **Status**: ✅ **v0.4.1 complete (2056 tests, 79% coverage)**

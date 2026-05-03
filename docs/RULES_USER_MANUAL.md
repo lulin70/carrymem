@@ -1,7 +1,7 @@
-# CarryMem v0.2.0 — User Installation & Usage Manual
+# CarryMem — User Installation & Usage Manual
 
-**Version**: 1.0 (Rules Engine Phase 1)  
-**Date**: 2026-04-29  
+**Version**: 0.1.5  
+**Date**: 2026-05-03  
 **Audience**: End Users (Developers, Power Users, Teams)  
 **Prerequisites**: Python 3.9+, pip
 
@@ -18,7 +18,7 @@ pip install carrymem
 **Verify installation:**
 ```bash
 carrymem version
-# Output: CarryMem v0.2.0
+# Output: CarryMem v0.1.5
 ```
 
 ### Step 2: Initialize
@@ -30,7 +30,7 @@ carrymem init
 This creates:
 - `~/.carrymem/` directory (config)
 - `~/.carrymem/memories.db` (SQLite database)
-- Rules table automatically created (new in v0.2.0!)
+- Rules table automatically created
 
 ### Step 3: Create Your First Rule
 
@@ -52,7 +52,7 @@ carrymem add-rule "报告控制在三页以内" --trigger "写报告" --type for
 
 ```bash
 # Check if rule matches a scenario
-$ carrymem match "帮我写一份Q2销售报告"
+$ carrymem match-rules "帮我写一份Q2销售报告"
 
 🎯 Found 1 matching rule:
 
@@ -75,7 +75,7 @@ $ carrymem doctor
   CarryMem Doctor - Diagnostics
   =============================================
   [OK] Python 3.11+ (>= 3.9)
-  [OK] CarryMem v0.2.0
+  [OK] CarryMem v0.1.5
   [OK] Config directory: /Users/you/.carrymem
   [OK] Database: /Users/you/.carrymem/memories.db (0.14 MB)
   
@@ -192,7 +192,7 @@ carrymem add-rule --interactive
   Override: Yes (AI cannot ignore this)
 
 Test it now? [Y/n] y
-→ Running: carrymem match "帮我做供应商调研"
+→ Running: carrymem match-rules "帮我做供应商调研"
 🎯 Found 1 matching rule! Your rule is working.
 ```
 
@@ -229,7 +229,7 @@ rule_005    旧策略              跳过印度公司         avoid  paused    0
 #### View Rule Details
 
 ```bash
-carrymem show-rule rule_001
+carrymem rules show rule_001
 ```
 
 **Detailed output:**
@@ -290,7 +290,7 @@ carrymem resume-rule rule_005
 #### Deprecate (Soft Delete)
 
 ```bash
-carrymem deprecate-rule rule_002
+carrymem rules delete rule_002
 🗑️ Rule rule_002 deprecated
   Status: active → deprecated
   Reason? (optional) 已迁移到新框架
@@ -320,14 +320,14 @@ carrymem delete-rule rule_002
 #### Find Which Rules Apply
 
 ```bash
-carrymem match "<describe your current task or context>"
+carrymem match-rules "<describe your current task or context>"
 ```
 
 **Examples:**
 
 ```bash
 # Simple query
-$ carrymem match "帮我做竞品分析"
+$ carrymem match-rules "帮我做竞品分析"
 🎯 Found 2 matching rules:
 
 [1] ⭐⭐⭐ Similarity: 0.92
@@ -343,7 +343,7 @@ $ carrymem match "帮我做竞品分析"
 2 rules matched (of 5 active)
 
 # No matches
-$ carrymem match "部署到Kubernetes"
+$ carrymem match-rules "部署到Kubernetes"
 🔍 No matching rules found.
   Active rules: 5 (none triggered)
   
@@ -414,7 +414,7 @@ carrymem import-rules my_rules_backup.json
 #### View Usage Stats
 
 ```bash
-carrymem rule-stats
+carrymem rules-stats
 ```
 
 **Output:**
@@ -440,13 +440,13 @@ Top Triggered Rules:
 Unused Rules (0 hits, consider cleanup):
   ⚠️  rule_old_vendor    "跳过印度公司"           [last: 30d ago]
 
-Run 'carrymem review-rules' to clean up stale entries.
+Run 'carrymem check-rules' to clean up stale entries.
 ```
 
 #### Review Stale Rules
 
 ```bash
-carrymem review-rules
+carrymem check-rules
 ```
 
 **Interactive cleanup wizard:**
@@ -485,7 +485,7 @@ Choose action for rule_legacy_fmt [p/d/k/s]: d
 
 ```python
 from memory_classification_engine import CarryMem
-from carrymem.rules import RuleEngine
+from memory_classification_engine.rules import RuleEngine
 
 # Initialize (rules auto-enabled)
 cm = CarryMem()
@@ -542,7 +542,7 @@ carrymem setup-mcp --tool cursor
 
 When you use CarryMem with any AI tool, rules are **automatically injected** into the system prompt:
 
-**Before (v0.2.0 - Memory Only):**
+**Before (Memory Only):**
 ```
 ## System Instructions
 You are an AI assistant...
@@ -553,7 +553,7 @@ You are an AI assistant...
 ...
 ```
 
-**After (v0.2.0 - Memory + Rules):**
+**After (Memory + Rules):**
 ```
 ## System Instructions
 You are an AI assistant...
@@ -620,7 +620,7 @@ Follow these behavioral guidelines:
 
 **Symptoms:**
 ```bash
-$ carrymem match "写月度报告"
+$ carrymem match-rules "写月度报告"
 🔍 No matching rules found
 ```
 
@@ -634,7 +634,7 @@ $ carrymem match "写月度报告"
 2. **Check similarity threshold**: FTS5 needs keyword overlap
    ```bash
    # Try more specific query
-   carrymem match "帮我写一份报告"
+   carrymem match-rules "帮我写一份报告"
    ```
 3. **Check for typos**: Exact spelling matters for best results
 
@@ -650,7 +650,7 @@ Run 'carrymem help' for usage
 ```
 
 **Solution:**
-- Ensure you have v0.2.0+: `carrymem version`
+- Ensure you have CarryMem installed: `carrymem version`
 - If older version: `pip install --upgrade carrymem`
 
 ---
@@ -731,8 +731,8 @@ $ carrymem add-rule "normal" --trigger "*" --type prefer
 - **Security Reports**: Please email maintainers (do NOT post publicly)
 
 ### Version History
-- **v0.2.0** (Current): Rules Engine Phase 1 (this manual!)
-- **v0.2.0**: Memory layer foundation, PyPI release
+- **v0.1.5** (Current): Version reset — security hardening, thread safety, documentation reorganization
+- **v0.1.5**: Memory layer foundation, Rules Engine, PyPI release
 - **Changelog**: See [CHANGELOG.md](../CHANGELOG.md)
 
 ---
@@ -742,8 +742,8 @@ $ carrymem add-rule "normal" --trigger "*" --type prefer
 1. ✅ **Create 3-5 core rules** for your most common tasks
 2. ✅ **Test matching** with `carrymem match` to verify they activate correctly
 3. ✅ **Use with AI tool** (Cursor/Claude Code) and observe behavior changes
-4. ✅ **Run `carrymem rule-stats` after 1 week** to see which rules are most useful
-5. ✅ **Clean up stale rules** monthly with `carrymem review-rules`
+4. ✅ **Run `carrymem rules-stats` after 1 week** to see which rules are most useful
+5. ✅ **Clean up stale rules** monthly with `carrymem check-rules`
 
 ---
 

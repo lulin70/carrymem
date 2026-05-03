@@ -358,19 +358,19 @@ The Rules Engine is CarryMem's behavioral contract system, converting memories i
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Rules Engine (v0.2.1-v0.2.7)              │
+│                    Rules Engine               │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
 │  Rule Sources:                                               │
 │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐        │
 │  │  Manual CRUD │ │  Auto        │ │  Experience  │        │
-│  │  (v0.2.1)    │ │  Promotion   │ │  Learning    │        │
-│  │              │ │  (v0.2.5)    │ │  (v0.2.6)    │        │
+│  │      │ │  Promotion   │ │  Learning    │        │
+│  │              │ │      │ │      │        │
 │  └──────────────┘ └──────────────┘ └──────────────┘        │
 │  ┌──────────────┐ ┌──────────────┐                          │
 │  │  Q&A         │ │  Templates   │                          │
-│  │  Refinement  │ │  (v0.2.3)    │                          │
-│  │  (v0.2.7)    │ │              │                          │
+│  │  Refinement  │ │      │                          │
+│  │      │ │              │                          │
 │  └──────────────┘ └──────────────┘                          │
 │                                                              │
 │  Core Pipeline:                                              │
@@ -414,10 +414,10 @@ Create → Active → Paused → Deprecated
   └── Resume
 
 Derivation paths:
-  Manual (v0.2.1): User explicitly creates via CLI or API
-  Auto-Promotion (v0.2.5): Pattern detection → Candidate → User confirms
-  Experience Learning (v0.2.6): Failure signal → Lesson → User confirms
-  Q&A Refinement (v0.2.7): Specific rule → Multi-turn dialogue → General rule
+  Manual : User explicitly creates via CLI or API
+  Auto-Promotion : Pattern detection → Candidate → User confirms
+  Experience Learning : Failure signal → Lesson → User confirms
+  Q&A Refinement : Specific rule → Multi-turn dialogue → General rule
 ```
 
 ### Conflict Detection
@@ -432,11 +432,11 @@ Three types of conflicts detected:
 
 ### Security Layers
 
-1. **Sanitizer** (v0.2.1): Prompt injection detection, SQL injection blocking, length limits
-2. **Limiter** (v0.2.1): Global rule cap (3), total cap (200), rate limiting
-3. **Auto-Promotion Safety** (v0.2.5): User confirmation required, expiry, queue limits
-4. **Experience Safety** (v0.2.6): Duplicate detection, sanitizer validation, audit trail
-5. **Refinement Safety** (v0.2.7): Max rounds, session expiry, sanitizer validation
+1. **Sanitizer** : Prompt injection detection, SQL injection blocking, length limits
+2. **Limiter** : Global rule cap (3), total cap (200), rate limiting
+3. **Auto-Promotion Safety** : User confirmation required, expiry, queue limits
+4. **Experience Safety** : Duplicate detection, sanitizer validation, audit trail
+5. **Refinement Safety** : Max rounds, session expiry, sanitizer validation
 
 ---
 
@@ -448,7 +448,7 @@ LLM attention follows a U-curve pattern — high at the start and end of context
 
 This directly impacts CarryMem's rule injection: if critical override rules are placed in the middle of the injected prompt, they may be ignored by the LLM.
 
-### Solution: Anchored Layout Mode (v0.2.8)
+### Solution: Anchored Layout Mode 
 
 ```
 ┌─────────────────────────────────────────────────┐

@@ -1490,7 +1490,7 @@ pip show carrymem
 
 **詳細修正** — API 安定性リファレンス:
 
-安定、実験的、非推奨 API の完全なリストは [API_STABILITY.md](API_STABILITY.md) を参照。
+安定、実験的、非推奨 API の完全なリストは [API_STABILITY.md](../API_STABILITY.md) を参照。
 
 **検証**:
 ```bash
@@ -1505,5 +1505,5 @@ carrymem doctor
 - **診断**: `carrymem doctor` — 問題に遭遇したらまず実行
 - **GitHub Issues**: https://github.com/lulin70/carrymem/issues
 - **ドキュメント**: https://github.com/lulin70/carrymem
-- **チェンジログ**: [CHANGELOG.md](../CHANGELOG.md)
-- **API 安定性**: [API_STABILITY.md](API_STABILITY.md)
+- **チェンジログ**: [CHANGELOG.md](../../CHANGELOG.md)
+- **API 安定性**: [API_STABILITY.md](../API_STABILITY.md)

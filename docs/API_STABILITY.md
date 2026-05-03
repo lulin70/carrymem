@@ -14,9 +14,9 @@ CarryMem APIs are classified into three stability tiers:
 | **Experimental** | `@experimental` | May change between minor versions | With deprecation notice |
 | **Internal** | `@internal` | No stability guarantee | Any time without notice |
 
-## 2. Stable API (v0.4.x guarantee)
+## 2. Stable API (v0.1.x guarantee)
 
-The following public interfaces are **Stable** and will not have breaking changes within the v0.4.x series:
+The following public interfaces are **Stable** and will not have breaking changes within the v0.1.x series:
 
 ### 2.1 Core Python API (`memory_classification_engine`)
 
@@ -45,7 +45,7 @@ CarryMem.check_quality(min_score=0.3) -> List
 CarryMem.list_expired() -> List
 CarryMem.close() -> None
 
-# Stable - Rules Engine (promoted from Experimental in v0.3.0)
+# Stable - Rules Engine
 CarryMem.add_rule(trigger, action, rule_type="avoid", override=True, confidence=0.8, scope="personal") -> Rule
 CarryMem.list_rules(status=None, rule_type=None, scope=None, limit=50) -> List[Rule]
 CarryMem.match_rules(scene_description, limit=10, scopes=None) -> List[MatchResult]

@@ -1533,7 +1533,7 @@ pip show carrymem
 
 **深度修复** — API 稳定性参考:
 
-参见 [API_STABILITY.md](API_STABILITY.md) 获取稳定、实验性和已弃用 API 的完整列表。
+参见 [API_STABILITY.md](../API_STABILITY.md) 获取稳定、实验性和已弃用 API 的完整列表。
 
 **验证**:
 ```bash
@@ -1548,5 +1548,5 @@ carrymem doctor
 - **诊断**: `carrymem doctor` — 遇到任何问题先运行此命令
 - **GitHub Issues**: https://github.com/lulin70/carrymem/issues
 - **文档**: https://github.com/lulin70/carrymem
-- **更新日志**: [CHANGELOG.md](../CHANGELOG.md)
-- **API 稳定性**: [API_STABILITY.md](API_STABILITY.md)
+- **更新日志**: [CHANGELOG.md](../../CHANGELOG.md)
+- **API 稳定性**: [API_STABILITY.md](../API_STABILITY.md)

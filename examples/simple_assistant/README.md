@@ -82,5 +82,4 @@ results = memory.recall_memories("query", limit=10)
 ## Learn More
 
 - [Quick Start Guide](../../docs/QUICK_START_GUIDE.md)
-- [User Stories](../../docs/USER_STORIES.md)
 - [Architecture](../../docs/ARCHITECTURE.md)
