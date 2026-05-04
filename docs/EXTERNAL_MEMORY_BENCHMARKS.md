@@ -1,521 +1,303 @@
-# AI记忆系统外部Benchmark对标分析
+# CarryMem 外部 Benchmark 评测计划
 
-**生成时间**: 2026-05-04  
-**目的**: 对标业界知名benchmark，提升CarryMem竞争力
-
----
-
-## 📋 执行摘要
-
-AI记忆系统是一个新兴领域，目前还没有像ImageNet（计算机视觉）或GLUE（NLP）那样的统一标准benchmark。但有几个重要的相关benchmark和评估框架值得参考。
+**版本**: v0.1.6  
+**更新日期**: 2026-05-03  
+**目标**: 通过业界标准 benchmark 获取可对比分数，展示 CarryMem 在质量与效率上的双重优势
 
 ---
 
-## 🌟 业界知名Benchmark
+## 一、评测优先级
 
-### 1️⃣ **MemoryBank Benchmark** (2024)
+### 1.1 完整优先级排序
 
-**来源**: 学术界（多所大学联合）  
-**论文**: "MemoryBank: Enhancing Large Language Models with Long-Term Memory"
+| 优先级 | Benchmark | 理由 | CarryMem 角色 |
+|--------|-----------|------|--------------|
+| ⭐⭐⭐ | **MSC** | 最贴切核心场景，适配成本最低 | 主力：跨会话记忆保持 |
+| ⭐⭐⭐ | **LongMemEval** | 500题5维度，通用领域，有说服力 | 主力：综合对标 |
+| ⭐⭐ | **ES-MemEval** | 冲突检测+用户建模维度有价值 | 补充：证明冲突处理能力 |
+| ⭐⭐ | **LaMP** | 个性化任务，补"记忆→应用"链路 | 补充 |
+| ⭐ | **LoCoMo** | 和LongMemEval重叠多 | 可选：定性case study |
+| ⭐ | **MemoryBank** | 遗忘机制对比 | 可选：学术深挖 |
+| — | PersonaChat | 太旧 | 跳过 |
+| — | MemPrompt | 不是标准benchmark | 跳过 |
 
-**测试维度**:
-- **记忆存储准确率** - 信息是否正确保存
-- **记忆召回准确率** - 能否找到相关记忆
-- **时间衰减曲线** - 记忆随时间的保持情况
-- **干扰抗性** - 新记忆是否影响旧记忆
+### 1.2 为什么 MSC 排第一？
 
-**数据集规模**:
-- 10,000+对话轮次
-- 5种记忆类型
-- 3种语言（英、中、日）
+MSC（Multi-Session Chat, Meta Research, ACL 2022）是 **CarryMem 最天然匹配的 benchmark**：
 
-**评估指标**:
-```
-- Precision@K (K=1,5,10)
-- Recall@K
-- MRR (Mean Reciprocal Rank)
-- NDCG (Normalized Discounted Cumulative Gain)
-```
+| MSC 特性 | CarryMem 对应 | 匹配度 |
+|----------|--------------|--------|
+| **多会话渐进式认识** — 5 sessions 中逐步了解对方兴趣 | `classify_and_remember()` 跨会话存储 | ★★★★★ |
+| **Persona 学习** — 记住用户偏好、事实、关系 | 7 种记忆类型（user_preference, fact_declaration, relationship...） | ★★★★★ |
+| **跨会话一致性** — 后续会话引用之前讨论的内容 | `recall_memories()` + FTS5 全文检索 | ★★★★★ |
+| **RAG 优于 encoder-decoder** — MSC 论文核心结论 | CarryMem 天然是 RAG 架构 | ★★★★★ |
+| **Persona Summary 任务** — 从对话中提取 persona 摘要 | `classify_and_remember()` 自动分类 + 存储 | ★★★★☆ |
 
-**CarryMem对标**:
-- ✅ 已有类似测试（run_benchmark.py）
-- ✅ 准确率90.6%（优秀）
-- ⚠️ 缺少时间衰减测试
-- ⚠️ 缺少干扰抗性测试
+MSC 测试的不只是"能否回答问题"，而是 **"记住你之后能否自然地聊下去"**——这正是 CarryMem 的产品定位。
 
----
+### 1.3 为什么 LongMemEval 排第二？
 
-### 2️⃣ **LongMemEval** (2024)
+LongMemEval（ICLR 2025）的 5 维度评测能全面对标：
 
-**来源**: OpenAI/Anthropic研究社区  
-**重点**: 长期记忆保持和一致性
+| 能力 | 测试内容 | CarryMem 对应功能 |
+|------|---------|------------------|
+| Information Extraction | 从对话中提取关键信息 | classify_and_remember |
+| Multi-Session Reasoning | 跨会话推理 | recall_memories + 语义匹配 |
+| Temporal Reasoning | 时间相关推理 | 时间戳 + TTL 机制 |
+| Knowledge Updates | 知识更新/冲突处理 | 冲突检测 + correction 类型 |
+| Abstention | 知道何时"不知道" | confidence 阈值 + 弃权判断 |
 
-**测试场景**:
-1. **单会话长对话** (100+轮)
-   - 测试会话内记忆保持
-   - 前后一致性检查
+### 1.4 补充 Benchmark 的价值
 
-2. **跨会话记忆** (30天+)
-   - 测试长期记忆保持
-   - 时间跨度召回
-
-3. **记忆冲突解决**
-   - 矛盾信息处理
-   - 更新vs保留决策
-
-4. **隐私边界**
-   - 敏感信息识别
-   - 遗忘机制测试
-
-**评估指标**:
-```
-- Consistency Score (一致性)
-- Retention Rate (保持率)
-- Conflict Resolution Accuracy (冲突解决准确率)
-- Privacy Compliance (隐私合规性)
-```
-
-**CarryMem对标**:
-- ✅ 有冲突检测（check命令）
-- ✅ 有遗忘机制（forget命令）
-- ⚠️ 缺少长期保持率测试
-- ⚠️ 缺少一致性评分
+| Benchmark | 补充价值 |
+|-----------|---------|
+| **ES-MemEval** | 冲突检测维度 + 用户建模维度，证明 CarryMem 的 conflict_detector 和 correction 类型处理能力 |
+| **LaMP** | 个性化任务（个性化新闻摘要/邮件撰写等），补全"记忆→个性化应用"的链路证明 |
+| **LoCoMo** | 和 LongMemEval 重叠多，但超长对话（600轮）场景可做定性 case study |
+| **MemoryBank** | 遗忘机制对比，证明 CarryMem 的 TTL + tier 体系 vs Ebbinghaus 遗忘曲线 |
 
 ---
 
-### 3️⃣ **PersonaChat Benchmark** (Meta AI)
+## 二、Benchmark 详细对比
 
-**来源**: Meta AI Research  
-**论文**: "Personalizing Dialogue Agents"
-
-**测试重点**: 个性化对话能力
-
-**数据集**:
-- 1,155个角色档案
-- 162,064条对话
-- 每个角色5-7个特征
-
-**评估维度**:
-1. **角色一致性** - 是否符合设定
-2. **记忆准确性** - 是否记住用户信息
-3. **自然度** - 对话是否自然
-4. **相关性** - 回复是否相关
-
-**评估指标**:
-```
-- Perplexity (困惑度)
-- F1 Score
-- Hits@1 (首选准确率)
-- Persona Consistency Score
-```
-
-**CarryMem对标**:
-- ✅ 有身份画像（whoami）
-- ✅ 有记忆分类（7种类型）
-- ⚠️ 缺少角色一致性测试
-- ⚠️ 缺少对话质量评估
+| 维度 | MSC | LongMemEval | ES-MemEval | LaMP | LoCoMo | MemoryBank |
+|------|-----|-------------|------------|------|--------|------------|
+| **来源** | Meta, ACL 2022 | UCLA/Tencent, ICLR 2025 | 2025 | 2024 | Snap/UNC, ACL 2024 | 2023 |
+| **数据规模** | 4K conv, 12K sessions | 500 questions | ~1K questions | 7 tasks, ~10K samples | 10 conv, ~600轮 | 893 questions |
+| **会话结构** | 5 sessions/conv | 多会话+时间戳 | 多会话 | 单轮+用户画像 | 单超长对话 | 多轮对话 |
+| **核心场景** | Persona学习+跨会话一致性 | 5种记忆能力 | 冲突+用户建模 | 个性化生成 | QA+事件摘要 | 遗忘机制 |
+| **评测方式** | Persona F1+人工评估 | Token F1+LLM Judge | F1+LLM Judge | ROUGE+LLM Judge | Token F1+LLM Judge | F1+人工评估 |
+| **适配难度** | 中 | 低 | 低 | 中 | 中 | 低 |
+| **业界认可度** | ACL 2022, 300+引用 | ICLR 2025 | 新兴 | EMNLP 2024 | ACL 2024 | ACL 2023 |
 
 ---
 
-### 4️⃣ **MSC (Multi-Session Chat)** (Meta AI)
+## 三、CarryMem 适配方案
 
-**来源**: Meta AI  
-**论文**: "Beyond Goldfish Memory"
+### 3.1 MSC 适配（⭐⭐⭐ 主力）
 
-**特点**: 多会话记忆测试
-
-**测试场景**:
-- Session 1: 初次对话
-- Session 2: 1天后
-- Session 3: 1周后
-- Session 4: 1月后
-- Session 5: 3月后
-
-**评估指标**:
-```
-- Session-to-Session Recall (跨会话召回)
-- Memory Decay Rate (记忆衰减率)
-- Update Accuracy (更新准确率)
-- Forgetting Curve (遗忘曲线)
-```
-
-**CarryMem对标**:
-- ✅ 有时间衰减机制（30天半衰期）
-- ✅ 有访问强化机制
-- ⚠️ 缺少多会话测试数据集
-- ⚠️ 缺少遗忘曲线可视化
-
----
-
-### 5️⃣ **MemPrompt Benchmark** (Stanford)
-
-**来源**: Stanford NLP Group  
-**论文**: "MemPrompt: Memory-assisted Prompt Editing"
-
-**测试重点**: 记忆辅助的提示词优化
-
-**评估维度**:
-1. **记忆检索效率** - 检索速度
-2. **记忆相关性** - 检索准确性
-3. **上下文注入质量** - 提示词质量
-4. **Token效率** - Token使用量
-
-**评估指标**:
-```
-- Retrieval Latency (P50, P95, P99)
-- Relevance Score (相关性评分)
-- Context Quality Score (上下文质量)
-- Token Efficiency (Token/记忆)
-```
-
-**CarryMem对标**:
-- ✅ 有性能测试（P50: 0.01ms, P99: 65.97ms）
-- ✅ 有上下文注入（build_system_prompt）
-- ✅ 有Token预算管理
-- ✅ 性能优秀
-
----
-
-### 6️⃣ **LaMP (Language Model Personalization)** (2023)
-
-**来源**: 学术界联合  
-**论文**: "LaMP: When Large Language Models Meet Personalization"
-
-**7个子任务**:
-1. LaMP-1: 个性化文章分类
-2. LaMP-2: 个性化新闻标题生成
-3. LaMP-3: 个性化产品评分预测
-4. LaMP-4: 个性化新闻摘要
-5. LaMP-5: 个性化学术标题生成
-6. LaMP-6: 个性化邮件主题生成
-7. LaMP-7: 个性化推文生成
-
-**评估指标**:
-```
-- Accuracy (准确率)
-- ROUGE (摘要质量)
-- BLEU (生成质量)
-- Personalization Score (个性化评分)
-```
-
-**CarryMem对标**:
-- ✅ 有个性化能力（用户偏好记忆）
-- ⚠️ 缺少LaMP任务测试
-- ⚠️ 缺少生成质量评估
-
----
-
-## 🎯 CarryMem应该对标的Benchmark
-
-### 优先级排序
-
-| Benchmark | 相关性 | 实现难度 | 优先级 | 建议 |
-|-----------|--------|---------|--------|------|
-| **MemoryBank** | ⭐⭐⭐⭐⭐ | 🟢 低 | 🔴 P0 | 立即实现 |
-| **MSC** | ⭐⭐⭐⭐⭐ | 🟡 中 | 🔴 P0 | 本月实现 |
-| **MemPrompt** | ⭐⭐⭐⭐ | 🟢 低 | 🟡 P1 | 已部分实现 |
-| **LongMemEval** | ⭐⭐⭐⭐ | 🟡 中 | 🟡 P1 | 本季度 |
-| **PersonaChat** | ⭐⭐⭐ | 🔴 高 | 🟢 P2 | 长期规划 |
-| **LaMP** | ⭐⭐⭐ | 🔴 高 | 🟢 P2 | 长期规划 |
-
----
-
-## 📊 建议实现的Benchmark
-
-### P0: 立即实现（本周）
-
-#### 1. MemoryBank风格测试
-
-创建 `benchmarks/memorybank_benchmark.py`:
+#### 方式 A：Persona Summary 任务（自动评估，推荐先跑）
 
 ```python
-#!/usr/bin/env python3
-"""
-MemoryBank风格Benchmark
-
-测试维度:
-1. 记忆存储准确率
-2. 记忆召回准确率 (Precision@K, Recall@K)
-3. 时间衰减曲线
-4. 干扰抗性
-"""
-
-import time
 from memory_classification_engine import CarryMem
 
-def test_storage_accuracy():
-    """测试存储准确率"""
+def run_msc_persona_summary(conv_sessions, llm_model="gpt-4.1-mini"):
     cm = CarryMem()
     
-    test_cases = [
-        ("I prefer dark mode", "user_preference"),
-        ("Use PostgreSQL not MySQL", "correction"),
-        ("Let's use React", "decision"),
-        ("Python 3.11 is the version", "fact_declaration"),
-    ]
+    for session_idx, session in enumerate(conv_sessions):
+        for turn in session:
+            if turn["speaker"] == "user":
+                cm.classify_and_remember(
+                    turn["text"],
+                    metadata={"session": session_idx + 1}
+                )
     
-    correct = 0
-    for content, expected_type in test_cases:
-        result = cm.classify_and_remember(content)
-        if result.get("memory_type") == expected_type:
-            correct += 1
+    preferences = cm.recall_memories("user preferences", 
+                                      memory_type="user_preference", limit=50)
+    facts = cm.recall_memories("user facts", 
+                                memory_type="fact_declaration", limit=50)
+    relationships = cm.recall_memories("user relationships", 
+                                        memory_type="relationship", limit=50)
     
-    accuracy = correct / len(test_cases)
-    print(f"✅ 存储准确率: {accuracy:.1%}")
+    all_memories = preferences + facts + relationships
+    prompt = "Based on the following memories about a person, write a persona summary:\n"
+    for m in all_memories:
+        prompt += f"- {m['content']}\n"
     
+    summary = call_llm(prompt, model=llm_model)
     cm.close()
-    return accuracy
-
-def test_recall_at_k(k_values=[1, 5, 10]):
-    """测试Recall@K"""
-    cm = CarryMem()
-    
-    # 存储测试数据
-    test_memories = [
-        "I prefer dark mode",
-        "I use PostgreSQL",
-        "I like Python",
-        "I work remotely",
-        "I prefer TypeScript",
-    ]
-    
-    for mem in test_memories:
-        cm.classify_and_remember(mem)
-    
-    # 测试召回
-    queries = [
-        ("dark theme", "dark mode"),
-        ("database", "PostgreSQL"),
-("programming language", "Python"),
-    ]
-    
-    results = {}
-    for k in k_values:
-        recall_scores = []
-        for query, expected in queries:
-            memories = cm.recall_memories(query, limit=k)
-            found = any(expected.lower() in m["content"].lower() for m in memories)
-            recall_scores.append(1 if found else 0)
-        
-        recall_at_k = sum(recall_scores) / len(recall_scores)
-        results[f"Recall@{k}"] = recall_at_k
-        print(f"✅ Recall@{k}: {recall_at_k:.1%}")
-    
-    cm.close()
-    return results
-
-def test_time_decay():
-    """测试时"""
-    cm = CarryMem()
-    
-    # 存储记忆并模拟时间流逝
-    cm.classify_and_remember("Test memory")
-    
-    # 获取重要性评分
-    memories = cm.recall_memories("test")
-    if memories:
-        initial_importance = memories[0].get("importance", 0)
-        print(f"✅ 初始重要性: {initial_importance:.2f}")
-        
-        # TODO: 模拟30天后的重要性
-        # 预期: importance * 0.5 (半衰期)
-    
-    cm.close()
-
-def test_interference_resistance():
-    """测试干扰抗性"""
-    cm = CarryMem()
-    
-    # 存储原始记忆
-    cm.classify_and_remember("I prefer dark mode")
-    
-    # 存储大量干扰记忆
-    fonge(100):
-        cm.classify_and_remember(f"Random memory {i}")
-    
-    # 测试是否仍能召回原始记忆
-    memories = cm.recall_memories("dark mode")
-    found = any("dark mode" in m["content"].lower() for m in memories[:10])
-    
-    print(f"✅ 干扰抗性: {'通过' if found else '失败'}")
-    
-    cm.close()
-    return found
-
-if __name__ == "__main__":
-    print("="*60)
-    print("MemoryBank风格Benchmark")
-    print("="*60 + "\n")
-    
-    test_storage_accuracy()
-    test_recall_at_k()
-    test_time_decay()
-    test_interference_resistance()
+    return summary
 ```
 
-#### 2. MSC多会话测试
+#### 方式 B：对话生成 + 人工评估（高质量但高成本，按需）
 
-创建 `benchmarks/multi_session_benchmark.py`:
+用 CarryMem 作为记忆后端，生成第 5 session 的回复，人工评估 engagingness 和 consistency。
+
+### 3.2 LongMemEval 适配（⭐⭐⭐ 主力）
 
 ```python
-#!/usr/bin/env python3
-"""
-MSC (Multi-Session Chat) Benchmark
-
-模拟多个会话，测试跨会话记忆保持
-"""
-
-import time
-from datetime import datetime, timedelta
+import json
 from memory_classification_engine import CarryMem
 
-def simulate_session(session_id, days_after=0):
-    """模拟一个会话"""
-    print(f"\n📅 Session {session_id} (Day {days_after})")
+def run_longmemeval(data_file, output_file, llm_model="gpt-4.1-mini"):
+    with open(data_file) as f:
+        data = json.load(f)
     
-    cm = CarryMem()
-    
-    if session_id == 1:
-        # 第一次会话：建立记忆
-        cm.classify_and_remember("I prefer dark mode")
-        cm.classify_and_remember("I use PostgreSQL")
-        cm.classify_and_remember("I work remotely")
-        print("   ✅ 建立了3条记忆")
-    
-    else:
-        # 后续会话：测试召回
-        memories = cm.recall_memories("preferences")
-        recalled = len(memories)
-        print(f"   ✅ 召回了{recalled}条记忆")
+    results = []
+    for item in data:
+        cm = CarryMem()
         
-        # 计算召回率
-        expected = 3
-        recall_rate = recalled / expected
-        print(f"   📊 召回率: {recall_rate:.1%}")
+        for session, date in zip(item["haystack_sessions"], item["haystack_dates"]):
+            for turn in session:
+                if turn["role"] == "user":
+                    cm.classify_and_remember(turn["content"])
         
-        return recall_rate
+        memories = cm.recall_memories(item["question"], limit=20)
+        prompt = cm.build_system_prompt(item["question"], memories)
+        answer = call_llm(prompt, model=llm_model)
+        
+        results.append({
+            "question_id": item["question_id"],
+            "hypothesis": answer,
+        })
+        cm.close()
     
-    cm.close()
-
-def run_multi_session_test():
-    """运行多会话测试"""
-    print("="*60)
-    print("MSC多会话Benchmark")
-    print("="*60)
-    
-    sessions = [
-        (1, 0),    # Day 0: 初次对话
-        (2, 1),    # Day 1
-        (3, 7),    # Day 7
-      (4, 30),   # Day 30
-        (5, 90),   # Day 90
-    ]
-    
-    results = {}
-    for session_id, days in sessions:
-        recall_rate = simulate_session(session_id, days)
-        if recall_rate is not None:
-            results[f"Day_{days}"] = recall_rate
-    
-    print("\n" + "="*60)
-    print("遗忘曲线")
-    print("="*60)
-    for day, rate in results.items():
-        print(f"{day}: {rate:.1%}")
-
-if __name__ == "__main__":
-    run_multi_session_test()
+    with open(output_file, "w") as f:
+        for r in results:
+            f.write(json.dumps(r) + "\n")
 ```
 
----
+### 3.3 MemEval 适配（⭐ 可选，含 LoCoMo）
 
-### P1: 本月实现
-
-#### 3. LongMemEval一致性测试
+MemEval（ProsusAI 2026.03）整合了 LoCoMo + LongMemEval，内置全链路 token 成本追踪和 9 个系统基线。如果需要与 PropMem/Mem0/Graphiti 等系统直接对比，可通过 MemEval 跑 LoCoMo。
 
 ```python
-def test_consistency():
-    """测试记忆一致性"""
-    cm = CarryMem()
-    
-    # 存储初始偏好
-    cm.classify_and_remember("I prefer dark mode")
-    
-    # 存储冲突偏好
-    cm.classify_and_remember("I prefer light mode")
-    
-    # 检查冲突检测
-    conflicts = cm.check_conflicts()
-    
-    print(f"✅ 冲突检测: {len(conflicts)}个冲突")
-    
-    cm.close()
+# 在 MemEval 的 scripts/run_full_benchmark.py 中注册
+SYSTEMS["carrymem"] = {
+    "fn": run_carrymem,
+    "architecture": "Classified memory with rules engine and token budget management",
+    "infrastructure": "SQLite + FTS5 + local classification (no LLM for ingestion)",
+}
 ```
 
 ---
 
-## 🏆 对标目标
+## 四、评测指标体系
 
-### 短期目标（3个月）
+### 4.1 核心指标
 
-| 指标 | 当前 | 目标 | Benchmark来源 |
-|------|------|------|--------------|
-| 存储准确率 | 90.6% | >95% | MemoryBank |
-| Recall@10 | ? | >90% | MemoryBank |
-| P99延迟 | 65.97ms | <50ms | MemPrompt |
-| 跨会话召回 | ? | >85% | MSC |
-| 冲突检测率 | ? | >90% | LongMemEval |
+| 指标 | 说明 | 来源 |
+|------|------|------|
+| **Token F1** | 生成文本与参考答案的 token 重叠度 | 通用 |
+| **LLM-as-Judge** | GPT 评分（相关性 + 完整性 + 准确性） | 通用 |
+| **Persona Summary F1** | 提取的 persona 与参考 persona 的 F1 | MSC |
+| **Engagingness** | 人工评估回复吸引力（1-5 分） | MSC |
+| **Consistency** | 人工评估跨会话一致性（1-5 分） | MSC |
 
-### 长期目标（1年）
+### 4.2 CarryMem 特色指标（差异化优势）
 
-- 参与或创建行业标准benchmark
-- 发表benchmark论文
-- 建立CarryMem排行榜
-- 开源benchmark数据集
+| 指标 | 说明 | 为什么重要 |
+|------|------|-----------|
+| **Ingestion Token Cost** | 记忆存储阶段的 LLM token 消耗 | CarryMem = 0（本地分类），其他系统 > 0 |
+| **Quality-per-Token** | F1 / Total Tokens | 越高越好，展示效率优势 |
+| **Retrieval Latency** | P50/P95/P99 召回延迟 | CarryMem 已有 P50: 0.01ms |
+| **Memory Compression Ratio** | 原始对话 tokens / 存储记忆 tokens | 展示记忆压缩效率 |
+| **Zero-LLM Ingestion** | 是否不需要 LLM 即可存储记忆 | CarryMem 独有优势 |
 
----
+### 4.3 分维度评分
 
-## 📚 参考资源
+#### 对齐 LongMemEval 5 能力
 
-### 论文
+| 能力 | 测试内容 | CarryMem 对应功能 |
+|------|---------|------------------|
+| Information Extraction | 从对话中提取关键信息 | classify_and_remember |
+| Multi-Session Reasoning | 跨会话推理 | recall_memories + 语义匹配 |
+| Temporal Reasoning | 时间相关推理 | 时间戳 + TTL 机制 |
+| Knowledge Updates | 知识更新/冲突处理 | 冲突检测 + correction 类型 |
+| Abstention | 知道何时"不知道" | confidence 阈值 + 弃权判断 |
 
-1. **MemoryBank**: "Enhancing LLMs with Long-Term Memory" (2024)
-2. **MSC**: "Beyond Goldfish Memory: Long-Term Open-Domain Conversation" (Meta AI, 2022)
-3. **PersonaChat**: "Personalizing Dialogue Agents" (Meta AI, 2018)
-4. **LaMP**: "When Large Language Models Meet Personalization" (2023)
-5. **MemPrompt**: "Memory-assisted Prompt Editing" (Stanford, 2023)
+#### 对齐 MSC Persona 能力
 
-### 数据集
-
-- PersonaChat: https://gitacebookresearch/ParlAI
-- MSC: https://github.com/facebookresearch/ParlAI/tree/main/projects/msc
-- LaMP: https://lamp-benchmark.github.io/
-
-### 排行榜
-
-- Papers with Code: https://paperswithcode.com/task/dialogue-generation
-- Hugging Face: https://huggingface.co/spaces
-
----
-
-## 🎯 行动计划
-
-### 本周
-- ✅ 实现MemoryBank风格测试
-- ✅ 实现MSC多会话测试
-- ✅ 运行并记录基准结果
-
-### 本月
-- ✅ 实现LongMemEval一致性测试
-- ✅ 创建benchmark对比报告
-- ✅ 提交到Papers with Code
-
-### 本季度
-- ✅ 参与社区benchmark讨论
-- ✅ 发布benchmark数据集
-- ✅ 撰写技术博客
+| 能力 | 测试内容 | CarryMem 对应功能 |
+|------|---------|------------------|
+| Preference Learning | 记住用户偏好 | user_preference 类型 + 规则引擎 |
+| Fact Retention | 记住用户陈述的事实 | fact_declaration 类型 |
+| Relationship Tracking | 记住人际关系 | relationship 类型 |
+| Cross-Session Consistency | 跨会话保持一致 | recall_memories + 规则匹配 |
+| Interest Evolution | 兴趣变化追踪 | correction 类型 + 冲突检测 |
 
 ---
 
-**报告生成时间**: 2026-05-04  
-**下次更新**: 根据实现进度更新
+## 五、执行计划
+
+### Phase 1: MSC + LongMemEval（主力，1-2 天）
+
+| 步骤 | 内容 | 产出 |
+|------|------|------|
+| 1.1 | 从 HuggingFace 获取 MSC 数据集 | MSC 数据 |
+| 1.2 | 编写 MSC Persona Summary 适配 | Persona Summary F1 |
+| 1.3 | 运行 MSC Persona Summary 评测 | MSC 分数 |
+| 1.4 | 获取 LongMemEval 数据 | LongMemEval 数据 |
+| 1.5 | 编写 LongMemEval 适配 | 5 维度分数 |
+| 1.6 | 运行 LongMemEval 评测 | LongMemEval 分数 |
+
+### Phase 2: ES-MemEval + LaMP（补充，1 天）
+
+| 步骤 | 内容 | 产出 |
+|------|------|------|
+| 2.1 | 获取 ES-MemEval 数据 | ES-MemEval 数据 |
+| 2.2 | 重点跑冲突检测+用户建模维度 | 冲突处理分数 |
+| 2.3 | 获取 LaMP 数据 | LaMP 数据 |
+| 2.4 | 跑个性化生成任务 | 个性化分数 |
+
+### Phase 3: 结果分析与报告（1 天）
+
+| 步骤 | 内容 | 产出 |
+|------|------|------|
+| 3.1 | 汇总所有 benchmark 分数 | 综合对比表 |
+| 3.2 | 计算 Quality-per-Token | 效率优势量化 |
+| 3.3 | 分维度分析 | 强弱项识别 |
+| 3.4 | 生成评测报告 | 公开发布的报告 |
+
+### Phase 4: 优化迭代（按需）
+
+| 优化方向 | 预期效果 | 影响的 Benchmark |
+|----------|---------|-----------------|
+| 添加 persona-aware prompt 模板 | 提升 Persona Summary F1 | MSC |
+| 添加 time-aware query expansion | 提升 Temporal F1 | LongMemEval |
+| 改进 recall 策略（entity-scoped 检索） | 提升 Multi-hop F1 | LongMemEval/LoCoMo |
+| 添加 interest evolution tracking | 提升 Interest Evolution 分数 | MSC |
+| 优化 confidence 阈值 | 提升 Abstention 准确率 | LongMemEval |
+
+---
+
+## 六、预期结果与核心叙事
+
+### 6.1 核心叙事
+
+> **CarryMem 在记忆质量与 LLM 成本之间取得了最优平衡。**
+>
+> - **Ingestion 零 LLM 成本**：本地分类引擎（90.6% 准确率）替代 LLM 事实提取
+> - **Token 预算管理**：精确控制注入上下文的 token 数量，避免浪费
+> - **FTS5 + 语义双检索**：毫秒级召回，无需 LLM 参与检索
+> - **Quality-per-Token 最高**：每百万 token 获得最高 F1 分数
+> - **MSC 场景完美匹配**：7 种记忆类型天然适配 persona 学习
+
+### 6.2 对比图表示例
+
+```
+Quality (F1) vs Cost (Tokens)
+
+F1  0.60 |          * PropMem (5.9M)
+    0.55 |       * OpenClaw (16.4M)
+    0.50 |    * Full Context (37.5M)
+    0.45 | * Hindsight (24.2M)
+    0.40 |
+    0.35 |              * CarryMem (~1.5M) ← 效率之王
+         +----------------------------------→ Tokens
+         0    5M   10M   15M   20M   25M   30M
+```
+
+---
+
+## 七、风险与缓解
+
+| 风险 | 影响 | 缓解措施 |
+|------|------|---------|
+| 本地分类丢失隐式信息 | F1 偏低 | 补充 LLM 辅助分类作为可选模式 |
+| FTS5 对长问题召回不足 | Multi-hop F1 偏低 | 添加 query expansion + entity 检索 |
+| MSC 依赖 ParlAI 框架 | 适配成本高 | 从 HuggingFace 提取数据，绕过 ParlAI |
+| API 费用 | 成本 | 使用 gpt-4.1-mini，预估 $10-20 |
+| MSC 人工评估成本 | 高 | 先跑自动评估（Persona Summary F1），人工评估按需 |
+
+---
+
+## 八、参考资源
+
+- **MSC**: https://parl.ai/projects/msc/ — Meta Research, "Beyond Goldfish Memory" (ACL 2022)
+- **LongMemEval**: https://github.com/xiaowu0162/LongMemEval — ICLR 2025 长期记忆 benchmark
+- **ES-MemEval**: Evaluating Social Memory Systems (2025) — 冲突检测 + 用户建模
+- **LaMP**: https://github.com/LaMP-Benchmark/LaMP — 个性化生成 benchmark (EMNLP 2024)
+- **LoCoMo**: https://snap-research.github.io/locomo — ACL 2024 长期对话 benchmark
+- **MemoryBank**: https://github.com/zhao-ht/MemoryBank — 遗忘机制 benchmark (ACL 2023)
+- **MemEval**: https://github.com/ProsusAI/MemEval — 公平评估框架（2026.03），含 LoCoMo + LongMemEval
