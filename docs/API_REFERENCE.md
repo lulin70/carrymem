@@ -1,6 +1,6 @@
 # CarryMem API Reference
 
-**Version**: v0.1.5
+**Version**: v0.1.6
 **Date**: 2026-05-01
 
 ---
@@ -864,7 +864,7 @@ carrymem doctor --db /path/to/db   # Custom database path
 
 ```json
 {
-  "version": "0.1.5",
+  "version": "0.1.6",
   "checks_passed": 13,
   "checks_total": 14,
   "issues": ["disk_space: Low disk space (< 100MB)"],

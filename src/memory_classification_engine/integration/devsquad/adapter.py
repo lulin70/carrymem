@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from memory_classification_engine.rules import RuleEngine
 from memory_classification_engine.security.audit import AuditLogger
+from memory_classification_engine.utils.logger import logger
 from .type_mapping import (
     carrymem_rule_to_devsquad_dict,
     carrymem_to_devsquad_type,
@@ -48,7 +49,8 @@ class DevSquadAdapter:
         try:
             self._rule_engine.count_rules()
             return True
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Health check failed: {e}")
             return False
 
     def get_rules(

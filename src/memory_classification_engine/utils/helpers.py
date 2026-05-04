@@ -2,8 +2,12 @@ import re
 import time
 import json
 import hashlib
+import logging
+import secrets
 from datetime import timedelta
 from typing import Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
 
 MEMORY_TYPES = {
     "user_preference": "User Preference",
@@ -23,12 +27,7 @@ MEMORY_TIERS = {
 }
 
 def generate_memory_id() -> str:
-    """Generate a unique memory ID.
-    
-    Returns:
-        A unique memory ID.
-    """
-    import secrets
+    """Generate a unique memory ID using cryptographically secure random."""
     timestamp = int(time.time() * 1000)
     random_suffix = secrets.randbelow(9000) + 1000
     return f"mem_{timestamp}_{random_suffix}"
@@ -131,7 +130,7 @@ def load_json_file(file_path: str) -> Dict[str, Any]:
             data = json.load(f)
         return data
     except Exception as e:
-        print(f"Error loading JSON file: {e}")
+        logger.warning("Error loading JSON file %s: %s", file_path, e)
         return {}
 
 def save_json_file(file_path: str, data: Dict[str, Any]):
@@ -145,7 +144,7 @@ def save_json_file(file_path: str, data: Dict[str, Any]):
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception as e:
-        print(f"Error saving JSON file: {e}")
+        logger.warning("Error saving JSON file %s: %s", file_path, e)
 
 
 def escape_like(value: str) -> str:
@@ -158,7 +157,11 @@ def content_hash(content: str, prefix: str = "") -> str:
 
     Args:
         content: The content to hash.
-        prefix: Optional prefix to include in the hash (e.g., memory type).
+        prefix: Optional prefix to include in the hash.
+            - For memory deduplication (SQLite/JSON adapters): pass entry type
+              so that same content with different types produces different hashes.
+            - For file change detection (Obsidian adapter): omit prefix so that
+              same file content always produces the same hash regardless of type.
 
     Returns:
         The first 16 characters of the hex digest.

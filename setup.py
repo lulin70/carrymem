@@ -115,7 +115,6 @@ setup(
         "tui": [
             "textual>=0.40",
         ],
-        "devsquad": [],
         "full": [
             "pycld2>=0.41",
             "langdetect>=1.0.9",

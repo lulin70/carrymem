@@ -1,10 +1,9 @@
 """
 Tests for conflict_detector module.
 
-Covers: ConflictDetector, ConflictResolver,
+Covers: ConflictDetector,
 contradiction detection, duplicate detection,
-outdated detection, preference change detection,
-resolution strategies.
+outdated detection, preference change detection.
 """
 
 import pytest
@@ -13,7 +12,6 @@ from unittest.mock import MagicMock
 
 from memory_classification_engine.conflict_detector import (
     ConflictDetector,
-    ConflictResolver,
     MemoryConflict,
     ConflictType,
     ConflictSeverity,
@@ -202,120 +200,6 @@ class TestConflictDetector:
         conflicts = detector._detect_preference_changes(memories)
         assert isinstance(conflicts, list)
 
-
-class TestConflictResolver:
-    def test_init(self):
-        resolver = ConflictResolver()
-        assert resolver is not None
-
-    def test_resolve_auto(self):
-        resolver = ConflictResolver()
-        memories = [make_stored(storage_key="k1"), make_stored(storage_key="k2")]
-        conflict = MemoryConflict(
-            conflict_type=ConflictType.DUPLICATE,
-            severity=ConflictSeverity.LOW,
-            memories=memories,
-            reason="Test",
-        )
-        result = resolver.resolve(conflict, strategy="auto")
-        assert isinstance(result, dict)
-
-    def test_resolve_keep_newest(self):
-        resolver = ConflictResolver()
-        memories = [make_stored(storage_key="k1"), make_stored(storage_key="k2")]
-        conflict = MemoryConflict(
-            conflict_type=ConflictType.DUPLICATE,
-            severity=ConflictSeverity.LOW,
-            memories=memories,
-            reason="Test",
-        )
-        result = resolver.resolve(conflict, strategy="keep_newest")
-        assert isinstance(result, dict)
-
-    def test_resolve_keep_highest_quality(self):
-        resolver = ConflictResolver()
-        memories = [make_stored(storage_key="k1"), make_stored(storage_key="k2")]
-        conflict = MemoryConflict(
-            conflict_type=ConflictType.CONTRADICTION,
-            severity=ConflictSeverity.HIGH,
-            memories=memories,
-            reason="Test",
-        )
-        result = resolver.resolve(conflict, strategy="keep_highest_quality")
-        assert isinstance(result, dict)
-
-    def test_resolve_manual(self):
-        resolver = ConflictResolver()
-        memories = [make_stored(storage_key="k1"), make_stored(storage_key="k2")]
-        conflict = MemoryConflict(
-            conflict_type=ConflictType.CONTRADICTION,
-            severity=ConflictSeverity.HIGH,
-            memories=memories,
-            reason="Test",
-        )
-        result = resolver.resolve(conflict, strategy="manual")
-        assert isinstance(result, dict)
-
-    def test_resolve_invalid_strategy(self):
-        resolver = ConflictResolver()
-        memories = [make_stored(storage_key="k1"), make_stored(storage_key="k2")]
-        conflict = MemoryConflict(
-            conflict_type=ConflictType.DUPLICATE,
-            severity=ConflictSeverity.LOW,
-            memories=memories,
-            reason="Test",
-        )
-        with pytest.raises(ValueError):
-            resolver.resolve(conflict, strategy="invalid_strategy")
-
-    def test_normalize_dt_none(self):
-        result = ConflictResolver._normalize_dt(None)
-        assert result == datetime.min.replace(tzinfo=timezone.utc)
-
-    def test_normalize_dt_aware(self):
-        dt = datetime(2026, 1, 1, tzinfo=timezone.utc)
-        result = ConflictResolver._normalize_dt(dt)
-        assert result == dt
-
-    def test_normalize_dt_string(self):
-        result = ConflictResolver._normalize_dt("2026-01-01T00:00:00+00:00")
-        assert isinstance(result, datetime)
-
-    def test_auto_resolve_duplicate(self):
-        resolver = ConflictResolver()
-        memories = [make_stored(storage_key="k1"), make_stored(storage_key="k2")]
-        conflict = MemoryConflict(
-            conflict_type=ConflictType.DUPLICATE,
-            severity=ConflictSeverity.LOW,
-            memories=memories,
-            reason="Test",
-        )
-        result = resolver._auto_resolve(conflict)
-        assert isinstance(result, dict)
-
-    def test_auto_resolve_outdated(self):
-        resolver = ConflictResolver()
-        memories = [make_stored(storage_key="k1"), make_stored(storage_key="k2")]
-        conflict = MemoryConflict(
-            conflict_type=ConflictType.OUTDATED,
-            severity=ConflictSeverity.MEDIUM,
-            memories=memories,
-            reason="Test",
-        )
-        result = resolver._auto_resolve(conflict)
-        assert isinstance(result, dict)
-
-    def test_auto_resolve_contradiction(self):
-        resolver = ConflictResolver()
-        memories = [make_stored(storage_key="k1"), make_stored(storage_key="k2")]
-        conflict = MemoryConflict(
-            conflict_type=ConflictType.CONTRADICTION,
-            severity=ConflictSeverity.HIGH,
-            memories=memories,
-            reason="Test",
-        )
-        result = resolver._auto_resolve(conflict)
-        assert isinstance(result, dict)
 
 
 class TestMemoryConflict:

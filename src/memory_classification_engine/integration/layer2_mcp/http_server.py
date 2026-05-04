@@ -25,6 +25,7 @@ from memory_classification_engine.__version__ import __version__ as _version
 import uuid
 from typing import Any, Dict, Optional
 
+from memory_classification_engine.utils.logger import logger
 from .server import MCPServer
 
 _MAX_REQUEST_SIZE = 10 * 1024 * 1024
@@ -74,15 +75,46 @@ class MCPHTTPServer:
         return False
 
     def _get_cors_origin(self, request_origin: str) -> str:
+        """Match CORS origin with strict validation.
+        
+        Supports patterns like:
+        - http://localhost:* (matches http://localhost:3000, etc.)
+        - http://127.0.0.1:* (matches http://127.0.0.1:8080, etc.)
+        - https://example.com (exact match only)
+        """
         if not request_origin:
             return ""
+        
+        # Validate origin format (must be a valid URL)
+        if not re.match(r'^https?://[a-zA-Z0-9\.\-]+(:\d+)?$', request_origin):
+            logger.debug(f"Invalid origin format: {request_origin}")
+            return ""
+        
         for pattern in self._allowed_origins:
             if pattern.endswith("*"):
-                prefix = pattern[:-1]
-                if request_origin.startswith(prefix) and re.fullmatch(r'\d+', request_origin[len(prefix):]):
-                    return request_origin
+                # Wildcard pattern: http://localhost:*
+                prefix = pattern[:-1]  # Remove the *
+                
+                # Ensure prefix ends with : for port wildcard
+                if not prefix.endswith(":"):
+                    logger.warning(f"Invalid wildcard pattern (must end with :*): {pattern}")
+                    continue
+                
+                # Check if origin starts with the prefix
+                if request_origin.startswith(prefix):
+                    # Extract and validate the port part
+                    port_part = request_origin[len(prefix):]
+                    if re.fullmatch(r'\d+', port_part):
+                        port = int(port_part)
+                        # Validate port range (1-65535)
+                        if 1 <= port <= 65535:
+                            return request_origin
+                        else:
+                            logger.debug(f"Port out of range: {port}")
             elif request_origin == pattern:
+                # Exact match
                 return request_origin
+        
         return ""
 
     async def _handle_request(self, reader, writer):
@@ -139,14 +171,23 @@ class MCPHTTPServer:
                 await self._send_response(writer, 404, {"error": "Not found"}, request_origin)
 
         except Exception as e:
+            # Log detailed error for debugging
+            logger.error(f"Request handling error: {e}", exc_info=True)
             try:
-                await self._send_response(writer, 500, {"error": "Internal server error"}, "")
-            except Exception:
+                # Return sanitized error message (no stack trace or sensitive info)
+                error_msg = "Internal server error"
+                if os.environ.get("CARRYMEM_DEBUG") == "1":
+                    # Only show details in debug mode
+                    error_msg = str(e)
+                await self._send_response(writer, 500, {"error": error_msg}, "")
+            except Exception as e2:
+                logger.debug(f"Failed to send error response: {e2}")
                 pass
         finally:
             try:
                 writer.close()
-            except Exception:
+            except Exception as e:
+                logger.debug(f"Failed to close connection: {e}")
                 pass
 
     async def _handle_sse(self, writer, request_origin: str = ""):

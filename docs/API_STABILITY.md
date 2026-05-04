@@ -1,7 +1,7 @@
 # CarryMem API Stability Policy
 
 **Version**: 1.1
-**Effective**: v0.1.5+
+**Effective**: v0.1.6+
 **Last Updated**: 2026-05-02
 
 ## 1. API Classification
@@ -198,7 +198,7 @@ CarryMem follows Semantic Versioning (SemVer) with the following convention:
 
 ### Historical Note
 
-Early development used various version numbering schemes. The current v0.1.5 is a version reset that consolidates all features with security hardening and quality improvements.
+Early development used various version numbering schemes. The current v0.1.6 is a version reset that consolidates all features with security hardening and quality improvements.
 
 ## 7. Conditional Imports
 

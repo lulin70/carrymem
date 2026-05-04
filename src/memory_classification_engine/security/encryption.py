@@ -20,6 +20,7 @@ import hmac
 import json
 import os
 import struct
+import warnings
 from typing import Optional
 
 
@@ -46,6 +47,13 @@ class MemoryEncryption:
             self._fernet_available = True
         except ImportError:
             self._fernet_available = False
+            warnings.warn(
+                "cryptography library not available. Using fallback encryption (HMAC-CTR). "
+                "For enhanced security, install cryptography: pip install 'carrymem[encryption]' "
+                "or pip install cryptography",
+                SecurityWarning,
+                stacklevel=2
+            )
 
         if key:
             raw_key = self._derive_key(key)

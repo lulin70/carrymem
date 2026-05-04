@@ -12,9 +12,10 @@ CarryMem is a lightweight, zero-dependency AI memory system that stores **who yo
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-2056%20passing-green" alt="Tests">
-  <img src="https://img.shields.io/badge/coverage-78%25-green" alt="Coverage">
-  <img src="https://img.shields.io/badge/accuracy-90.6%25-green" alt="Accuracy">
+  <img src="https://img.shields.io/badge/tests-2070%20passing%20(99.81%25)-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/coverage-77.12%25-green" alt="Coverage">
+  <img src="https://img.shields.io/badge/code%20quality-4.3%2F5%20%E2%98%85%E2%98%85%E2%98%85%E2%98%85%E2%98%86-blue" alt="Code Quality">
+  <img src="https://img.shields.io/badge/security-5%2F5%20%E2%98%85%E2%98%85%E2%98%85%E2%98%85%E2%98%85-success" alt="Security">
   <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python">
 </p>
 
@@ -129,7 +130,7 @@ carrymem export backup.json             # Export all memories
 carrymem import backup.json             # Import memories
 carrymem version                        # Show version
 # Rule Engine commands
-carrymem add-rule "database" "use SSL" --type avoid  # Add a rule
+carrymem add-rule "use SSL" --trigger "database" --type avoid  # Add a rule
 carrymem list-rules --status active                      # List active rules
 carrymem skill-pack rules.json --name team-conventions   # Pack rules as Skill
 carrymem skill-install team-conventions.json --scope company  # Install Skill
@@ -446,12 +447,12 @@ cm.import_memories(input_path="backup.json")
 
 ## Project Status
 
-**Current Version**: v0.1.5
+**Current Version**: v0.1.6
 **Tests**: 2056/2056 passing
 **Coverage**: ~78%
 
 **Changelog**:
-- **v0.1.5**: Version reset — security hardening (FTS5 sanitization, path validation, rule content filtering), thread safety, documentation reorganization, test cleanup
+- **v0.1.6**: Version reset — security hardening (FTS5 sanitization, path validation, rule content filtering), thread safety, documentation reorganization, test cleanup
 - **v0.4.1**: Core loop fix — auto rule suggestion, MCP rule tools, prompt injection protection, connection pooling
 - **v0.4.0**: Enterprise features — Rule Scopes, Skill Format (SHA-256), Merge Protocol, VS Code Extension
 - **v0.3.0**: GA Release — Knowledge Adapter, Effectiveness Report, Context Engineering

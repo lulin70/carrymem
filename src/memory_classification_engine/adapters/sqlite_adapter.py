@@ -11,10 +11,10 @@ Features:
 - **v0.4.2**: Thread-safe with ThreadLocal connections and proper resource management
 """
 
-import hashlib
 import json
 import os
 import sqlite3
+import threading
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 

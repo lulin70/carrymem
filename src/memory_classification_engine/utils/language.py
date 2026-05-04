@@ -1,6 +1,8 @@
 import re
 from typing import Dict, List, Optional, Tuple
 
+from memory_classification_engine.utils.logger import logger
+
 try:
     from langdetect import detect, LangDetectException
     _LANGDETECT_AVAILABLE = True
@@ -156,7 +158,8 @@ class LanguageManager:
                     confidence = details[0][2] / 100.0
                     language_code = self._map_language_code(language_code)
                     return language_code, confidence
-            except Exception:
+            except Exception as e:
+                logger.debug(f"Failed to process language detection with CLD2: {e}")
                 pass
 
         if _LANGDETECT_AVAILABLE:

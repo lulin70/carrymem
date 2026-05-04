@@ -1,6 +1,6 @@
 # CarryMem Documentation Hub
 
-**Version**: v0.1.5  
+**Version**: v0.1.6  
 **Last Updated**: 2026-05-03
 
 ---

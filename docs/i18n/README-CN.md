@@ -126,7 +126,7 @@ carrymem export backup.json             # 导出所有记忆
 carrymem import backup.json             # 导入记忆
 carrymem version                        # 显示版本
 # 规则引擎命令
-carrymem add-rule "数据库" "始终使用SSL" --type avoid   # 添加规则
+carrymem add-rule "始终使用SSL" --trigger "数据库" --type avoid   # 添加规则
 carrymem list-rules --status active                      # 列出活跃规则
 carrymem skill-pack rules.json --name team-conventions   # 打包规则为 Skill
 carrymem skill-install team-conventions.json --scope company  # 安装 Skill
@@ -349,12 +349,12 @@ carrymem tui
 
 ## 项目状态
 
-**当前版本**：v0.1.5
+**当前版本**：v0.1.6
 **测试**：2056/2056 通过
 **覆盖率**：~78%
 
 **更新日志**：
-- **v0.1.5**：版本重置 — 安全加固（FTS5查询净化、路径验证、规则内容过滤）、线程安全、文档整理、测试清理
+- **v0.1.6**：版本重置 — 安全加固（FTS5查询净化、路径验证、规则内容过滤）、线程安全、文档整理、测试清理
 - **v0.4.1**：核心循环修复 — 自动规则建议、MCP 规则工具、提示注入防护、连接池
 - **v0.4.0**：企业功能 — 规则作用域、Skill 格式（SHA-256）、合并协议、VS Code 扩展
 - **v0.3.0**：GA 发布 — 知识适配器、有效性报告、上下文工程

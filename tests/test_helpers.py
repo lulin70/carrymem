@@ -213,7 +213,7 @@ class TestLoadJsonFile:
         result = load_json_file("/nonexistent/file.json")
         assert result == {}
     
-    def test_load_invalid_json(self, tmp_path, capsys):
+    def test_load_invalid_json(self, tmp_path, caplog):
         """Test loading invalid JSON returns empty dict"""
         json_file = tmp_path / "invalid.json"
         json_file.write_text("{ invalid json }")
@@ -221,8 +221,7 @@ class TestLoadJsonFile:
         result = load_json_file(str(json_file))
         assert result == {}
         
-        captured = capsys.readouterr()
-        assert "Error loading JSON file" in captured.out
+        assert "Error loading JSON file" in caplog.text
 
 
 class TestSaveJsonFile:
@@ -252,12 +251,11 @@ class TestSaveJsonFile:
         assert "中文" in content
         assert "😀" in content
     
-    def test_save_to_invalid_path(self, capsys):
-        """Test saving to invalid path prints error"""
+    def test_save_to_invalid_path(self, caplog):
+        """Test saving to invalid path logs error"""
         save_json_file("/invalid/path/file.json", {"data": "test"})
         
-        captured = capsys.readouterr()
-        assert "Error saving JSON file" in captured.out
+        assert "Error saving JSON file" in caplog.text
 
 
 class TestConstants:

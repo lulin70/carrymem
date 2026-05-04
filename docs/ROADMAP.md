@@ -2,7 +2,7 @@
 
 **Last Updated**: 2026-05-03
 **Product Positioning**: AI Identity Layer — Memory + Rules + Knowledge
-**Version Scheme**: v0.1.5 (Version Reset — Security + Quality) → v0.2.0 (Next)
+**Version Scheme**: v0.1.6 (Version Reset — Security + Quality) → v0.2.0 (Next)
 
 ---
 
@@ -30,7 +30,7 @@ v0.2.0 ─── Design Baseline (Memory Foundation + Rules Design Docs)
 - Second digit changes for GA milestones (API stability guarantee)
 - No "v1.0.0 jump" — earn it through proven production usage
 
-> **Note**: The v0.2.0–v0.4.1 versions listed above represent the project's development history. The version was reset to v0.1.5 to accurately reflect the product's current maturity (early beta). All features from those versions are included in v0.1.5 with security hardening and quality improvements. The next release will be v0.2.0.
+> **Note**: The v0.2.0–v0.4.1 versions listed above represent the project's development history. The version was reset to v0.1.6 to accurately reflect the product's current maturity (early beta). All features from those versions are included in v0.1.6 with security hardening and quality improvements. The next release will be v0.2.0.
 
 ---
 

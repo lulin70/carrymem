@@ -1,6 +1,6 @@
 # CarryMem ルールユーザーマニュアル
 
-**バージョン**: v0.1.5  
+**バージョン**: v0.1.6  
 **Date**: 2026-05-03  
 **Audience**: End Users (Developers, Power Users, Teams)  
 **Prerequisites**: Python 3.9+, pip
@@ -18,7 +18,7 @@ pip install carrymem
 **Verify installation:**
 ```bash
 carrymem version
-# Output: CarryMem v0.1.5
+# Output: CarryMem v0.1.6
 ```
 
 ### Step 2: Initialize
@@ -75,7 +75,7 @@ $ carrymem doctor
   CarryMem Doctor - Diagnostics
   =============================================
   [OK] Python 3.11+ (>= 3.9)
-  [OK] CarryMem v0.1.5
+  [OK] CarryMem v0.1.6
   [OK] Config directory: /Users/you/.carrymem
   [OK] Database: /Users/you/.carrymem/memories.db (0.14 MB)
   
@@ -151,7 +151,7 @@ carrymem add-rule "<action>" --trigger "<scene>" --type <type> [options]
 carrymem add-rule "跳过印度供应商" --trigger "写供应商调研" --type avoid
 
 # Soft preference (AI can override if needed)
-carrymem add-rule "优先用Python" --trigger "写脚本" --type prefer --override false
+carrymem add-rule "优先用Python" --trigger "写脚本" --type prefer --soft
 
 # Hard constraint (AI cannot ignore)
 carrymem add-rule "必须检查SQL注入" --trigger "代码评审" --type always
@@ -207,13 +207,13 @@ Test it now? [Y/n] y
 carrymem list-rules
 
 # Show paused rules only
-carrymem list-rules --paused
+carrymem list-rules --status paused
 
 # Show deprecated rules only
-carrymem list-rules --deprecated
+carrymem list-rules --status deprecated
 
 # Show all rules (any status)
-carrymem list-rules --all
+carrymem list-rules
 ```
 
 **Output format:**
@@ -300,7 +300,7 @@ carrymem rules delete rule_002
 - Don't match in queries
 - Stay in database (not deleted)
 - Can be resumed later if needed
-- Show up in `list-rules --deprecated`
+- Show up in `list-rules --status deprecated`
 
 #### Delete (Permanent Removal)
 
@@ -731,8 +731,8 @@ $ carrymem add-rule "normal" --trigger "*" --type prefer
 - **Security Reports**: Please email maintainers (do NOT post publicly)
 
 ### Version History
-- **v0.1.5** (Current): Version reset — security hardening, thread safety, documentation reorganization
-- **v0.1.5**: Memory layer foundation, Rules Engine, PyPI release
+- **v0.1.6** (Current): Version reset — security hardening, thread safety, documentation reorganization
+- **v0.1.6**: Memory layer foundation, Rules Engine, PyPI release
 - **Changelog**: See [CHANGELOG.md](../../CHANGELOG.md)
 
 ---

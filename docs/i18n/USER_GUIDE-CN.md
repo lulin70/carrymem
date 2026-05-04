@@ -229,7 +229,7 @@ print(f"已替换：{result['replaced_count']}")
 ### 安装
 
 1. 打开 VS Code
-2. 从 VSIX 安装：`code --install-extension vscode-carrymem-0.1.5.vsix`
+2. 从 VSIX 安装：`code --install-extension vscode-carrymem-0.1.6.vsix`
 3. 或在扩展目录中按 F5 以调试模式运行
 
 ### 功能
@@ -275,7 +275,7 @@ carrymem doctor                # 诊断安装
 ### 规则命令
 
 ```bash
-carrymem add-rule "触发器" "动作" [--type avoid] [--soft]
+carrymem add-rule "动作" --trigger "触发器" [--type avoid] [--soft]
 carrymem list-rules [--status active] [--type avoid]
 carrymem edit-rule <id> [--trigger "新"] [--action "新"]
 carrymem delete-rule <id>

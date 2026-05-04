@@ -2,7 +2,7 @@
 
 CarryMem = MCE Classification Engine + SQLite Default Storage + Replaceable Adapters
 
-v0.1.5: Version reset — Security hardening, thread safety, documentation reorganization
+v0.1.6: Code audit remediation — dead code removal, duplicate extraction, documentation consistency
 
 Quick Start:
     from memory_classification_engine import CarryMem

@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional, Any
 import re
 from memory_classification_engine.utils.language import language_manager
+from memory_classification_engine.utils.logger import logger
 
 class PatternAnalyzer:
     """Pattern-based memory analyzer."""
@@ -19,6 +20,16 @@ class PatternAnalyzer:
         self._re_log_timestamp = re.compile(r'^(DEBUG|INFO|WARN|WARNING|ERROR|CRITICAL)[:\s]')
         self._re_iso_date = re.compile(r'^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}')
         self._re_short_msg = re.compile(r'[a-z]{3,}')
+
+        # Pre-compiled keyword sets for O(1) lookup (Performance optimization)
+        self._feedback_positive_keywords = {
+            '对了', '正确', '好的', '成功', '完成', '不错',
+            'great', 'correct', 'good', 'success', 'done',
+        }
+        self._feedback_negative_keywords = {
+            '不对', '错误', '重做', '失败', '不行', '重新',
+            'wrong', 'error', 'redo', 'fail', 'no', 'again',
+        }
     
     def analyze(self, message: str, context: Optional[Dict[str, Any]] = None, execution_context: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Analyze a message for patterns.
@@ -50,7 +61,8 @@ class PatternAnalyzer:
         # Detect language (with fallback)
         try:
             language, _ = language_manager.detect_language(message)
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to detect language, defaulting to 'en': {e}")
             language = 'en'
 
         # Run all detectors (Phase B Fix #4: task/decision BEFORE fact)
@@ -305,14 +317,14 @@ class PatternAnalyzer:
             A dictionary representing the detected feedback pattern, or None if no pattern found.
         """
         user_feedback = execution_context.get('user_feedback', '').lower()
-        
+
         tool_error = execution_context.get('tool_error', False)
         retry_count = execution_context.get('retry_count', 0)
         execution_time = execution_context.get('execution_time', 0)
-        
+
         context_position = execution_context.get('context_position', '')
-        
-        if any(phrase in user_feedback for phrase in ['对了', '正确', '好的', '成功', '完成', '不错', 'great', 'correct', 'good', 'success', 'done']):
+
+        if self._feedback_positive_keywords & set(user_feedback.split()):
             return {
                 'memory_type': 'positive_feedback',
                 'tier': 2,
@@ -322,8 +334,8 @@ class PatternAnalyzer:
                 'feedback_type': 'positive',
                 'execution_context': execution_context
             }
-        
-        if any(phrase in user_feedback for phrase in ['不对', '错误', '重做', '失败', '不行', '重新', 'wrong', 'error', 'redo', 'fail', 'no', 'again']):
+
+        if self._feedback_negative_keywords & set(user_feedback.split()):
             return {
                 'memory_type': 'negative_feedback',
                 'tier': 3,

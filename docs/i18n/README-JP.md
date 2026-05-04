@@ -126,7 +126,7 @@ carrymem export backup.json             # 全メモリをエクスポート
 carrymem import backup.json             # メモリをインポート
 carrymem version                        # バージョン表示
 # ルールエンジンコマンド
-carrymem add-rule "データベース" "常にSSLを使用" --type avoid   # ルール追加
+carrymem add-rule "常にSSLを使用" --trigger "データベース" --type avoid   # ルール追加
 carrymem list-rules --status active                            # アクティブルール一覧
 carrymem skill-pack rules.json --name team-conventions         # Skill としてパック
 carrymem skill-install team-conventions.json --scope company   # Skill インストール
@@ -349,12 +349,12 @@ carrymem tui
 
 ## プロジェクトステータス
 
-**現在のバージョン**: v0.1.5
+**現在のバージョン**: v0.1.6
 **テスト**: 2056/2056 通過
 **カバレッジ**: ~78%
 
 **チェンジログ**:
-- **v0.1.5**: バージョンリセット — セキュリティ強化（FTS5サニタイズ、パス検証、ルールコンテンツフィルタリング）、スレッドセーフ、ドキュメント整理、テストクリーンアップ
+- **v0.1.6**: バージョンリセット — セキュリティ強化（FTS5サニタイズ、パス検証、ルールコンテンツフィルタリング）、スレッドセーフ、ドキュメント整理、テストクリーンアップ
 - **v0.4.1**: コアループ修正 — 自動ルール提案、MCP ルールツール、プロンプト注入防御、コネクションプーリング
 - **v0.4.0**: エンタープライズ機能 — ルールスコープ、Skill フォーマット（SHA-256）、マージプロトコル、VS Code 拡張
 - **v0.3.0**: GA リリース — ナレッジアダプター、有効性レポート、コンテキストエンジニアリング
