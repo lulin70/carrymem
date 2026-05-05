@@ -1,0 +1,180 @@
+{
+  "benchmark": "RuleEngine-Eval",
+  "timestamp": "2026-05-05T04:23:04.958509+00:00",
+  "dimensions": {
+    "compliance": {
+      "compliance_rate": 0.8333,
+      "correct": 10,
+      "total": 12,
+      "details": [
+        {
+          "query": "Python version for new project",
+          "status": "PASS",
+          "reason": "matched expected rule"
+        },
+        {
+          "query": "How to design the API for mobile",
+          "status": "PASS",
+          "reason": "matched expected rule"
+        },
+        {
+          "query": "Which database should we use",
+          "status": "PASS",
+          "reason": "matched expected rule"
+        },
+        {
+          "query": "Security configuration for production",
+          "status": "PASS",
+          "reason": "matched expected rule"
+        },
+        {
+          "query": "Testing strategy for microservices",
+          "status": "PASS",
+          "reason": "matched expected rule"
+        },
+        {
+          "query": "Deploy to production today",
+          "status": "FAIL",
+          "reason": "expected trigger 'deployment', got []"
+        },
+        {
+          "query": "Code review process",
+          "status": "PASS",
+          "reason": "matched expected rule"
+        },
+        {
+          "query": "Logging framework choice",
+          "status": "PASS",
+          "reason": "matched expected rule"
+        },
+        {
+          "query": "What's the weather today",
+          "status": "PASS",
+          "reason": "correctly no match"
+        },
+        {
+          "query": "Recipe for chocolate cake",
+          "status": "PASS",
+          "reason": "correctly no match"
+        },
+        {
+          "query": "Python interpreter setup",
+          "status": "PASS",
+          "reason": "matched expected rule"
+        },
+        {
+          "query": "REST vs GraphQL comparison",
+          "status": "FAIL",
+          "reason": "expected trigger 'API design', got []"
+        }
+      ]
+    },
+    "conflict_detection": {
+      "detection_rate": 0.6667,
+      "scenarios_passed": 2,
+      "total_scenarios": 3,
+      "same_trigger_conflict": false,
+      "contradiction_detected": true,
+      "overlap_detected": true,
+      "conflict_types_found": []
+    },
+    "priority": {
+      "priority_rate": 1.0,
+      "scenarios_passed": 3,
+      "total_scenarios": 3,
+      "company_over_personal": true,
+      "three_scope_priority": true,
+      "hard_rule_recognized": true
+    },
+    "scope_isolation": {
+      "isolation_rate": 1.0,
+      "scenarios_passed": 3,
+      "total_scenarios": 3,
+      "personal_isolated": true,
+      "company_isolated": true,
+      "no_cross_scope_leak": true
+    },
+    "matching_accuracy": {
+      "accuracy": 0.875,
+      "correct": 7,
+      "total": 8,
+      "details": [
+        {
+          "query": "Which programming language should I use",
+          "status": "PASS",
+          "matched_trigger": "programming language selection"
+        },
+        {
+          "query": "What frontend framework for the new project",
+          "status": "PASS",
+          "matched_trigger": "frontend framework selection"
+        },
+        {
+          "query": "Need a database for the application",
+          "status": "PASS",
+          "matched_trigger": "database selection"
+        },
+        {
+          "query": "Cloud provider recommendation",
+          "status": "PASS",
+          "matched_trigger": "cloud platform selection"
+        },
+        {
+          "query": "How to deploy the containers",
+          "status": "FAIL",
+          "expected": "infrastructure and deployment",
+          "got": []
+        },
+        {
+          "query": "API protocol choice for mobile",
+          "status": "PASS",
+          "matched_trigger": "API design and protocol"
+        },
+        {
+          "query": "Authentication method for the service",
+          "status": "PASS",
+          "matched_trigger": "security and authentication"
+        },
+        {
+          "query": "Git workflow for the team",
+          "status": "PASS",
+          "matched_trigger": "version control workflow"
+        }
+      ]
+    },
+    "lifecycle": {
+      "lifecycle_rate": 1.0,
+      "scenarios_passed": 8,
+      "total_scenarios": 8,
+      "create": true,
+      "update": true,
+      "pause": true,
+      "pause_effective": true,
+      "resume": true,
+      "resume_effective": true,
+      "delete": true,
+      "delete_effective": true
+    }
+  },
+  "summary": {
+    "total_score": 0.8833,
+    "grade": "B (Good)",
+    "duration_seconds": 0.08,
+    "weights": {
+      "compliance": 0.25,
+      "conflict_detection": 0.15,
+      "priority": 0.15,
+      "scope_isolation": 0.15,
+      "matching_accuracy": 0.2,
+      "lifecycle": 0.1
+    },
+    "dimension_scores": {
+      "compliance": 0.8333,
+      "conflict_detection": 0.6667,
+      "priority": 1.0,
+      "scope_isolation": 1.0,
+      "matching_accuracy": 0.875,
+      "lifecycle": 1.0
+    }
+  }
+}

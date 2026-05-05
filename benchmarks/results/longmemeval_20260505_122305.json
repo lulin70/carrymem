@@ -1,0 +1,272 @@
+{
+  "benchmark": "LongMemEval",
+  "timestamp": "2026-05-05T04:23:05.042135+00:00",
+  "dimensions": {
+    "storage_accuracy": {
+      "accuracy": 0.7,
+      "correct": 14,
+      "total": 20,
+      "details": [
+        {
+          "message": "I prefer dark mode in all my editors",
+          "expected": "user_preference",
+          "actual": "user_preference",
+          "correct": true
+        },
+        {
+          "message": "We decided to use PostgreSQL for the main database",
+          "expected": "decision",
+          "actual": "decision",
+          "correct": true
+        },
+        {
+          "message": "Actually, the deadline is next Friday not Monday",
+          "expected": "correction",
+          "actual": "correction",
+          "correct": true
+        },
+        {
+          "message": "The API rate limit is 1000 requests per minute",
+          "expected": "fact_declaration",
+          "actual": "fact_declaration",
+          "correct": true
+        },
+        {
+          "message": "Always use TypeScript strict mode in new projects",
+          "expected": "user_preference",
+          "actual": "user_preference",
+          "correct": true
+        },
+        {
+          "message": "Let's go with microservices architecture",
+          "expected": "decision",
+          "actual": "task_pattern",
+          "correct": false
+        },
+        {
+          "message": "That was wrong, use the async version instead",
+          "expected": "correction",
+          "actual": "correction",
+          "correct": true
+        },
+        {
+          "message": "Our team has 15 engineers",
+          "expected": "fact_declaration",
+          "actual": "relationship",
+          "correct": false
+        },
+        {
+          "message": "I like using vim for quick edits",
+          "expected": "user_preference",
+          "actual": "decision",
+          "correct": false
+        },
+        {
+          "message": "We chose AWS over GCP for cloud hosting",
+          "expected": "decision",
+          "actual": "decision",
+          "correct": true
+        },
+        {
+          "message": "Correction: the port should be 5432 not 5433",
+          "expected": "correction",
+          "actual": "correction",
+          "correct": true
+        },
+        {
+          "message": "The staging server is at 10.0.1.50",
+          "expected": "fact_declaration",
+          "actual": "fact_declaration",
+          "correct": true
+        },
+        {
+          "message": "Never deploy on Fridays",
+          "expected": "user_preference",
+          "actual": "task_pattern",
+          "correct": false
+        },
+        {
+          "message": "We agreed to use trunk-based development",
+          "expected": "decision",
+          "actual": "task_pattern",
+          "correct": false
+        },
+        {
+          "message": "No, use spaces not tabs for indentation",
+          "expected": "correction",
+          "actual": "correction",
+          "correct": true
+        },
+        {
+          "message": "Redis cache TTL is set to 3600 seconds",
+          "expected": "fact_declaration",
+          "actual": "fact_declaration",
+          "correct": true
+        },
+        {
+          "message": "Prefer composition over inheritance",
+          "expected": "user_preference",
+          "actual": "user_preference",
+          "correct": true
+        },
+        {
+          "message": "Decided to migrate from REST to GraphQL",
+          "expected": "decision",
+          "actual": "task_pattern",
+          "correct": false
+        },
+        {
+          "message": "That approach is incorrect, try the simpler one",
+          "expected": "correction",
+          "actual": "correction",
+          "correct": true
+        },
+        {
+          "message": "Sprint duration is 2 weeks",
+          "expected": "fact_declaration",
+          "actual": "fact_declaration",
+          "correct": true
+        }
+      ]
+    },
+    "recall_accuracy": {
+      "recall_rate": 0.4,
+      "correct": 4,
+      "total": 10,
+      "details": [
+        {
+          "query": "theme preference",
+          "expected_keyword": "dark mode",
+          "found": true,
+          "result_count": 3
+        },
+        {
+          "query": "database choice",
+          "expected_keyword": "PostgreSQL",
+          "found": true,
+          "result_count": 2
+        },
+        {
+          "query": "API limits",
+          "expected_keyword": "rate limit",
+          "found": false,
+          "result_count": 0
+        },
+        {
+          "query": "TypeScript configuration",
+          "expected_keyword": "strict mode",
+          "found": false,
+          "result_count": 0
+        },
+        {
+          "query": "cloud provider",
+          "expected_keyword": "AWS",
+          "found": true,
+          "result_count": 3
+        },
+        {
+          "query": "deployment rules",
+          "expected_keyword": "Friday",
+          "found": true,
+          "result_count": 3
+        },
+        {
+          "query": "server address",
+          "expected_keyword": "10.0.1.50",
+          "found": false,
+          "result_count": 2
+        },
+        {
+          "query": "cache settings",
+          "expected_keyword": "Redis",
+          "found": false,
+          "result_count": 0
+        },
+        {
+          "query": "development workflow",
+          "expected_keyword": "trunk",
+          "found": false,
+          "result_count": 0
+        },
+        {
+          "query": "design patterns",
+          "expected_keyword": "composition",
+          "found": false,
+          "result_count": 0
+        }
+      ]
+    },
+    "long_term_retention": {
+      "retention_score": 1.0,
+      "day_0": 1.0,
+      "day_30": 1.0,
+      "day_90": 1.0,
+      "retention_curve": {
+        "day_0": {
+          "recall_rate": 1.0,
+          "correct": 5,
+          "total": 5,
+          "description": "Immediate recall"
+        },
+        "day_1": {
+          "recall_rate": 1.0,
+          "correct": 5,
+          "total": 5,
+          "description": "Short-term (1 day)"
+        },
+        "day_7": {
+          "recall_rate": 1.0,
+          "correct": 5,
+          "total": 5,
+          "description": "Medium-term (1 week)"
+        },
+        "day_30": {
+          "recall_rate": 1.0,
+          "correct": 5,
+          "total": 5,
+          "description": "Half-life test (30 days)"
+        },
+        "day_90": {
+          "recall_rate": 1.0,
+          "correct": 5,
+          "total": 5,
+          "description": "Long-term (90 days)"
+        }
+      }
+    },
+    "conflict_resolution": {
+      "resolution_rate": 0.5,
+      "scenarios_passed": 1,
+      "total_scenarios": 2,
+      "contradiction_detected": true,
+      "preference_change_detected": false,
+      "duplicate_detected": false
+    },
+    "privacy_compliance": {
+      "compliance_rate": 1.0,
+      "scenarios_passed": 2,
+      "total_scenarios": 2,
+      "alice_isolated": true,
+      "bob_isolated": true
+    }
+  },
+  "summary": {
+    "total_score": 0.715,
+    "grade": "C (Fair)",
+    "duration_seconds": 0.71,
+    "weights": {
+      "storage_accuracy": 0.2,
+      "recall_accuracy": 0.25,
+      "long_term_retention": 0.25,
+      "conflict_resolution": 0.15,
+      "privacy_compliance": 0.15
+    },
+    "dimension_scores": {
+      "storage_accuracy": 0.7,
+      "recall_accuracy": 0.4,
+      "long_term_retention": 1.0,
+      "conflict_resolution": 0.5,
+      "privacy_compliance": 1.0
+    }
+  }
+}

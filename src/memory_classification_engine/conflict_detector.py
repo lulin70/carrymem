@@ -22,6 +22,7 @@ class ConflictType(Enum):
     OUTDATED = "outdated"
     DUPLICATE = "duplicate"
     PREFERENCE_CHANGE = "preference_change"
+    OVERLAP = "overlap"
 
 
 class ConflictSeverity(Enum):
@@ -315,7 +316,7 @@ class ConflictDetector:
                     continue
                 
                 similarity = self._calculate_similarity(pref1, pref2)
-                if similarity >= 0.6:
+                if similarity >= 0.4:
                     group.append(pref2)
                     used.add(j)
             

@@ -81,6 +81,11 @@ OVERLAPPING_PAIRS: List[Tuple[str, str]] = [
     ("prefer", "prefer"),
     ("format", "format"),
     ("always", "format"),
+    ("always", "always"),
+    ("always", "prefer"),
+    ("avoid", "avoid"),
+    ("forbid", "forbid"),
+    ("prefer", "format"),
 ]
 
 

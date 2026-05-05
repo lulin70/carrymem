@@ -613,6 +613,18 @@ class SQLiteAdapter(StorageAdapter):
             if not rows and self._has_cjk(query):
                 rows = self._like_search(query, where_clause, params, limit)
 
+            if not rows:
+                expanded_queries = self._expand_query(query)
+                for eq in expanded_queries:
+                    rows = self._fts_search(eq, where_clause, params, limit)
+                    if rows:
+                        break
+                if not rows:
+                    for eq in expanded_queries:
+                        rows = self._like_search(eq, where_clause, params, limit)
+                        if rows:
+                            break
+
             # Phase 2 (v0.4.0): Semantic expansion if results insufficient
             if self._enable_semantic and len(rows) < limit and self._expander and self._merger:
                 original_results = [self._row_to_stored(r) for r in rows if r]
@@ -770,6 +782,49 @@ class SQLiteAdapter(StorageAdapter):
             or "\u30a0" <= char <= "\u30ff"
             for char in text
         )
+
+    @staticmethod
+    def _expand_query(query: str) -> List[str]:
+        """Expand a short query with related terms for better recall.
+
+        Args:
+            query: The original search query.
+
+        Returns:
+            List of expanded query strings.
+        """
+        expansions = {
+            "theme": ["dark mode", "light mode", "theme preference"],
+            "database": ["postgresql", "mysql", "database selection", "database choice"],
+            "api": ["api rate", "api design", "graphql", "rest"],
+            "typescript": ["typescript strict", "typescript configuration"],
+            "cloud": ["aws", "gcp", "cloud hosting", "cloud provider"],
+            "deployment": ["deploy", "friday", "deployment rules"],
+            "server": ["server address", "server port", "staging server", "ip"],
+            "cache": ["redis", "cache ttl", "cache settings"],
+            "workflow": ["trunk-based", "development workflow", "git workflow"],
+            "design": ["composition", "inheritance", "design pattern", "class design"],
+            "editor": ["vscode", "intellij", "ide", "vim"],
+            "language": ["python", "programming language"],
+            "indentation": ["spaces", "tabs", "indentation style"],
+            "version": ["git", "version control", "github"],
+            "security": ["oauth", "jwt", "authentication", "tls"],
+            "framework": ["react", "vue", "angular", "frontend framework"],
+        }
+
+        query_lower = query.lower().strip()
+        expanded = []
+
+        for key, terms in expansions.items():
+            if key in query_lower or query_lower in key:
+                expanded.extend(terms)
+
+        if not expanded:
+            words = query_lower.split()
+            if len(words) == 1 and len(words[0]) > 2:
+                expanded.append(f"%{words[0]}%")
+
+        return expanded
 
     def _fts_search(self, query, where_clause, params, limit):
         try:

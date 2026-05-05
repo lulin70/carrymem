@@ -47,6 +47,7 @@ class ClassificationPipeline:
         
         if pattern_matches:
             logger.debug(f"Pattern analysis found {len(pattern_matches)} matches")
+            pattern_matches = self._resolve_type_priority(pattern_matches)
             return pattern_matches
         
         semantic_matches = self.semantic_classifier.classify(message, context, execution_context)
@@ -109,6 +110,38 @@ class ClassificationPipeline:
         
         return matches
     
+    @staticmethod
+    def _resolve_type_priority(matches: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Resolve type priority when multiple types match the same message.
+
+        Priority: correction > decision > preference > task > fact > others
+
+        Args:
+            matches: List of pattern matches.
+
+        Returns:
+            Resolved list with highest-priority type first.
+        """
+        if len(matches) <= 1:
+            return matches
+
+        type_priority = {
+            'correction': 1,
+            'decision': 2,
+            'user_preference': 3,
+            'task_pattern': 4,
+            'fact_declaration': 5,
+            'sentiment_marker': 6,
+            'relationship': 7,
+            'location': 8,
+        }
+
+        def sort_key(m):
+            return type_priority.get(m.get('memory_type', ''), 99)
+
+        matches.sort(key=sort_key)
+        return matches
+
     def _get_default_classification(self, message: str, language: str) -> Optional[Dict[str, Any]]:
         """Get default classification for a message when no other matches found.
 

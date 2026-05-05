@@ -93,14 +93,14 @@ class PatternAnalyzer:
             return patterns
 
         for detector_name, detector_func in [
-            ('correction', self._detect_correction_pattern),  # V4-02: correction first
-            ('sentiment', self._detect_sentiment_pattern),    # V4-05: sentiment before task
-            ('task', self._detect_task_pattern),           # Phase B: before fact
-            ('decision', self._detect_decision_pattern),     # Phase B: before fact
+            ('correction', self._detect_correction_pattern),
+            ('sentiment', self._detect_sentiment_pattern),
+            ('decision', self._detect_decision_pattern),
+            ('task', self._detect_task_pattern),
             ('preference', self._detect_preference_pattern),
             ('relationship', self._detect_relationship_pattern),
-            ('fact', self._detect_fact_pattern),              # V4-08: fact BEFORE location
-            ('location', self._detect_location_pattern),      # Location is weak signal, last
+            ('fact', self._detect_fact_pattern),
+            ('location', self._detect_location_pattern),
         ]:
             result = detector_func(message, language)
             if result:
@@ -929,6 +929,15 @@ class PatternAnalyzer:
         Returns:
             A task pattern if detected, None otherwise.
         """
+        message_lower = message.lower()
+        decision_guard = re.compile(
+            r'\b(decided?|agreed?|chose|chosen|going\s+with|settled?\s+on|opted?\s+for|'
+            r"we\s+('ll|will)\s+(use|adopt|go\s+with|move\s+to|switch\s+to))\b",
+            re.IGNORECASE,
+        )
+        if decision_guard.search(message_lower):
+            return None
+
         task_keywords = language_manager.get_keywords('task_pattern', language)
 
         if language == 'en':
@@ -1090,21 +1099,17 @@ class PatternAnalyzer:
         """
         # Phase B-2: Strong decision indicators (NOT noise words!)
         strong_decision_patterns = [
-            # Explicit decision markers
             r'\b(decision|decided?|choose|chose|chosen|choice|select|selected|selection|pick|picked)\b',
             r'\b(going\s+with|settled?\s+on|opted?\s+for|landed?\s+on|went\s+with)\b',
-            r'\b(adopt|adopting|adopted|embrace|embraced|integrate|integrated)\b',
-
-            # Commitment/Agreement markers
+            r'\b(adopt|adopting|adopted|embrace|embraced)\b',
             r'\b(agreed?|consensus|unanimous|commit(ted|ting)?|pledge(d|ing)?)\b',
             r'\b(final(ize|ized|ization)|confirm(ed|ation)|approve(d|val)?|sign(ed|ing|off)?)\b',
-
-            # Architecture/Approach decisions
             r'\b(architecture|approach|strategy|plan|pattern|design|solution|stack|framework|library|tool|tech|technology)\s+(is|will be|should be|has been|we(\'re| are))\b',
-            r'\b(use|using|utilizing|leveraging|based\s+on|built\s+(with|on|around))\s+\w+\s+(for|as|instead of|over|rather than)\b',
-
-            # Process/Policy decisions
-            r'\b(will\s+move|moving|shift(ing)?|chang(e|ing)?)\s+to\b.*\b(monday|tuesday|friday|weekly|monthly|agile|scrum|kanban)\b',
+            r'\b(use|using|utilizing|leveraging)\s+\w+\s+(instead\s+of|over|rather\s+than)\b',
+            r'\b(we|team|group)\s+(\'ll|will|are|\'re)\s+(use|using|adopt|adopting|go\s+with|move\s+to|switch\s+to|build\s+with|deploy\s+(with|on|to))\b',
+            r'\bagreed?\s+to\s+(use|adopt|go\s+with|switch\s+to|implement|build|deploy)\b',
+            r'\bdecided?\s+to\s+(use|adopt|go\s+with|switch\s+to|migrate|move|build|deploy|implement)\b',
+            r'\b(from\s+now\s+on|going\s+forward|henceforth)\b',
             r'\b(are|is|will be)\s+(mandatory|required|standard|policy|rule|practice|norm|convention|default)\b',
         ]
 

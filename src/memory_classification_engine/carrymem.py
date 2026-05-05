@@ -1436,13 +1436,27 @@ class CarryMem:
         if not self._adapter:
             raise StorageNotConfiguredError()
 
-        all_memories = self._adapter.recall("", limit=10000)
-        if not all_memories:
-            return []
+        all_conflicts = []
 
-        detector = ConflictDetector()
-        conflicts = detector.detect_conflicts(all_memories)
-        return [c.to_dict() for c in conflicts]
+        all_memories = self._adapter.recall("", limit=10000)
+        if all_memories:
+            detector = ConflictDetector()
+            memory_conflicts = detector.detect_conflicts(all_memories)
+            all_conflicts.extend(c.to_dict() for c in memory_conflicts)
+
+        if self._rule_engine:
+            rule_conflicts = self._rule_engine.check_conflicts()
+            for rc in rule_conflicts:
+                all_conflicts.append({
+                    "conflict_type": rc.conflict_type.value,
+                    "severity": rc.severity.value,
+                    "reason": rc.reason,
+                    "suggestion": rc.suggestion,
+                    "rules": [{"id": r.id, "trigger": r.trigger, "action": r.action, "scope": r.scope} for r in rc.rules],
+                    "source": "rule_engine",
+                })
+
+        return all_conflicts
 
     def check_quality(self, min_score: float = 0.3) -> List[Dict[str, Any]]:
         from memory_classification_engine.quality_scorer import MemoryQualityScorer, QualityAnalyzer

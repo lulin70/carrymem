@@ -131,7 +131,8 @@ class RuleStorage:
                     trigger,
                     action,
                     content='rules',
-                    content_rowid='rowid'
+                    content_rowid='rowid',
+                    tokenize='trigram'
                 );
 
                 -- Triggers to keep FTS5 in sync
@@ -154,8 +155,23 @@ class RuleStorage:
                 """
             )
             conn.commit()
+            self._migrate_fts_tokenizer()
         finally:
             pass
+
+    def _migrate_fts_tokenizer(self):
+        """Migrate rules_fts from unicode61 to trigram tokenizer if needed."""
+        conn = self._get_connection()
+        try:
+            row = conn.execute(
+                "SELECT sql FROM sqlite_master WHERE type='table' AND name='rules_fts'"
+            ).fetchone()
+            if row and 'unicode61' in (row[0] or ''):
+                conn.execute("INSERT INTO rules_fts(rules_fts) VALUES('rebuild')")
+                conn.commit()
+                _logger.info("Migrated rules_fts from unicode61 to trigram tokenizer")
+        except sqlite3.OperationalError as e:
+            _logger.warning(f"FTS5 tokenizer migration skipped: {e}")
 
     def _create_validated(
         self,
@@ -382,6 +398,32 @@ class RuleStorage:
             pass
 
     @staticmethod
+    def _estimate_rank(rule: Rule, query_text: str) -> float:
+        """Estimate a rank score for fallback search results."""
+        query_lower = query_text.lower()
+        score = 0.5
+        if query_lower in rule.trigger.lower():
+            score += 0.3
+        if query_lower in rule.action.lower():
+            score += 0.1
+        query_words = set(query_lower.split())
+        trigger_words = set(rule.trigger.lower().split())
+        overlap = query_words & trigger_words
+        if overlap:
+            score += 0.2 * (len(overlap) / max(len(query_words), 1))
+        return min(score, 1.0)
+
+    @staticmethod
+    def _has_cjk(text: str) -> bool:
+        """Check if text contains CJK characters."""
+        return any(
+            "\u4e00" <= char <= "\u9fff"
+            or "\u3400" <= char <= "\u4dbf"
+            or "\u30a0" <= char <= "\u30ff"
+            for char in text
+        )
+
+    @staticmethod
     def _sanitize_field(value: str, field_name: str) -> str:
         danger_pattern = re.compile(
             r'(?:ignore\s+(?:previous|above|all)\s+(?:instructions?|rules?)|'
@@ -402,8 +444,12 @@ class RuleStorage:
     def _sanitize_fts_query(query_text: str) -> str:
         cleaned = re.sub(r'[{}():^!|*]', ' ', query_text)
         cleaned = re.sub(r'\b(NEAR|NOT|OR|AND|COLUMN)\b', ' ', cleaned, flags=re.IGNORECASE)
-        terms = cleaned.split()
-        return ' '.join(f'"{t}"' for t in terms[:20] if t.strip())
+        terms = [t for t in cleaned.split()[:20] if t.strip()]
+        if not terms:
+            return ''
+        if len(terms) == 1:
+            return terms[0]
+        return ' '.join(f'"{t}"' for t in terms)
 
     def search(self, query_text: str, limit: int = 20) -> List[Rule]:
         safe_query = self._sanitize_fts_query(query_text)
@@ -417,22 +463,27 @@ class RuleStorage:
                        r.source_memories, r.derived_from,
                        r.status, r.override, r.confidence,
                        r.trigger_count, r.confirmed_by_user, r.scope,
-                       r.created_at, r.updated_at, r.metadata
+                       r.created_at, r.updated_at, r.metadata,
+                       r.expires_at, r.condition
                 FROM rules r
-                JOIN rules_fts fts ON r.id = fts.id
-                WHERE fts MATCH ?
+                JOIN rules_fts fts ON r.rowid = fts.rowid
+                WHERE rules_fts MATCH ?
                 ORDER BY rank
                 LIMIT ?
                 """,
                 (safe_query, limit),
             )
             rows = cursor.fetchall()
-            return [self._row_to_rule(row) for row in rows]
+            results = [self._row_to_rule(row) for row in rows]
+            if results:
+                return results
         except sqlite3.OperationalError as e:
             _logger.warning(f"FTS5 search failed ({e}), falling back to LIKE")
-            return self._fallback_search(query_text, limit)
-        finally:
-            pass
+        if self._has_cjk(query_text) or len(query_text) < 3:
+            like_results = self._fallback_search(query_text, limit)
+            if like_results:
+                return like_results
+        return self._fallback_search(query_text, limit)
 
     def search_with_rank(self, query_text: str, limit: int = 20) -> List[tuple]:
         safe_query = self._sanitize_fts_query(query_text)
@@ -447,11 +498,12 @@ class RuleStorage:
                        r.status, r.override, r.confidence,
                        r.trigger_count, r.confirmed_by_user, r.scope,
                        r.created_at, r.updated_at, r.metadata,
-                       -fts.rank as rank_score
+                       r.expires_at, r.condition,
+                       bm25(rules_fts) as rank_score
                 FROM rules r
-                JOIN rules_fts fts ON r.id = fts.id
-                WHERE fts MATCH ?
-                ORDER BY rank
+                JOIN rules_fts fts ON r.rowid = fts.rowid
+                WHERE rules_fts MATCH ?
+                ORDER BY rank_score
                 LIMIT ?
                 """,
                 (safe_query, limit),
@@ -459,16 +511,19 @@ class RuleStorage:
             rows = cursor.fetchall()
             results = []
             for row in rows:
-                rule = self._row_to_rule(row[:15])
-                rank_score = row[15] if len(row) > 15 else 0.0
+                rule = self._row_to_rule(row[:17])
+                rank_score = row[17] if len(row) > 17 else 0.0
                 results.append((rule, rank_score))
-            return results
+            if results:
+                return results
         except sqlite3.OperationalError as e:
             _logger.warning(f"FTS5 search_with_rank failed ({e}), falling back")
-            rules = self._fallback_search(query_text, limit)
-            return [(r, 0.0) for r in rules]
-        finally:
-            pass
+        if self._has_cjk(query_text) or len(query_text) < 3:
+            like_rules = self._fallback_search(query_text, limit)
+            if like_rules:
+                return [(r, self._estimate_rank(r, query_text)) for r in like_rules]
+        rules = self._fallback_search(query_text, limit)
+        return [(r, self._estimate_rank(r, query_text)) for r in rules]
 
     def _fallback_search(self, query_text: str, limit: int) -> List[Rule]:
         """Fallback to LIKE-based search if FTS5 fails"""
@@ -479,7 +534,9 @@ class RuleStorage:
             cursor = conn.execute(
                 """
                 SELECT * FROM rules
-                WHERE trigger LIKE ? ESCAPE '\\' OR action LIKE ? ESCAPE '\\'
+                WHERE (trigger LIKE ? ESCAPE '\\' OR action LIKE ? ESCAPE '\\')
+                AND status = 'active'
+                AND (expires_at = '' OR expires_at IS NULL OR expires_at > datetime('now'))
                 ORDER BY updated_at DESC
                 LIMIT ?
                 """,

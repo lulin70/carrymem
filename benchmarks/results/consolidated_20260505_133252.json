@@ -1,0 +1,47 @@
+{
+  "report_type": "CarryMem Benchmark Suite — Consolidated Report",
+  "timestamp": "2026-05-05T05:32:52.182063+00:00",
+  "benchmarks": {
+    "ruleengine-eval": {
+      "total_score": 0.8833,
+      "grade": "B (Good)",
+      "duration_seconds": 0.08
+    },
+    "longmemeval": {
+      "total_score": 0.715,
+      "grade": "C (Fair)",
+      "duration_seconds": 0.71
+    },
+    "msc": {
+      "total_score": 0.7663,
+      "grade": "C (Fair)",
+      "duration_seconds": 0.6
+    },
+    "memeval": {
+      "total_score": 0.847,
+      "grade": "B (Good)",
+      "duration_seconds": 0.81
+    }
+  },
+  "summary": {
+    "total_benchmarks": 4,
+    "average_score": 0.8029,
+    "overall_grade": "B (Good)",
+    "benchmark_scores": {
+      "ruleengine-eval": 0.8833,
+      "longmemeval": 0.715,
+      "msc": 0.7663,
+      "memeval": 0.847
+    }
+  },
+  "narrative": {
+    "headlines": [
+      "RuleEngine-Eval: CarryMem is the ONLY system with a rule engine, scoring 88% — competitors score 0% (no rule engine)",
+      "MSC: CarryMem maintains 80% recall at 90 days — AI truly 'remembers you'",
+      "MemEval: 88% zero-cost classification — no LLM tokens needed for the majority of cases",
+      "LongMemEval: Comprehensive score 72% across 5 dimensions"
+    ],
+    "elevator_pitch": "CarryMem delivers classification accuracy of 68%; 88% zero-cost classification; the only AI memory system with a rule engine (88% compliance) — making AI truly remember and follow user rules."
+  },
+  "total_duration_seconds": 2.3
+}
