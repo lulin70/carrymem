@@ -8,16 +8,19 @@ CarryMem is a lightweight, zero-dependency AI memory system that stores **who yo
 
 ### 🏆 Benchmark Highlights
 
-| | Metric | Result |
-|---|--------|--------|
-| 🥇 | **Overall Score** | **94.5% (Grade A)** across 4 benchmarks |
-| 🥇 | **Multi-Session Recall** | **100%** at 90 days — AI truly "remembers you" |
-| 🥇 | **Only Rule Engine** | **93.3%** compliance — competitors: **0%** |
-| 💰 | **Zero-Cost Classification** | **88%** needs **no LLM tokens** at all |
-| ⚡ | **P99 Latency** | **1.3ms** — **93x faster** than Mem0 |
-| 🪶 | **Dependencies** | **SQLite only** — no vector DB needed |
+| Benchmark | Score | Method |
+|-----------|-------|--------|
+| **LongMemEval** (Official) | **53.3%** | Official dataset + LLM-as-Judge |
+| **RuleEngine-Eval** (Original) | **93.3%** | CarryMem's unique benchmark |
 
-> *Benchmarks are CarryMem-adapted evaluations inspired by LongMemEval, MSC, and MemEval dimensions. RuleEngine-Eval is CarryMem's original benchmark. [See details](docs/BENCHMARK_STRATEGY_FINAL.md#compliance-status)*
+| | Advantage | Result |
+|---|-----------|--------|
+| 💰 | Zero-LLM Ingestion | **88%** memories need **no LLM tokens** |
+| ⚡ | P99 Latency | **1.3ms** — **93x faster** than Mem0 |
+| 🪶 | Dependencies | **SQLite only** — no vector DB |
+| 🛡️ | Rule Engine | **Only system** with rule engine (competitors: 0%) |
+
+> *LongMemEval: Official oracle dataset (500Q stratified sample 90Q), Judge: Claude Sonnet 4 (official: GPT-4o). [See methodology & compliance](docs/BENCHMARK_STRATEGY_FINAL.md#compliance-status)*
 
 **English** | [中文](docs/i18n/README-CN.md) | [日本語](docs/i18n/README-JP.md)
 
@@ -338,35 +341,37 @@ Rule management directly in your editor:
 
 ---
 
-## Benchmark Results (Phase 1 — Optimized)
+## Benchmark Results
 
-**Overall Score: 94.5% (Grade A — Outstanding)** — Tested across 4 benchmarks, 20 dimensions
+### Official LongMemEval (Oracle Dataset)
 
-| Benchmark | Score | Grade | Key Metric |
-|-----------|-------|-------|------------|
-| **MSC** | **100.0%** | A+ | 100% recall at Day 90, AI truly "remembers you" |
-| **LongMemEval** | **91.5%** | A | 100% recall accuracy, 100% privacy compliance |
-| **MemEval** | **93.1%** | A | 92% classification accuracy, 88% zero-cost |
-| **RuleEngine-Eval** | **93.3%** | A | Only system with rule engine (competitors: 0%) |
+**Overall: 53.3% (48/90)** — Stratified sample from official 500-question dataset, evaluated with LLM-as-Judge
 
-### CarryMem vs Industry
+| Question Type | Score | Description |
+|---------------|-------|-------------|
+| **single-session-user** | **73.3%** | User factual info — CarryMem's strength |
+| **knowledge-update** | **66.7%** | Updated knowledge tracking |
+| **single-session-preference** | **46.7%** | Personalized recommendations |
+| **single-session-assistant** | **46.7%** | Recalling AI-provided info |
+| **temporal-reasoning** | **53.3%** | Time-based reasoning |
+| **multi-session** | **33.3%** | Cross-session aggregation |
 
-| System | Accuracy | Token Cost | Vector DB | P99 Latency |
-|--------|----------|------------|-----------|-------------|
-| **CarryMem** | **92.0%** | **88% zero-cost** | **No** | **1.3ms** |
-| Mem0 | 85.0% | High | Yes | 120ms |
-| MemGPT | 82.0% | Very High | Yes | 250ms |
-| Zep | 83.0% | High | Yes | 130ms |
-| LangChain Memory | 80.0% | Medium | No | 110ms |
-| Chroma | 77.0% | Medium | Yes | 100ms |
+**Methodology**: Official LongMemEval oracle dataset, official prompt templates, LLM-as-Judge evaluation.
+**Deviation**: Judge model is Claude Sonnet 4 (via Moka AI API) instead of official GPT-4o.
+**Note**: CarryMem is optimized for user identity memory (preferences, decisions, corrections), not general conversation recall. The single-session-user score (73.3%) reflects its core design goal.
 
-### Why CarryMem Wins
+### RuleEngine-Eval (CarryMem Original)
 
-- 🏆 **Only rule engine** — 93.3% compliance, competitors score 0%
-- 🏆 **100% multi-session recall** — AI remembers you across 90+ days
-- 🏆 **88% zero-cost** — No LLM tokens needed for most classifications
-- 🏆 **93x faster** — P99 classify 1.3ms vs Mem0 120ms
-- 🏆 **Zero dependencies** — SQLite only, no vector DB required
+**Overall: 93.3% (Grade A)** — No other AI memory system has a rule engine
+
+| Dimension | Score |
+|-----------|-------|
+| **conflict_detection** | **100.0%** |
+| **priority** | **100.0%** |
+| **scope_isolation** | **100.0%** |
+| **lifecycle** | **100.0%** |
+| **matching_accuracy** | **87.5%** |
+| **compliance** | **83.3%** |
 
 > Full benchmark details: [BENCHMARK_STRATEGY_FINAL.md](docs/BENCHMARK_STRATEGY_FINAL.md)
 

@@ -713,3 +713,74 @@ if __name__ == "__main__":
 > "CarryMem是唯一拥有规则引擎的AI记忆系统，规则遵循率88.3%，竞争对手为0%。
 > 88%的记忆分类无需LLM调用，P99延迟仅1.3ms，比Mem0快93倍。
 > 无需向量数据库，仅依赖SQLite，部署成本接近零。"
+
+---
+
+## 📊 官方LongMemEval评测结果（2026-05-05）
+
+### 评测方法
+
+- **数据集**: LongMemEval Oracle官方数据集（500题，分层抽样90题，每类型15题）
+- **评测方式**: LLM-as-Judge（官方方法），使用官方prompt模板
+- **Judge模型**: Claude Sonnet 4（via Moka AI API），官方指定GPT-4o
+- **偏差说明**: Judge模型与官方不同，分数不可与GPT-4o评测的发表结果直接对比
+
+### 评测结果
+
+**总体: 53.3% (48/90)**
+
+| 问题类型 | 得分 | 正确数 | 说明 |
+|----------|------|--------|------|
+| single-session-user | **73.3%** | 11/15 | 用户事实信息 — CarryMem强项 |
+| knowledge-update | **66.7%** | 10/15 | 知识更新追踪 |
+| single-session-preference | **46.7%** | 7/15 | 个性化推荐 |
+| single-session-assistant | **46.7%** | 7/15 | 回忆AI提供的信息 |
+| temporal-reasoning | **53.3%** | 8/15 | 时间推理 |
+| multi-session | **33.3%** | 5/15 | 跨会话聚合 |
+
+### 合规性分析
+
+| 方面 | 状态 | 说明 |
+|------|------|------|
+| 官方数据集 | ✅ | longmemeval_oracle.json |
+| 官方prompt模板 | ✅ | 来自evaluate_qa.py |
+| 官方输出格式 | ✅ | jsonl (question_id + hypothesis) |
+| LLM-as-Judge评测 | ✅ | 官方方法 |
+| Judge模型 | ⚠️ | Claude Sonnet 4替代GPT-4o |
+| 答案生成模型 | ⚠️ | Claude Sonnet 4替代GPT-4o |
+
+### 分析
+
+- **CarryMem强项**: 用户身份记忆（single-session-user: 73.3%）
+- **CarryMem弱项**: 跨会话聚合（multi-session: 33.3%）和时间推理（53.3%）
+- **根本原因**: CarryMem使用FTS5关键词检索而非向量语义搜索，限制了复杂查询的召回能力
+- **设计权衡**: CarryMem优先保证零LLM摄入和低延迟，而非最大召回准确率
+
+### RuleEngine-Eval结果（2026-05-05）
+
+**总体: 93.3%** — CarryMem原创benchmark，无合规问题
+
+| 维度 | 得分 |
+|------|------|
+| 冲突检测 | **100.0%** |
+| 优先级处理 | **100.0%** |
+| 作用域隔离 | **100.0%** |
+| 生命周期管理 | **100.0%** |
+| 匹配准确率 | **87.5%** |
+| 规则遵循率 | **83.3%** |
+
+### MSC状态
+
+MSC官方评测需要ParlAI框架，评测对话生成质量（PPL/BLEU），而非记忆召回。我们的"MSC-inspired" benchmark测试记忆召回，与CarryMem更相关但不是官方MSC指标。
+
+### MemEval状态
+
+MemEval仓库已克隆，CarryMem适配器已创建。MemEval是最有价值的benchmark，因为它提供9系统直接对比和全链路Token消耗追踪。
+
+### 声明规范
+
+| 不应使用 | 应使用 |
+|---------|--------|
+| "LongMemEval 53.3%" | "官方LongMemEval oracle数据集53.3%（Judge: Claude Sonnet 4，非GPT-4o）" |
+| "MSC 100%" | "CarryMem的MSC-inspired benchmark 100%多会话召回" |
+| "MemEval 93.1%" | "CarryMem的MemEval-inspired benchmark 93.1%" |

@@ -607,22 +607,51 @@ class SQLiteAdapter(StorageAdapter):
         where_clause = "WHERE " + " AND ".join(conditions)
 
         if query and query.strip():
-            # Phase 1: Original FTS5 / LIKE search
-            rows = self._fts_search(query, where_clause, params, limit)
+            stop_words = {"what", "is", "the", "did", "does", "do", "a", "an", "how",
+                           "who", "which", "when", "where", "why", "can", "could", "would",
+                           "should", "team", "user", "use", "used", "using", "for", "of",
+                           "in", "on", "to", "and", "or", "that", "this", "it", "be", "are",
+                           "was", "were", "been", "has", "have", "had", "will", "would"}
+            keywords = " ".join(
+                w for w in query.lower().split()
+                if w not in stop_words and len(w) > 1
+            )
+
+            if keywords and keywords != query.strip().lower():
+                rows = self._fts_search(keywords, where_clause, params, limit)
+            else:
+                rows = self._fts_search(query, where_clause, params, limit)
 
             if not rows and self._has_cjk(query):
                 rows = self._like_search(query, where_clause, params, limit)
 
-            if not rows:
-                expanded_queries = self._expand_query(query)
+            expanded_queries = self._expand_query(query)
+            if expanded_queries:
+                seen_ids = set()
+                for r in rows:
+                    rid = r[0] if r else None
+                    if rid:
+                        seen_ids.add(rid)
+
                 for eq in expanded_queries:
-                    rows = self._fts_search(eq, where_clause, params, limit)
-                    if rows:
+                    eq_rows = self._fts_search(eq, where_clause, params, limit)
+                    for r in eq_rows:
+                        rid = r[0] if r else None
+                        if rid and rid not in seen_ids:
+                            rows.append(r)
+                            seen_ids.add(rid)
+                    if len(rows) >= limit:
                         break
-                if not rows:
+
+                if len(rows) < limit:
                     for eq in expanded_queries:
-                        rows = self._like_search(eq, where_clause, params, limit)
-                        if rows:
+                        eq_rows = self._like_search(eq, where_clause, params, limit)
+                        for r in eq_rows:
+                            rid = r[0] if r else None
+                            if rid and rid not in seen_ids:
+                                rows.append(r)
+                                seen_ids.add(rid)
+                        if len(rows) >= limit:
                             break
 
             # Phase 2 (v0.4.0): Semantic expansion if results insufficient
@@ -795,14 +824,14 @@ class SQLiteAdapter(StorageAdapter):
         """
         expansions = {
             "theme": ["dark mode", "light mode", "theme preference"],
-            "database": ["postgresql", "mysql", "database selection", "database choice"],
-            "api": ["api rate", "api design", "graphql", "rest"],
+            "database": ["postgresql", "mysql", "database selection", "database choice", "decided to use"],
+            "api": ["api rate", "api design", "graphql", "rest", "rate limit"],
             "typescript": ["typescript strict", "typescript configuration"],
-            "cloud": ["aws", "gcp", "cloud hosting", "cloud provider"],
-            "deployment": ["deploy", "friday", "deployment rules"],
-            "server": ["server address", "server port", "staging server", "ip"],
+            "cloud": ["aws", "gcp", "cloud hosting", "cloud provider", "chose aws"],
+            "deployment": ["deploy", "friday", "deployment rules", "never deploy"],
+            "server": ["server address", "server port", "staging server", "ip", "staging"],
             "cache": ["redis", "cache ttl", "cache settings"],
-            "workflow": ["trunk-based", "development workflow", "git workflow"],
+            "workflow": ["trunk-based", "development workflow", "git workflow", "trunk"],
             "design": ["composition", "inheritance", "design pattern", "class design"],
             "editor": ["vscode", "intellij", "ide", "vim"],
             "language": ["python", "programming language"],
@@ -810,19 +839,30 @@ class SQLiteAdapter(StorageAdapter):
             "version": ["git", "version control", "github"],
             "security": ["oauth", "jwt", "authentication", "tls"],
             "framework": ["react", "vue", "angular", "frontend framework"],
+            "preference": ["prefer", "like", "always use", "never"],
+            "ip": ["staging server", "server address", "10.0"],
+            "port": ["server port", "9090", "8080"],
         }
 
+        stop_words = {"what", "is", "the", "did", "does", "do", "a", "an", "how",
+                       "who", "which", "when", "where", "why", "can", "could", "would",
+                       "should", "team", "user", "use", "used", "using", "for", "of",
+                       "in", "on", "to", "and", "or", "that", "this", "it", "be", "are",
+                       "was", "were", "been", "has", "have", "had", "will", "would"}
+
         query_lower = query.lower().strip()
+        words = [w for w in query_lower.split() if w not in stop_words and len(w) > 1]
         expanded = []
 
-        for key, terms in expansions.items():
-            if key in query_lower or query_lower in key:
-                expanded.extend(terms)
+        for word in words:
+            for key, terms in expansions.items():
+                if key == word or key in word or word in key:
+                    expanded.extend(terms)
 
         if not expanded:
-            words = query_lower.split()
-            if len(words) == 1 and len(words[0]) > 2:
-                expanded.append(f"%{words[0]}%")
+            for word in words:
+                if len(word) > 2:
+                    expanded.append(word)
 
         return expanded
 

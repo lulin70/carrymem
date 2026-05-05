@@ -8,14 +8,19 @@ CarryMem 是一个轻量级、零依赖的 AI 记忆系统，存储**你是谁**
 
 ### 🏆 Benchmark 亮点
 
-| | 指标 | 结果 |
+| Benchmark | 得分 | 方法 |
+|-----------|------|------|
+| **LongMemEval**（官方） | **53.3%** | 官方数据集 + LLM-as-Judge |
+| **RuleEngine-Eval**（原创） | **93.3%** | CarryMem独有benchmark |
+
+| | 优势 | 结果 |
 |---|------|------|
-| 🥇 | **综合得分** | **94.5%（A级）** 4个benchmark |
-| 🥇 | **多会话召回** | **100%** 90天 — AI真正"记住你" |
-| 🥇 | **唯一规则引擎** | **93.3%** 遵循率 — 竞争对手：**0%** |
-| 💰 | **零成本分类** | **88%** 无需任何 **LLM Token** |
-| ⚡ | **P99延迟** | **1.3ms** — 比 Mem0 **快93倍** |
-| 🪶 | **依赖** | **仅需SQLite** — 无需向量数据库 |
+| 💰 | 零LLM摄入 | **88%** 记忆无需 **LLM Token** |
+| ⚡ | P99延迟 | **1.3ms** — 比 Mem0 **快93倍** |
+| 🪶 | 依赖 | **仅需SQLite** — 无需向量数据库 |
+| 🛡️ | 规则引擎 | **唯一拥有**规则引擎（竞争对手：0%） |
+
+> *LongMemEval：官方oracle数据集（500题分层抽样90题），Judge：Claude Sonnet 4（官方：GPT-4o）。[查看方法与合规](../BENCHMARK_STRATEGY_FINAL.md#compliance-status)*
 
 [English](../../README.md) | **中文** | [日本語](README-JP.md)
 
