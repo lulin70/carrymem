@@ -214,6 +214,8 @@ Day 90: Does AI remember? ⚠️ (Long-term retention)
 
 ## Phase 1 Implementation Results (2026-05-05)
 
+> ⚠️ **Important Disclaimer**: The current benchmark results are based on **self-constructed test cases inspired by the official benchmark dimensions**, NOT the official datasets or evaluation scripts. See [Compliance Status](#compliance-status) below for details.
+
 ### Overall Score: 94.5% (Grade A — Outstanding) ✅
 
 | Benchmark | Score | Grade | Key Finding |
@@ -299,7 +301,77 @@ Day 90: Does AI remember? ⚠️ (Long-term retention)
 
 ---
 
+## Compliance Status
+
+### Current Status: Self-Constructed Tests (Not Official)
+
+The Phase 1 results above are based on **self-constructed test cases** that test the same dimensions as the official benchmarks, but do NOT use the official datasets or evaluation scripts. This means:
+
+- ❌ Our scores are **NOT directly comparable** to published results from the benchmark authors
+- ❌ We cannot claim "CarryMem scored X% on LongMemEval" in academic or competitive contexts
+- ✅ Our tests **do** validate CarryMem's capabilities in the same dimensions
+- ✅ RuleEngine-Eval is our **original benchmark** with no compliance issue
+
+### Gap Analysis
+
+| Benchmark | Official Dataset | Official Eval Script | Our Status |
+|-----------|-----------------|---------------------|------------|
+| **LongMemEval** | 500 QA questions + chat history (115k-1.5M tokens) | `evaluate_qa.py` + GPT-4o scoring | ❌ Self-constructed |
+| **MSC** | 237k training + 25k validation multi-session dialogues | ParlAI framework + Perplexity/BLEU/RP@10 | ❌ Self-constructed |
+| **MemEval** | 9-system published baselines | Unified evaluation framework | ⚠️ Partial (cited published data) |
+| **RuleEngine-Eval** | N/A (our original) | N/A (our original) | ✅ Fully compliant |
+
+### Official Compliance Roadmap
+
+#### Step 1: LongMemEval Official Evaluation (Priority: High)
+
+**What's needed**:
+1. Download official dataset from [GitHub](https://github.com/xiaowu0162/LongMemEval) or [HuggingFace](https://huggingface.co/datasets/xiaowu0162/longmemeval)
+2. Implement CarryMem as a memory system in LongMemEval's framework
+3. Feed chat history sessions to CarryMem's `classify_and_remember()`
+4. Answer 500 questions using `recall_memories()`
+5. Run `evaluate_qa.py` with GPT-4o for official scoring
+
+**Requirements**:
+- OPENAI_API_KEY for GPT-4o evaluation
+- ~2-4 hours GPU/CPU time for full evaluation
+- Python 3.9 + `requirements-lite.txt`
+
+**Expected outcome**: Official LongMemEval score comparable to published results
+
+#### Step 2: MSC Official Evaluation (Priority: Medium)
+
+**What's needed**:
+1. Install ParlAI framework
+2. Download MSC dataset via `parlai display_data -t msc`
+3. Implement CarryMem as a memory module in ParlAI
+4. Evaluate with RP@10 (Recall Precision at 10) metric
+
+**Note**: MSC's official evaluation focuses on dialogue generation quality (Perplexity, BLEU), not memory recall. Our "MSC-inspired" benchmark tests memory recall, which is more relevant to CarryMem but not the official MSC metric.
+
+#### Step 3: Publish Results (Priority: After Step 1)
+
+**What's needed**:
+1. Run official LongMemEval evaluation
+2. Compare with published baselines (Mem0, MemGPT, etc.)
+3. Submit to Papers with Code
+4. Publish technical blog post
+
+### Revised Claims
+
+Until official evaluation is completed, we should use these **accurate** claims:
+
+| Instead of | Use |
+|-----------|-----|
+| "94.5% on LongMemEval" | "94.5% on CarryMem's LongMemEval-inspired benchmark" |
+| "100% on MSC" | "100% multi-session recall on CarryMem's MSC-inspired benchmark" |
+| "93.1% on MemEval" | "93.1% on CarryMem's MemEval-inspired benchmark" |
+| "93.3% on RuleEngine-Eval" | "93.3% on RuleEngine-Eval (CarryMem's original benchmark)" ✅ |
+
+---
+
 **Strategy Created**: 2026-05-04 23:35
 **Phase 1 Implemented**: 2026-05-05
 **Phase 1 Optimized**: 2026-05-05 (80.3% → 94.5%)
-**Next Step**: Phase 2 — ES-MemEval + MemoryBank
+**Compliance Assessment**: 2026-05-05
+**Next Step**: Run official LongMemEval evaluation

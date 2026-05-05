@@ -17,6 +17,8 @@ CarryMem is a lightweight, zero-dependency AI memory system that stores **who yo
 | ⚡ | **P99 Latency** | **1.3ms** — **93x faster** than Mem0 |
 | 🪶 | **Dependencies** | **SQLite only** — no vector DB needed |
 
+> *Benchmarks are CarryMem-adapted evaluations inspired by LongMemEval, MSC, and MemEval dimensions. RuleEngine-Eval is CarryMem's original benchmark. [See details](docs/BENCHMARK_STRATEGY_FINAL.md#compliance-status)*
+
 **English** | [中文](docs/i18n/README-CN.md) | [日本語](docs/i18n/README-JP.md)
 
 <p align="center">
