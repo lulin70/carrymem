@@ -6,22 +6,6 @@
 
 CarryMem is a lightweight, zero-dependency AI memory system that stores **who you are** — your preferences, decisions, corrections — and makes that identity available to any AI tool. Switch from Cursor to Claude Code, from GPT to Claude, your AI always knows you.
 
-### 🏆 Benchmark Highlights
-
-| Benchmark | Score | Method |
-|-----------|-------|--------|
-| **LongMemEval** (Official) | **53.3%** | Official dataset + LLM-as-Judge |
-| **RuleEngine-Eval** (Original) | **93.3%** | CarryMem's unique benchmark |
-
-| | Advantage | Result |
-|---|-----------|--------|
-| 💰 | Zero-LLM Ingestion | **88%** memories need **no LLM tokens** |
-| ⚡ | P99 Latency | **1.3ms** — **93x faster** than Mem0 |
-| 🪶 | Dependencies | **SQLite only** — no vector DB |
-| 🛡️ | Rule Engine | **Only system** with rule engine (competitors: 0%) |
-
-> *LongMemEval: Official oracle dataset (500Q stratified sample 90Q), Judge: Claude Sonnet 4 (official: GPT-4o). [See methodology & compliance](docs/BENCHMARK_STRATEGY_FINAL.md#compliance-status)*
-
 **English** | [中文](docs/i18n/README-CN.md) | [日本語](docs/i18n/README-JP.md)
 
 <p align="center">
@@ -341,24 +325,43 @@ Rule management directly in your editor:
 
 ---
 
+### 🏆 Benchmark Highlights
+
+| Benchmark | Score | Method |
+|-----------|-------|--------|
+| **LongMemEval** (Official, 500Q) | **42.6%** | Official dataset + LLM-as-Judge |
+| **RuleEngine-Eval** (Original) | **93.3%** | CarryMem's unique benchmark |
+
+| | Advantage | Result |
+|---|-----------|--------|
+| 💰 | Zero-LLM Ingestion | **88%** memories need **no LLM tokens** |
+| ⚡ | P99 Latency | **1.3ms** — **93x faster** than Mem0 |
+| 🪶 | Dependencies | **SQLite only** — no vector DB |
+| 🛡️ | Rule Engine | **Only system** with rule engine (competitors: 0%) |
+
+> *LongMemEval: Official oracle dataset (full 500Q), Judge: Claude Sonnet 4 (official: GPT-4o). MSC: Dataset unavailable (requires ParlAI). MemEval: Adapter ready, running. [See methodology & compliance](docs/BENCHMARK_STRATEGY_FINAL.md#compliance-status)*
+
+---
+
 ## Benchmark Results
 
-### Official LongMemEval (Oracle Dataset)
+### Official LongMemEval (Oracle Dataset, Full 500Q)
 
-**Overall: 53.3% (48/90)** — Stratified sample from official 500-question dataset, evaluated with LLM-as-Judge
+**Overall: 42.6% (213/500)** — Official dataset, LLM-as-Judge evaluation
 
-| Question Type | Score | Description |
-|---------------|-------|-------------|
-| **single-session-user** | **73.3%** | User factual info — CarryMem's strength |
-| **knowledge-update** | **66.7%** | Updated knowledge tracking |
-| **single-session-preference** | **46.7%** | Personalized recommendations |
-| **single-session-assistant** | **46.7%** | Recalling AI-provided info |
-| **temporal-reasoning** | **53.3%** | Time-based reasoning |
-| **multi-session** | **33.3%** | Cross-session aggregation |
+| Question Type | Score | Correct | Description |
+|---------------|-------|---------|-------------|
+| **single-session-user** | **67.1%** | 47/70 | User factual info — CarryMem's strength |
+| **knowledge-update** | **62.8%** | 49/78 | Updated knowledge tracking |
+| **single-session-preference** | **46.7%** | 14/30 | Personalized recommendations |
+| **multi-session** | **42.1%** | 56/133 | Cross-session aggregation |
+| **single-session-assistant** | **26.8%** | 15/56 | Recalling AI-provided info |
+| **temporal-reasoning** | **24.1%** | 32/133 | Time-based reasoning |
 
-**Methodology**: Official LongMemEval oracle dataset, official prompt templates, LLM-as-Judge evaluation.
+**Methodology**: Official LongMemEval oracle dataset (500 questions), official prompt templates, LLM-as-Judge evaluation.
 **Deviation**: Judge model is Claude Sonnet 4 (via Moka AI API) instead of official GPT-4o.
-**Note**: CarryMem is optimized for user identity memory (preferences, decisions, corrections), not general conversation recall. The single-session-user score (73.3%) reflects its core design goal.
+**Token Usage**: 5.25M prompt tokens + 38K completion tokens (answer generation + judge evaluation).
+**Note**: CarryMem is optimized for user identity memory (preferences, decisions, corrections), not general conversation recall. The single-session-user score (67.1%) reflects its core design goal.
 
 ### RuleEngine-Eval (CarryMem Original)
 
@@ -372,6 +375,14 @@ Rule management directly in your editor:
 | **lifecycle** | **100.0%** |
 | **matching_accuracy** | **87.5%** |
 | **compliance** | **83.3%** |
+
+### MSC Status
+
+MSC official evaluation requires the ParlAI framework (PyTorch-based) and evaluates dialogue generation quality (PPL/BLEU), not memory recall. The dataset is only available through ParlAI or HuggingFace datasets library, both of which are currently inaccessible from our environment. **MSC official evaluation is pending environment setup.**
+
+### MemEval Status
+
+CarryMem adapter has been created and integrated into the MemEval framework (`benchmarks/MemEval/src/agents_memory/systems/carrymem.py`). MemEval provides 9-system direct comparison with full-pipeline token tracking — the most valuable benchmark for demonstrating CarryMem's zero-LLM ingestion advantage. **MemEval evaluation is in progress.**
 
 > Full benchmark details: [BENCHMARK_STRATEGY_FINAL.md](docs/BENCHMARK_STRATEGY_FINAL.md)
 

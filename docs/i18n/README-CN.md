@@ -6,22 +6,6 @@
 
 CarryMem 是一个轻量级、零依赖的 AI 记忆系统，存储**你是谁** — 你的偏好、决策、纠正 — 并将这个身份提供给任何 AI 工具。从 Cursor 切换到 Claude Code，从 GPT 切换到 Claude，你的 AI 始终认识你。
 
-### 🏆 Benchmark 亮点
-
-| Benchmark | 得分 | 方法 |
-|-----------|------|------|
-| **LongMemEval**（官方） | **53.3%** | 官方数据集 + LLM-as-Judge |
-| **RuleEngine-Eval**（原创） | **93.3%** | CarryMem独有benchmark |
-
-| | 优势 | 结果 |
-|---|------|------|
-| 💰 | 零LLM摄入 | **88%** 记忆无需 **LLM Token** |
-| ⚡ | P99延迟 | **1.3ms** — 比 Mem0 **快93倍** |
-| 🪶 | 依赖 | **仅需SQLite** — 无需向量数据库 |
-| 🛡️ | 规则引擎 | **唯一拥有**规则引擎（竞争对手：0%） |
-
-> *LongMemEval：官方oracle数据集（500题分层抽样90题），Judge：Claude Sonnet 4（官方：GPT-4o）。[查看方法与合规](../BENCHMARK_STRATEGY_FINAL.md#compliance-status)*
-
 [English](../../README.md) | **中文** | [日本語](README-JP.md)
 
 <p align="center">
@@ -337,33 +321,21 @@ carrymem tui
 
 ---
 
-## Benchmark 结果（Phase 1 — 优化后）
+### 🏆 Benchmark 亮点
 
-**综合得分：94.5%（A级 Outstanding）** — 4 个 benchmark，20 个维度
+| Benchmark | 得分 | 方法 |
+|-----------|------|------|
+| **LongMemEval**（官方，500题） | **42.6%** | 官方数据集 + LLM-as-Judge |
+| **RuleEngine-Eval**（原创） | **93.3%** | CarryMem独有benchmark |
 
-| Benchmark | 得分 | 等级 | 关键指标 |
-|-----------|------|------|---------|
-| **MSC** | **100.0%** | A+ | 90天100%召回，AI真正"记住你" |
-| **LongMemEval** | **91.5%** | A | 100%召回准确率，100%隐私合规 |
-| **MemEval** | **93.1%** | A | 92%分类准确率，88%零成本 |
-| **RuleEngine-Eval** | **93.3%** | A | 唯一有规则引擎的系统（竞争对手：0%） |
+| | 优势 | 结果 |
+|---|------|------|
+| 💰 | 零LLM摄入 | **88%** 记忆无需 **LLM Token** |
+| ⚡ | P99延迟 | **1.3ms** — 比 Mem0 **快93倍** |
+| 🪶 | 依赖 | **仅需SQLite** — 无需向量数据库 |
+| 🛡️ | 规则引擎 | **唯一拥有**规则引擎（竞争对手：0%） |
 
-### CarryMem vs 行业
-
-| 系统 | 准确率 | Token成本 | 向量DB | P99延迟 |
-|------|--------|----------|--------|---------|
-| **CarryMem** | **92.0%** | **88%零成本** | **不需要** | **1.3ms** |
-| Mem0 | 85.0% | 高 | 需要 | 120ms |
-| MemGPT | 82.0% | 极高 | 需要 | 250ms |
-| Zep | 83.0% | 高 | 需要 | 130ms |
-
-### 核心优势
-
-- 🏆 **唯一规则引擎** — 93.3%遵循率，竞争对手0%
-- 🏆 **100%多会话召回** — AI跨越90天记住你
-- 🏆 **88%零成本** — 大部分分类无需LLM Token
-- 🏆 **93倍更快** — P99分类1.3ms vs Mem0 120ms
-- 🏆 **零依赖** — 仅需SQLite，无需向量数据库
+> *LongMemEval：官方oracle数据集（完整500题），Judge：Claude Sonnet 4（官方：GPT-4o）。MSC：数据集无法获取（需ParlAI）。MemEval：适配器已就绪，运行中。[查看方法与合规](../BENCHMARK_STRATEGY_FINAL.md#compliance-status)*
 
 ---
 

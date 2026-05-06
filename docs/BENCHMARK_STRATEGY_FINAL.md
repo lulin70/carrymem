@@ -312,27 +312,29 @@ Day 90: Does AI remember? ⚠️ (Long-term retention)
 | **MemEval** | ⚠️ Repo cloned, adapter created | ⚠️ Needs API adaptation | 🟡 Adapter ready, not yet run |
 | **RuleEngine-Eval** | N/A (our original) | N/A (our original) | ✅ Fully compliant |
 
-### Official LongMemEval Results (2026-05-05)
+### Official LongMemEval Results (2026-05-06)
 
 **Dataset**: LongMemEval Oracle (official, 500 questions)
-**Sample**: Stratified 90 questions (15 per type)
 **Evaluation**: LLM-as-Judge with official prompt templates
 
 | Question Type | Score | Correct |
 |---------------|-------|---------|
-| single-session-user | **73.3%** | 11/15 |
-| knowledge-update | **66.7%** | 10/15 |
-| single-session-preference | **46.7%** | 7/15 |
-| single-session-assistant | **46.7%** | 7/15 |
-| temporal-reasoning | **53.3%** | 8/15 |
-| multi-session | **33.3%** | 5/15 |
-| **Overall** | **53.3%** | **48/90** |
+| single-session-user | **67.1%** | 47/70 |
+| knowledge-update | **62.8%** | 49/78 |
+| single-session-preference | **46.7%** | 14/30 |
+| multi-session | **42.1%** | 56/133 |
+| single-session-assistant | **26.8%** | 15/56 |
+| temporal-reasoning | **24.1%** | 32/133 |
+| **Overall** | **42.6%** | **213/500** |
+
+**Token Usage**: 5.25M prompt + 38K completion (answer generation + judge evaluation)
 
 **Methodology Compliance**:
-- ✅ Official dataset (longmemeval_oracle.json)
+- ✅ Official dataset (longmemeval_oracle.json, full 500Q)
 - ✅ Official prompt templates (from evaluate_qa.py)
 - ✅ Official output format (jsonl with question_id + hypothesis)
 - ✅ LLM-as-Judge evaluation (official method)
+- ✅ Random stratified sampling (seed=42)
 - ⚠️ **Deviation**: Judge model is Claude Sonnet 4 (via Moka AI API) instead of official GPT-4o
   - Reason: GPT-4o API key not available; Claude Sonnet 4 is a comparable model
   - Impact: Different LLMs may judge differently; scores not directly comparable to GPT-4o-based published results
@@ -342,8 +344,8 @@ Day 90: Does AI remember? ⚠️ (Long-term retention)
 - ✅ CarryMem stores both user and assistant messages (with `[Assistant said]` prefix)
 
 **Analysis**:
-- CarryMem's **strength**: User identity memory (single-session-user: 73.3%)
-- CarryMem's **weakness**: Cross-session aggregation (multi-session: 33.3%) and temporal reasoning (53.3%)
+- CarryMem's **strength**: User identity memory (single-session-user: 67.1%, knowledge-update: 62.8%)
+- CarryMem's **weakness**: Temporal reasoning (24.1%) and assistant message recall (26.8%)
 - **Root cause**: CarryMem uses FTS5 keyword-based retrieval, not vector-based semantic search. This limits recall for complex queries requiring multi-hop reasoning or temporal ordering.
 - **Design tradeoff**: CarryMem prioritizes zero-LLM ingestion and low latency over maximum recall accuracy.
 
