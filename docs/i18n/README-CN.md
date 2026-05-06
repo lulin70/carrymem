@@ -321,12 +321,18 @@ carrymem tui
 
 ---
 
-### 🏆 Benchmark 亮点
+### 🏆 Benchmark 亮点 — v0.1.6 baseline
 
-| Benchmark | 得分 | 方法 |
-|-----------|------|------|
-| **LongMemEval**（官方，500题） | **42.6%** | 官方数据集 + LLM-as-Judge |
-| **RuleEngine-Eval**（原创） | **93.3%** | CarryMem独有benchmark |
+> **透明优先。** 这是首次运行的基线分数，不完美但诚实。我们将其作为迭代改进的起点。
+
+| Benchmark | 得分 | 状态 | 方法 |
+|-----------|------|------|------|
+| **LongMemEval** | **42.6%** | ✅ 官方 | 官方oracle数据集(500Q) + LLM-as-Judge |
+| **RuleEngine-Eval** | **93.3%** | ✅ 原创 | CarryMem独有benchmark |
+| **MemEval** | *运行中* | 🔄 进行中 | 官方框架，CarryMem适配器 |
+| **MSC** | *待定* | ⏳ 受阻 | 数据集需ParlAI（不可用） |
+
+**使用LLM**: Claude Sonnet 4.6（via Moka AI API）。官方benchmark指定GPT-4o——见下方偏差说明。
 
 | | 优势 | 结果 |
 |---|------|------|
@@ -334,8 +340,6 @@ carrymem tui
 | ⚡ | P99延迟 | **1.3ms** — 比 Mem0 **快93倍** |
 | 🪶 | 依赖 | **仅需SQLite** — 无需向量数据库 |
 | 🛡️ | 规则引擎 | **唯一拥有**规则引擎（竞争对手：0%） |
-
-> *LongMemEval：官方oracle数据集（完整500题），Judge：Claude Sonnet 4（官方：GPT-4o）。MSC：数据集无法获取（需ParlAI）。MemEval：适配器已就绪，运行中。[查看方法与合规](../BENCHMARK_STRATEGY_FINAL.md#compliance-status)*
 
 ---
 

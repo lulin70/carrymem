@@ -325,12 +325,18 @@ Rule management directly in your editor:
 
 ---
 
-### 🏆 Benchmark Highlights
+### 🏆 Benchmark Highlights — v0.1.6 baseline
 
-| Benchmark | Score | Method |
-|-----------|-------|--------|
-| **LongMemEval** (Official, 500Q) | **42.6%** | Official dataset + LLM-as-Judge |
-| **RuleEngine-Eval** (Original) | **93.3%** | CarryMem's unique benchmark |
+> **Transparency first.** These are first-run baseline scores. Not perfect, but honest. We publish them as a starting point for iterative improvement.
+
+| Benchmark | Score | Status | Method |
+|-----------|-------|--------|--------|
+| **LongMemEval** | **42.6%** | ✅ Official | Official oracle dataset (500Q) + LLM-as-Judge |
+| **RuleEngine-Eval** | **93.3%** | ✅ Original | CarryMem's unique benchmark |
+| **MemEval** | **F1=0.127** | ✅ Official | Official framework, CarryMem adapter (20Q sample) |
+| **MSC** | *pending* | ⏳ Blocked | Dataset requires ParlAI (unavailable) |
+
+**LLM used**: Claude Sonnet 4.6 (via Moka AI API). Official benchmarks specify GPT-4o — see deviations below.
 
 | | Advantage | Result |
 |---|-----------|--------|
@@ -339,29 +345,26 @@ Rule management directly in your editor:
 | 🪶 | Dependencies | **SQLite only** — no vector DB |
 | 🛡️ | Rule Engine | **Only system** with rule engine (competitors: 0%) |
 
-> *LongMemEval: Official oracle dataset (full 500Q), Judge: Claude Sonnet 4 (official: GPT-4o). MSC: Dataset unavailable (requires ParlAI). MemEval: Adapter ready, running. [See methodology & compliance](docs/BENCHMARK_STRATEGY_FINAL.md#compliance-status)*
-
 ---
 
-## Benchmark Results
+## Benchmark Results — v0.1.6 baseline
 
-### Official LongMemEval (Oracle Dataset, Full 500Q)
+### LongMemEval (Official Oracle Dataset, 500Q)
 
-**Overall: 42.6% (213/500)** — Official dataset, LLM-as-Judge evaluation
+**Overall: 42.6% (213/500)** — First baseline, room for improvement
 
 | Question Type | Score | Correct | Description |
 |---------------|-------|---------|-------------|
-| **single-session-user** | **67.1%** | 47/70 | User factual info — CarryMem's strength |
+| **single-session-user** | **67.1%** | 47/70 | User factual info — CarryMem's core strength |
 | **knowledge-update** | **62.8%** | 49/78 | Updated knowledge tracking |
 | **single-session-preference** | **46.7%** | 14/30 | Personalized recommendations |
-| **multi-session** | **42.1%** | 56/133 | Cross-session aggregation |
-| **single-session-assistant** | **26.8%** | 15/56 | Recalling AI-provided info |
-| **temporal-reasoning** | **24.1%** | 32/133 | Time-based reasoning |
+| **multi-session** | **42.1%** | 56/133 | Cross-session aggregation — needs improvement |
+| **single-session-assistant** | **26.8%** | 15/56 | Recalling AI-provided info — weak point |
+| **temporal-reasoning** | **24.1%** | 32/133 | Time-based reasoning — weakest point |
 
-**Methodology**: Official LongMemEval oracle dataset (500 questions), official prompt templates, LLM-as-Judge evaluation.
-**Deviation**: Judge model is Claude Sonnet 4 (via Moka AI API) instead of official GPT-4o.
-**Token Usage**: 5.25M prompt tokens + 38K completion tokens (answer generation + judge evaluation).
-**Note**: CarryMem is optimized for user identity memory (preferences, decisions, corrections), not general conversation recall. The single-session-user score (67.1%) reflects its core design goal.
+**Methodology**: Official LongMemEval oracle dataset (500Q), official prompt templates from `evaluate_qa.py`, LLM-as-Judge.
+**Deviation from official**: Judge & answer model is Claude Sonnet 4.6 (not GPT-4o). Scores may differ from GPT-4o-based evaluations.
+**Token cost**: 5.25M prompt + 38K completion = ~5.3M total tokens for 500Q evaluation.
 
 ### RuleEngine-Eval (CarryMem Original)
 
@@ -376,15 +379,24 @@ Rule management directly in your editor:
 | **matching_accuracy** | **87.5%** |
 | **compliance** | **83.3%** |
 
-### MSC Status
+### MemEval (Official Framework)
 
-MSC official evaluation requires the ParlAI framework (PyTorch-based) and evaluates dialogue generation quality (PPL/BLEU), not memory recall. The dataset is only available through ParlAI or HuggingFace datasets library, both of which are currently inaccessible from our environment. **MSC official evaluation is pending environment setup.**
+**Token F1: 0.127 (20Q sample)** — Official MemEval framework evaluation
 
-### MemEval Status
+| Metric | Score |
+|--------|-------|
+| **Token F1** | **0.127 ± 0.091** |
+| **Total Tokens** | 138,823 (~6,941 per question) |
 
-CarryMem adapter has been created and integrated into the MemEval framework (`benchmarks/MemEval/src/agents_memory/systems/carrymem.py`). MemEval provides 9-system direct comparison with full-pipeline token tracking — the most valuable benchmark for demonstrating CarryMem's zero-LLM ingestion advantage. **MemEval evaluation is in progress.**
+**Methodology**: Official MemEval framework (`run_full_benchmark.py`), CarryMem adapter, Token F1 metric.
+**Deviation**: LLM is Claude Sonnet 4.6 (not GPT-4o); Judge disabled (skip-judge mode).
+**Note**: Token F1 measures exact token overlap, which is stricter than LLM-as-Judge. The 0.127 F1 is consistent with the 42.6% LLM-as-Judge accuracy on LongMemEval — both indicate that CarryMem's keyword-based recall misses many relevant memories.
 
-> Full benchmark details: [BENCHMARK_STRATEGY_FINAL.md](docs/BENCHMARK_STRATEGY_FINAL.md)
+### MSC (Official)
+
+MSC official evaluation requires ParlAI framework (PyTorch) and evaluates dialogue generation quality (PPL/BLEU), not memory recall. Dataset only available through ParlAI/HuggingFace datasets. **Blocked by environment — pending ParlAI setup.**
+
+> Full benchmark methodology & compliance: [BENCHMARK_STRATEGY_FINAL.md](docs/BENCHMARK_STRATEGY_FINAL.md)
 
 ---
 

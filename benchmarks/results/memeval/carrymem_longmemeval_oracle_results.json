@@ -1,0 +1,29 @@
+{
+  "benchmark": "MemEval-LongMemEval-Oracle",
+  "system": "carrymem",
+  "version": "v0.1.6 baseline",
+  "date": "2026-05-07",
+  "llm_model": "code/claude-sonnet-4-6",
+  "judge": "disabled (skip-judge)",
+  "num_samples": 20,
+  "results": {
+    "overall_f1": 0.127,
+    "overall_f1_std": 0.091,
+    "total_questions": 20,
+    "by_category": {
+      "temporal_reasoning": {"f1": 0.127, "std": 0.091, "n": 20}
+    },
+    "total_tokens": 138823,
+    "avg_tokens_per_question": 6941
+  },
+  "methodology": {
+    "framework": "MemEval official (https://github.com/ProsusAI/MemEval)",
+    "adapter": "benchmarks/MemEval/src/agents_memory/systems/carrymem.py",
+    "memorization": "CarryMem classify_and_remember (both user + assistant messages)",
+    "recall": "CarryMem recall_memories (top-20)",
+    "answer_generation": "LLM (code/claude-sonnet-4-6) based on recalled memories",
+    "evaluation": "Token F1 (official MemEval metric)",
+    "deviation": "LLM is Claude Sonnet 4.6, not GPT-4o; Judge disabled"
+  },
+  "note": "F1=0.127 is the Token F1 score, measuring token overlap between generated and reference answers. Lower than LLM-as-Judge accuracy (42.6%) because F1 penalizes partial matches strictly."
+}
