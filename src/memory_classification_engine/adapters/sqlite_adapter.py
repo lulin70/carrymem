@@ -824,7 +824,8 @@ class SQLiteAdapter(StorageAdapter):
         """
         expansions = {
             "theme": ["dark mode", "light mode", "theme preference"],
-            "database": ["postgresql", "mysql", "database selection", "database choice", "decided to use"],
+            "database": ["postgresql", "mysql", "database selection", "database choice", "decided to use", "sqlite"],
+            "db": ["database", "sqlite", "postgresql", "mysql"],
             "api": ["api rate", "api design", "graphql", "rest", "rate limit"],
             "typescript": ["typescript strict", "typescript configuration"],
             "cloud": ["aws", "gcp", "cloud hosting", "cloud provider", "chose aws"],
@@ -838,10 +839,16 @@ class SQLiteAdapter(StorageAdapter):
             "indentation": ["spaces", "tabs", "indentation style"],
             "version": ["git", "version control", "github"],
             "security": ["oauth", "jwt", "authentication", "tls"],
-            "framework": ["react", "vue", "angular", "frontend framework"],
+            "framework": ["react", "vue", "angular", "django", "flask", "frontend", "backend"],
             "preference": ["prefer", "like", "always use", "never"],
             "ip": ["staging server", "server address", "10.0"],
             "port": ["server port", "9090", "8080"],
+            "数据库": ["postgresql", "mysql", "database"],
+            "偏好": ["prefer", "like", "preference"],
+            "深色": ["dark mode", "dark theme"],
+            "主题": ["theme", "theme preference"],
+            "ダークモード": ["dark mode", "dark theme"],
+            "データベース": ["database", "postgresql", "mysql"],
         }
 
         stop_words = {"what", "is", "the", "did", "does", "do", "a", "an", "how",
@@ -866,9 +873,38 @@ class SQLiteAdapter(StorageAdapter):
 
         return expanded
 
+    @staticmethod
+    def _sanitize_fts_query(query: str) -> str:
+        """Sanitize a query string for FTS5 MATCH.
+
+        FTS5 treats ", *, OR, AND, NOT, NEAR as special operators.
+        For ASCII tokens, wrap in quotes to treat as literal phrases.
+        For CJK tokens, leave unquoted (trigram tokenizer needs free matching).
+        """
+        tokens = query.strip().split()
+        sanitized = []
+        for token in tokens:
+            clean = token.replace('"', '').strip()
+            if not clean:
+                continue
+            has_cjk = any(
+                "\u4e00" <= c <= "\u9fff"
+                or "\u3040" <= c <= "\u309f"
+                or "\u30a0" <= c <= "\u30ff"
+                for c in clean
+            )
+            if has_cjk:
+                sanitized.append(clean)
+            else:
+                sanitized.append(f'"{clean}"')
+        return " ".join(sanitized)
+
     def _fts_search(self, query, where_clause, params, limit):
         try:
             conn = self._get_connection()
+            safe_query = self._sanitize_fts_query(query)
+            if not safe_query:
+                return []
             fts_sql = f"""
                 SELECT m.* FROM memories m
                 JOIN memories_fts f ON m.rowid = f.rowid
@@ -879,7 +915,7 @@ class SQLiteAdapter(StorageAdapter):
                 ORDER BY m.importance_score DESC, m.confidence DESC
                 LIMIT ?
             """
-            params_with_query = params + [query, limit]
+            params_with_query = params + [safe_query, limit]
             return conn.execute(fts_sql, params_with_query).fetchall()
         except sqlite3.OperationalError:
             return []

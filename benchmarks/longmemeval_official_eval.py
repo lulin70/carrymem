@@ -38,12 +38,13 @@ from memory_classification_engine import CarryMem
 from openai import OpenAI
 import backoff
 
-JUDGE_API_KEY = os.environ.get(
-    "MOKA_API_KEY",
-    "sk-GWSmGaP4XYK3YDWi80gGZTtae8eb7id1mgCAYDdvDgoFpUzX",
-)
-JUDGE_BASE_URL = "https://api.moka-ai.com/v1"
-JUDGE_MODEL = "code/claude-sonnet-4-6"
+JUDGE_API_KEY = os.environ.get("MOKA_API_KEY", "")
+if not JUDGE_API_KEY:
+    print("Error: MOKA_API_KEY environment variable not set")
+    print("  export MOKA_API_KEY=your-api-key")
+    sys.exit(1)
+JUDGE_BASE_URL = os.environ.get("MOKA_BASE_URL", "https://api.moka-ai.com/v1")
+JUDGE_MODEL = os.environ.get("MOKA_MODEL", "code/claude-sonnet-4-6")
 
 
 def get_anscheck_prompt(task, question, answer, response, abstention=False):
@@ -127,9 +128,12 @@ Answer:"""
             client, model, [{"role": "user", "content": answer_prompt}],
             temperature=0, max_tokens=200,
         )
-        return resp.choices[0].message.content.strip()
+        answer_text = resp.choices[0].message.content.strip()
+        p_tokens = getattr(resp.usage, "prompt_tokens", 0)
+        c_tokens = getattr(resp.usage, "completion_tokens", 0)
+        return answer_text, p_tokens, c_tokens
     except Exception as e:
-        return f"Error: {e}"
+        return f"Error: {e}", 0, 0
 
 
 def run_official_evaluation(
@@ -151,15 +155,17 @@ def run_official_evaluation(
     print(f"Total questions in dataset: {len(dataset)}")
 
     if stratified:
+        import random
         from collections import defaultdict
+        random.seed(42)
         by_type = defaultdict(list)
         for entry in dataset:
             by_type[entry["question_type"]].append(entry)
         sampled = []
         for qtype, entries in sorted(by_type.items()):
             n = min(stratified, len(entries))
-            sampled.extend(entries[:n])
-            print(f"  {qtype}: {n}/{len(entries)} sampled")
+            sampled.extend(random.sample(entries, n))
+            print(f"  {qtype}: {n}/{len(entries)} sampled (random)")
         dataset = sampled
         print(f"Stratified sample: {len(dataset)} questions ({stratified} per type)")
     elif max_questions:
@@ -187,6 +193,10 @@ def run_official_evaluation(
     total_turns = 0
     total_prompt_tokens = 0
     total_completion_tokens = 0
+    answer_prompt_tokens = 0
+    answer_completion_tokens = 0
+    judge_prompt_tokens = 0
+    judge_completion_tokens = 0
 
     for i, entry in enumerate(dataset):
         qid = entry["question_id"]
@@ -211,7 +221,9 @@ def run_official_evaluation(
 
             memories = cm.recall_memories(query=question, limit=20)
 
-            hypothesis = generate_answer(client, JUDGE_MODEL, question, memories)
+            hypothesis, a_pt, a_ct = generate_answer(client, JUDGE_MODEL, question, memories)
+            answer_prompt_tokens += a_pt
+            answer_completion_tokens += a_ct
 
             cm.close()
         except Exception as e:
@@ -236,8 +248,12 @@ def run_official_evaluation(
             )
             eval_response = eval_resp.choices[0].message.content.strip()
             label = "yes" in eval_response.lower()
-            total_prompt_tokens += getattr(eval_resp.usage, "prompt_tokens", 0)
-            total_completion_tokens += getattr(eval_resp.usage, "completion_tokens", 0)
+            j_pt = getattr(eval_resp.usage, "prompt_tokens", 0)
+            j_ct = getattr(eval_resp.usage, "completion_tokens", 0)
+            judge_prompt_tokens += j_pt
+            judge_completion_tokens += j_ct
+            total_prompt_tokens = answer_prompt_tokens + judge_prompt_tokens
+            total_completion_tokens = answer_completion_tokens + judge_completion_tokens
         except Exception as e:
             print(f"  Judge error for {qid}: {e}")
             label = False
@@ -280,8 +296,9 @@ def run_official_evaluation(
         print(f"  {qtype:30s}: {type_acc:.1%} ({sum(accs)}/{len(accs)})")
 
     print(f"\nToken Usage:")
-    print(f"  Prompt tokens: {total_prompt_tokens}")
-    print(f"  Completion tokens: {total_completion_tokens}")
+    print(f"  Answer generation: {answer_prompt_tokens} prompt + {answer_completion_tokens} completion")
+    print(f"  Judge evaluation:  {judge_prompt_tokens} prompt + {judge_completion_tokens} completion")
+    print(f"  Total: {total_prompt_tokens} prompt + {total_completion_tokens} completion")
     print(f"  Total sessions memorized: {total_sessions}")
     print(f"  Total turns memorized: {total_turns}")
 
@@ -314,8 +331,12 @@ def run_official_evaluation(
             },
         },
         "token_usage": {
-            "prompt_tokens": total_prompt_tokens,
-            "completion_tokens": total_completion_tokens,
+            "answer_prompt_tokens": answer_prompt_tokens,
+            "answer_completion_tokens": answer_completion_tokens,
+            "judge_prompt_tokens": judge_prompt_tokens,
+            "judge_completion_tokens": judge_completion_tokens,
+            "total_prompt_tokens": total_prompt_tokens,
+            "total_completion_tokens": total_completion_tokens,
         },
         "scale": {
             "total_sessions": total_sessions,
