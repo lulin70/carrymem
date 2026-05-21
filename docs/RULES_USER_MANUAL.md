@@ -1,6 +1,6 @@
 # CarryMem — User Installation & Usage Manual
 
-**Version**: 0.1.6  
+**Version**: 0.2.0  
 **Date**: 2026-05-03  
 **Audience**: End Users (Developers, Power Users, Teams)  
 **Prerequisites**: Python 3.9+, pip
@@ -18,7 +18,7 @@ pip install carrymem
 **Verify installation:**
 ```bash
 carrymem version
-# Output: CarryMem v0.1.6
+# Output: CarryMem v0.2.0
 ```
 
 ### Step 2: Initialize
@@ -75,7 +75,7 @@ $ carrymem doctor
   CarryMem Doctor - Diagnostics
   =============================================
   [OK] Python 3.11+ (>= 3.9)
-  [OK] CarryMem v0.1.6
+  [OK] CarryMem v0.2.0
   [OK] Config directory: /Users/you/.carrymem
   [OK] Database: /Users/you/.carrymem/memories.db (0.14 MB)
   
@@ -484,8 +484,8 @@ Choose action for rule_legacy_fmt [p/d/k/s]: d
 ### Using Rules with Python API
 
 ```python
-from memory_classification_engine import CarryMem
-from memory_classification_engine.rules import RuleEngine
+from carrymem import CarryMem
+from carrymem.rules import RuleEngine
 
 # Initialize (rules auto-enabled)
 cm = CarryMem()
@@ -699,7 +699,7 @@ $ carrymem add-rule "normal" --trigger "*" --type prefer
 **Debugging steps:**
 1. **Verify injection works:**
    ```python
-   from memory_classification_engine import CarryMem
+   from carrymem import CarryMem
    cm = CarryMem()
    prompt = cm.build_system_prompt(context="写报告")
    print(prompt)
@@ -731,8 +731,8 @@ $ carrymem add-rule "normal" --trigger "*" --type prefer
 - **Security Reports**: Please email maintainers (do NOT post publicly)
 
 ### Version History
-- **v0.1.6** (Current): Version reset — security hardening, thread safety, documentation reorganization
-- **v0.1.6**: Memory layer foundation, Rules Engine, PyPI release
+- **v0.2.0** (Current): Version reset — security hardening, thread safety, documentation reorganization
+- **v0.2.0**: Memory layer foundation, Rules Engine, PyPI release
 - **Changelog**: See [CHANGELOG.md](../CHANGELOG.md)
 
 ---

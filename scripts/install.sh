@@ -84,13 +84,13 @@ else
         echo "    source $SHELL_RC"
         echo ""
         echo "Or use the full command:"
-        echo "    python3 -m memory_classification_engine.cli"
+        echo "    python3 -m carrymem.cli"
     fi
 fi
 
 echo ""
 echo "🗄️  Initializing database..."
-python3 -m memory_classification_engine.cli init 2>/dev/null || echo "✅ Database already initialized"
+python3 -m carrymem.cli init 2>/dev/null || echo "✅ Database already initialized"
 
 echo ""
 echo "🔌 MCP Configuration"
@@ -103,11 +103,11 @@ if [ -f "$CLAUDE_CONFIG" ]; then
     read -p "Configure MCP for Claude Desktop? (y/n) " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        python3 -m memory_classification_engine.cli setup-mcp --tool claude 2>/dev/null || echo "⚠️  MCP setup command not fully implemented yet"
+        python3 -m carrymem.cli setup-mcp --tool claude 2>/dev/null || echo "⚠️  MCP setup command not fully implemented yet"
         echo "💡 Manual setup: Add to $CLAUDE_CONFIG"
         echo '   "carrymem": {'
         echo '     "command": "python3",'
-        echo '     "args": ["-m", "memory_classification_engine.integration.layer2_mcp"]'
+        echo '     "args": ["-m", "carrymem.integration.layer2_mcp"]'
         echo '   }'
     fi
 else

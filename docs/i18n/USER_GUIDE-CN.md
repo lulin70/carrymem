@@ -8,15 +8,16 @@
 4. [规则作用域](#规则作用域)
 5. [Skill 格式](#skill-格式)
 6. [合并协议](#合并协议)
-7. [VS Code 扩展](#vs-code-扩展)
-8. [CLI 参考](#cli-参考)
+7. [记忆整合](#记忆整合)
+8. [VS Code 扩展](#vs-code-扩展)
+9. [CLI 参考](#cli-参考)
 
 ---
 
 ## 快速入门
 
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 cm = CarryMem()
 cm.classify_and_remember("我偏好深色模式")
@@ -48,7 +49,7 @@ CarryMem 自动将你的输入分类为 7 种记忆类型：
 规则是行为契约：**当 X 发生时，做 Y**。
 
 ```python
-from memory_classification_engine.rules import RuleEngine
+from carrymem.rules import RuleEngine
 
 engine = RuleEngine()
 
@@ -191,7 +192,7 @@ carrymem skill-install my-rules.skill.json --scope company --mode skip
 ### 预览冲突
 
 ```python
-from memory_classification_engine.rules import review_incoming_rules
+from carrymem.rules import review_incoming_rules
 
 preview = engine.review_incoming_rules(
     incoming=new_rules,
@@ -224,12 +225,56 @@ print(f"已替换：{result['replaced_count']}")
 
 ---
 
+## 记忆整合
+
+随着时间推移，记忆库会积累重复条目、过时条目和低价值记忆。整合功能可以清理和优化记忆库。
+
+### 运行整合
+
+```bash
+# 预览整合操作（安全，不修改数据）
+carrymem consolidate --dry-run
+
+# 执行整合
+carrymem consolidate
+
+# 仅运行去重+衰减（跳过模式晋升和语义合并）
+carrymem consolidate --no-p1 --no-p2
+```
+
+### 三个阶段
+
+| 阶段 | 功能 | 使用时机 |
+|------|------|---------|
+| **P0: 去重 + 衰减** | 移除重复记忆（Jaccard ≥0.85），应用时间衰减 | 每日或每周运行 |
+| **P1: 模式 → 规则** | 检测重复模式，生成规则候选供审查 | 每周运行 |
+| **P2: 语义合并** | 聚类相关记忆，请求宿主 LLM 整合 | 每月运行 |
+
+### 衰减行为
+
+记忆随时间衰减，除非被访问。偏好始终保留。
+
+| 记忆类型 | 半衰期 |
+|---------|--------|
+| 偏好 | 270 天 |
+| 事实、决策、纠正 | 90 天 |
+| 情绪 | 45 天 |
+
+### 最佳实践
+
+- 始终先用 `--dry-run` 预览变更
+- 在低使用时段运行整合
+- 审查 P1 规则候选后再接受
+- 偏好永远不会被衰减或去重——你的偏好是永久的
+
+---
+
 ## VS Code 扩展
 
 ### 安装
 
 1. 打开 VS Code
-2. 从 VSIX 安装：`code --install-extension vscode-carrymem-0.1.6.vsix`
+2. 从 VSIX 安装：`code --install-extension vscode-carrymem-0.2.0.vsix`
 3. 或在扩展目录中按 F5 以调试模式运行
 
 ### 功能

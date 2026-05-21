@@ -17,10 +17,10 @@ import pytest
 import tempfile
 import os
 
-from memory_classification_engine.rules import RuleEngine
-from memory_classification_engine.rules.models import Rule
-from memory_classification_engine.rules.skill import skill_pack, skill_verify, skill_install
-from memory_classification_engine.rules.merge_protocol import (
+from carrymem.rules import RuleEngine
+from carrymem.rules.models import Rule
+from carrymem.rules.skill import skill_pack, skill_verify, skill_install
+from carrymem.rules.merge_protocol import (
     MergeStrategy,
     merge_rules,
     review_incoming_rules,

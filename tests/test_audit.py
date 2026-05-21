@@ -10,7 +10,7 @@ import sqlite3
 import pytest
 from datetime import datetime, timezone
 
-from memory_classification_engine.security.audit import AuditLogger
+from carrymem.security.audit import AuditLogger
 
 
 @pytest.fixture

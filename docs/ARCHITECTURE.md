@@ -1,7 +1,7 @@
 # CarryMem Architecture
 
-**Version**: v0.1.6
-**Date**: 2026-05-01
+**Version**: v0.2.0
+**Date**: 2026-05-13
 **Status**: Stable
 
 ---
@@ -35,9 +35,9 @@ CarryMem uses a **layered architecture + plugin design**:
 ### Core Value
 
 ```
-User Input → Auto-Classify → Smart Store → Semantic Recall
-   ↓              ↓              ↓             ↓
- Simple       90%+ accuracy   Dedup+TTL    <100ms
+User Input → Auto-Classify → Smart Store → Semantic Recall → Proactive Inject
+   ↓              ↓              ↓             ↓              ↓
+ Simple       90%+ accuracy   Dedup+TTL    <100ms      AI knows who you are
 ```
 
 ---
@@ -60,8 +60,10 @@ User Input → Auto-Classify → Smart Store → Semantic Recall
 │  ┌──────────────────────────────────────────────────┐  │
 │  │              CarryMem (Main Entry)                │  │
 │  │  - classify_and_remember()  - recall_memories()   │  │
+│  │  - recall_aggregated()      - recall_timeline()   │  │
 │  │  - declare()  - forget_memory()                   │  │
 │  │  - export_memories()  - import_memories()         │  │
+│  │  Note: classify_and_remember(session_id=...)      │  │
 │  └──────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────┘
                          ↓
@@ -89,6 +91,14 @@ User Input → Auto-Classify → Smart Store → Semantic Recall
 │  │  (Exact)     │  │   Expander   │  │    Merger    │ │
 │  └──────────────┘  └──────────────┘  └──────────────┘ │
 └─────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│            Consolidation Layer                           │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
+│  │  P0: Dedup   │  │  P1: Pattern │  │  P2: Semantic│ │
+│  │  + Decay     │  │  → Rules     │  │  Merge       │ │
+│  └──────────────┘  └──────────────┘  └──────────────┘ │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -101,7 +111,7 @@ User Input → Auto-Classify → Smart Store → Semantic Recall
 
 #### 1.1 Python API
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 with CarryMem() as cm:
     cm.classify_and_remember("I prefer dark mode")
@@ -121,7 +131,7 @@ carrymem stats
   "mcpServers": {
     "carrymem": {
       "command": "python3",
-      "args": ["-m", "memory_classification_engine.integration.layer2_mcp"]
+      "args": ["-m", "carrymem.integration.layer2_mcp"]
     }
   }
 }
@@ -213,6 +223,7 @@ CREATE TABLE memories (
     type TEXT NOT NULL,
     content TEXT NOT NULL,
     original_message TEXT,
+    raw_text TEXT,              -- NEW: Verbatim user input for FTS5 dual-index
     confidence REAL NOT NULL,
     tier INTEGER NOT NULL,
     namespace TEXT NOT NULL,
@@ -220,7 +231,9 @@ CREATE TABLE memories (
     expires_at TEXT,
     access_count INTEGER,
     content_hash TEXT NOT NULL,
-    metadata TEXT
+    metadata TEXT,
+    superseded_at TEXT,         -- NEW: When this memory was superseded
+    supersedes TEXT             -- NEW: Which memory this replaces
 );
 
 CREATE VIRTUAL TABLE memories_fts USING fts5(
@@ -260,6 +273,114 @@ class ResultMerger:
         # 4. Return top-K
 ```
 
+### 6. Knowledge Lifecycle Layer
+
+**Responsibility**: Track knowledge evolution and manage memory supersession
+
+#### 6.1 Auto-Supersession Pipeline
+
+```
+New Memory → Jaccard Similarity Check → Contradiction Detection → Mark Old as Superseded
+     ↓              ↓                        ↓                         ↓
+  INSERT      ≥ 0.25 threshold      Word boundary regex         superseded_at = now
+              + Update marker detection      (like/dislike, etc.)        supersedes = new_key
+              detection              + Assistant exclusion
+```
+
+#### 6.2 Session-Aware Storage
+
+```
+classify_and_remember(session_id="s_20260513")
+     ↓
+session_id → metadata JSON → session_id filter in recall()
+```
+
+#### 6.3 Time Expression Parsing
+
+```
+Query: "What did I recently decide about databases?"
+     ↓
+_parse_time_expressions() → created_after = 7 days ago
+     ↓
+recall_memories(query="databases", filters={"created_after": "2026-05-06T..."})
+```
+
+#### 6.4 Structured Prompt Generation
+
+```
+Memories → Priority Classification → Structured Prompt
+              ↓                         ↓
+         MANDATORY (correction/decision)  → Head section
+         IMPORTANT (high confidence)       → Middle section
+         OUTDATED (superseded)            → Tail section with update notes
+```
+
+### 7. LLM-Augmented Layer
+
+**Responsibility**: LLM-powered session summarization and semantic aggregation (optional, requires API key)
+
+- **Consolidation Engine** (`consolidation.py`): Memory lifecycle management with three phases:
+  - P0: Jaccard-based deduplication (≥0.85) + exponential half-life decay
+  - P1: Pattern detection → rule candidate generation via PromotionPipeline
+  - P2: Semantic clustering → host LLM consolidation requests
+  - Preferences are always preserved (never decayed or deduplicated)
+
+#### 7.1 LLM Client Abstraction
+
+```
+Environment Variables → LLMClient → OpenAI/ZhipuAI/vLLM
+     ↓                     ↓              ↓
+CARRYMEM_LLM_*      Lazy-cached      chat(prompt) → str
+CARRYMEM_LLM_API_KEY  instance       is_available() → bool
+CARRYMEM_LLM_MODEL                   count_tokens() → int
+```
+
+#### 7.2 Session Summarizer Pipeline
+
+```
+Session Memories → Prioritize (correction/decision > preference > other)
+     ↓                    ↓
+Exclude superseded    Cap at 50 memories
+     ↓
+LLM available? ──Yes──→ LLM Summarize → session_summary (confidence: 0.9)
+     │
+     No
+     ↓
+Rule-based Concat → session_summary (confidence: 0.7)
+     ↓
+Store with metadata: {session_id, source_memory_ids, summary_method}
+```
+
+#### 7.3 Semantic Aggregator Pipeline
+
+```
+All Active Memories → Embed (all-MiniLM-L6-v2)
+     ↓
+Pairwise Cosine Similarity Matrix
+     ↓
+Connected Component Clustering (DFS, threshold: 0.55)
+     ↓
+For each cluster (size ≥ 2):
+  LLM available? ──Yes──→ LLM Merge → aggregated memory
+       │
+       No
+       ↓
+  Rule-based (latest + note) → aggregated memory
+```
+
+#### 7.4 Session Summary in Recall
+
+```
+recall_memories() → Exclude session_summary by default
+                     (avoid noise from rule-based summaries)
+
+build_context() → Include session_summary (top 3)
+                   (cross-session context for decision support)
+
+filters={"include_session_summary": True} → Explicit inclusion
+filters={"type": "session_summary"}       → Type-specific query
+```
+
 ---
 
 ## Data Flow
@@ -293,17 +414,19 @@ class ResultMerger:
    ↓
 2. Query Validation
    ↓
-3. FTS5 Search
+3. Time Expression Parsing (NEW)
    ↓
-4. Results insufficient? → Semantic Expansion
+4. FTS5 Search
    ↓
-5. Result Fusion
+5. Results insufficient? → Context Rebuild (NEW)
    ↓
-6. Dedup + Sort
+6. Result Fusion
    ↓
-7. Update access_count
+7. Dedup + Sort + Supersession Filter (NEW)
    ↓
-8. Return Top-K
+8. Update access_count
+   ↓
+9. Return Top-K
 ```
 
 ---
@@ -342,7 +465,7 @@ class ValidationError(CarryMemError):
 ### 3. Logging
 
 ```python
-from memory_classification_engine.utils.logger import logger
+from carrymem.utils.logger import logger
 
 # Log levels: DEBUG, INFO, WARNING, ERROR
 # File: ~/.carrymem/logs/carrymem.log (if configured)
@@ -517,7 +640,7 @@ When rule injection approaches context window limits:
 ### 1. Custom Storage Adapter
 
 ```python
-from memory_classification_engine.adapters import StorageAdapter
+from carrymem.adapters import StorageAdapter
 
 class PostgreSQLAdapter(StorageAdapter):
     def remember(self, entry: MemoryEntry) -> StoredMemory: ...
@@ -610,3 +733,5 @@ CarryMem uses a **layered architecture + plugin design**, achieving:
 ✅ **Extensible**: Adapter pattern + plugin system
 ✅ **Easy to Use**: Zero config + CLI tools
 ✅ **Secure**: Input validation + parameterized queries + path safety
+✅ **Knowledge Lifecycle**: Auto-supersession + session-aware + time reasoning
+✅ **Structured Injection**: MANDATORY/IMPORTANT/OUTDATED priority labels

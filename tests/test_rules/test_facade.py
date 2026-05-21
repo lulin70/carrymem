@@ -7,9 +7,9 @@ import pytest
 import tempfile
 import os
 
-from memory_classification_engine.rules import RuleEngine
-from memory_classification_engine.rules.models import Rule
-from memory_classification_engine.rules.skill import skill_pack
+from carrymem.rules import RuleEngine
+from carrymem.rules.models import Rule
+from carrymem.rules.skill import skill_pack
 
 
 class TestRuleEngineSkillFacade:

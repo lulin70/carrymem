@@ -9,8 +9,8 @@ import os
 
 import pytest
 
-from memory_classification_engine import CarryMem
-from memory_classification_engine.cli import (
+from carrymem import CarryMem
+from carrymem.cli import (
     cmd_add,
     cmd_whoami,
     cmd_profile,

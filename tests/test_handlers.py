@@ -10,8 +10,8 @@ import pytest
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
-from memory_classification_engine import CarryMem
-from memory_classification_engine.integration.layer2_mcp.handlers import (
+from carrymem import CarryMem
+from carrymem.integration.layer2_mcp.handlers import (
     handle_classify_message,
     handle_get_classification_schema,
     handle_batch_classify,
@@ -25,6 +25,8 @@ from memory_classification_engine.integration.layer2_mcp.handlers import (
     handle_declare_preference,
     handle_get_memory_profile,
     handle_get_system_prompt,
+    handle_summarize_and_store,
+    handle_consolidate_memories,
     Handlers,
     _safe_error,
     _clamp,
@@ -48,13 +50,13 @@ def cm(temp_db):
 
 @pytest.fixture
 def engine():
-    from memory_classification_engine.engine import MemoryClassificationEngine
+    from carrymem.engine import MemoryClassificationEngine
     return MemoryClassificationEngine()
 
 
 class TestSafeError:
     def test_storage_error(self):
-        from memory_classification_engine.exceptions import StorageNotConfiguredError
+        from carrymem.exceptions import StorageNotConfiguredError
         e = StorageNotConfiguredError()
         assert _safe_error(e) == "storage_not_configured"
 
@@ -359,7 +361,7 @@ class TestHandlerMap:
             "mce_status", "classify_and_remember", "recall_memories",
             "forget_memory", "index_knowledge", "recall_from_knowledge",
             "recall_all", "declare_preference", "get_memory_profile",
-            "get_system_prompt",
+            "get_system_prompt", "summarize_and_store", "consolidate_memories",
         ]
         for name in expected:
             assert name in handler_map
@@ -555,3 +557,73 @@ class TestHandlersClass:
             namespace="default",
         )
         await handlers.cleanup()
+
+
+class TestHandleSummarizeAndStore:
+    def test_no_session_id(self, cm):
+        result = handle_summarize_and_store(cm, {})
+        assert "error" in result
+        assert "session_id" in result["error"]
+
+    def test_no_memories_for_session(self, cm):
+        result = handle_summarize_and_store(cm, {"session_id": "nonexistent"})
+        assert result["action"] == "no_content"
+        assert result["session_id"] == "nonexistent"
+
+    def test_returns_content_for_summarization(self, cm):
+        cm.classify_and_remember(
+            "I prefer dark mode for coding",
+            session_id="sess-1",
+        )
+        cm.classify_and_remember(
+            "I decided to use PostgreSQL for the project",
+            session_id="sess-1",
+        )
+        result = handle_summarize_and_store(cm, {"session_id": "sess-1"})
+        assert result["action"] == "summarize"
+        assert result["session_id"] == "sess-1"
+        assert "content" in result
+        assert result["memory_count"] >= 1
+        assert "instruction" in result
+
+    def test_max_tokens_limit(self, cm):
+        cm.classify_and_remember(
+            "I prefer dark mode",
+            session_id="sess-2",
+        )
+        result = handle_summarize_and_store(
+            cm, {"session_id": "sess-2", "max_tokens": 100},
+        )
+        assert result["action"] == "summarize"
+
+    def test_namespace_passed(self, cm):
+        cm.classify_and_remember(
+            "I like Python",
+            session_id="sess-3",
+        )
+        result = handle_summarize_and_store(
+            cm, {"session_id": "sess-3", "namespace": "work"},
+        )
+        assert result["namespace"] == "work"
+
+
+class TestHandleConsolidateMemories:
+    def test_dry_run_default(self, cm):
+        result = handle_consolidate_memories(cm, {})
+        assert result.get("dry_run") is True or "dry_run" not in result or result.get("dry_run") is None
+
+    def test_dry_run_true(self, cm):
+        cm.classify_and_remember("I prefer Python")
+        result = handle_consolidate_memories(cm, {"dry_run": True})
+        assert "input_count" in result
+
+    def test_dry_run_false(self, cm):
+        cm.classify_and_remember("I prefer Python")
+        result = handle_consolidate_memories(cm, {"dry_run": False})
+        assert "input_count" in result
+
+    def test_error_handling(self):
+        mock_cm = MagicMock()
+        mock_cm.consolidate.side_effect = RuntimeError("test error")
+        result = handle_consolidate_memories(mock_cm, {"dry_run": True})
+        assert "error" in result

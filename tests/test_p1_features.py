@@ -17,8 +17,8 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
-from memory_classification_engine.carrymem import CarryMem
-from memory_classification_engine.rules import RuleEngine
+from carrymem.carrymem import CarryMem
+from carrymem.rules import RuleEngine
 
 
 class TestPromotionIntegration(unittest.TestCase):
@@ -244,28 +244,28 @@ class TestOnboarding(unittest.TestCase):
 
     def test_onboard_returns_welcome_message(self):
         """Verify: Onboard returns welcome message in English."""
-        from memory_classification_engine.integration.layer2_mcp.handlers import handle_onboard
+        from carrymem.integration.layer2_mcp.handlers import handle_onboard
         result = handle_onboard(self.cm, {"language": "en"})
         self.assertIn("welcome", result)
         self.assertIn("CarryMem", result["welcome"])
 
     def test_onboard_chinese(self):
         """Verify: Onboard returns Chinese welcome message."""
-        from memory_classification_engine.integration.layer2_mcp.handlers import handle_onboard
+        from carrymem.integration.layer2_mcp.handlers import handle_onboard
         result = handle_onboard(self.cm, {"language": "zh"})
         self.assertIn("welcome", result)
         self.assertIn("欢迎使用", result["welcome"])
 
     def test_onboard_japanese(self):
         """Verify: Onboard returns Japanese welcome message."""
-        from memory_classification_engine.integration.layer2_mcp.handlers import handle_onboard
+        from carrymem.integration.layer2_mcp.handlers import handle_onboard
         result = handle_onboard(self.cm, {"language": "ja"})
         self.assertIn("welcome", result)
         self.assertIn("ようこそ", result["welcome"])
 
     def test_onboard_has_next_steps(self):
         """Verify: Onboard returns next steps."""
-        from memory_classification_engine.integration.layer2_mcp.handlers import handle_onboard
+        from carrymem.integration.layer2_mcp.handlers import handle_onboard
         result = handle_onboard(self.cm, {"language": "en"})
         self.assertIn("next_steps", result)
         self.assertGreater(len(result["next_steps"]), 0)

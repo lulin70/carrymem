@@ -8,15 +8,16 @@
 4. [Rule Scopes](#rule-scopes)
 5. [Skill Format](#skill-format)
 6. [Merge Protocol](#merge-protocol)
-7. [VS Code Extension](#vs-code-extension)
-8. [CLI Reference](#cli-reference)
+7. [Memory Consolidation](#memory-consolidation)
+8. [VS Code Extension](#vs-code-extension)
+9. [CLI Reference](#cli-reference)
 
 ---
 
 ## はじめに
 
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 cm = CarryMem()
 cm.classify_and_remember("I prefer dark mode")
@@ -48,7 +49,7 @@ CarryMem auto-classifies your inputs into 7 memory types:
 Rules are behavioral contracts: **when X happens, do Y**.
 
 ```python
-from memory_classification_engine.rules import RuleEngine
+from carrymem.rules import RuleEngine
 
 engine = RuleEngine()
 
@@ -191,7 +192,7 @@ When rules from different sources conflict, the merge protocol resolves them.
 ### Preview Conflicts
 
 ```python
-from memory_classification_engine.rules import review_incoming_rules
+from carrymem.rules import review_incoming_rules
 
 preview = engine.review_incoming_rules(
     incoming=new_rules,
@@ -224,12 +225,56 @@ print(f"Replaced: {result['replaced_count']}")
 
 ---
 
+## Memory Consolidation
+
+時間の経過とともに、記憶ストアには重複、古いエントリ、低価値の記憶が蓄積されます。統合により記憶ストアをクリーンアップ・最適化します。
+
+### 統合の実行
+
+```bash
+# 変更内容をプレビュー（安全、変更なし）
+carrymem consolidate --dry-run
+
+# 統合を実行
+carrymem consolidate
+
+# 重複排除+減衰のみ実行（パターン昇格と意味マージをスキップ）
+carrymem consolidate --no-p1 --no-p2
+```
+
+### 3つのフェーズ
+
+| フェーズ | 機能 | 実行タイミング |
+|---------|------|--------------|
+| **P0: 重複排除 + 減衰** | 重複を除去（Jaccard ≥0.85）、時間ベース減衰を適用 | 毎日または毎週 |
+| **P1: パターン → ルール** | 繰り返しパターンを検出、レビュー用ルール候補を生成 | 毎週 |
+| **P2: 意味マージ** | 関連記憶をクラスタリング、ホストLLMに統合をリクエスト | 毎月 |
+
+### 減衰動作
+
+記憶は時間とともに減衰します（アクセスされない場合）。嗜好は常に保持されます。
+
+| 記憶タイプ | 半減期 |
+|-----------|--------|
+| 嗜好 | 270日 |
+| 事実、決定、修正 | 90日 |
+| 感情 | 45日 |
+
+### ベストプラクティス
+
+- 常に最初に `--dry-run` で変更をプレビュー
+- 低使用時間帯に統合を実行
+- P1ルール候補を承認前にレビュー
+- 嗜好は減衰・重複排除されません — あなたの嗜好は永続的です
+
+---
+
 ## VS Code Extension
 
 ### Installation
 
 1. Open VS Code
-2. Install from VSIX: `code --install-extension vscode-carrymem-0.1.6.vsix`
+2. Install from VSIX: `code --install-extension vscode-carrymem-0.2.0.vsix`
 3. Or press F5 in the extension directory to run in debug mode
 
 ### Features

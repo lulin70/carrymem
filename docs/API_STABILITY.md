@@ -18,7 +18,7 @@ CarryMem APIs are classified into three stability tiers:
 
 The following public interfaces are **Stable** and will not have breaking changes within the v0.1.x series:
 
-### 2.1 Core Python API (`memory_classification_engine`)
+### 2.1 Core Python API (`carrymem`)
 
 ```python
 # Stable classes
@@ -155,10 +155,10 @@ carrymem skill-pack / skill-install / skill-verify
 
 The following are **Internal** and should not be relied upon by external code:
 
-- All modules under `memory_classification_engine.adapters.*` (except through CarryMem)
-- All modules under `memory_classification_engine.rules.*` (except through CarryMem)
-- All modules under `memory_classification_engine.security.*` (except InputValidator)
-- All modules under `memory_classification_engine.utils.*`
+- All modules under `carrymem.adapters.*` (except through CarryMem)
+- All modules under `carrymem.rules.*` (except through CarryMem)
+- All modules under `carrymem.security.*` (except InputValidator)
+- All modules under `carrymem.utils.*`
 - All private methods (prefixed with `_`)
 
 ### 4.1 DevSquad Integration Adapter (Experimental)
@@ -166,7 +166,7 @@ The following are **Internal** and should not be relied upon by external code:
 The `integration.devsquad` module is **Experimental** and provides Protocol-based integration for DevSquad:
 
 ```python
-from memory_classification_engine.integration.devsquad import DevSquadAdapter
+from carrymem.integration.devsquad import DevSquadAdapter
 
 adapter = DevSquadAdapter(db_path="carrymem.db")
 if adapter.is_available():
@@ -198,7 +198,7 @@ CarryMem follows Semantic Versioning (SemVer) with the following convention:
 
 ### Historical Note
 
-Early development used various version numbering schemes. The current v0.1.6 is a version reset that consolidates all features with security hardening and quality improvements.
+Early development used various version numbering schemes. The current v0.2.0 is a version reset that consolidates all features with security hardening and quality improvements.
 
 ## 7. Conditional Imports
 

@@ -7,7 +7,7 @@ format_memory_entry, format_knowledge_entry, build_prompt.
 
 import pytest
 
-from memory_classification_engine.context import (
+from carrymem.context import (
     context_relevance,
     select_memories,
     select_knowledge,

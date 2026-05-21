@@ -9,9 +9,9 @@ import sys
 
 def main():
     try:
-        from memory_classification_engine.cli import main as cli_main
+        from carrymem.cli import main as cli_main
     except ImportError as e:
-        if 'memory_classification_engine' not in str(e):
+        if 'carrymem' not in str(e):
             raise
         print("Error: CarryMem is not installed.")
         print("Install with: pip install carrymem")

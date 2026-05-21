@@ -40,7 +40,7 @@ You: exit
 ## How It Works
 
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 # Initialize CarryMem
 memory = CarryMem()

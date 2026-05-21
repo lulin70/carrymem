@@ -13,12 +13,12 @@ import os
 import pytest
 import tempfile
 
-from memory_classification_engine.utils.config import ConfigManager
-from memory_classification_engine.utils.language import LanguageManager
-from memory_classification_engine.security.encryption import MemoryEncryption, NoEncryption, EncryptionError
-from memory_classification_engine.rules.skill import skill_pack, skill_verify, skill_install, SKILL_MAX_RULES
-from memory_classification_engine.rules.models import Rule
-from memory_classification_engine.rules.storage import RuleStorage
+from carrymem.utils.config import ConfigManager
+from carrymem.utils.language import LanguageManager
+from carrymem.security.encryption import MemoryEncryption, NoEncryption, EncryptionError
+from carrymem.rules.skill import skill_pack, skill_verify, skill_install, SKILL_MAX_RULES
+from carrymem.rules.models import Rule
+from carrymem.rules.storage import RuleStorage
 
 
 class TestConfigManager:
@@ -48,11 +48,11 @@ class TestConfigManager:
 
     def test_get_from_env_override(self):
         cm = ConfigManager(config_path="/nonexistent/path")
-        os.environ["MCE_TEST_KEY"] = "env_value"
+        os.environ["CARRYMEM_TEST_KEY"] = "env_value"
         try:
             assert cm.get("test_key") == "env_value"
         finally:
-            del os.environ["MCE_TEST_KEY"]
+            del os.environ["CARRYMEM_TEST_KEY"]
 
     def test_set_nested_key(self):
         cm = ConfigManager(config_path="/nonexistent/path")
@@ -117,12 +117,12 @@ class TestConfigManager:
                 os.remove(config_path)
 
     def test_env_path_config(self):
-        os.environ["MCE_CONFIG_PATH"] = "/nonexistent/env_config.json"
+        os.environ["CARRYMEM_CONFIG_PATH"] = "/nonexistent/env_config.json"
         try:
             cm = ConfigManager()
             assert cm.config_path == "/nonexistent/env_config.json"
         finally:
-            del os.environ["MCE_CONFIG_PATH"]
+            del os.environ["CARRYMEM_CONFIG_PATH"]
 
 
 class TestLanguageManager:

@@ -45,7 +45,7 @@ carrymem init
 ### 2. 存储第一条记忆（1 分钟）
 
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 with CarryMem() as cm:
     cm.classify_and_remember("我偏好深色模式")
@@ -132,6 +132,15 @@ with CarryMem() as cm:
     profile = cm.get_memory_profile()
     print(profile['summary'])
     # → "AI 记住了关于你的 12 件事：5 个偏好、3 个纠正、2 个决策"
+```
+
+### 记忆整合
+
+```python
+# 记忆整合（定期运行）
+report = cm.consolidate(dry_run=True)  # 预览变更
+print(f"发现 {report['stats']['duplicates_found']} 个重复")
+report = cm.consolidate(dry_run=False)  # 执行
 ```
 
 ---

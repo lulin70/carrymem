@@ -1,7 +1,7 @@
 # CarryMem API リファレンス
 
-**バージョン**: v0.1.6
-**日付**: 2026-05-01
+**バージョン**: v0.2.0
+**日付**: 2026-05-13
 
 ---
 
@@ -12,7 +12,7 @@ Main entry point for CarryMem.
 ### Constructor
 
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 cm = CarryMem(
     storage="sqlite",           # "sqlite", "obsidian", StorageAdapter instance, or None
@@ -43,6 +43,7 @@ result = cm.classify_and_remember(
     message="I prefer dark mode",
     context=None,
     language=None,
+    session_id=None,           # セッション識別子（クロスセッション認識用）
 )
 ```
 
@@ -82,7 +83,9 @@ Recall memories matching a query.
 ```python
 memories = cm.recall_memories(
     query="database",
-    filters=None,               # {"type": "user_preference", "tier": 2}
+    filters=None,               # {"type": "user_preference", "tier": 2,
+                                #  "session_id": "sess_...", "created_before": "2026-05-10T...",
+                                #  "include_superseded": False, "_order_oldest": False}
     limit=20,                   # Max results (1-1000)
 )
 ```
@@ -101,6 +104,48 @@ memories = cm.recall_memories(
 }
 ```
 
+### recall_aggregated()
+
+タイプ別に全セッションの記憶を集約して召回します。
+
+```python
+result = cm.recall_aggregated(
+    memory_type=None,           # タイプでフィルタ（例: "user_preference"）
+    limit_per_type=50,          # タイプごとの最大結果数
+)
+```
+
+**戻り値**: `Dict[str, List[Dict]]`、キーは記憶タイプ：
+```python
+{
+    "user_preference": [
+        {"id": "cm_...", "content": "ダークモードが好き", "confidence": 0.95, ...},
+        ...
+    ],
+    "decision": [...],
+    ...
+}
+```
+
+### recall_timeline()
+
+トピックに関する記憶を時系列で召回し、知識の変遷を表示します。
+
+```python
+results = cm.recall_timeline(
+    topic="database",           # 検索トピック
+    limit=20,                   # 最大結果数
+)
+```
+
+**戻り値**: `List[Dict]`、作成日時順（古い順）、置換済みの記憶を含む：
+```python
+[
+    {"id": "cm_...", "content": "MySQLを使っている", "superseded_at": "2026-05-10T...", ...},
+    {"id": "cm_...", "content": "PostgreSQLに切り替えた", "supersedes": "cm_...", ...},
+]
+```
+
 ### forget_memory()
 
 Delete a specific memory.
@@ -110,6 +155,30 @@ deleted = cm.forget_memory(memory_id="cm_20260425_...")
 ```
 
 **Returns**: `bool` — True if the memory was found and deleted.
+
+### `consolidate(dry_run=True, run_p1=True, run_p2=True)`
+
+記憶統合を実行：類似記憶の重複排除、時間ベースの減衰適用、ルール昇格のためのパターン検出、意味統合リクエストの準備。
+
+**パラメータ：**
+
+| パラメータ | 型 | デフォルト | 説明 |
+|-----------|-----|-----------|------|
+| `dry_run` | `bool` | `True` | True の場合、変更を加えずに実行内容を報告のみ |
+| `run_p1` | `bool` | `True` | True の場合、P1 パターン認識とルール候補生成を実行 |
+| `run_p2` | `bool` | `True` | True の場合、P2 意味統合（ホストLLM借用）を実行 |
+
+**統合フェーズ：**
+
+| フェーズ | 機能 | メカニズム |
+|---------|------|-----------|
+| P0 | 重複排除 + 減衰 | Jaccard 類似度（≥0.85）、指数半減期減衰 |
+| P1 | パターン → ルール | PatternDetector → CandidateRuleGenerator → PromotionPipeline |
+| P2 | 意味マージ | Jaccard クラスタリング（≥0.65）→ ホストLLM統合リクエスト |
+
+**タイプ別減衰半減期：**
+
+嗜好 270日（3.0x）、事実/決定/修正/関係/タスクパターン 90日（1.0x）、感情 45日（0.5x）、セッション要約 63日（0.7x）
 
 ### declare()
 
@@ -426,7 +495,7 @@ The Rules Engine provides a rule-based identity layer on top of memories.
 ### RuleEngine
 
 ```python
-from memory_classification_engine.rules import RuleEngine
+from carrymem.rules import RuleEngine
 
 engine = RuleEngine(db_path="carrymem.db")
 ```
@@ -510,7 +579,7 @@ Maps CarryMem concepts to Domain-Driven Design terminology:
 #### Context Budget
 
 ```python
-from memory_classification_engine.rules.injector import ContextBudget
+from carrymem.rules.injector import ContextBudget
 
 budget = ContextBudget(budget_tokens=2000)
 
@@ -685,7 +754,7 @@ validation = engine.validate_source_memories("rule_abc123")
 Provides Protocol-based integration for DevSquad multi-agent orchestration.
 
 ```python
-from memory_classification_engine.integration.devsquad import DevSquadAdapter
+from carrymem.integration.devsquad import DevSquadAdapter
 
 adapter = DevSquadAdapter(db_path="carrymem.db", namespace="default")
 ```
@@ -752,7 +821,7 @@ When `is_available()` returns `False`, all methods return safe defaults:
 Validates all external inputs for injection attacks.
 
 ```python
-from memory_classification_engine.security import InputValidator, validate_content, validate_query
+from carrymem.security import InputValidator, validate_content, validate_query
 
 validator = InputValidator(strict_mode=False)
 
@@ -777,7 +846,7 @@ Detection patterns:
 Records all operations for audit trail.
 
 ```python
-from memory_classification_engine.security.audit import AuditLogger
+from carrymem.security.audit import AuditLogger
 
 logger = AuditLogger(connection_factory=lambda: sqlite3.connect(db_path), namespace="default")
 logger.log_operation(
@@ -797,7 +866,7 @@ stats = logger.get_stats()
 Encrypts stored data at rest.
 
 ```python
-from memory_classification_engine.security.encryption import MemoryEncryption, NoEncryption
+from carrymem.security.encryption import MemoryEncryption, NoEncryption
 
 encryptor = MemoryEncryption(key_path="~/.carrymem/.key")
 encrypted = encryptor.encrypt("sensitive data")
@@ -812,7 +881,7 @@ assert no_encrypt.encrypt("data") == "data"
 ## Exceptions
 
 ```python
-from memory_classification_engine import (
+from carrymem import (
     StorageNotConfiguredError,
     KnowledgeNotConfiguredError,
     ValidationError,
@@ -863,7 +932,7 @@ carrymem doctor --db /path/to/db   # Custom database path
 
 ```json
 {
-  "version": "0.1.6",
+  "version": "0.2.0",
   "checks_passed": 13,
   "checks_total": 14,
   "issues": ["disk_space: Low disk space (< 100MB)"],
@@ -892,7 +961,7 @@ carrymem match-rules "Design REST API" --context-budget 2000  # Token-aware comp
 ### SQLiteAdapter (Default)
 
 ```python
-from memory_classification_engine import SQLiteAdapter
+from carrymem import SQLiteAdapter
 
 adapter = SQLiteAdapter(
     db_path=None,
@@ -907,7 +976,7 @@ adapter = SQLiteAdapter(
 Read-only adapter for Obsidian vault full-text search.
 
 ```python
-from memory_classification_engine import ObsidianAdapter
+from carrymem import ObsidianAdapter
 
 adapter = ObsidianAdapter(
     vault_path="/path/to/vault",
@@ -930,7 +999,7 @@ linked = adapter.get_linked_notes("API Design")  # Wiki-link back-references
 ### JSONAdapter
 
 ```python
-from memory_classification_engine import JSONAdapter
+from carrymem import JSONAdapter
 
 adapter = JSONAdapter(
     file_path="/path/to/memories.json",
@@ -949,7 +1018,41 @@ adapter = JSONAdapter(
 | `decision` | Made decisions | 3 (365 days) |
 | `relationship` | Social/context info | 2 (90 days) |
 | `task_pattern` | Work patterns | 2 (90 days) |
-| `sentiment_marker` | Emotional reactions | 1 (24 hours) |
+| `sentiment_marker` | 感情反応 | 1 (24 hours) |
+
+## ナレッジライフサイクル
+
+### 自動置換（Auto-Supersession）
+
+新しい記憶が既存の記憶と矛盾または更新する場合、旧記憶は自動的に置換済みとしてマークされます：
+
+- **トリガー**: Jaccard 類似度 ≥ 0.25 + 矛盾検出または更新マーカー
+- **矛盾ペア**: like/dislike、prefer/avoid、love/hate、enabled/disabled 等
+- **更新マーカー**: "now"、"currently"、"switched"、"changed"、"no longer"、"instead" 等
+- **安全機構**: アシスタントメッセージと分類プレフィックスは置換対象外
+
+### 記憶優先度ラベル
+
+システムプロンプト構築時、記憶に優先度ラベルが付与されます：
+
+| ラベル | 条件 | 意味 |
+|--------|------|------|
+| `[MANDATORY]` | type=correction または decision | 必須遵守、無視不可 |
+| `[IMPORTANT]` | type=user_preference + confidence ≥ 0.8 | 高信頼度の嗜好 |
+| `[OUTDATED]` | superseded_at が null でない | 置換済み、参考用 |
+
+### 時間表現パース
+
+クエリに含まれる時間表現が自動的にパースされます：
+
+| 表現 | 解釈 |
+|------|------|
+| recently、lately、just | 過去7日間 |
+| this week、past week | 過去7日間 |
+| this month、past month | 過去30日間 |
+| today、yesterday | 過去2日間 |
+| first、initial、earliest | 古い順でソート |
+| N days/weeks/months ago | 日付範囲を計算 |
 
 ## Storage Tiers
 
@@ -1001,7 +1104,7 @@ rules = engine.list_rules(scope="company")
 Export rules as a portable Skill bundle with SHA-256 signature.
 
 ```python
-from memory_classification_engine.rules import skill_pack, skill_verify, skill_install
+from carrymem.rules import skill_pack, skill_verify, skill_install
 
 # Pack all active rules into a Skill bundle
 bundle = engine.skill_pack(
@@ -1079,7 +1182,7 @@ result = engine.skill_install(bundle, scope_override="company", mode="overwrite"
 Preview merge conflicts without modifying any data.
 
 ```python
-from memory_classification_engine.rules import review_incoming_rules
+from carrymem.rules import review_incoming_rules
 
 preview = engine.review_incoming_rules(
     incoming=new_rules,
@@ -1139,7 +1242,7 @@ See [API_STABILITY.md](../API_STABILITY.md) for full details.
 All Stable API return types have corresponding TypedDict definitions for type checking:
 
 ```python
-from memory_classification_engine import (
+from carrymem import (
     RuleDict,
     MatchResultDict,
     EffectivenessReportDict,

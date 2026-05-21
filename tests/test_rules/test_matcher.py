@@ -12,8 +12,8 @@ import pytest
 import tempfile
 import os
 
-from memory_classification_engine.rules.storage import RuleStorage
-from memory_classification_engine.rules.matcher import RuleMatcher
+from carrymem.rules.storage import RuleStorage
+from carrymem.rules.matcher import RuleMatcher
 
 
 @pytest.fixture

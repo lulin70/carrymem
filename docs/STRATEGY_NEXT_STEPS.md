@@ -1,7 +1,7 @@
 # CarryMem 战略方向：从产品初心出发
 
 > 日期：2026-05-07
-> 基于：v0.1.6 官方benchmark基线数据
+> 基于：v0.2.0 官方benchmark基线数据
 
 ## 1. 产品初心回顾
 
@@ -104,9 +104,9 @@ Layer 2: LLM-Augmented Recall (可选，需API)
 
 ## 5. 具体行动方案
 
-### Phase 0（立即）：诚实发布 v0.1.6 baseline
+### Phase 0（立即）：诚实发布 v0.2.0 baseline
 
-- README标注"v0.1.6 baseline (FTS5-only)"
+- README标注"v0.2.0 baseline (FTS5-only)"
 - 公布所有官方分数，不加修饰
 - 在README中明确说明：**CarryMem当前是FTS5-only模式，适合用户身份记忆场景，不适合通用对话检索**
 - 写一篇技术博客："Why Our Benchmark Scores Look Bad (And Why That's OK)"
@@ -147,7 +147,7 @@ Layer 2: LLM-Augmented Recall (可选，需API)
 
 **推荐：第三条路——分层架构，渐进增强**
 
-1. 立即诚实发布v0.1.6 baseline（FTS5-only分数）
+1. 立即诚实发布v0.2.0 baseline（FTS5-only分数）
 2. 1-2周内实现Layer 1（local embedding），重新跑benchmark
 3. 用分层架构作为产品故事的核心差异化
 4. LaMP评测同步推进，补全个性化维度

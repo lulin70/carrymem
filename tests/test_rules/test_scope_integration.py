@@ -15,10 +15,10 @@ import pytest
 import tempfile
 import os
 
-from memory_classification_engine.rules import RuleEngine
-from memory_classification_engine.rules.models import Rule, SCOPE_PRIORITY
-from memory_classification_engine.rules.skill import skill_pack, skill_verify, skill_install
-from memory_classification_engine.rules.merge_protocol import (
+from carrymem.rules import RuleEngine
+from carrymem.rules.models import Rule, SCOPE_PRIORITY
+from carrymem.rules.skill import skill_pack, skill_verify, skill_install
+from carrymem.rules.merge_protocol import (
     MergeStrategy,
     MergeDecision,
     MergeConflict,
@@ -26,7 +26,7 @@ from memory_classification_engine.rules.merge_protocol import (
     merge_rules,
     review_incoming_rules,
 )
-from memory_classification_engine.rules.storage import RuleStorage
+from carrymem.rules.storage import RuleStorage
 
 
 class TestSkillDistributionWorkflow:

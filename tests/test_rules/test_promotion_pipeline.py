@@ -13,7 +13,7 @@ import pytest
 import tempfile
 import os
 
-from memory_classification_engine.rules.promotion_pipeline import (
+from carrymem.rules.promotion_pipeline import (
     PromotionPipeline,
     PromotionAuditEntry,
     PROMOTION_STATUS_PENDING,
@@ -21,7 +21,7 @@ from memory_classification_engine.rules.promotion_pipeline import (
     PROMOTION_STATUS_REJECTED,
     PROMOTION_STATUS_EXPIRED,
 )
-from memory_classification_engine.rules.storage import RuleStorage
+from carrymem.rules.storage import RuleStorage
 
 
 @pytest.fixture

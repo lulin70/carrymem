@@ -6,7 +6,7 @@ Covers: MemoryEncryption, NoEncryption, encrypt/decrypt operations.
 
 import pytest
 
-from memory_classification_engine.security.encryption import (
+from carrymem.security.encryption import (
     MemoryEncryption,
     NoEncryption,
     EncryptionError,

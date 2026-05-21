@@ -27,7 +27,7 @@ class PostInstallCommand(install):
             print("    # Add to ~/.bashrc for persistence")
         else:
             print("    # Add Python Scripts directory to your PATH")
-        print("\n  Or use: python3 -m memory_classification_engine.cli version")
+        print("\n  Or use: python3 -m carrymem.cli version")
         print("\n  Quick start: carrymem tutorial")
         print("=" * 60 + "\n")
 
@@ -36,13 +36,13 @@ class PostDevelopCommand(develop):
     def run(self):
         develop.run(self)
         print("\n  CarryMem development install complete!")
-        print("  Run: python3 -m memory_classification_engine.cli version\n")
+        print("  Run: python3 -m carrymem.cli version\n")
 
 
 def get_version():
     version_file = os.path.join(
         os.path.dirname(__file__),
-        "src", "memory_classification_engine", "__version__.py",
+        "src", "carrymem", "__version__.py",
     )
     if os.path.exists(version_file):
         with open(version_file, encoding="utf-8") as f:
@@ -50,7 +50,7 @@ def get_version():
             if match:
                 return match.group(1)
     try:
-        from memory_classification_engine.__version__ import __version__
+        from carrymem.__version__ import __version__
         return __version__
     except ImportError:
         raise RuntimeError(
@@ -80,7 +80,7 @@ setup(
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     package_data={
-        "memory_classification_engine": [
+        "carrymem": [
             "py.typed",
             "semantic/data/*.yaml",
         ],
@@ -93,6 +93,11 @@ setup(
         "language": [
             "pycld2>=0.41",
             "langdetect>=1.0.9",
+        ],
+        "semantic": [
+            "sqlite-vec>=0.1.0",
+            "pysqlite3>=0.6.0",
+            "sentence-transformers>=2.2.2",
         ],
         "dev": [
             "pytest>=7.0",
@@ -120,16 +125,19 @@ setup(
             "langdetect>=1.0.9",
             "cryptography>=41.0",
             "textual>=0.40",
+            "sqlite-vec>=0.1.0",
+            "pysqlite3>=0.6.0",
+            "sentence-transformers>=2.2.2",
         ],
     },
     entry_points={
         "console_scripts": [
-            "carrymem=memory_classification_engine.cli:main",
+            "carrymem=carrymem.cli:main",
         ],
         "carrymem.adapters": [
-            "sqlite=memory_classification_engine.adapters.sqlite_adapter:SQLiteAdapter",
-            "obsidian=memory_classification_engine.adapters.obsidian_adapter:ObsidianAdapter",
-            "json=memory_classification_engine.adapters.json_adapter:JSONAdapter",
+            "sqlite=carrymem.adapters.sqlite_adapter:SQLiteAdapter",
+            "obsidian=carrymem.adapters.obsidian_adapter:ObsidianAdapter",
+            "json=carrymem.adapters.json_adapter:JSONAdapter",
         ],
     },
     classifiers=[

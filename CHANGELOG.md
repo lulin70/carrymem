@@ -5,6 +5,260 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-05-21 (Recall Purity + Scope Injection + PromptBuilder + PrefEval 0.940)
+
+### Added
+- **Scope-based preference injection**: Preferences are now filtered by domain scope (programming, education, travel, etc.) before injection. Cross-domain hallucination eliminated (Hallucinated 4→0).
+- **Cross-domain shared keywords**: Keywords like "subscription", "project-based", "language" now appear in multiple scopes, reducing false negatives in scope matching.
+- **PromptBuilder class**: Extracted 481 lines from `carrymem.py` into `prompt_builder.py`, reducing god-module bloat (carrymem.py: 2042→1700 lines).
+- **preference_matches_scope()**: New function to determine if a preference should be injected for a given question, with core preference exemption (confidence ≥ 0.9 always matches).
+- **E2E user scenario tests**: 14 end-to-end tests simulating real user workflows (onboarding, multi-session, scope filtering, recall purity).
+
+### Changed
+- **Recall purity (P0-A)**: `recall()` now accepts `update_access` parameter (default True). `build_context()` and `build_qa_prompt()` use `update_access=False` to avoid write side effects during prompt construction.
+- **No in-place dict mutation**: `build_qa_prompt()` no longer mutates memory dicts' `confidence`/`importance_score`. Uses `_recalc_scores` mapping for pure computation.
+- **Preference prompt format**: Changed from "In your response, please ensure..." to "Context: ... Where relevant, incorporate..." to reduce AI over-caution.
+- **Scope vocabulary expansion**: Added 30+ cross-domain keywords (subscription, free, paid, online, tutorial, resource, project-based, collaboration, etc.) to improve scope inference accuracy.
+
+### Fixed
+- **Hallucinated 4→0**: Scope filtering prevents preferences from being injected into unrelated domains (e.g., "I prefer Python" no longer appears in travel questions).
+- **Unhelpful 6→3**: Preference prompt format change reduces AI over-caution while maintaining preference following.
+- **Recall side effects**: Multiple `build_qa_prompt()` calls no longer accumulate `access_count` changes, making benchmarks reproducible.
+- **build_context ordering**: Corrections/decisions now appear before preferences in the final prompt (was reversed).
+
+### Performance
+- **Recall calls reduced**: `build_qa_prompt()` now makes 3-4 recall calls instead of 7, by reusing memories from main recall.
+
+### Benchmark Results
+- **PrefEval 50-sample**: Accuracy 0.940 (up from 0.880), Acknowledged 39, Violated 0, Hallucinated 0, Unhelpful 3.
+- **Test coverage**: 80.5% (up from 77.14%), 2761 tests passing.
+
+## [0.1.9] - 2026-05-18 (Fast Path + Package Rename + MCE Removal + PrefEval 0.95 + Consolidation P0)
+
+### Fixed
+- **`self._db_path` AttributeError in consolidate P1**: replaced undefined `self._db_path` with `getattr(self._adapter, "db_path", None)`, preventing crash when running `consolidate(run_p1=True, dry_run=False)`
+- **Preference token budget overflow**: preferences now capped at 40% of memories budget to prevent prompt truncation when many preferences exist
+- **Inconsistent `db_path` access**: unified all `self._adapter._db_path` (private) usages to `self._adapter.db_path` (public property) in backup/restore/consolidate paths
+- **Inline `import re` (7 occurrences)**: moved to module-level import per PEP 8
+
+### Changed
+- **Tiered preference injection**: preferences are no longer all injected unconditionally. Core preferences (confidence ≥ 0.9) are always injected; contextual preferences are filtered by relevance to the current conversation. This reduces prompt noise and improves AI response quality for unrelated queries.
+- **Correction memories also use relevance-based retrieval**: `recall_memories` for corrections now uses the current question as query instead of empty string.
+- **Type-based selection boost in select_memories**: corrections (+0.5), decisions (+0.4), and preferences (+0.3) get scoring boosts to survive token budget pressure. Session summaries (-0.1) and sentiment markers (-0.2) are penalized unless highly relevant.
+- **Mandatory type ordering**: corrections and decisions now appear before preferences in the final prompt, ensuring behavioral constraints are never displaced.
+- **QA prompt includes override rules**: `build_qa_prompt` now injects override rules (corrections/prohibitions) with 10% token budget, fixing the bug where QA responses ignored user corrections.
+- **Session summaries filtered by relevance**: summaries are no longer unconditionally injected; only those with `context_relevance > 0.05` are included, saving 15-30% tokens on unrelated queries.
+- **Rules tiered by context availability**: when no context is provided, only override rules are injected instead of all active rules.
+- **Removed 24-hour recency cliff**: eliminated the duplicate recency bonus in `select_memories` that caused a scoring cliff at 24 hours. Recency is now handled solely by the smooth exponential decay in `scoring.py`.
+- **Expanded decision/task_pattern keywords**: added project management keywords (implement, deploy, migrate, phase, milestone, sprint, etc.) in 9 languages, enabling CarryMem to recognize project decisions and progress updates that were previously classified as "not worth remembering".
+
+### Fixed
+- **`force_type` ignored when `should_remember=False`**: `classify_and_remember(message, force_type="user_preference")` now forces storage even when the classifier says "don't remember". Previously, `force_type` only changed the type label but didn't override the storage decision.
+- **Fast Path skipped rules injection**: `build_qa_prompt` Fast Path (preferences-only) now includes override rules, fixing the bug where corrections were absent from QA responses when only preferences existed.
+- **`context_relevance` crashed on None content**: added None/non-string guard to prevent `AttributeError` when memory content is missing.
+- **Hardcoded API key removed**: `benchmarks/run_official_full_scale.py` no longer contains hardcoded API key; now requires `OPENAI_API_KEY` environment variable.
+
+### Removed
+- **Unused imports**: `StoredMemory` from carrymem.py and cache.py, `datetime/timezone/Tuple` from merge.py, `timedelta` from consolidation.py, `unicodedata` from llm/__init__.py
+- **Stale benchmark files**: deleted `_prefeval.py`, 10 stale result JSON files from benchmarks/ root
+
+### Added
+- **Consolidation P0 engine** (`consolidation.py`): memory lifecycle management with pure-rule dedup + time-based decay
+  - Jaccard similarity deduplication (≥0.85 threshold, preferences always preserved)
+  - Exponential half-life decay with type-differentiated multipliers (preference: 3x, sentiment: 0.5x)
+  - Access frequency boost and low-confidence extra decay
+  - `consolidate(dry_run=True)` API for safe preview before changes
+- **Consolidation P1 engine** (`consolidation.py`): pattern recognition + auto-promotion
+  - Integrates PatternDetector → CandidateRuleGenerator → PromotionPipeline into consolidation flow
+  - `consolidate(run_p1=True)` API parameter to enable/disable P1
+  - `consolidate_p1()` standalone function for direct P1 invocation
+  - Rule candidates generated from repeated memory patterns, queued for user review
+- **Consolidation P2 engine** (`consolidation.py`): semantic consolidation via host LLM
+  - Jaccard-based semantic clustering (threshold 0.65) to find related memories
+  - Generates consolidation requests for host LLM to merge similar memories
+  - Integrates with P0 superseded pairs for merged summaries
+  - `consolidate(run_p2=True)` API parameter to enable/disable P2
+  - `consolidate_p2()` standalone function for direct P2 invocation
+  - Preferences always preserved (never clustered for consolidation)
+- **consolidate_memories MCP tool**: run memory consolidation via MCP protocol (supports dry_run, run_p1, and run_p2 parameters)
+
+### Fixed
+- **Preference injection gap in build_context**: preferences were not unconditionally retrieved in `build_system_prompt`/`build_context`, only in `build_qa_prompt`. Now both paths guarantee preference memories are always included and exempt from budget filtering.
+- **utcnow() deprecation**: replaced `datetime.utcnow()` with `datetime.now(timezone.utc)` in engine.py
+
+### Changed
+- **PrefEval accuracy improved**: 20-sample 0.950 → 50-sample 0.960 (acknowledged: 31/50, violated: 2/50, hallucinated: 1/50, unhelpful: 0/50)
+- **PrefEval A/B comparison**: zero-shot 0.900 < reminder 0.920 < CarryMem 0.960, proving proactive injection value with data
+
+### Added
+- **CodingContext adapter** (`coding_context_adapter.py`): read-only knowledge adapter for coding conventions
+  - Parses 30+ config file types: AI instructions (CLAUDE.md, .cursorrules), editor configs (.editorconfig, .eslintrc), project metadata (package.json, pyproject.toml)
+  - Auto-infers memory type from content semantics (preference/decision/correction/fact)
+  - Auto-detects language and framework from project files
+  - Section-level parsing for AI instruction files (markdown headers)
+  - FTS5 trigram full-text search with incremental indexing
+  - `index_project()`, `get_conventions()`, `get_tech_stack()` APIs
+- **Fast Path** in `build_qa_prompt()`: when only preference-type memories exist (no other memories/knowledge), skip retrieval/scoring/hierarchy and directly output reminder format
+- **Preference always-retrieve**: preferences are now always retrieved regardless of `_has_preference_signal()`, fixing 22% of samples where preferences were not injected
+- **Dual API support** in PrefEval benchmark: separate judge API (judge-api-key/judge-api-base/judge-model)
+- **Retry logic** in benchmark API calls with exponential backoff
+- **Filter logging counters** in `ClassificationPipeline`: noise/low_info_assistant/fail_closed counters with periodic info-level logging
+- **LongMemEval multi-session benchmark script** (`benchmarks/run_longmemeval_multisession.py`)
+- **PrefEval official protocol evaluation** (`benchmarks/prefeval_official_v2.py`): multi-turn dialogue protocol, official 4-dimension LLM-as-judge, official error_type prompts
+
+### Changed
+- **Package renamed**: `memory_classification_engine` → `carrymem` (import path, directory, configs, docs)
+- **MCE_* environment variables removed**: All `MCE_*` backward compatibility removed, use `CARRYMEM_*` only
+- **Backward compatibility shim removed**: `src/memory_classification_engine/` directory deleted
+- **Preference prompt optimized**: `IMPORTANT: Remember` → Reminder-aligned format with explicit instruction
+- **Preference memories forced to top**: Exempt from budget filtering and select_memories, always retained
+- **Unhelpful guardrail**: Added "Always provide a specific, helpful answer" before Answer:
+- **soft_catchall confidence raised**: 0.3→0.5 (default), 0.3→0.4 (sentiment)
+- **Preference signal keywords expanded**: 6→27 keywords (added like/love/hate/avoid/want/need/averse etc.)
+- Preference retrieval moved outside `_has_preference_signal()` conditional in `CarryMem.build_qa_prompt()`
+- Removed duplicate `pref_memories`/`non_pref_active` calculations in `build_qa_prompt()`
+- `[Assistant said]` detection now case-insensitive with 3 prefix variants
+- `scoring.py`: `recalculate_confidence` and `recency_factor` now handle string `created_at` inputs
+
+### Fixed
+- Preferences not injected when question lacks preference signal (root cause of 20% Unhelpful rate)
+- FTS query mismatch: `recall_memories(query=question)` couldn't find preferences with unrelated keywords
+- Duplicate `import re` in `pattern_analyzer.py`
+- `'str' object has no attribute 'tzinfo'` in confidence recalculation when `created_at` is a string
+
+### Benchmark Results
+- **PrefEval official protocol** (50 inter-turns, 20 topics, 20 samples): Zero-shot=0.35, Reminder=0.75, **CarryMem=0.95**
+- **LongMemEval multi-session F1**: 0.0075 (5 samples, S split) — expected low, not CarryMem's core use case
+
+## [0.1.8] - 2026-05-13 (Session Summary + Semantic Aggregation)
+
+### Added
+- **LLM Client Abstraction** (`llm/` package): Provider-agnostic client supporting OpenAI, ZhipuAI, local vLLM
+  - Environment variable configuration: `CARRYMEM_LLM_*` or `MCE_LLM_*`
+  - Graceful degradation when no LLM available
+  - API key masking in `__repr__`
+  - Empty choices guard + config value error handling
+- **Session Summarizer** (`SessionSummarizer`): LLM-powered or rule-based session summarization
+  - `CarryMem.summarize_session(session_id, language, store)` API
+  - Priority-based memory selection (correction/decision > preference > other)
+  - Chinese and English prompt templates with `<memory_data>` anti-injection delimiters
+- **Semantic Aggregator** (`SemanticAggregator`): Embedding-based memory clustering and condensation
+  - `CarryMem.aggregate_memories(memory_type, language, store)` API
+  - Connected-component clustering via DFS (handles transitive similarity chains)
+  - LLM-powered or rule-based aggregation fallback
+  - Cosine similarity threshold: 0.55
+- **session_summary memory type**: 8th memory type for session-level summaries
+  - Default excluded from recall (avoid noise), included in `build_context()`
+  - `include_session_summary` filter key for explicit inclusion
+- **31 new unit tests** for Phase 4 features (test_phase4.py)
+
+### Changed
+- `CarryMem.__init__` now stores `self._config` for LLM client configuration
+- `CarryMem.summarize_session()` and `aggregate_memories()` use lazy-cached `self._llm_client`
+- `build_context()` now includes session_summary memories in context
+- `_recall_impl` excludes session_summary by default (configurable via filter)
+- `_ALLOWED_FILTER_KEYS` now includes `include_session_summary`
+- `MEMORY_TYPES` now includes `session_summary`
+- `_VALID_MEMORY_TYPES` now includes `session_summary`
+- Benchmark script calls `summarize_session()` after each haystack session
+
+### Fixed
+- **[High] Prompt injection** in SessionSummarizer and SemanticAggregator → `<memory_data>` delimiters
+- **[High] Incomplete clustering** → connected-component DFS algorithm
+- **[Medium] LLMClient per-call instantiation** → lazy-cached instance
+- **[Medium] LLMClient empty choices** → guard before `choices[0]` access
+- **[Medium] LLMClient config value errors** → try/except with defaults
+- **[Medium] API key exposure** → `__repr__` masks key
+- **[Medium] Silent failure on no embeddings** → explicit warning log
+
+### Benchmark Results (LongMemEval 100-question, rule-based summary)
+
+| Category | Phase 1-3 | Phase 4 | Change |
+|----------|-----------|---------|--------|
+| overall | 0.105 | 0.102 | -0.003 |
+| temporal-reasoning | 0.127 | 0.113 | -0.014 |
+| single-session-assistant | 0.200 | 0.200 | 0 |
+
+Key insight: Rule-based session summary doesn't improve F1. LLM-powered summarization is needed for effective context compression.
+
+---
+
+## [0.1.7] - 2026-05-13 (Intelligent Memory Layer Enhancement)
+
+### 🧠 Product Repositioning
+- **CarryMem repositioned as "Intelligent Memory Layer"** (智能记忆层), not just a retrieval system
+- Core value: `build_system_prompt()` proactively injects user context, making AI truly "know who you are"
+- F1 is a means, not an end — injection quality is the ultimate metric
+- Storage/classification zero-token is the core moat; on-demand LLM in recall stage is by design
+
+### Phase 1: Session-Aware Storage + Knowledge Supersession
+- **`classify_and_remember(session_id=...)`** — session identifier for cross-session awareness
+  - session_id written to metadata JSON field
+  - recall_memories() supports session_id filter
+- **Auto-supersession** — automatic contradiction detection on ingest
+  - `superseded_at` / `supersedes` fields in StoredMemory and SQLite schema (v080 migration)
+  - Jaccard similarity ≥ 0.25 + contradiction pairs (like/dislike, prefer/avoid, etc.)
+  - Update marker detection ("now", "currently", "switched", "changed", etc.)
+  - Safety: assistant messages and classification prefixes excluded from supersession
+  - Called AFTER INSERT to prevent data loss
+- **`recall_aggregated()`** — aggregate memories by type across all sessions
+  - Returns `{type: [memories]}` structure
+  - Supports memory_type filter and limit_per_type
+- **`recall_timeline(topic)`** — recall memories about a topic ordered by time
+  - Shows knowledge evolution including superseded memories
+  - Multi-word topic support with OR matching
+- **New filter keys**: `session_id`, `created_before`, `include_superseded`, `_order_oldest`
+- **SQL injection protection**: session_id filter escapes `%` and `_` with ESCAPE clause
+
+### Phase 2: Time Reasoning + Context Rebuild
+- **`_parse_time_expressions()`** — extract time constraints from queries
+  - "recently" → 7 days, "this month" → 30 days, "3 months ago" → 90 days
+  - "first/initial/earliest" → sort oldest first
+  - Regex-based, zero LLM dependency
+- **`_rebuild_context()`** — extend FTS5 queries with related words from user profile
+  - When FTS5 results insufficient, extracts overlap words from profile memories
+  - Adds related context words to expand search scope
+- **`_order_oldest` filter** — support "first/earliest" queries with ascending time sort
+
+### Phase 3: Structured Prompt + Knowledge Updates
+- **Priority labels in `format_memory_entry()`**:
+  - `[MANDATORY]` — correction/decision types (must be followed)
+  - `[IMPORTANT]` — user_preference with confidence ≥ 0.8
+  - `[OUTDATED]` — superseded memories (for reference only)
+- **`_build_superseded_notes()`** — knowledge update tracking (old→new direction)
+- **Structured prompt sections**: Mandatory → Important → Context → Outdated → Knowledge Updates
+- **`build_context()` safe access** — compatible with `__new__()` created objects via `getattr()`
+- **`build_context()` fetches superseded memories** for update notes
+
+### Fixed
+- **[Critical] auto-supersede before INSERT** — moved `_auto_supersede()` call after INSERT to prevent data loss
+- **[Critical] auto-supersede false positives** — excluded assistant messages and classification prefixes
+- **[Critical] `_is_contradictory` substring matching** — "now" matching "nowhere"; fixed with `\b` word boundary regex
+- **[Critical] `conf` variable NameError** in context.py — changed to inline `m.get("confidence", 0)`
+- **[High] `_UPDATE_MARKERS` substring matching** — "now" matching "nowhere"; fixed with space-padded matching
+- **[High] recall_timeline multi-word topic** — LIKE `%word1 word2%` required exact order; fixed with OR conditions
+- **[High] session_id SQL injection** — `%` and `_` could cause unintended LIKE matches; fixed with ESCAPE
+- **[High] recall_aggregated/timeline missing locks** — could cause thread safety issues; added `with self._lock`
+- **[Medium] `_parse_time_expressions` ago pattern** — used `re.match` (start-only) instead of `re.search`
+- **[Medium] Knowledge Updates arrow direction** — old→new was reversed; fixed variable naming
+
+### Changed
+- Package-level `TRANSFORMERS_OFFLINE=1` + `HF_HUB_OFFLINE=1` (prioritize local models)
+- `pyproject.toml` — registered asyncio marker + `asyncio_mode = "auto"` (fixed 19 async tests)
+
+### Benchmark Results (LongMemEval 100-question sample, seed=42)
+
+| Category | P1 Baseline | Phase 1-3 | Change |
+|----------|-------------|-----------|--------|
+| temporal-reasoning | 0.110 | **0.127** | **+0.017** ✅ |
+| single-session-assistant | 0.196 | **0.200** | +0.004 |
+| knowledge-update | 0.055 | 0.057 | +0.002 |
+| overall | 0.107 | 0.105 | -0.002 |
+
+Key insight: Phase 1-3 value is in new capabilities (session awareness, knowledge lifecycle, structured injection), not raw F1 improvement. F1 gains will come from Phase 4 (LLM-assisted session summary + semantic aggregation).
+
+---
+
 ## [0.1.6] - 2026-05-04 (Code Quality Sprint + DevSquad 协作)
 
 ### 🤖 DevSquad 7角色协作审查

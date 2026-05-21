@@ -3,7 +3,7 @@
 import math
 from datetime import datetime, timezone, timedelta
 import pytest
-from memory_classification_engine.scoring import (
+from carrymem.scoring import (
     type_weight, recency_factor, access_factor,
     calculate_importance, recalculate_importance,
     TYPE_WEIGHTS, DEFAULT_TYPE_WEIGHT, HALF_LIFE_DAYS, RECENCY_FLOOR, ACCESS_SCALE

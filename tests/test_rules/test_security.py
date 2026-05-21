@@ -11,12 +11,12 @@ Validates:
 
 import pytest
 
-from memory_classification_engine.rules.sanitizer import (
+from carrymem.rules.sanitizer import (
     RuleSanitizer,
     SecurityEvent,
 )
-from memory_classification_engine.rules.limiter import RuleLimiter
-from memory_classification_engine.rules.models import Rule
+from carrymem.rules.limiter import RuleLimiter
+from carrymem.rules.models import Rule
 
 
 class TestRuleSanitizerTriggerValidation:

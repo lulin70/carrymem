@@ -1,10 +1,10 @@
-# CarryMem v0.1.6 Benchmark Optimization Plan
+# CarryMem v0.2.0 Benchmark Optimization Plan
 
 > Based on official LongMemEval evaluation (42.6%, 500Q baseline)
 > Date: 2026-05-07
-> Version: v0.1.6 baseline → v0.2.0 target
+> Version: v0.2.0 baseline → v0.2.0 target
 
-## 1. Current Baseline (v0.1.6)
+## 1. Current Baseline (v0.2.0)
 
 | Question Type | Score | Gap |
 |---------------|-------|-----|
@@ -191,7 +191,7 @@ def _llm_expand_query(self, query: str) -> list[str]:
 
 | Version | Overall | User | Knowledge | Preference | Multi | Assistant | Temporal |
 |---------|---------|------|-----------|------------|-------|-----------|----------|
-| v0.1.6 (current) | 42.6% | 67.1% | 62.8% | 46.7% | 42.1% | 26.8% | 24.1% |
+| v0.2.0 (current) | 42.6% | 67.1% | 62.8% | 46.7% | 42.1% | 26.8% | 24.1% |
 | v0.2.0 (Phase 1) | ~50% | 70% | 65% | 50% | 48% | 35% | 35% |
 | v0.3.0 (Phase 2) | ~60% | 75% | 70% | 58% | 55% | 45% | 50% |
 | v0.4.0 (Phase 3) | ~70% | 80% | 75% | 65% | 62% | 55% | 60% |

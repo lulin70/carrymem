@@ -1,7 +1,7 @@
 # CarryMem API Reference
 
-**Version**: v0.1.6
-**Date**: 2026-05-01
+**Version**: v0.2.0
+**Date**: 2026-05-13
 
 ---
 
@@ -12,7 +12,7 @@ Main entry point for CarryMem.
 ### Constructor
 
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 cm = CarryMem(
     storage="sqlite",           # "sqlite", "obsidian", StorageAdapter instance, or None
@@ -44,6 +44,7 @@ result = cm.classify_and_remember(
     message="I prefer dark mode",
     context=None,
     language=None,
+    session_id=None,           # Session identifier for cross-session awareness
 )
 ```
 
@@ -83,7 +84,10 @@ Recall memories matching a query.
 ```python
 memories = cm.recall_memories(
     query="database",
-    filters=None,               # {"type": "user_preference", "tier": 2}
+    filters=None,               # {"type": "user_preference", "tier": 2,
+                                #  "session_id": "sess_...", "created_before": "2026-05-10T...",
+                                #  "include_superseded": False, "include_session_summary": False,
+                                #  "_order_oldest": False}
     limit=20,                   # Max results (1-1000)
 )
 ```
@@ -102,6 +106,108 @@ memories = cm.recall_memories(
 }
 ```
 
+### recall_aggregated()
+
+Recall memories aggregated by type across all sessions.
+
+```python
+result = cm.recall_aggregated(
+    memory_type=None,           # Filter by type (e.g., "user_preference")
+    limit_per_type=50,          # Max results per type
+)
+```
+
+**Returns**: `Dict[str, List[Dict]]` where keys are memory types:
+```python
+{
+    "user_preference": [
+        {"id": "cm_...", "content": "I prefer dark mode", "confidence": 0.95, ...},
+        ...
+    ],
+    "decision": [...],
+    ...
+}
+```
+
+### recall_timeline()
+
+Recall memories about a topic ordered by time, showing knowledge evolution.
+
+```python
+results = cm.recall_timeline(
+    topic="database",           # Topic to search for
+    limit=20,                   # Max results
+)
+```
+
+**Returns**: `List[Dict]` ordered by creation time (oldest first), including superseded memories:
+```python
+[
+    {"id": "cm_...", "content": "I use MySQL", "superseded_at": "2026-05-10T...", ...},
+    {"id": "cm_...", "content": "I switched to PostgreSQL", "supersedes": "cm_...", ...},
+]
+```
+
+### summarize_session()
+
+Generate a summary of all memories in a session and optionally store it.
+
+```python
+summary = cm.summarize_session(
+    session_id="s_20260513",    # Session to summarize
+    language="en",              # "en" or "zh"
+    store=True,                 # Store the summary as a session_summary memory
+)
+```
+
+**Returns**: `Optional[Dict]` with the session summary memory:
+```python
+{
+    "id": "mce_...",
+    "type": "session_summary",
+    "content": "Session summary (5 memories): Decision: Use React | Preference: Dark mode...",
+    "confidence": 0.7,  # 0.9 with LLM, 0.7 with rule-based
+    "metadata": {
+        "session_id": "s_20260513",
+        "source_memory_count": 5,
+        "source_memory_ids": ["cm_...", ...],
+        "summary_method": "rule",  # or "llm"
+    }
+}
+```
+
+**Note**: Requires LLM API for high-quality summaries. Falls back to rule-based concatenation when no LLM is available. Session summaries are excluded from regular `recall_memories()` by default; use `filters={"include_session_summary": True}` or `filters={"type": "session_summary"}` to retrieve them.
+
+### aggregate_memories()
+
+Cluster semantically similar memories and produce condensed summaries.
+
+```python
+results = cm.aggregate_memories(
+    memory_type=None,           # Filter by type before aggregation
+    language="en",              # "en" or "zh"
+    store=True,                 # Store aggregated memories
+)
+```
+
+**Returns**: `List[Dict]` with aggregated memories:
+```python
+[{
+    "id": "mce_...",
+    "type": "user_preference",  # Dominant type in cluster
+    "content": "I like dark themes in editors (aggregated from 2 related memories)",
+    "confidence": 0.89,
+    "metadata": {
+        "aggregated_from": ["cm_...", "cm_..."],
+        "cluster_size": 2,
+        "cluster_types": ["user_preference"],
+        "aggregation_method": "rule",  # or "llm"
+    }
+}]
+```
+
+**Note**: Requires vector search to be enabled (`enable_vector_search=True`). Uses embedding similarity (threshold 0.55) with connected-component clustering.
+
 ### forget_memory()
 
 Delete a specific memory.
@@ -111,6 +217,61 @@ deleted = cm.forget_memory(memory_id="cm_20260425_...")
 ```
 
 **Returns**: `bool` — True if the memory was found and deleted.
+
+### `consolidate(dry_run=True, run_p1=True, run_p2=True)`
+
+Run memory consolidation: deduplicate similar memories, apply time-based decay, detect patterns for rule promotion, and prepare semantic consolidation requests.
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `dry_run` | `bool` | `True` | If True, only report what would be done without making changes |
+| `run_p1` | `bool` | `True` | If True, run P1 pattern recognition and rule candidate generation |
+| `run_p2` | `bool` | `True` | If True, run P2 semantic consolidation via host LLM |
+
+**Returns:** `Dict[str, Any]` — Consolidation report with:
+- `to_supersede`: Memories to be superseded by newer versions
+- `to_decay`: Memories with decay factor below 0.5
+- `to_forget`: Memories with decay factor below 0.1
+- `p1_promotion`: Pattern recognition results (if run_p1=True)
+- `p2_consolidation`: Semantic consolidation requests (if run_p2=True)
+- `stats`: Statistics including duplicates_found, decayed_below_threshold, preferences_preserved
+
+**Example:**
+
+```python
+# Preview changes
+report = cm.consolidate(dry_run=True)
+print(f"Duplicates found: {report['stats']['duplicates_found']}")
+print(f"Memories to forget: {len(report['to_forget'])}")
+
+# Execute consolidation
+report = cm.consolidate(dry_run=False, run_p1=True, run_p2=True)
+print(f"Superseded: {report['superseded_count']}")
+print(f"Forgotten: {report['forgotten_count']}")
+```
+
+**Consolidation Phases:**
+
+| Phase | Function | Mechanism |
+|-------|----------|-----------|
+| P0 | Dedup + Decay | Jaccard similarity (≥0.85), exponential half-life decay |
+| P1 | Pattern → Rules | PatternDetector → CandidateRuleGenerator → PromotionPipeline |
+| P2 | Semantic Merge | Jaccard clustering (≥0.65) → host LLM consolidation requests |
+
+**Decay Half-Lives by Type:**
+
+| Memory Type | Half-Life | Multiplier |
+|-------------|-----------|------------|
+| user_preference | 270 days | 3.0x |
+| personal_fact | 90 days | 1.0x |
+| decision | 90 days | 1.0x |
+| correction | 90 days | 1.0x |
+| relationship | 90 days | 1.0x |
+| task_pattern | 90 days | 1.0x |
+| sentiment_marker | 45 days | 0.5x |
+| session_summary | 63 days | 0.7x |
 
 ### declare()
 
@@ -211,7 +372,7 @@ result = cm.import_memories(
 
 ### build_system_prompt()
 
-Build a system prompt with relevant memories.
+Build a system prompt with relevant memories. Memories are labeled with priority: `[MANDATORY]` (corrections/decisions), `[IMPORTANT]` (high-confidence preferences), `[OUTDATED]` (superseded memories).
 
 ```python
 prompt = cm.build_system_prompt(
@@ -224,7 +385,7 @@ prompt = cm.build_system_prompt(
 
 ### build_context()
 
-Build a context dict with memories and knowledge for prompt assembly.
+Build a context dict with memories and knowledge for prompt assembly. Memories include priority labels: `[MANDATORY]`, `[IMPORTANT]`, `[OUTDATED]`.
 
 ```python
 result = cm.build_context(
@@ -427,7 +588,7 @@ The Rules Engine provides a rule-based identity layer on top of memories.
 ### RuleEngine
 
 ```python
-from memory_classification_engine.rules import RuleEngine
+from carrymem.rules import RuleEngine
 
 engine = RuleEngine(db_path="carrymem.db")
 ```
@@ -511,7 +672,7 @@ Maps CarryMem concepts to Domain-Driven Design terminology:
 #### Context Budget
 
 ```python
-from memory_classification_engine.rules.injector import ContextBudget
+from carrymem.rules.injector import ContextBudget
 
 budget = ContextBudget(budget_tokens=2000)
 
@@ -686,7 +847,7 @@ validation = engine.validate_source_memories("rule_abc123")
 Provides Protocol-based integration for DevSquad multi-agent orchestration.
 
 ```python
-from memory_classification_engine.integration.devsquad import DevSquadAdapter
+from carrymem.integration.devsquad import DevSquadAdapter
 
 adapter = DevSquadAdapter(db_path="carrymem.db", namespace="default")
 ```
@@ -753,7 +914,7 @@ When `is_available()` returns `False`, all methods return safe defaults:
 Validates all external inputs for injection attacks.
 
 ```python
-from memory_classification_engine.security import InputValidator, validate_content, validate_query
+from carrymem.security import InputValidator, validate_content, validate_query
 
 validator = InputValidator(strict_mode=False)
 
@@ -778,7 +939,7 @@ Detection patterns:
 Records all operations for audit trail.
 
 ```python
-from memory_classification_engine.security.audit import AuditLogger
+from carrymem.security.audit import AuditLogger
 
 logger = AuditLogger(connection_factory=lambda: sqlite3.connect(db_path), namespace="default")
 logger.log_operation(
@@ -798,7 +959,7 @@ stats = logger.get_stats()
 Encrypts stored data at rest.
 
 ```python
-from memory_classification_engine.security.encryption import MemoryEncryption, NoEncryption
+from carrymem.security.encryption import MemoryEncryption, NoEncryption
 
 encryptor = MemoryEncryption(key_path="~/.carrymem/.key")
 encrypted = encryptor.encrypt("sensitive data")
@@ -813,7 +974,7 @@ assert no_encrypt.encrypt("data") == "data"
 ## Exceptions
 
 ```python
-from memory_classification_engine import (
+from carrymem import (
     StorageNotConfiguredError,
     KnowledgeNotConfiguredError,
     ValidationError,
@@ -864,7 +1025,7 @@ carrymem doctor --db /path/to/db   # Custom database path
 
 ```json
 {
-  "version": "0.1.6",
+  "version": "0.2.0",
   "checks_passed": 13,
   "checks_total": 14,
   "issues": ["disk_space: Low disk space (< 100MB)"],
@@ -893,7 +1054,7 @@ carrymem match-rules "Design REST API" --context-budget 2000  # Token-aware comp
 ### SQLiteAdapter (Default)
 
 ```python
-from memory_classification_engine import SQLiteAdapter
+from carrymem import SQLiteAdapter
 
 adapter = SQLiteAdapter(
     db_path=None,
@@ -908,7 +1069,7 @@ adapter = SQLiteAdapter(
 Read-only adapter for Obsidian vault full-text search.
 
 ```python
-from memory_classification_engine import ObsidianAdapter
+from carrymem import ObsidianAdapter
 
 adapter = ObsidianAdapter(
     vault_path="/path/to/vault",
@@ -931,7 +1092,7 @@ linked = adapter.get_linked_notes("API Design")  # Wiki-link back-references
 ### JSONAdapter
 
 ```python
-from memory_classification_engine import JSONAdapter
+from carrymem import JSONAdapter
 
 adapter = JSONAdapter(
     file_path="/path/to/memories.json",
@@ -951,6 +1112,40 @@ adapter = JSONAdapter(
 | `relationship` | Social/context info | 2 (90 days) |
 | `task_pattern` | Work patterns | 2 (90 days) |
 | `sentiment_marker` | Emotional reactions | 1 (24 hours) |
+
+## Knowledge Lifecycle
+
+### Auto-Supersession
+
+When a new memory contradicts or updates an existing one, the old memory is automatically marked as superseded:
+
+- **Trigger**: Jaccard similarity ≥ 0.25 + contradiction detection or update marker
+- **Contradiction pairs**: like/dislike, prefer/avoid, love/hate, enabled/disabled, etc.
+- **Update markers**: "now", "currently", "switched", "changed", "no longer", "instead", etc.
+- **Safety**: Assistant messages and classification prefixes are excluded from supersession
+
+### Memory Priority Labels
+
+When building system prompts, memories are labeled by priority:
+
+| Label | Condition | Meaning |
+|-------|-----------|---------|
+| `[MANDATORY]` | type=correction or decision | Must be followed, never ignore |
+| `[IMPORTANT]` | type=user_preference + confidence ≥ 0.8 | High-confidence preference |
+| `[OUTDATED]` | superseded_at is not null | Has been superseded, for reference only |
+
+### Time Expression Parsing
+
+Queries can include time expressions that are automatically parsed:
+
+| Expression | Interpretation |
+|------------|---------------|
+| recently, lately, just | Last 7 days |
+| this week, past week | Last 7 days |
+| this month, past month | Last 30 days |
+| today, yesterday | Last 2 days |
+| first, initial, earliest | Sort oldest first |
+| N days/weeks/months ago | Calculated date range |
 
 ## Storage Tiers
 
@@ -1002,7 +1197,7 @@ rules = engine.list_rules(scope="company")
 Export rules as a portable Skill bundle with SHA-256 signature.
 
 ```python
-from memory_classification_engine.rules import skill_pack, skill_verify, skill_install
+from carrymem.rules import skill_pack, skill_verify, skill_install
 
 # Pack all active rules into a Skill bundle
 bundle = engine.skill_pack(
@@ -1080,7 +1275,7 @@ result = engine.skill_install(bundle, scope_override="company", mode="overwrite"
 Preview merge conflicts without modifying any data.
 
 ```python
-from memory_classification_engine.rules import review_incoming_rules
+from carrymem.rules import review_incoming_rules
 
 preview = engine.review_incoming_rules(
     incoming=new_rules,
@@ -1140,7 +1335,7 @@ See [API_STABILITY.md](API_STABILITY.md) for full details.
 All Stable API return types have corresponding TypedDict definitions for type checking:
 
 ```python
-from memory_classification_engine import (
+from carrymem import (
     RuleDict,
     MatchResultDict,
     EffectivenessReportDict,

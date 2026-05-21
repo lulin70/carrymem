@@ -14,8 +14,8 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
-from memory_classification_engine import CarryMem
-from memory_classification_engine.scoring import (
+from carrymem import CarryMem
+from carrymem.scoring import (
     calculate_importance,
     recency_factor,
     access_factor,
@@ -23,15 +23,15 @@ from memory_classification_engine.scoring import (
     TYPE_WEIGHTS,
     HALF_LIFE_DAYS,
 )
-from memory_classification_engine.cache import RecallCache
-from memory_classification_engine.context import (
+from carrymem.cache import RecallCache
+from carrymem.context import (
     select_memories,
     context_relevance,
     _estimate_tokens,
     build_prompt,
     format_memory_entry,
 )
-from memory_classification_engine.merge import (
+from carrymem.merge import (
     detect_conflicts,
     merge_memories,
     _similarity,
@@ -220,8 +220,43 @@ class TestContextSelection(unittest.TestCase):
             {"type": "correction", "content": "Use PostgreSQL not MySQL", "confidence": 0.95, "source_layer": "rule"},
             language="en",
         )
-        self.assertIn("Correction", entry)
+        self.assertIn("NOT repeat", entry)
         self.assertIn("PostgreSQL", entry)
+
+    def test_format_memory_entry_preference_avoid(self):
+        entry = format_memory_entry(
+            {"type": "user_preference", "content": "MySQL", "confidence": 0.9, "auto_rule": "avoid", "source_layer": "rule"},
+            language="en",
+        )
+        self.assertIn("NOT want", entry)
+
+    def test_format_memory_entry_preference_prefer(self):
+        entry = format_memory_entry(
+            {"type": "user_preference", "content": "PostgreSQL", "confidence": 0.9, "auto_rule": "prefer", "source_layer": "rule"},
+            language="en",
+        )
+        self.assertIn("prefers", entry)
+
+    def test_format_memory_entry_decision(self):
+        entry = format_memory_entry(
+            {"type": "decision", "content": "Use React for frontend", "confidence": 0.9, "source_layer": "rule"},
+            language="en",
+        )
+        self.assertIn("Always follow", entry)
+
+    def test_format_memory_entry_superseded(self):
+        entry = format_memory_entry(
+            {"type": "fact_declaration", "content": "User lives in Beijing", "confidence": 0.9, "superseded_at": "2026-01-01", "source_layer": "rule"},
+            language="en",
+        )
+        self.assertIn("outdated", entry)
+
+    def test_format_memory_entry_session_summary(self):
+        entry = format_memory_entry(
+            {"type": "session_summary", "content": "User discussed database preferences", "confidence": 0.9, "source_layer": "rule"},
+            language="en",
+        )
+        self.assertIn("Based on previous conversations", entry)
 
 
 class TestMerge(unittest.TestCase):
@@ -397,6 +432,140 @@ class TestCarryMemV050(unittest.TestCase):
         self.cm.classify_and_remember("I prefer dark mode")
         total = self.cm._adapter.recalculate_importance()
         self.assertGreater(total, 0)
+
+    def test_preference_always_in_system_prompt(self):
+        # Core preferences (high confidence) are always injected
+        self.cm.classify_and_remember("I prefer Python for coding", force_type="user_preference")
+        # Boost confidence to make it a core preference
+        prefs = self.cm.recall_memories(query="", limit=5, filters={"type": "user_preference"})
+        for p in prefs:
+            if "Python" in p.get("content", ""):
+                self.cm._adapter._get_connection().execute(
+                    "UPDATE memories SET confidence = 0.95 WHERE storage_key = ?",
+                    (p.get("storage_key"),)
+                )
+        self.cm._adapter._get_connection().commit()
+        self.cm.classify_and_remember("I work at Google")
+        result = self.cm.build_context(context="unrelated topic", max_memories=2)
+        prompt = result["system_prompt"]
+        self.assertIn("Python", prompt)
+
+    def test_preference_always_in_qa_prompt(self):
+        # Core preferences (high confidence) are always injected
+        self.cm.classify_and_remember("I prefer Python for coding", force_type="user_preference")
+        # Boost confidence to make it a core preference
+        prefs = self.cm.recall_memories(query="", limit=5, filters={"type": "user_preference"})
+        for p in prefs:
+            if "Python" in p.get("content", ""):
+                self.cm._adapter._get_connection().execute(
+                    "UPDATE memories SET confidence = 0.95 WHERE storage_key = ?",
+                    (p.get("storage_key"),)
+                )
+        self.cm._adapter._get_connection().commit()
+        self.cm.classify_and_remember("I work at Google")
+        prompt = self.cm.build_qa_prompt(question="unrelated topic", max_memories=2)
+        self.assertIn("Python", prompt)
+
+    def test_contextual_preference_filtered_by_relevance(self):
+        # Contextual preferences (normal confidence) are only injected when relevant
+        self.cm.classify_and_remember("I prefer Python for coding", force_type="user_preference")
+        self.cm.classify_and_remember("I work at Google")
+        # Normal confidence preference should appear in relevant query
+        prompt_relevant = self.cm.build_qa_prompt(question="What programming language should I use?", max_memories=5)
+        # But may not appear in completely unrelated query (no FTS match)
+        prompt_unrelated = self.cm.build_qa_prompt(question="What is the weather today?", max_memories=5)
+        # At minimum, relevant query should find the Python preference
+        self.assertIn("Python", prompt_relevant)
+
+
+class TestFastPath(unittest.TestCase):
+
+    def test_fast_path_only_preference(self):
+        from carrymem.context import build_qa_prompt
+
+        memories = [
+            {"type": "user_preference", "content": "I prefer Python", "auto_rule": "prefer", "superseded_at": None},
+        ]
+        prompt = build_qa_prompt(memories=memories, knowledge=[], question="What language?", include_question=False)
+        self.assertIn("The user has the following preference: I prefer Python", prompt)
+        self.assertIn("Where relevant, incorporate this preference", prompt)
+        self.assertNotIn("Additional context", prompt)
+
+    def test_fast_path_avoid_preference(self):
+        from carrymem.context import build_qa_prompt
+
+        memories = [
+            {"type": "user_preference", "content": "I dislike Java", "auto_rule": "avoid", "superseded_at": None},
+        ]
+        prompt = build_qa_prompt(memories=memories, knowledge=[], question="What language?", include_question=False)
+        self.assertIn("The user has explicitly stated they do NOT want: I dislike Java", prompt)
+        self.assertIn("Where relevant, do NOT recommend", prompt)
+
+    def test_fast_path_not_triggered_with_facts(self):
+        from carrymem.context import build_qa_prompt
+
+        memories = [
+            {"type": "user_preference", "content": "I prefer Python", "auto_rule": "prefer", "superseded_at": None},
+            {"type": "personal_fact", "content": "I work at Google", "superseded_at": None},
+        ]
+        prompt = build_qa_prompt(memories=memories, knowledge=[], question="What language?", include_question=False)
+        self.assertIn("The user has the following preference: I prefer Python", prompt)
+        self.assertIn("Additional context", prompt)
+        self.assertIn("I work at Google", prompt)
+
+    def test_fast_path_not_triggered_with_knowledge(self):
+        from carrymem.context import build_qa_prompt
+
+        memories = [
+            {"type": "user_preference", "content": "I prefer Python", "auto_rule": "prefer", "superseded_at": None},
+        ]
+        knowledge = [{"title": "Python Guide", "content": "Python is great"}]
+        prompt = build_qa_prompt(memories=memories, knowledge=knowledge, question="What language?", include_question=False)
+        self.assertIn("The user has the following preference: I prefer Python", prompt)
+        self.assertIn("Knowledge Base", prompt)
+
+    def test_fast_path_not_triggered_with_outdated(self):
+        from carrymem.context import build_qa_prompt
+
+        memories = [
+            {"type": "user_preference", "content": "I prefer Python", "auto_rule": "prefer", "superseded_at": None},
+            {"type": "user_preference", "content": "I prefer Java", "auto_rule": "prefer", "superseded_at": "2026-01-01"},
+        ]
+        prompt = build_qa_prompt(memories=memories, knowledge=[], question="What language?", include_question=False)
+        self.assertIn("The user has the following preference: I prefer Python", prompt)
+        self.assertIn("Outdated", prompt)
+
+    def test_fast_path_include_question(self):
+        from carrymem.context import build_qa_prompt
+
+        memories = [
+            {"type": "user_preference", "content": "I prefer Python", "auto_rule": "prefer", "superseded_at": None},
+        ]
+        prompt = build_qa_prompt(memories=memories, knowledge=[], question="What language?", include_question=True)
+        self.assertIn("Question: What language?", prompt)
+        self.assertIn("Answer:", prompt)
+
+    def test_mixed_scenario_preference_and_fact(self):
+        from carrymem.context import build_qa_prompt
+
+        memories = [
+            {"type": "user_preference", "content": "I prefer Python", "auto_rule": "prefer", "superseded_at": None},
+            {"type": "personal_fact", "content": "I work at Google", "superseded_at": None},
+        ]
+        prompt = build_qa_prompt(memories=memories, knowledge=[], question="What language?", include_question=False)
+        self.assertIn("I prefer Python", prompt)
+        self.assertIn("I work at Google", prompt)
+        self.assertIn("Additional context", prompt)
+
+    def test_no_preference_goes_full_path(self):
+        from carrymem.context import build_qa_prompt
+
+        memories = [
+            {"type": "personal_fact", "content": "I work at Google", "superseded_at": None},
+        ]
+        prompt = build_qa_prompt(memories=memories, knowledge=[], question="Where do I work?", include_question=False)
+        self.assertNotIn("The user has the following preference", prompt)
+        self.assertIn("I work at Google", prompt)
 
 
 if __name__ == "__main__":

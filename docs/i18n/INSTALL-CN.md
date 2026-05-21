@@ -45,10 +45,10 @@ source ~/.bashrc
 
 **通用替代方案**：
 ```bash
-python3 -m memory_classification_engine.cli version
+python3 -m carrymem.cli version
 ```
 
-> ⚠️ **包名与导入名**：安装用 `pip install carrymem`，导入用 `from memory_classification_engine import CarryMem` 或 `from carrymem import CarryMem`。
+> ⚠️ **包名与导入名**：安装用 `pip install carrymem`，导入用 `from carrymem import CarryMem` 或 `from carrymem import CarryMem`。
 
 ### 2. 开发模式安装
 
@@ -110,11 +110,11 @@ python -m pytest tests/test_rules/test_installation.py -v
 
 ## 常见问题
 
-### "Module not found: memory_classification_engine"
+### "Module not found: carrymem"
 
-PyPI 包名是 `carrymem`，但导入名是 `memory_classification_engine`：
+PyPI 包名是 `carrymem`，但导入名是 `carrymem`：
 ```python
-from memory_classification_engine import CarryMem  # 正确
+from carrymem import CarryMem  # 正确
 from carrymem import CarryMem  # 错误
 ```
 

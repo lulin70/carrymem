@@ -1,6 +1,6 @@
 # CarryMem API 安定性保証
 
-**バージョン**: v0.1.6  
+**バージョン**: v0.2.0  
 **発効**: v0.1.6+
 
 ---
@@ -120,18 +120,18 @@ RuleScope / VALID_RULE_SCOPES / SCOPE_PRIORITY
 以下は内部実装の詳細であり、**いつでも変更される可能性**があります。外部コードでの使用は推奨されません：
 
 ```python
-memory_classification_engine.classification.pattern_analyzer.*
-memory_classification_engine.classification.semantic_classifier.*
-memory_classification_engine.storage.sqlite_adapter.*
-memory_classification_engine.rules.storage.*
-memory_classification_engine.security.validator.*
+carrymem.classification.pattern_analyzer.*
+carrymem.classification.semantic_classifier.*
+carrymem.storage.sqlite_adapter.*
+carrymem.rules.storage.*
+carrymem.security.validator.*
 ```
 
 ---
 
 ## バージョン管理ポリシー
 
-- **パッチバージョン** (0.1.x → 0.1.6): バグ修正、新機能（Stable APIは変更なし）
+- **パッチバージョン** (0.1.x → 0.2.0): バグ修正、新機能（Stable APIは変更なし）
 - **マイナーバージョン** (0.1.x → 0.2.0): 新機能、Experimental→Stable昇格の可能性
 - **メジャーバージョン** (0.x → 1.0.0): 破壊的変更が発生する可能性
 
@@ -161,7 +161,7 @@ memory_classification_engine.security.validator.*
 v0.1.6以降、以下の2つのインポートパスがサポートされています：
 
 ```python
-from memory_classification_engine import CarryMem  # 公式パッケージ名
+from carrymem import CarryMem  # 公式パッケージ名
 from carrymem import CarryMem                       # 互換エイリアス
 ```
 
@@ -172,4 +172,4 @@ from carrymem import CarryMem                       # 互換エイリアス
 ## 変更履歴
 
 - **v0.1.6**: バージョンリセット — セキュリティ強化、スレッドセーフ、ドキュメント整理
-- 初期開発では0.4.x-0.8.xのバージョン番号が使用されていましたが、後に0.2.xシリーズに統合されました。現在のv0.1.6は、セキュリティ強化と品質改善を統合したバージョンリセットです。
+- 初期開発では0.4.x-0.8.xのバージョン番号が使用されていましたが、後に0.2.xシリーズに統合されました。現在のv0.2.0は、v0.1.6バージョンリセットのセキュリティ強化と品質改善、およびその後の機能強化を含んでいます。

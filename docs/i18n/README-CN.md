@@ -1,16 +1,20 @@
-# CarryMem — AI 的身份层
+# CarryMem — 你的 AI 终于认识你了
 
-**AI 记住你是谁。不只是你说了什么。**
+**别再一遍遍教 AI 你是谁了。**
 
-> 你的便携式 AI 身份层 — 偏好、决策和纠正，跨模型、跨工具、跨设备随身携带。
+> 你的随身 AI 记忆 — 偏好、决策和纠正，跨模型、跨工具、跨设备随身携带。
 
-CarryMem 是一个轻量级、零依赖的 AI 记忆系统，存储**你是谁** — 你的偏好、决策、纠正 — 并将这个身份提供给任何 AI 工具。从 Cursor 切换到 Claude Code，从 GPT 切换到 Claude，你的 AI 始终认识你。
+每次开新对话，你都要重新介绍自己。你的偏好、你的决策、你的纠正，全忘了。换工具（Cursor → Claude Code），换模型（GPT → Claude），每次都从零开始。
+
+你不是在用 AI，你是在反复教 AI。
+
+CarryMem 解决这个问题。它是一个轻量级、零依赖的记忆系统，存储**你是谁**，并将这个身份提供给任何 AI 工具。你的 AI 记住你的偏好、你过去的决策和你做过的纠正，让你专注做事，而不是反复自我介绍。
 
 [English](../../README.md) | **中文** | [日本語](README-JP.md)
 
 <p align="center">
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI 版本"></a>
-  <img src="https://img.shields.io/badge/tests-2056%20passing-green" alt="测试">
+  <img src="https://img.shields.io/badge/tests-2100%20passing-green" alt="测试">
   <img src="https://img.shields.io/badge/coverage-78%25-green" alt="覆盖率">
   <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python">
 </p>
@@ -83,17 +87,17 @@ export PATH="$HOME/Library/Python/3.9/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"
 
 # 或直接使用 Python 模块
-python3 -m memory_classification_engine.cli version
+python3 -m carrymem.cli version
 ```
 
 然后运行 `carrymem doctor` 检查配置。
 
 ### 5 行代码
 
-> ⚠️ **包名与导入名**：安装用 `pip install carrymem`，导入用 `from memory_classification_engine import CarryMem` 或 `from carrymem import CarryMem`。将在 v1.0.0 统一。
+> ⚠️ **包名与导入名**：安装用 `pip install carrymem`，导入用 `from carrymem import CarryMem` 或 `from carrymem import CarryMem`。将在 v1.0.0 统一。
 
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 cm = CarryMem()
 cm.classify_and_remember("我偏好深色模式")              # 自动分类为偏好
@@ -217,14 +221,14 @@ carrymem setup-mcp --tool claude-code
 carrymem setup-mcp --tool all
 ```
 
-提供 12 个 MCP 工具：核心(3) · 存储(3) · 知识库(3) · 画像(2) · 提示(1)
+25 个 MCP 工具：Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (1) · Rules (11)
 
 ### 8. 规则引擎与作用域
 
 行为规则支持三个作用域级别，实现团队/组织对齐：
 
 ```python
-from memory_classification_engine.rules import RuleEngine
+from carrymem.rules import RuleEngine
 
 engine = RuleEngine()
 
@@ -295,6 +299,28 @@ carrymem tui
 
 ---
 
+## 架构
+
+```
+用户输入
+    ↓
+自动分类（7 种类型，4 层）
+    ↓
+重要性评分（confidence × type × recency × access）
+    ↓
+智能存储（SQLite + FTS5，去重，TTL，加密）
+    ↓
+记忆整合（P0: 去重+衰减 → P1: 模式→规则 → P2: 语义合并）
+    ↓
+语义召回（FTS5 + 同义词 + 拼写纠正 + 跨语言）
+    ↓
+上下文注入（token 预算，相关性排序）
+    ↓
+AI 工具（Cursor / Claude Code / 任意 MCP 客户端）
+```
+
+---
+
 ## 竞品对比
 
 |  | CarryMem | Mem0 | OpenChronicle | ima |
@@ -317,29 +343,41 @@ carrymem tui
 
 > **注**：对比基于公开信息。产品迭代迅速，请核实最新功能。
 
-**核心差异**：其他产品存储*你读了什么*。CarryMem 存储*你是谁*。
+**核心差异**：其他产品存储*你读了什么*。CarryMem 记住*你是谁*。
 
 ---
 
-### 🏆 Benchmark 亮点 — v0.1.6 baseline
+### 🏆 Benchmark — v0.2.0 基线
 
-> **透明优先。** 这是首次运行的基线分数，不完美但诚实。我们将其作为迭代改进的起点。
-
-| Benchmark | 得分 | 状态 | 方法 |
-|-----------|------|------|------|
-| **LongMemEval** | **42.6%** | ✅ 官方 | 官方oracle数据集(500Q) + LLM-as-Judge |
-| **RuleEngine-Eval** | **93.3%** | ✅ 原创 | CarryMem独有benchmark |
-| **MemEval** | *运行中* | 🔄 进行中 | 官方框架，CarryMem适配器 |
-| **MSC** | *待定* | ⏳ 受阻 | 数据集需ParlAI（不可用） |
-
-**使用LLM**: Claude Sonnet 4.6（via Moka AI API）。官方benchmark指定GPT-4o——见下方偏差说明。
+| Benchmark | 得分 | 说明 |
+|-----------|------|------|
+| **PrefEval** | **96.0%** | ICLR 2025 Oral，50 样本，偏好遵守率（zero-shot: 90%，reminder: 92%） |
+| **LongMemEval** | **42.6%** | 官方 oracle 数据集，500 题 |
+| **RuleEngine-Eval** | **93.3%** | CarryMem 原创基准 — 唯一拥有规则引擎的记忆系统 |
+| **MemEval** | *运行中* | 官方框架，CarryMem 适配器 |
+| **MSC** | *待定* | 数据集受限 |
 
 | | 优势 | 结果 |
 |---|------|------|
-| 💰 | 零LLM摄入 | **88%** 记忆无需 **LLM Token** |
-| ⚡ | P99延迟 | **1.3ms** — 比 Mem0 **快93倍** |
-| 🪶 | 依赖 | **仅需SQLite** — 无需向量数据库 |
+| 💰 | 零 LLM 摄入 | **88%** 记忆无需 **LLM Token** |
+| ⚡ | P99 延迟 | **1.3ms** — 比 Mem0 **快 93 倍** |
+| 🪶 | 依赖 | **仅需 SQLite** — 无需向量数据库 |
 | 🛡️ | 规则引擎 | **唯一拥有**规则引擎（竞争对手：0%） |
+
+> **透明优先。** 首次运行基线分数，不完美但诚实。完整数据：[BENCHMARK_STRATEGY_FINAL.md](../BENCHMARK_STRATEGY_FINAL.md)
+
+---
+
+## 适合谁？
+
+**厌倦了反复自我介绍？**
+你每天用 Cursor、Claude Code、ChatGPT。你的技术栈、编码风格、架构决策，你告诉 AI 一百遍了，它还在问"你偏好什么框架？"CarryMem 让你的 AI 记住这些，不用再说第二遍。
+
+**在手动维护 CLAUDE.md？**
+你已经知道 AI 需要记忆。你到处都是 prompt 文件，它们互相矛盾，会过时，而且换工具就失效。CarryMem 自动分类你的偏好、决策和纠正，并自动保持更新。
+
+**在开发 AI Agent？**
+你的 Agent 在会话之间会忘记用户。你需要一个轻量、本地、兼容任何 LLM 的记忆层。CarryMem 提供 5 行代码接入、7 种记忆类型和规则引擎，除了 SQLite 外零依赖。
 
 ---
 
@@ -358,12 +396,13 @@ carrymem tui
 
 ## 项目状态
 
-**当前版本**：v0.1.6
-**测试**：2056/2056 通过
+**当前版本**：v0.2.0
+**测试**：2100+ passing
 **覆盖率**：~78%
 
 **更新日志**：
-- **v0.1.6**：版本重置 — 安全加固（FTS5查询净化、路径验证、规则内容过滤）、线程安全、文档整理、测试清理
+- **v0.2.0**：记忆整合引擎（P0/P1/P2），PrefEval 96.0%，偏好注入修复，25 个 MCP 工具
+- **v0.2.0**：版本重置 — 安全加固（FTS5查询净化、路径验证、规则内容过滤）、线程安全、文档整理、测试清理
 - **v0.4.1**：核心循环修复 — 自动规则建议、MCP 规则工具、提示注入防护、连接池
 - **v0.4.0**：企业功能 — 规则作用域、Skill 格式（SHA-256）、合并协议、VS Code 扩展
 - **v0.3.0**：GA 发布 — 知识适配器、有效性报告、上下文工程
@@ -396,4 +435,4 @@ MIT 许可证 — 详见 [LICENSE](../../LICENSE)
 
 ---
 
-**CarryMem — AI 记住你是谁。只有你拥有数据。** 🚀
+**CarryMem — 你的 AI 终于认识你了。只有你拥有数据。**

@@ -1,6 +1,6 @@
 # CarryMem 故障排查指南
 
-**版本**: v0.1.6
+**版本**: v0.2.0
 
 ---
 
@@ -78,7 +78,7 @@
 | 错误信息 | 问题编号 |
 |---|---|
 | `command not found: carrymem` | [#1](#1-cli-命令未找到) |
-| `No module named 'memory_classification_engine'` | [#2](#2-导入错误) |
+| `No module named 'carrymem'` | [#2](#2-导入错误) |
 | `No module named 'carrymem'` | [#2](#2-导入错误) |
 | `carrymem version 显示版本错误` | [#3](#3-版本不匹配) |
 | `error: externally-managed-environment` | [#4](#4-pip-安装失败) |
@@ -113,7 +113,7 @@
 
 **快速修复**（通用）:
 ```bash
-python3 -m memory_classification_engine.cli version
+python3 -m carrymem.cli version
 ```
 
 **标准修复**:
@@ -143,7 +143,7 @@ source ~/.bashrc
 **Windows (原生 PowerShell)**:
 ```powershell
 pip install carrymem
-python -m memory_classification_engine.cli version
+python -m carrymem.cli version
 ```
 
 **深度修复** — 如果以上方法无效，使用 pipx 隔离安装:
@@ -165,11 +165,11 @@ carrymem doctor
 **严重度**: 🔴 严重  
 **doctor 检查项**: `carrymem_import`
 
-**问题**: `ImportError: No module named 'memory_classification_engine'` 或 `No module named 'carrymem'`
+**问题**: `ImportError: No module named 'carrymem'` 或 `No module named 'carrymem'`
 
 **错误示例**:
 ```
-ModuleNotFoundError: No module named 'memory_classification_engine'
+ModuleNotFoundError: No module named 'carrymem'
 ```
 
 **根因**: CarryMem 未安装在当前 Python 环境中。
@@ -200,7 +200,7 @@ pip install carrymem
 
 4. 使用兼容导入路径:
    ```python
-   from carrymem import CarryMem  # 与 from memory_classification_engine 等效
+   from carrymem import CarryMem  # 与 from carrymem 等效
    ```
 
 **深度修复** — 虚拟环境冲突:
@@ -215,7 +215,7 @@ pip install carrymem
 
 **验证**:
 ```bash
-python3 -c "from memory_classification_engine import CarryMem; print('OK')"
+python3 -c "from carrymem import CarryMem; print('OK')"
 carrymem doctor
 # carrymem_import 应显示: ok
 ```
@@ -242,7 +242,7 @@ pip install --force-reinstall carrymem
    ```bash
    pip show carrymem
    carrymem version
-   python3 -c "from memory_classification_engine.__version__ import __version__; print(__version__)"
+   python3 -c "from carrymem.__version__ import __version__; print(__version__)"
    ```
 
 2. 版本不一致时清理:
@@ -254,7 +254,7 @@ pip install --force-reinstall carrymem
 **深度修复** — 多个 Python 环境:
 ```bash
 # 查找所有 carrymem 安装
-find / -name "__version__.py" -path "*/memory_classification_engine/*" 2>/dev/null
+find / -name "__version__.py" -path "*/carrymem/*" 2>/dev/null
 
 # 删除旧版本并重新安装
 pipx install --force carrymem
@@ -263,7 +263,7 @@ pipx install --force carrymem
 **验证**:
 ```bash
 carrymem version
-# 应显示: 0.1.6
+# 应显示: 0.2.0
 ```
 
 ---
@@ -365,7 +365,7 @@ carrymem add "你的内容" --force
 
 **深度修复** — 分类逻辑调试:
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 cm = CarryMem()
 result = cm.classify_and_remember("你的内容")
 print(result)
@@ -469,7 +469,7 @@ carrymem add "你的内容" --type user_preference
 
 **深度修复** — 分类优先级:
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 cm = CarryMem()
 result = cm.classify_and_remember("我总是用 vim 编辑")
 print(f"类型: {result['memory_type']}, 原因: {result.get('reason', 'N/A')}")
@@ -501,14 +501,14 @@ sqlite3.OperationalError: database is locked
 
 **快速修复**:
 ```bash
-pkill -f memory_classification_engine
+pkill -f carrymem
 ```
 
 **标准修复**:
 
 1. 关闭其他 CarryMem 实例:
    ```bash
-   pkill -f memory_classification_engine
+   pkill -f carrymem
    ```
 
 2. 删除残留 WAL/SHM 文件:
@@ -871,7 +871,7 @@ carrymem setup-mcp --tool claude-code
      "mcpServers": {
        "carrymem": {
          "command": "python3",
-         "args": ["-m", "memory_classification_engine.integration.layer2_mcp"]
+         "args": ["-m", "carrymem.integration.layer2_mcp"]
        }
      }
    }
@@ -889,7 +889,7 @@ cat > .cursor/mcp.json << 'EOF'
   "mcpServers": {
     "carrymem": {
       "command": "python3",
-      "args": ["-m", "memory_classification_engine.integration.layer2_mcp"]
+      "args": ["-m", "carrymem.integration.layer2_mcp"]
     }
   }
 }
@@ -902,7 +902,7 @@ cat > .claude/mcp.json << 'EOF'
   "mcpServers": {
     "carrymem": {
       "command": "python3",
-      "args": ["-m", "memory_classification_engine.integration.layer2_mcp"]
+      "args": ["-m", "carrymem.integration.layer2_mcp"]
     }
   }
 }
@@ -935,7 +935,7 @@ carrymem doctor
 
 1. 手动测试 MCP 服务器:
    ```bash
-   python3 -m memory_classification_engine.integration.layer2_mcp
+   python3 -m carrymem.integration.layer2_mcp
    # 应正常启动无报错
    ```
 
@@ -946,7 +946,7 @@ carrymem doctor
 
 3. 检查导入错误:
    ```bash
-   python3 -c "from memory_classification_engine.integration.layer2_mcp import mcp; print('OK')"
+   python3 -c "from carrymem.integration.layer2_mcp import mcp; print('OK')"
    ```
 
 **深度修复** — 首次导入缓慢:
@@ -954,7 +954,7 @@ carrymem doctor
 首次 MCP 调用可能因 Python 模块加载而缓慢。预热方法:
 ```bash
 # 添加到 shell 启动脚本
-python3 -c "from memory_classification_engine import CarryMem" &
+python3 -c "from carrymem import CarryMem" &
 ```
 
 **验证**:
@@ -1070,7 +1070,7 @@ carrymem export ~/my_export.json
 
 使用 Python API 时，可以指定 `allowed_base`:
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 cm = CarryMem()
 cm.export_memories(output_path="/data/exports/backup.json")
 # 如果 /data/exports 不是系统目录则可以工作
@@ -1115,7 +1115,7 @@ carrymem doctor
 
 3. 重新配置适配器:
    ```python
-   from memory_classification_engine import CarryMem
+   from carrymem import CarryMem
    cm = CarryMem(storage_adapter="obsidian", vault_path="/path/to/vault")
    cm.close()
    ```
@@ -1213,7 +1213,7 @@ carrymem doctor
 
 3. 重装扩展:
    ```bash
-   code --install-extension vscode-carrymem-0.1.6.vsix
+   code --install-extension vscode-carrymem-0.2.0.vsix
    ```
 
 **深度修复** — VS Code 中的 Python 路径:
@@ -1222,7 +1222,7 @@ carrymem doctor
 ```bash
 # 找到安装了 CarryMem 的 Python
 which python3
-python3 -c "import memory_classification_engine; print(memory_classification_engine.__file__)"
+python3 -c "import carrymem; print(carrymem.__file__)"
 
 # 配置 VS Code 使用此 Python
 # 命令面板 → Python: Select Interpreter → 选择正确的解释器
@@ -1254,7 +1254,7 @@ RuntimeError: Event loop is closed
 **快速修复**:
 ```python
 import asyncio
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 async def main():
     cm = CarryMem()
@@ -1293,7 +1293,7 @@ asyncio.run(main())
 ```python
 python3 -c "
 import asyncio
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 async def test():
     cm = CarryMem()
     print('异步 API 可用:', hasattr(cm, 'classify_and_remember_async'))
@@ -1399,7 +1399,7 @@ carrymem clean --expired --force
 
 3. 运行优化:
    ```python
-   from memory_classification_engine import CarryMem
+   from carrymem import CarryMem
    cm = CarryMem()
    cm.optimize()
    cm.close()
@@ -1456,7 +1456,7 @@ carrymem clean --quality 0.3 --force
 
 3. VACUUM 数据库:
    ```python
-   from memory_classification_engine import CarryMem
+   from carrymem import CarryMem
    cm = CarryMem()
    cm.optimize()
    cm.close()
@@ -1513,8 +1513,8 @@ pip show carrymem
 
 3. 使用兼容的导入路径:
    ```python
-   # v0.1.6+ 两种均可
-   from memory_classification_engine import CarryMem
+   # v0.2.0+ 两种均可
+   from carrymem import CarryMem
    from carrymem import CarryMem
    ```
 

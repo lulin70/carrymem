@@ -20,8 +20,8 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from memory_classification_engine import CarryMem
-from memory_classification_engine.cli import (
+from carrymem import CarryMem
+from carrymem.cli import (
     cmd_add,
     cmd_list,
     cmd_search,
@@ -160,7 +160,7 @@ class TestHelperFunctions:
         assert "test" in result
 
     def test_c_no_color(self):
-        import memory_classification_engine.cli as cli_mod
+        import carrymem.cli as cli_mod
         orig = cli_mod._HAS_COLOR
         try:
             cli_mod._HAS_COLOR = False
@@ -525,13 +525,13 @@ class TestCmdSetupMcp:
 
 class TestCmdServe:
     def test_serve_import(self):
-        from memory_classification_engine.cli import cmd_serve
+        from carrymem.cli import cmd_serve
         assert callable(cmd_serve)
 
 
 class TestCmdTui:
     def test_tui_no_textual(self, capsys):
-        with patch.dict("sys.modules", {"memory_classification_engine.tui": MagicMock(HAS_TEXTUAL=False)}):
+        with patch.dict("sys.modules", {"carrymem.tui": MagicMock(HAS_TEXTUAL=False)}):
             result = cmd_tui([])
             assert result == 1
 
@@ -572,14 +572,14 @@ class TestMainFunction:
     def test_main_keyboard_interrupt(self, capsys):
         with pytest.raises(SystemExit) as exc_info:
             with patch("sys.argv", ["carrymem", "stats"]):
-                with patch("memory_classification_engine.cli.cmd_stats", side_effect=KeyboardInterrupt):
+                with patch("carrymem.cli.cmd_stats", side_effect=KeyboardInterrupt):
                     main()
         assert exc_info.value.code == 130
 
     def test_main_exception(self, capsys):
         with pytest.raises(SystemExit) as exc_info:
             with patch("sys.argv", ["carrymem", "stats"]):
-                with patch("memory_classification_engine.cli.cmd_stats", side_effect=RuntimeError("test error")):
+                with patch("carrymem.cli.cmd_stats", side_effect=RuntimeError("test error")):
                     main()
         assert exc_info.value.code == 1
 
@@ -653,7 +653,7 @@ class TestCmdAddRuleTemplate:
             assert result == 0
 
     def test_add_rule_validation_error(self, temp_db, capsys):
-        from memory_classification_engine.rules import RuleEngine
+        from carrymem.rules import RuleEngine
         with patch.object(RuleEngine, "add_rule", side_effect=ValueError("bad rule")):
             result = cmd_add_rule([
                 "test action", "--trigger", "test trigger",

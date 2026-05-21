@@ -13,8 +13,8 @@ import pytest
 import tempfile
 import os
 
-from memory_classification_engine.rules import RuleEngine
-from memory_classification_engine.rules import ImportModeError
+from carrymem.rules import RuleEngine
+from carrymem.rules import ImportModeError
 
 
 @pytest.fixture
@@ -52,7 +52,7 @@ class TestExportRules:
 
     def test_export_includes_version(self, engine):
         """Export should include current version"""
-        from memory_classification_engine.__version__ import __version__
+        from carrymem.__version__ import __version__
         data = engine.export_rules()
         assert data["version"] == __version__
 

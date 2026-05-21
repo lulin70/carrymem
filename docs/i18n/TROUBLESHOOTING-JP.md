@@ -1,6 +1,6 @@
 # CarryMem トラブルシューティングガイド
 
-**バージョン**: v0.1.6
+**バージョン**: v0.2.0
 
 ---
 
@@ -78,7 +78,7 @@
 | エラーメッセージ | イシュー |
 |---|---|
 | `command not found: carrymem` | [#1](#1-cli-コマンドが見つからない) |
-| `No module named 'memory_classification_engine'` | [#2](#2-インポートエラー) |
+| `No module named 'carrymem'` | [#2](#2-インポートエラー) |
 | `No module named 'carrymem'` | [#2](#2-インポートエラー) |
 | `carrymem version が間違ったバージョンを表示` | [#3](#3-バージョンの不一致) |
 | `error: externally-managed-environment` | [#4](#4-pip-インストール失敗) |
@@ -113,7 +113,7 @@
 
 **クイック修正**（どこでも動作）:
 ```bash
-python3 -m memory_classification_engine.cli version
+python3 -m carrymem.cli version
 ```
 
 **標準修正**:
@@ -143,7 +143,7 @@ source ~/.bashrc
 **Windows (ネイティブ PowerShell)**:
 ```powershell
 pip install carrymem
-python -m memory_classification_engine.cli version
+python -m carrymem.cli version
 ```
 
 **詳細修正** — 上記が機能しない場合、pipx で隔離インストール:
@@ -165,11 +165,11 @@ carrymem doctor
 **重大度**: 🔴 クリティカル  
 **doctor チェック**: `carrymem_import`
 
-**問題**: `ImportError: No module named 'memory_classification_engine'` または `No module named 'carrymem'`
+**問題**: `ImportError: No module named 'carrymem'` または `No module named 'carrymem'`
 
 **エラー例**:
 ```
-ModuleNotFoundError: No module named 'memory_classification_engine'
+ModuleNotFoundError: No module named 'carrymem'
 ```
 
 **原因**: CarryMem が現在の Python 環境にインストールされていない。
@@ -200,7 +200,7 @@ pip install carrymem
 
 4. 互換インポートパスを使用:
    ```python
-   from carrymem import CarryMem  # from memory_classification_engine と同等
+   from carrymem import CarryMem  # from carrymem と同等
    ```
 
 **詳細修正** — 仮想環境の競合:
@@ -215,7 +215,7 @@ pip install carrymem
 
 **検証**:
 ```bash
-python3 -c "from memory_classification_engine import CarryMem; print('OK')"
+python3 -c "from carrymem import CarryMem; print('OK')"
 carrymem doctor
 # carrymem_import が ok を表示
 ```
@@ -242,7 +242,7 @@ pip install --force-reinstall carrymem
    ```bash
    pip show carrymem
    carrymem version
-   python3 -c "from memory_classification_engine.__version__ import __version__; print(__version__)"
+   python3 -c "from carrymem.__version__ import __version__; print(__version__)"
    ```
 
 2. バージョンが異なる場合、クリーンアップ:
@@ -254,7 +254,7 @@ pip install --force-reinstall carrymem
 **詳細修正** — 複数の Python 環境:
 ```bash
 # 全 carrymem インストールを検索
-find / -name "__version__.py" -path "*/memory_classification_engine/*" 2>/dev/null
+find / -name "__version__.py" -path "*/carrymem/*" 2>/dev/null
 
 # 古いものを削除して再インストール
 pipx install --force carrymem
@@ -263,7 +263,7 @@ pipx install --force carrymem
 **検証**:
 ```bash
 carrymem version
-# 0.1.6 を表示
+# 0.2.0 を表示
 ```
 
 ---
@@ -365,7 +365,7 @@ carrymem add "あなたのコンテンツ" --force
 
 **詳細修正** — 分類ロジックのデバッグ:
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 cm = CarryMem()
 result = cm.classify_and_remember("コンテンツ")
 print(result)
@@ -492,14 +492,14 @@ sqlite3.OperationalError: database is locked
 
 **クイック修正**:
 ```bash
-pkill -f memory_classification_engine
+pkill -f carrymem
 ```
 
 **標準修正**:
 
 1. 他の CarryMem インスタンスを終了:
    ```bash
-   pkill -f memory_classification_engine
+   pkill -f carrymem
    ```
 
 2. 古い WAL/SHM ファイルを削除:
@@ -856,7 +856,7 @@ carrymem setup-mcp --tool claude-code
      "mcpServers": {
        "carrymem": {
          "command": "python3",
-         "args": ["-m", "memory_classification_engine.integration.layer2_mcp"]
+         "args": ["-m", "carrymem.integration.layer2_mcp"]
        }
      }
    }
@@ -874,7 +874,7 @@ cat > .cursor/mcp.json << 'EOF'
   "mcpServers": {
     "carrymem": {
       "command": "python3",
-      "args": ["-m", "memory_classification_engine.integration.layer2_mcp"]
+      "args": ["-m", "carrymem.integration.layer2_mcp"]
     }
   }
 }
@@ -887,7 +887,7 @@ cat > .claude/mcp.json << 'EOF'
   "mcpServers": {
     "carrymem": {
       "command": "python3",
-      "args": ["-m", "memory_classification_engine.integration.layer2_mcp"]
+      "args": ["-m", "carrymem.integration.layer2_mcp"]
     }
   }
 }
@@ -920,7 +920,7 @@ carrymem doctor
 
 1. MCP サーバーを手動テスト:
    ```bash
-   python3 -m memory_classification_engine.integration.layer2_mcp
+   python3 -m carrymem.integration.layer2_mcp
    # エラーなく起動するはず
    ```
 
@@ -931,7 +931,7 @@ carrymem doctor
 
 3. インポートエラーを確認:
    ```bash
-   python3 -c "from memory_classification_engine.integration.layer2_mcp import mcp; print('OK')"
+   python3 -c "from carrymem.integration.layer2_mcp import mcp; print('OK')"
    ```
 
 **詳細修正** — 初回インポートの遅延:
@@ -939,7 +939,7 @@ carrymem doctor
 初回 MCP 呼び出しは Python モジュールの読み込みで遅くなる場合があります。プレウォーム:
 ```bash
 # シェル起動スクリプトに追加
-python3 -c "from memory_classification_engine import CarryMem" &
+python3 -c "from carrymem import CarryMem" &
 ```
 
 **検証**:
@@ -1089,7 +1089,7 @@ carrymem doctor
 
 3. アダプターを再設定:
    ```python
-   from memory_classification_engine import CarryMem
+   from carrymem import CarryMem
    cm = CarryMem(storage_adapter="obsidian", vault_path="/path/to/vault")
    cm.close()
    ```
@@ -1187,7 +1187,7 @@ carrymem doctor
 
 3. 拡張機能を再インストール:
    ```bash
-   code --install-extension vscode-carrymem-0.1.6.vsix
+   code --install-extension vscode-carrymem-0.2.0.vsix
    ```
 
 **詳細修正** — VS Code の Python パス:
@@ -1196,7 +1196,7 @@ VS Code がターミナルと異なる Python を使用している場合:
 ```bash
 # CarryMem がインストールされた Python を見つける
 which python3
-python3 -c "import memory_classification_engine; print(memory_classification_engine.__file__)"
+python3 -c "import carrymem; print(carrymem.__file__)"
 
 # VS Code でこの Python を設定
 # コマンドパレット → Python: Select Interpreter → 正しいものを選択
@@ -1228,7 +1228,7 @@ RuntimeError: Event loop is closed
 **クイック修正**:
 ```python
 import asyncio
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 async def main():
     cm = CarryMem()
@@ -1267,7 +1267,7 @@ asyncio.run(main())
 ```python
 python3 -c "
 import asyncio
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 async def test():
     cm = CarryMem()
     print('非同期 API 利用可能:', hasattr(cm, 'classify_and_remember_async'))
@@ -1356,7 +1356,7 @@ carrymem clean --expired --force
 
 3. 最適化を実行:
    ```python
-   from memory_classification_engine import CarryMem
+   from carrymem import CarryMem
    cm = CarryMem()
    cm.optimize()
    cm.close()
@@ -1413,7 +1413,7 @@ carrymem clean --quality 0.3 --force
 
 3. データベースを VACUUM:
    ```python
-   from memory_classification_engine import CarryMem
+   from carrymem import CarryMem
    cm = CarryMem()
    cm.optimize()
    cm.close()
@@ -1470,8 +1470,8 @@ pip show carrymem
 
 3. 互換インポートパスを使用:
    ```python
-   # v0.1.6+ では両方動作
-   from memory_classification_engine import CarryMem
+   # v0.2.0+ では両方動作
+   from carrymem import CarryMem
    from carrymem import CarryMem
    ```
 

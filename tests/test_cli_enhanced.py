@@ -12,13 +12,13 @@ from unittest.mock import patch
 
 import pytest
 
-from memory_classification_engine.cli import (
+from carrymem.cli import (
     cmd_add, cmd_list, cmd_search, cmd_show, cmd_edit, cmd_forget, cmd_clean,
     cmd_export, cmd_import, cmd_stats, cmd_doctor, cmd_setup_mcp, cmd_init,
     cmd_version, _format_time, _truncate, main,
 )
 try:
-    from memory_classification_engine import CarryMem
+    from carrymem import CarryMem
 except ImportError:
     CarryMem = None
 
@@ -111,7 +111,7 @@ class TestCmdList:
     def test_list_with_limit(self, temp_db, capsys):
         cm = CarryMem(db_path=temp_db)
         for i in range(5):
-            _store(cm, f"I always use Python for project {i}")
+            _store(cm, f"Fact number {i} about the project")
         cm.close()
 
         result = cmd_list(["--limit", "3", "--db", temp_db])

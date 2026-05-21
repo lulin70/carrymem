@@ -16,7 +16,7 @@ import tempfile
 import os
 from pathlib import Path
 
-from memory_classification_engine.security.input_validator import (
+from carrymem.security.input_validator import (
     InputValidator,
     get_validator,
     validate_content,
@@ -28,7 +28,7 @@ from memory_classification_engine.security.input_validator import (
     validate_limit,
     validate_filters,
 )
-from memory_classification_engine.exceptions import ValidationError
+from carrymem.exceptions import ValidationError
 
 
 @pytest.fixture
@@ -347,16 +347,16 @@ class TestConvenienceFunctions:
 
 class TestCommandInjection:
     def test_command_substitution_detected(self, validator):
-        from memory_classification_engine.security.input_validator import InputValidator
+        from carrymem.security.input_validator import InputValidator
         v = InputValidator(strict_mode=False)
         assert v._contains_command_injection("$(whoami)")
 
     def test_backtick_detected(self, validator):
-        from memory_classification_engine.security.input_validator import InputValidator
+        from carrymem.security.input_validator import InputValidator
         v = InputValidator(strict_mode=False)
         assert v._contains_command_injection("`rm -rf /`")
 
     def test_safe_content_no_command_injection(self, validator):
-        from memory_classification_engine.security.input_validator import InputValidator
+        from carrymem.security.input_validator import InputValidator
         v = InputValidator(strict_mode=False)
         assert not v._contains_command_injection("Normal text content")

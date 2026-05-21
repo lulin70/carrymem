@@ -34,7 +34,7 @@ pip install -e ".[devsquad]"  # DevSquad integration only
 pytest tests/ -v                                    # All tests
 pytest tests/ -v --ignore=tests/test_rules/test_performance.py  # Skip flaky benchmarks
 pytest tests/test_carrymem.py::TestENPreference -v  # Specific test
-pytest --cov=memory_classification_engine tests/    # With coverage
+pytest --cov=carrymem tests/    # With coverage
 ```
 
 **Coverage requirement**: ≥ 80% for new code. CI enforces ≥ 55% overall.
@@ -177,7 +177,7 @@ git checkout -b fix/your-bug-fix
 # Run tests
 pytest tests/ -v --ignore=tests/test_rules/test_performance.py
 # Check coverage
-pytest --cov=memory_classification_engine tests/
+pytest --cov=carrymem tests/
 ```
 
 ### 4. Commit Changes
@@ -208,7 +208,7 @@ Fill in the PR template (see `.github/pull_request_template.md`):
 
 ```
 carrymem/
-├── src/memory_classification_engine/
+├── src/carrymem/
 │   ├── carrymem.py              # Main entry point
 │   ├── async_carrymem.py        # Async wrapper
 │   ├── engine.py                # Classification engine
@@ -276,7 +276,7 @@ pytest tests/test_carrymem.py::TestENPreference -v
 ### Q: How to check test coverage?
 
 ```bash
-pytest --cov=memory_classification_engine tests/
+pytest --cov=carrymem tests/
 ```
 
 ### Q: How to debug tests?

@@ -1,6 +1,6 @@
 # CarryMem 外部 Benchmark 评测计划
 
-**版本**: v0.1.6  
+**版本**: v0.2.0  
 **更新日期**: 2026-05-03  
 **目标**: 通过业界标准 benchmark 获取可对比分数，展示 CarryMem 在质量与效率上的双重优势
 
@@ -108,7 +108,7 @@ CarryMem 的 **rules engine**（add-rule, match-rules）是所有对比系统中
 
 ```python
 import json
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 def run_longmemeval(data_file, output_file, llm_model="gpt-4.1-mini"):
     with open(data_file) as f:
@@ -143,7 +143,7 @@ def run_longmemeval(data_file, output_file, llm_model="gpt-4.1-mini"):
 #### 方式 A：Persona Summary 任务（自动评估，推荐先跑）
 
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 def run_msc_persona_summary(conv_sessions, llm_model="gpt-4.1-mini"):
     cm = CarryMem()
@@ -189,7 +189,7 @@ SYSTEMS["carrymem"] = {
 ### 3.4 CarryMem Rules Eval（⭐ 自定义，独有卖点）
 
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 RULES_TEST_CASES = [
     {

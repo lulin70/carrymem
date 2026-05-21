@@ -9,8 +9,8 @@ get_memory_history.
 import os
 import pytest
 
-from memory_classification_engine.adapters.sqlite_adapter import SQLiteAdapter
-from memory_classification_engine.adapters.base import MemoryEntry
+from carrymem.adapters.sqlite_adapter import SQLiteAdapter
+from carrymem.adapters.base import MemoryEntry
 
 
 @pytest.fixture
@@ -136,6 +136,6 @@ class TestClosedAdapter:
     def test_access_after_close(self, db_path):
         adapter = SQLiteAdapter(db_path, enable_semantic_recall=False, enable_cache=False)
         adapter.close()
-        from memory_classification_engine.exceptions import DBConnectionError
+        from carrymem.exceptions import DBConnectionError
         with pytest.raises((DBConnectionError, Exception)):
             adapter.recall("test")

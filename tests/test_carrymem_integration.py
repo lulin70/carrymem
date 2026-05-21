@@ -8,7 +8,7 @@ recall_memories, classify_and_remember with various types.
 import os
 import pytest
 
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 
 @pytest.fixture

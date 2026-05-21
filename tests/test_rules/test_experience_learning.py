@@ -17,13 +17,13 @@ import tempfile
 import os
 from datetime import datetime, timezone, timedelta
 
-from memory_classification_engine.rules.failure_experience import (
+from carrymem.rules.failure_experience import (
     FailureExperienceExtractor,
     ExtractedLesson,
     FailureSignal,
     FailureConfidence,
 )
-from memory_classification_engine.rules.experience_bridge import (
+from carrymem.rules.experience_bridge import (
     ExperienceRuleBridge,
     ExperienceAuditEntry,
     EXPERIENCE_STATUS_PENDING,
@@ -31,7 +31,7 @@ from memory_classification_engine.rules.experience_bridge import (
     EXPERIENCE_STATUS_REJECTED,
     EXPERIENCE_STATUS_EXPIRED,
 )
-from memory_classification_engine.rules.storage import RuleStorage
+from carrymem.rules.storage import RuleStorage
 
 
 @pytest.fixture

@@ -15,7 +15,7 @@ import pytest
 from datetime import datetime, timezone, timedelta
 from unittest.mock import MagicMock
 
-from memory_classification_engine.quality_scorer import (
+from carrymem.quality_scorer import (
     MemoryQualityScorer,
     QualityAnalyzer,
 )

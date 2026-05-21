@@ -1,16 +1,20 @@
-# CarryMem — AI のアイデンティティレイヤー
+# CarryMem — AI はついにあなたを覚えてくれた
 
-**AI はあなたが誰かを覚える。あなたが何を言ったかだけではない。**
+**もう何度も AI に自己紹介する必要はありません。**
 
-> ポータブル AI アイデンティティレイヤー — 好み、決定、訂正がモデル、ツール、デバイスを越えてついてくる。
+> ポータブル AI メモリ — 好み、決定、訂正がモデル、ツール、デバイスを越えてついてくる。
 
-CarryMem は軽量・ゼロ依存の AI メモリシステムで、**あなたが誰か** — 好み、決定、訂正 — を保存し、そのアイデンティティをあらゆる AI ツールで利用可能にします。Cursor から Claude Code へ、GPT から Claude へ切り替えても、AI は常にあなたを知っています。
+新しいチャットを開くたびに、もう一度自己紹介。好みも、決定も、訂正も、全部忘れている。Cursor から Claude Code へ、GPT から Claude へ切り替えても、毎回ゼロから。
+
+あなたは AI を使っているのではなく、AI を教え込んでいます。何度も何度も。
+
+CarryMem はこれを解決します。軽量・ゼロ依存のメモリシステムで、**あなたが誰か**を保存し、あらゆる AI ツールで利用可能にします。AI は好み、過去の決定、訂正を覚えるので、あなたは自己紹介ではなく、本来の作業に集中できます。
 
 [English](../../README.md) | [中文](README-CN.md) | **日本語**
 
 <p align="center">
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI バージョン"></a>
-  <img src="https://img.shields.io/badge/tests-2056%20passing-green" alt="テスト">
+  <img src="https://img.shields.io/badge/tests-2100%20passing-green" alt="テスト">
   <img src="https://img.shields.io/badge/coverage-78%25-green" alt="カバレッジ">
   <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python">
 </p>
@@ -83,17 +87,17 @@ export PATH="$HOME/Library/Python/3.9/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"
 
 # または Python モジュールを直接使用
-python3 -m memory_classification_engine.cli version
+python3 -m carrymem.cli version
 ```
 
 その後 `carrymem doctor` で設定を確認。
 
 ### 5 行で始める
 
-> ⚠️ **パッケージ名とインポート名**: `pip install carrymem` でインストール、`from memory_classification_engine import CarryMem` または `from carrymem import CarryMem` でインポート。v1.0.0 で統一予定。
+> ⚠️ **パッケージ名とインポート名**: `pip install carrymem` でインストール、`from carrymem import CarryMem` または `from carrymem import CarryMem` でインポート。v1.0.0 で統一予定。
 
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 cm = CarryMem()
 cm.classify_and_remember("ダークモードが好き")              # 自動分類：好み
@@ -217,14 +221,14 @@ carrymem setup-mcp --tool claude-code
 carrymem setup-mcp --tool all
 ```
 
-12のMCPツール：コア(3) · ストレージ(3) · ナレッジ(3) · プロファイル(2) · プロンプト(1)
+25のMCPツール：Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (1) · Rules (11)
 
 ### 8. ルールエンジンとスコープ
 
 行動ルールは3つのスコープレベルをサポートし、チーム/組織のアラインメントを実現：
 
 ```python
-from memory_classification_engine.rules import RuleEngine
+from carrymem.rules import RuleEngine
 
 engine = RuleEngine()
 
@@ -295,6 +299,28 @@ carrymem tui
 
 ---
 
+## アーキテクチャ
+
+```
+ユーザー入力
+    ↓
+自動分類（7タイプ、4層）
+    ↓
+重要度スコアリング（confidence × type × recency × access）
+    ↓
+スマートストレージ（SQLite + FTS5、重複排除、TTL、暗号化）
+    ↓
+記憶統合（P0: 重複排除+減衰 → P1: パターン→ルール → P2: 意味マージ）
+    ↓
+セマンティック検索（FTS5 + 同義語 + スペル修正 + 多言語）
+    ↓
+コンテキスト注入（トークン予算、関連性ランキング）
+    ↓
+AI ツール（Cursor / Claude Code / 任意の MCP クライアント）
+```
+
+---
+
 ## 競合比較
 
 |  | CarryMem | Mem0 | OpenChronicle | ima |
@@ -323,18 +349,15 @@ carrymem tui
 
 ## パフォーマンス
 
-### 🏆 ベンチマークハイライト — v0.1.6 baseline
+### 🏆 ベンチマーク — v0.2.0 ベースライン
 
-> **透明性優先。** 初回実行のベースラインスコアです。完璧ではありませんが、正直です。反復改善の出発点として公開します。
-
-| ベンチマーク | スコア | ステータス | 方法 |
-|-------------|--------|-----------|------|
-| **LongMemEval** | **42.6%** | ✅ 公式 | 公式oracleデータセット(500Q) + LLM-as-Judge |
-| **RuleEngine-Eval** | **93.3%** | ✅ 独自 | CarryMem独自ベンチマーク |
-| **MemEval** | *実行中* | 🔄 進行中 | 公式フレームワーク、CarryMemアダプタ |
-| **MSC** | *保留* | ⏳ ブロック | データセットにParlAIが必要（利用不可） |
-
-**使用LLM**: Claude Sonnet 4.6（via Moka AI API）。公式ベンチマークはGPT-4oを指定 — 下記の偏差を参照。
+| ベンチマーク | スコア | 備考 |
+|-------------|--------|------|
+| **PrefEval** | **96.0%** | ICLR 2025 Oral、50項目、嗜好遵守率（zero-shot: 90%、reminder: 92%） |
+| **LongMemEval** | **42.6%** | 公式 oracle データセット、500問 |
+| **RuleEngine-Eval** | **93.3%** | CarryMem 独自 — ルールエンジンを持つ唯一のシステム |
+| **MemEval** | *実行中* | 公式フレームワーク、CarryMem アダプタ |
+| **MSC** | *保留* | データセット制限 |
 
 | | 利点 | 結果 |
 |---|------|------|
@@ -343,16 +366,20 @@ carrymem tui
 | 🪶 | 依存関係 | **SQLiteのみ** — ベクトルDB不要 |
 | 🛡️ | ルールエンジン | **唯一**ルールエンジン搭載（競合：0%） |
 
-> *LongMemEval：公式oracleデータセット（完全500Q）、Judge：Claude Sonnet 4（公式：GPT-4o）。MSC：データセット取得不可（ParlAI必要）。MemEval：アダプタ準備完了、実行中。[方法とコンプライアンス](../BENCHMARK_STRATEGY_FINAL.md#compliance-status)*
+> **透明性優先。** 初回ベースラインスコア — 完璧ではありませんが、正直です。詳細：[BENCHMARK_STRATEGY_FINAL.md](../BENCHMARK_STRATEGY_FINAL.md)
 
-| 指標 | 値 |
-|------|-----|
-| 分類精度 | **90.6%** |
-| F1 スコア | **97.9%** |
-| ゼロコスト分類 | **60%+** |
-| 検索レイテンシ (P50) | **~45ms** |
-| テスト通過 | **2056/2056** |
-| テストカバレッジ | **78%** |
+---
+
+## どんな人向け？
+
+**何度も自己紹介するのに疲れていませんか？**
+毎日 Cursor、Claude Code、ChatGPT を使っています。技術スタック、コーディングスタイル、設計の決定を100回伝えたのに、AI はまだ「どのフレームワークがお好みですか？」と聞いてきます。CarryMem は AI に覚えさせます。もう二度と言う必要はありません。
+
+**手動で CLAUDE.md をメンテナンスしていますか？**
+AI にはメモリが必要だと知っている。プロンプトファイルがあちこちにあって、矛盾して、古くなって、ツールを変えると使えない。CarryMem は好み、決定、訂正を自動分類し、自動的に最新に保ちます。
+
+**AI エージェントを開発していますか？**
+エージェントはセッション間でユーザーを忘れます。軽量、ローカル、どんな LLM でも動くメモリレイヤーが必要。CarryMem は 5 行の統合、7 種類のメモリタイプ、ルールエンジンを提供。SQLite 以外の依存関係はゼロ。
 
 ---
 
@@ -371,12 +398,13 @@ carrymem tui
 
 ## プロジェクトステータス
 
-**現在のバージョン**: v0.1.6
-**テスト**: 2056/2056 通過
+**現在のバージョン**: v0.2.0
+**テスト**: 2100+ passing
 **カバレッジ**: ~78%
 
 **チェンジログ**:
-- **v0.1.6**: バージョンリセット — セキュリティ強化（FTS5サニタイズ、パス検証、ルールコンテンツフィルタリング）、スレッドセーフ、ドキュメント整理、テストクリーンアップ
+- **v0.2.0**: 記憶統合エンジン（P0/P1/P2）、PrefEval 96.0%、嗜好注入修正、25のMCPツール
+- **v0.2.0**: バージョンリセット — セキュリティ強化（FTS5サニタイズ、パス検証、ルールコンテンツフィルタリング）、スレッドセーフ、ドキュメント整理、テストクリーンアップ
 - **v0.4.1**: コアループ修正 — 自動ルール提案、MCP ルールツール、プロンプト注入防御、コネクションプーリング
 - **v0.4.0**: エンタープライズ機能 — ルールスコープ、Skill フォーマット（SHA-256）、マージプロトコル、VS Code 拡張
 - **v0.3.0**: GA リリース — ナレッジアダプター、有効性レポート、コンテキストエンジニアリング
@@ -409,4 +437,4 @@ MIT ライセンス — 詳細は [LICENSE](../../LICENSE) を参照
 
 ---
 
-**CarryMem — AI はあなたが誰かを覚える。データはあなたのもの。** 🚀
+**CarryMem — AI はついにあなたを覚えてくれた。データはあなたのもの。**

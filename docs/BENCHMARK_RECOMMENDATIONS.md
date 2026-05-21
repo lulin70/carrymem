@@ -1,7 +1,7 @@
 # CarryMem Benchmark检查建议报告
 
 **生成时间**: 2026-05-04  
-**评估版本**: v0.1.6  
+**评估版本**: v0.2.0  
 **评估者**: 代码审查团队
 
 ---
@@ -190,7 +190,7 @@ if __name__ == "__main__":
 
 import concurrent.futures
 import time
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 def test_concurrent_writes(num_threads=10, operations_per_thread=100):
     """测试并发写入"""
@@ -250,7 +250,7 @@ if __name__ == "__main__":
 #!/usr/bin/env python3
 """压力测试 - 极限负载"""
 
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 import time
 
 def stress_test_large_dataset(size=100000):
@@ -301,7 +301,7 @@ if __name__ == "__main__":
 
 import psutil
 import time
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 def test_memory_leak(duration_minutes=60):
     """测试内存泄漏"""

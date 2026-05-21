@@ -1,6 +1,6 @@
 # CarryMem API 稳定性保证
 
-**版本**: v0.1.6  
+**版本**: v0.2.0  
 **生效**: v0.1.6+
 
 ---
@@ -120,18 +120,18 @@ RuleScope / VALID_RULE_SCOPES / SCOPE_PRIORITY
 以下是内部实现细节，**随时可能变更**。不建议在外部代码中使用：
 
 ```python
-memory_classification_engine.classification.pattern_analyzer.*
-memory_classification_engine.classification.semantic_classifier.*
-memory_classification_engine.storage.sqlite_adapter.*
-memory_classification_engine.rules.storage.*
-memory_classification_engine.security.validator.*
+carrymem.classification.pattern_analyzer.*
+carrymem.classification.semantic_classifier.*
+carrymem.storage.sqlite_adapter.*
+carrymem.rules.storage.*
+carrymem.security.validator.*
 ```
 
 ---
 
 ## 版本管理策略
 
-- **补丁版本** (0.1.x → 0.1.6): Bug 修复、新功能（Stable API 不变）
+- **补丁版本** (0.1.x → 0.2.0): Bug 修复、新功能（Stable API 不变）
 - **次版本** (0.1.x → 0.2.0): 新功能、Experimental→Stable 升级可能
 - **主版本** (0.x → 1.0.0): 可能有破坏性变更
 
@@ -161,7 +161,7 @@ memory_classification_engine.security.validator.*
 v0.1.6 起支持以下两种导入路径：
 
 ```python
-from memory_classification_engine import CarryMem  # 官方包名
+from carrymem import CarryMem  # 官方包名
 from carrymem import CarryMem                       # 兼容别名
 ```
 
@@ -172,4 +172,4 @@ from carrymem import CarryMem                       # 兼容别名
 ## 变更历史
 
 - **v0.1.6**: 版本重置 — 安全加固、线程安全、文档整理
-- 早期开发使用了 0.4.x-0.8.x 版本号，后统一为 0.2.x 系列。当前 v0.1.6 是整合了安全加固和质量改进的版本重置。
+- 早期开发使用了 0.4.x-0.8.x 版本号，后统一为 0.2.x 系列。当前 v0.2.0 包含了 v0.1.6 版本重置的安全加固和质量改进，以及后续功能增强。

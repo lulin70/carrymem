@@ -1,7 +1,7 @@
 # CarryMem 架构设计
 
-**版本**: v0.1.6  
-**日期**: 2026-05-01  
+**版本**: v0.2.0  
+**日期**: 2026-05-13  
 **状态**: 稳定
 
 ---
@@ -89,6 +89,14 @@ CarryMem 采用 **分层架构 + 插件设计**：
 │  │  (精确)      │  │   扩展器    │  │    合并器    │ │
 │  └──────────────┘  └──────────────┘  └──────────────┘ │
 └─────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│               记忆整合层                                 │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
+│  │  P0: 去重    │  │  P1: 模式    │  │  P2: 语义    │ │
+│  │  + 衰减      │  │  → 规则      │  │  合并        │ │
+│  └──────────────┘  └──────────────┘  └──────────────┘ │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -101,7 +109,7 @@ CarryMem 采用 **分层架构 + 插件设计**：
 
 #### 1.1 Python API
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 with CarryMem() as cm:
     cm.classify_and_remember("我偏好深色模式")
@@ -121,7 +129,7 @@ carrymem stats
   "mcpServers": {
     "carrymem": {
       "command": "python3",
-      "args": ["-m", "memory_classification_engine.integration.layer2_mcp"]
+      "args": ["-m", "carrymem.integration.layer2_mcp"]
     }
   }
 }
@@ -213,6 +221,7 @@ CREATE TABLE memories (
     type TEXT NOT NULL,
     content TEXT NOT NULL,
     original_message TEXT,
+    raw_text TEXT,              -- 新增：用户原始输入，用于 FTS5 双索引
     confidence REAL NOT NULL,
     tier INTEGER NOT NULL,
     namespace TEXT NOT NULL,
@@ -220,7 +229,9 @@ CREATE TABLE memories (
     expires_at TEXT,
     access_count INTEGER,
     content_hash TEXT NOT NULL,
-    metadata TEXT
+    metadata TEXT,
+    superseded_at TEXT,         -- 新增：此记忆被取代的时间
+    supersedes TEXT             -- 新增：此记忆取代的记忆 ID
 );
 
 CREATE VIRTUAL TABLE memories_fts USING fts5(
@@ -259,6 +270,48 @@ class ResultMerger:
         # 3. 按相关性排序
         # 4. 返回 Top-K
 ```
+
+### 6. 知识生命周期层
+
+**职责**: 追踪知识演变，管理记忆取代
+
+#### 6.1 自动取代流水线
+
+```
+新记忆 → Jaccard 相似度检测 → 矛盾检测 → 标记旧记忆为已取代
+   ↓           ↓                    ↓                ↓
+ INSERT   ≥ 0.25 阈值          词边界正则匹配      superseded_at = now
+          + 更新标记检测     (like/dislike 等)       supersedes = new_key
+                              + 助手消息排除
+```
+
+#### 6.2 会话感知存储
+
+```
+classify_and_remember(session_id="s_20260513")
+     ↓
+session_id → metadata JSON → recall() 中的 session_id 过滤
+```
+
+#### 6.3 时间表达式解析
+
+```
+查询: "我最近对数据库做了什么决定？"
+     ↓
+_parse_time_expressions() → created_after = 7 天前
+     ↓
+recall_memories(query="数据库", filters={"created_after": "2026-05-06T..."})
+```
+
+### 7. 记忆整合层
+
+**职责**: 记忆生命周期管理，去重、衰减与语义合并
+
+- **记忆整合引擎** (`consolidation.py`)：记忆生命周期管理，三个阶段：
+  - P0：基于 Jaccard 的去重（≥0.85）+ 指数半衰期衰减
+  - P1：模式检测 → 通过 PromotionPipeline 生成规则候选
+  - P2：语义聚类 → 宿主 LLM 整合请求
+  - 偏好始终保留（不会被衰减或去重）
 
 ---
 
@@ -342,7 +395,7 @@ class ValidationError(CarryMemError):
 ### 3. 日志
 
 ```python
-from memory_classification_engine.utils.logger import logger
+from carrymem.utils.logger import logger
 
 # 日志级别: DEBUG, INFO, WARNING, ERROR
 # 文件: ~/.carrymem/logs/carrymem.log（如已配置）
@@ -514,7 +567,7 @@ CarryMem 概念可以用领域驱动设计术语表达，便于与企业架构�
 ### 1. 自定义存储适配器
 
 ```python
-from memory_classification_engine.adapters import StorageAdapter
+from carrymem.adapters import StorageAdapter
 
 class PostgreSQLAdapter(StorageAdapter):
     def remember(self, entry: MemoryEntry) -> StoredMemory: ...

@@ -9,13 +9,13 @@ Validates:
 
 import pytest
 
-from memory_classification_engine.rules.pattern_detector import (
+from carrymem.rules.pattern_detector import (
     PatternDetector,
     MemoryPattern,
     PatternType,
     PatternConfidence,
 )
-from memory_classification_engine.rules.candidate_rule_generator import (
+from carrymem.rules.candidate_rule_generator import (
     CandidateRuleGenerator,
     RuleCandidate,
 )

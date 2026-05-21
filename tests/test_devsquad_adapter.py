@@ -10,7 +10,7 @@ import sqlite3
 import pytest
 from unittest.mock import patch, MagicMock
 
-from memory_classification_engine.integration.devsquad import (
+from carrymem.integration.devsquad import (
     DevSquadAdapter,
     MemoryProvider,
     CarryMemAdapter,
@@ -21,7 +21,7 @@ from memory_classification_engine.integration.devsquad import (
     carrymem_rule_to_devsquad_dict,
     devsquad_rule_to_carrymem_params,
 )
-from memory_classification_engine.rules import RuleEngine
+from carrymem.rules import RuleEngine
 
 
 @pytest.fixture
@@ -145,7 +145,7 @@ class TestIsAvailable:
 
     def test_not_available_when_init_fails(self):
         with patch(
-            "memory_classification_engine.integration.devsquad.adapter.RuleEngine",
+            "carrymem.integration.devsquad.adapter.RuleEngine",
             side_effect=Exception("init failed"),
         ):
             a = DevSquadAdapter(db_path=":memory:")
@@ -356,7 +356,7 @@ class TestGracefulDegradation:
 
     def test_init_error_stored(self):
         with patch(
-            "memory_classification_engine.integration.devsquad.adapter.RuleEngine",
+            "carrymem.integration.devsquad.adapter.RuleEngine",
             side_effect=Exception("db corrupted"),
         ):
             a = DevSquadAdapter(db_path=":memory:")

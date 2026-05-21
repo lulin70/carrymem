@@ -91,6 +91,12 @@ CODE_WALKTHROUGH_ISSUES_*.md
 benchmarks/*.json
 mce_bench_*.json
 
+# Benchmark archive (old scripts with sensitive info)
+benchmarks/archive/
+
+# Benchmark temp scripts
+benchmarks/_devsquad_review.py
+
 # Demo recordings
 demo/*.cast
 demo/demo.gif
@@ -110,3 +116,10 @@ demo/demo.gif
 # Deprecated
 .description
 :memory:*
+LaMP-official/
+LongMemEval/
+MemEval/
+PrefEval_official/
+LaMP_data/
+MSC_official_data/
+MSC_official/

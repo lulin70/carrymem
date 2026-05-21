@@ -51,10 +51,10 @@ carrymem version
 
 **Alternative (works everywhere)**:
 ```bash
-python3 -m memory_classification_engine.cli version
+python3 -m carrymem.cli version
 ```
 
-> ⚠️ **Package vs Import Name**: Install with `pip install carrymem`, import as `from memory_classification_engine import CarryMem` or `from carrymem import CarryMem`.
+> ⚠️ **Package vs Import Name**: Install with `pip install carrymem`, import as `from carrymem import CarryMem` or `from carrymem import CarryMem`.
 
 ### 2. Development Install
 
@@ -116,11 +116,11 @@ This verifies:
 
 ## Troubleshooting
 
-### "Module not found: memory_classification_engine"
+### "Module not found: carrymem"
 
-The PyPI package is `carrymem`, but the import name is `memory_classification_engine`:
+The PyPI package is `carrymem`, but the import name is `carrymem`:
 ```python
-from memory_classification_engine import CarryMem  # Correct
+from carrymem import CarryMem  # Correct
 from carrymem import CarryMem  # Wrong
 ```
 

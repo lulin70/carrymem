@@ -10,12 +10,12 @@ import json
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
 
-from memory_classification_engine.integration.layer2_mcp.http_server import (
+from carrymem.integration.layer2_mcp.http_server import (
     MCPHTTPServer,
     SSEClient,
     run_http_server,
 )
-from memory_classification_engine.integration.layer2_mcp.server import MCPServer
+from carrymem.integration.layer2_mcp.server import MCPServer
 
 
 class TestSSEClient:
@@ -282,5 +282,5 @@ class TestMCPServer:
 
 class TestRunHTTPServer:
     def test_import(self):
-        from memory_classification_engine.integration.layer2_mcp.http_server import run_http_server
+        from carrymem.integration.layer2_mcp.http_server import run_http_server
         assert callable(run_http_server)

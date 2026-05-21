@@ -16,21 +16,21 @@ import pytest
 import tempfile
 import os
 
-from memory_classification_engine.rules.models import (
+from carrymem.rules.models import (
     Rule,
     RuleScope,
     VALID_RULE_SCOPES,
     SCOPE_PRIORITY,
     _to_bool,
 )
-from memory_classification_engine.rules.skill import (
+from carrymem.rules.skill import (
     skill_pack,
     skill_verify,
     skill_install,
     SKILL_FORMAT,
     SKILL_MAX_RULES,
 )
-from memory_classification_engine.rules.merge_protocol import (
+from carrymem.rules.merge_protocol import (
     MergeStrategy,
     MergeDecision,
     MergeConflict,
@@ -40,8 +40,8 @@ from memory_classification_engine.rules.merge_protocol import (
     merge_rules,
     review_incoming_rules,
 )
-from memory_classification_engine.rules.storage import RuleStorage
-from memory_classification_engine.rules import RuleEngine
+from carrymem.rules.storage import RuleStorage
+from carrymem.rules import RuleEngine
 
 
 class TestScopeBasics:

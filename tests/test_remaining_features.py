@@ -16,10 +16,10 @@ from datetime import datetime, timezone, timedelta
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
-from memory_classification_engine.carrymem import CarryMem
-from memory_classification_engine.rules import RuleEngine
-from memory_classification_engine.rules.matcher import RuleMatcher
-from memory_classification_engine.rules.models import Rule
+from carrymem.carrymem import CarryMem
+from carrymem.rules import RuleEngine
+from carrymem.rules.matcher import RuleMatcher
+from carrymem.rules.models import Rule
 
 
 class TestChineseTokenization(unittest.TestCase):

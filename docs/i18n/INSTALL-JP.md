@@ -1,6 +1,6 @@
 # CarryMem インストールガイド
 
-**バージョン**: v0.1.6
+**バージョン**: v0.2.0
 
 ---
 
@@ -20,7 +20,7 @@
 pip install carrymem
 ```
 
-> ⚠️ **パッケージ名とインポート名**: `pip install carrymem` でインストール、`from memory_classification_engine import CarryMem` または `from carrymem import CarryMem` でインポート。v1.0.0 で統一予定。
+> ⚠️ **パッケージ名とインポート名**: `pip install carrymem` でインストール、`from carrymem import CarryMem` または `from carrymem import CarryMem` でインポート。v1.0.0 で統一予定。
 
 ### pipxを使用（推奨）
 
@@ -48,13 +48,13 @@ carrymem version
 
 期待される出力：
 ```
-CarryMem v0.1.6
+CarryMem v0.2.0
 ```
 
 ### 2. インポート確認
 
 ```python
-python3 -c "from memory_classification_engine import CarryMem; print('OK')"
+python3 -c "from carrymem import CarryMem; print('OK')"
 ```
 
 ### 3. インストール検証テスト
@@ -118,7 +118,7 @@ source ~/.bashrc
 
 **Windows (ネイティブ)**:
 ```powershell
-python -m memory_classification_engine.cli version
+python -m carrymem.cli version
 ```
 
 ### PATH確認

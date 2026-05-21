@@ -11,7 +11,7 @@ addopts = [
     "-v",
     "--strict-markers",
     "--tb=short",
-    "--cov=memory_classification_engine",
+    "--cov=carrymem",
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-report=xml",
@@ -20,10 +20,12 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
+    "asyncio: marks tests as async (requires pytest-asyncio)",
 ]
+asyncio_mode = "auto"
 
 [tool.coverage.run]
-source = ["src/memory_classification_engine"]
+source = ["src/carrymem"]
 omit = [
     "*/tests/*",
     "*/test_*.py",

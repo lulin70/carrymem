@@ -10,7 +10,7 @@ Validates:
 
 import pytest
 
-from memory_classification_engine.rules.templates import (
+from carrymem.rules.templates import (
     RULE_TEMPLATES,
     get_template,
     list_templates,

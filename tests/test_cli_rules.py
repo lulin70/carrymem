@@ -15,7 +15,7 @@ import tempfile
 
 import pytest
 
-from memory_classification_engine.cli import (
+from carrymem.cli import (
     cmd_add_rule,
     cmd_list_rules,
     cmd_match_rules,

@@ -107,7 +107,7 @@ def test_mcp_service():
     try:
         # 启动 MCP 服务进程
         process = subprocess.Popen(
-            [sys.executable, "-m", "memory_classification_engine", "mcp"],
+            [sys.executable, "-m", "carrymem", "mcp"],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

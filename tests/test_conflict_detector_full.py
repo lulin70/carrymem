@@ -10,13 +10,13 @@ import pytest
 from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
-from memory_classification_engine.conflict_detector import (
+from carrymem.conflict_detector import (
     ConflictDetector,
     MemoryConflict,
     ConflictType,
     ConflictSeverity,
 )
-from memory_classification_engine.adapters.base import StoredMemory
+from carrymem.adapters.base import StoredMemory
 
 
 def make_stored(

@@ -2,7 +2,7 @@
 
 import time
 import pytest
-from memory_classification_engine.cache import RecallCache
+from carrymem.cache import RecallCache
 
 
 class TestRecallCache:

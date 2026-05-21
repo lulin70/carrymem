@@ -1,0 +1,301 @@
+"""
+MCP Server implementation for CarryMem.
+
+This server implements the Model Context Protocol (MCP) to provide
+memory classification capabilities to MCP clients like Claude Code and Cursor.
+"""
+
+import asyncio
+import json
+import logging
+import os
+import sys
+from typing import Any, Dict, List, Optional
+
+from carrymem.__version__ import __version__ as _version
+from .handlers import Handlers
+from .tools import TOOLS
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stderr
+)
+logger = logging.getLogger(__name__)
+
+
+class MCPServer:
+    """
+    MCP Server for Memory Classification Engine.
+    
+    Implements JSON-RPC over stdio for MCP protocol compliance.
+    
+    Version: 1.0.0 (Production)
+    Protocol: MCP 2024-11-05
+    """
+    
+    VERSION = "1.0.0"
+    PROTOCOL_VERSION = "2024-11-05"
+    
+    def __init__(self, config_path: Optional[str] = None, data_path: Optional[str] = None, namespace: Optional[str] = None):
+        """
+        Initialize the MCP Server.
+        
+        Args:
+            config_path: Path to configuration file (optional)
+            data_path: Path to data directory (optional)
+            namespace: Default namespace for memory isolation (optional)
+        """
+        self.config_path = config_path or os.environ.get("CARRYMEM_CONFIG_PATH")
+        self.data_path = data_path or os.environ.get("CARRYMEM_DATA_PATH")
+        self.namespace = namespace or os.environ.get("CARRYMEM_NAMESPACE", "default")
+        self.handlers = Handlers(self.config_path, self.data_path, namespace=self.namespace)
+        self.request_id = 0
+        
+        logger.info("MCP Server initialized")
+        if self.config_path:
+            logger.info(f"Config path: {self.config_path}")
+        if self.data_path:
+            logger.info(f"Data path: {self.data_path}")
+        if self.namespace != "default":
+            logger.info(f"Namespace: {self.namespace}")
+    
+    async def start(self):
+        """Start the MCP server and listen for requests."""
+        logger.info("MCP Server starting...")
+        
+        try:
+            while True:
+                line = await asyncio.get_event_loop().run_in_executor(
+                    None, sys.stdin.readline
+                )
+                
+                if not line:
+                    logger.info("EOF received, shutting down...")
+                    break
+                
+                line = line.strip()
+                if not line:
+                    continue
+                
+                try:
+                    request = json.loads(line)
+                    response = await self.handle_request(request)
+                    if response:
+                        await self.send_response(response)
+                except json.JSONDecodeError as e:
+                    logger.error(f"Invalid JSON: {e}")
+                    await self.send_error(None, -32700, "Parse error")
+                except Exception as e:
+                    logger.error(f"Error handling request: {e}")
+                    await self.send_error(None, -32603, "Internal error")
+                    
+        except KeyboardInterrupt:
+            logger.info("Received interrupt, shutting down...")
+        except Exception as e:
+            logger.error(f"Server error: {e}")
+        finally:
+            await self.cleanup()
+    
+    async def handle_request(self, request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Handle an MCP request.
+        
+        Args:
+            request: The JSON-RPC request
+            
+        Returns:
+            Response dictionary or None for notifications
+        """
+        request_id = request.get("id")
+        method = request.get("method")
+        params = request.get("params", {})
+        
+        logger.debug(f"Handling request: {method} (id: {request_id})")
+        
+        if method == "initialize":
+            return await self.handle_initialize(request_id, params)
+        elif method == "initialized":
+            return None
+        elif method == "tools/list":
+            return await self.handle_tools_list(request_id)
+        elif method == "tools/call":
+            return await self.handle_tools_call(request_id, params)
+        elif method == "shutdown":
+            return await self.handle_shutdown(request_id)
+        elif method == "exit":
+            return None
+        else:
+            logger.warning(f"Unknown method: {method}")
+            return await self.send_error(request_id, -32601, "Method not found")
+    
+    async def handle_initialize(self, request_id: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle initialize request.
+        
+        Args:
+            request_id: The request ID
+            params: Initialization parameters
+            
+        Returns:
+            Initialize response
+        """
+        logger.info("Handling initialize request")
+        
+        protocol_version = params.get("protocolVersion", "2024-11-05")
+        client_info = params.get("clientInfo", {})
+        
+        logger.info(f"Client: {client_info.get('name', 'unknown')} "
+                   f"v{client_info.get('version', 'unknown')}")
+        logger.info(f"Protocol version: {protocol_version}")
+        
+        return {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "result": {
+                "protocolVersion": "2024-11-05",
+                "serverInfo": {
+                    "name": "carrymem-mcp",
+                    "version": _version
+                },
+                "capabilities": {
+                    "tools": {
+                        "listChanged": False
+                    }
+                }
+            }
+        }
+    
+    async def handle_tools_list(self, request_id: Any) -> Dict[str, Any]:
+        """
+        Handle tools/list request.
+        
+        Args:
+            request_id: The request ID
+            
+        Returns:
+            Tools list response
+        """
+        logger.info("Handling tools/list request")
+        
+        return {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "result": {
+                "tools": TOOLS
+            }
+        }
+    
+    async def handle_tools_call(self, request_id: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle tools/call request.
+        
+        Args:
+            request_id: The request ID
+            params: Tool call parameters
+            
+        Returns:
+            Tool call response
+        """
+        tool_name = params.get("name")
+        arguments = params.get("arguments", {})
+        
+        logger.info(f"Handling tools/call: {tool_name}")
+        logger.debug(f"Arguments: {arguments}")
+        
+        try:
+            result = await self.handlers.handle_tool(tool_name, arguments)
+            
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "result": {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": json.dumps(result, indent=2, ensure_ascii=False)
+                        }
+                    ]
+                }
+            }
+        except Exception as e:
+            logger.error(f"Error calling tool {tool_name}: {e}")
+            return await self.send_error(request_id, -32603, f"Tool error: {str(e)}")
+    
+    async def handle_shutdown(self, request_id: Any) -> Dict[str, Any]:
+        """
+        Handle shutdown request.
+        
+        Args:
+            request_id: The request ID
+            
+        Returns:
+            Shutdown response
+        """
+        logger.info("Handling shutdown request")
+        
+        return {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "result": None
+        }
+    
+    async def send_response(self, response: Dict[str, Any]):
+        """
+        Send a response to stdout.
+        
+        Args:
+            response: The response dictionary
+        """
+        response_json = json.dumps(response, ensure_ascii=False)
+        print(response_json, flush=True)
+        logger.debug(f"Sent response: {response_json[:200]}...")
+    
+    async def send_error(self, request_id: Any, code: int, message: str, 
+                        data: Optional[Any] = None) -> Dict[str, Any]:
+        """
+        Send an error response.
+        
+        Args:
+            request_id: The request ID
+            code: Error code
+            message: Error message
+            data: Additional error data
+            
+        Returns:
+            Error response dictionary
+        """
+        error_response = {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "error": {
+                "code": code,
+                "message": message
+            }
+        }
+        
+        if data:
+            error_response["error"]["data"] = data
+        
+        await self.send_response(error_response)
+        return error_response
+    
+    async def cleanup(self):
+        """Cleanup resources."""
+        logger.info("Cleaning up resources...")
+        await self.handlers.cleanup()
+
+
+async def main():
+    """Main entry point."""
+    config_path = os.environ.get("CARRYMEM_CONFIG_PATH")
+    data_path = os.environ.get("CARRYMEM_DATA_PATH")
+    namespace = os.environ.get("CARRYMEM_NAMESPACE", "default")
+    
+    server = MCPServer(config_path, data_path, namespace=namespace)
+    await server.start()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

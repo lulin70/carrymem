@@ -14,7 +14,7 @@ Covers:
 import json
 import pytest
 
-from memory_classification_engine.rules.rule_refiner import (
+from carrymem.rules.rule_refiner import (
     RuleRefiner,
     RefinementPhase,
     RefinementQuestion,
@@ -22,7 +22,7 @@ from memory_classification_engine.rules.rule_refiner import (
     RefinedRuleDraft,
     QuestionType,
 )
-from memory_classification_engine.rules.refinement_session import (
+from carrymem.rules.refinement_session import (
     RefinementSessionManager,
     SessionEntry,
     SESSION_STATUS_ACTIVE,
@@ -30,7 +30,7 @@ from memory_classification_engine.rules.refinement_session import (
     SESSION_STATUS_CANCELLED,
     SESSION_STATUS_EXPIRED,
 )
-from memory_classification_engine.rules.storage import RuleStorage
+from carrymem.rules.storage import RuleStorage
 
 
 @pytest.fixture

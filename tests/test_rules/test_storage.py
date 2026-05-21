@@ -12,7 +12,7 @@ import pytest
 import tempfile
 import os
 
-from memory_classification_engine.rules.storage import RuleStorage
+from carrymem.rules.storage import RuleStorage
 
 
 @pytest.fixture

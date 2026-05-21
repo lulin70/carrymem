@@ -7,7 +7,7 @@ Covers: backup creation, listing, and restoration.
 import os
 import pytest
 
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 
 @pytest.fixture
@@ -56,7 +56,7 @@ class TestBackup:
 class TestEncryption:
     def test_encryption_module_import(self):
         try:
-            from memory_classification_engine.security.encryption import EncryptionManager
+            from carrymem.security.encryption import EncryptionManager
             em = EncryptionManager()
             assert em is not None
         except (ImportError, TypeError, Exception):

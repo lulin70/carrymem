@@ -15,10 +15,10 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from memory_classification_engine import CarryMem
-from memory_classification_engine.adapters.sqlite_adapter import SQLiteAdapter
-from memory_classification_engine.adapters.base import MemoryEntry, StoredMemory
-from memory_classification_engine.exceptions import (
+from carrymem import CarryMem
+from carrymem.adapters.sqlite_adapter import SQLiteAdapter
+from carrymem.adapters.base import MemoryEntry, StoredMemory
+from carrymem.exceptions import (
     StorageNotConfiguredError,
     KnowledgeNotConfiguredError,
 )
@@ -169,7 +169,7 @@ class TestCarryMemMerge:
             cm.merge_memories()
 
     def test_merge_non_sqlite_adapter(self):
-        from memory_classification_engine.adapters.base import StorageAdapter
+        from carrymem.adapters.base import StorageAdapter
         mock_adapter = MagicMock(spec=StorageAdapter)
         cm = CarryMem(storage=mock_adapter)
         result = cm.merge_memories()
@@ -446,7 +446,7 @@ class TestCarryMemListExpired:
             cm.list_expired()
 
     def test_list_expired_non_sqlite(self):
-        from memory_classification_engine.adapters.base import StorageAdapter
+        from carrymem.adapters.base import StorageAdapter
         mock_adapter = MagicMock(spec=StorageAdapter)
         cm = CarryMem(storage=mock_adapter)
         result = cm.list_expired()

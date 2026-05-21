@@ -282,8 +282,8 @@ RuleEngine-Eval: CarryMem独有Benchmark
 测试规则引擎的遵循能力
 """
 
-from memory_classification_engine import CarryMem
-from memory_classification_engine.rules import RuleEngine
+from carrymem import CarryMem
+from carrymem.rules import RuleEngine
 
 def test_rule_compliance():
     """测试规则遵循率"""

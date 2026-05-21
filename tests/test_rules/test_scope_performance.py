@@ -14,15 +14,15 @@ import tempfile
 import os
 import time
 
-from memory_classification_engine.rules.models import Rule
-from memory_classification_engine.rules.skill import skill_pack, skill_verify, skill_install
-from memory_classification_engine.rules.merge_protocol import (
+from carrymem.rules.models import Rule
+from carrymem.rules.skill import skill_pack, skill_verify, skill_install
+from carrymem.rules.merge_protocol import (
     MergeStrategy,
     merge_rules,
     detect_merge_conflicts,
 )
-from memory_classification_engine.rules.storage import RuleStorage
-from memory_classification_engine.rules import RuleEngine
+from carrymem.rules.storage import RuleStorage
+from carrymem.rules import RuleEngine
 
 
 class TestRuleCreationPerformance:

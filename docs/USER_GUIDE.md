@@ -8,15 +8,16 @@
 4. [Rule Scopes](#rule-scopes)
 5. [Skill Format](#skill-format)
 6. [Merge Protocol](#merge-protocol)
-7. [VS Code Extension](#vs-code-extension)
-8. [CLI Reference](#cli-reference)
+7. [Memory Consolidation](#memory-consolidation)
+8. [VS Code Extension](#vs-code-extension)
+9. [CLI Reference](#cli-reference)
 
 ---
 
 ## Getting Started
 
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 cm = CarryMem()
 cm.classify_and_remember("I prefer dark mode")
@@ -48,7 +49,7 @@ CarryMem auto-classifies your inputs into 7 memory types:
 Rules are behavioral contracts: **when X happens, do Y**.
 
 ```python
-from memory_classification_engine.rules import RuleEngine
+from carrymem.rules import RuleEngine
 
 engine = RuleEngine()
 
@@ -191,7 +192,7 @@ When rules from different sources conflict, the merge protocol resolves them.
 ### Preview Conflicts
 
 ```python
-from memory_classification_engine.rules import review_incoming_rules
+from carrymem.rules import review_incoming_rules
 
 preview = engine.review_incoming_rules(
     incoming=new_rules,
@@ -224,12 +225,56 @@ print(f"Replaced: {result['replaced_count']}")
 
 ---
 
+## Memory Consolidation
+
+Over time, your memory store accumulates duplicates, outdated entries, and low-value memories. Consolidation cleans up and optimizes your memory store.
+
+### Running Consolidation
+
+```bash
+# Preview what consolidation would do (safe, no changes)
+carrymem consolidate --dry-run
+
+# Execute consolidation
+carrymem consolidate
+
+# Run only dedup + decay (skip pattern promotion and semantic merge)
+carrymem consolidate --no-p1 --no-p2
+```
+
+### Three Phases
+
+| Phase | What It Does | When to Use |
+|-------|-------------|-------------|
+| **P0: Dedup + Decay** | Removes duplicates (Jaccard ≥0.85), applies time-based decay | Run daily or weekly |
+| **P1: Pattern → Rules** | Detects repeated patterns, generates rule candidates for your review | Run weekly |
+| **P2: Semantic Merge** | Clusters related memories, requests host LLM to consolidate | Run monthly |
+
+### Decay Behavior
+
+Memories fade over time unless accessed. Preferences are always preserved.
+
+| Memory Type | Half-Life |
+|-------------|-----------|
+| Preferences | 270 days |
+| Facts, Decisions, Corrections | 90 days |
+| Sentiments | 45 days |
+
+### Best Practices
+
+- Always run with `--dry-run` first to preview changes
+- Run consolidation during low-usage periods
+- Review P1 rule candidates before accepting
+- Preferences are never decayed or deduplicated — your preferences are permanent
+
+---
+
 ## VS Code Extension
 
 ### Installation
 
 1. Open VS Code
-2. Install from VSIX: `code --install-extension vscode-carrymem-0.1.6.vsix`
+2. Install from VSIX: `code --install-extension vscode-carrymem-0.2.0.vsix`
 3. Or press F5 in the extension directory to run in debug mode
 
 ### Features

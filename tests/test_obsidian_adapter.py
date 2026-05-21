@@ -8,7 +8,7 @@ recall/search operations.
 import os
 import pytest
 
-from memory_classification_engine.adapters.obsidian_adapter import ObsidianAdapter
+from carrymem.adapters.obsidian_adapter import ObsidianAdapter
 
 
 @pytest.fixture

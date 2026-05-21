@@ -11,7 +11,7 @@ Validates:
 import pytest
 from datetime import datetime, timezone
 
-from memory_classification_engine.rules.models import (
+from carrymem.rules.models import (
     Rule,
     VALID_RULE_TYPES,
     VALID_RULE_STATUSES,

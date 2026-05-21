@@ -2,12 +2,12 @@
 
 import pytest
 from unittest.mock import patch
-from memory_classification_engine.async_carrymem import AsyncCarryMem
+from carrymem.async_carrymem import AsyncCarryMem
 
 
 @pytest.fixture
 def mock_carrymem():
-    with patch('memory_classification_engine.async_carrymem.CarryMem') as mock:
+    with patch('carrymem.async_carrymem.CarryMem') as mock:
         yield mock
 
 

@@ -8,7 +8,7 @@ This example demonstrates:
 
 import threading
 import time
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 def worker(worker_id: int, cm: CarryMem, num_operations: int = 10):
     """Worker thread that performs memory operations."""

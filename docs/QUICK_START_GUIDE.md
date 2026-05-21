@@ -45,7 +45,7 @@ This creates:
 ### 2. Store Your First Memory (1 minute)
 
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 # Create instance
 with CarryMem() as cm:
@@ -134,6 +134,15 @@ with CarryMem() as cm:
     profile = cm.get_memory_profile()
     print(profile['summary'])
     # → "AI remembers 12 things about you: 5 preferences, 3 corrections, 2 decisions"
+```
+
+### Memory Consolidation
+
+```python
+# Memory consolidation (run periodically)
+report = cm.consolidate(dry_run=True)  # Preview changes
+print(f"Found {report['stats']['duplicates_found']} duplicates")
+report = cm.consolidate(dry_run=False)  # Execute
 ```
 
 ---

@@ -10,7 +10,7 @@ Validates all validator functions including:
 
 import pytest
 
-from memory_classification_engine.utils.validators import (
+from carrymem.utils.validators import (
     validate_message,
     validate_context,
     validate_language,
@@ -24,7 +24,7 @@ from memory_classification_engine.utils.validators import (
     validate_query,
     validate_namespaces,
 )
-from memory_classification_engine.exceptions import ValidationError
+from carrymem.exceptions import ValidationError
 
 
 class TestValidateMessage:

@@ -7,7 +7,7 @@ This example demonstrates:
 4. Using context manager for proper resource cleanup
 """
 
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 def main():
     with CarryMem() as cm:

@@ -163,7 +163,7 @@ jobs:
           python3 << 'EOF'
           import ast, sys
 
-          with open('src/memory_classification_engine/utils/helpers.py') as f:
+          with open('src/carrymem/utils/helpers.py') as f:
               tree = ast.parse(f.read())
 
           chinese_found = []
@@ -223,7 +223,7 @@ jobs:
       - name: Run tests
         run: |
           python -m pytest tests/ \
-            --cov=memory_classification_engine \
+            --cov=carrymem \
             --cov-report=xml \
             --cov-report=term-missing \
             -v \
@@ -314,12 +314,12 @@ jobs:
           
           echo ""
           echo "=== Verifying package metadata ==="
-          python -c "import memory_classification_engine; print('✅ Package importable')"
-          python -c "from memory_classification_engine.utils.helpers import MEMORY_TYPES; print('✅ utils importable')"
-          python -c "from memory_classification_engine.layers.pattern_analyzer import PatternAnalyzer; print('✅ layers importable')"
-          python -c "from memory_classification_engine.security.input_validator import InputValidator; print('✅ security importable')"
-          python -c "from memory_classification_engine.adapters.sqlite_adapter import SQLiteAdapter; print('✅ adapters importable')"
-          python -c "from memory_classification_engine.cli import main; print('✅ cli importable')"
+          python -c "import carrymem; print('✅ Package importable')"
+          python -c "from carrymem.utils.helpers import MEMORY_TYPES; print('✅ utils importable')"
+          python -c "from carrymem.layers.pattern_analyzer import PatternAnalyzer; print('✅ layers importable')"
+          python -c "from carrymem.security.input_validator import InputValidator; print('✅ security importable')"
+          python -c "from carrymem.adapters.sqlite_adapter import SQLiteAdapter; print('✅ adapters importable')"
+          python -c "from carrymem.cli import main; print('✅ cli importable')"
           
           echo ""
           echo "=== Version check ==="
@@ -454,7 +454,7 @@ jobs:
           import re, sys
 
           # Read version from source
-          with open('src/memory_classification_engine/__version__.py') as f:
+          with open('src/carrymem/__version__.py') as f:
               src_ver = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', f.read()).group(1)
 
           # Read version from setup.py

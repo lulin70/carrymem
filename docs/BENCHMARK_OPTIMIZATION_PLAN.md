@@ -32,9 +32,9 @@
 - No FTS5 tokenizer migration for `rules_fts` table
 
 **Files**:
-- [storage.py:129-135](file:///Users/lin/trae_projects/carrymem/src/memory_classification_engine/rules/storage.py#L129-L135) — Missing `tokenize='trigram'`
-- [storage.py:401-406](file:///Users/lin/trae_projects/carrymem/src/memory_classification_engine/rules/storage.py#L401-L406) — Phrase query wrapping
-- [storage.py:437-471](file:///Users/lin/trae_projects/carrymem/src/memory_classification_engine/rules/storage.py#L437-L471) — Silent fallback with zero rank
+- [storage.py:129-135](file:///Users/lin/trae_projects/carrymem/src/carrymem/rules/storage.py#L129-L135) — Missing `tokenize='trigram'`
+- [storage.py:401-406](file:///Users/lin/trae_projects/carrymem/src/carrymem/rules/storage.py#L401-L406) — Phrase query wrapping
+- [storage.py:437-471](file:///Users/lin/trae_projects/carrymem/src/carrymem/rules/storage.py#L437-L471) — Silent fallback with zero rank
 
 **Fix**:
 1. Add `tokenize='trigram'` to `rules_fts` CREATE TABLE
@@ -58,10 +58,10 @@
 - No type-priority resolution when multiple types match
 
 **Files**:
-- [pattern_analyzer.py:95-104](file:///Users/lin/trae_projects/carrymem/src/memory_classification_engine/layers/pattern_analyzer.py#L95-L104) — Task before decision
-- [pattern_analyzer.py:934-948](file:///Users/lin/trae_projects/carrymem/src/memory_classification_engine/layers/pattern_analyzer.py#L934-L948) — Keyword overlap
-- [pattern_analyzer.py:1092-1109](file:///Users/lin/trae_projects/carrymem/src/memory_classification_engine/layers/pattern_analyzer.py#L1092-L1109) — Missing patterns
-- [classification_pipeline.py:46-49](file:///Users/lin/trae_projects/carrymem/src/memory_classification_engine/coordinators/classification_pipeline.py#L46-L49) — No priority resolution
+- [pattern_analyzer.py:95-104](file:///Users/lin/trae_projects/carrymem/src/carrymem/layers/pattern_analyzer.py#L95-L104) — Task before decision
+- [pattern_analyzer.py:934-948](file:///Users/lin/trae_projects/carrymem/src/carrymem/layers/pattern_analyzer.py#L934-L948) — Keyword overlap
+- [pattern_analyzer.py:1092-1109](file:///Users/lin/trae_projects/carrymem/src/carrymem/layers/pattern_analyzer.py#L1092-L1109) — Missing patterns
+- [classification_pipeline.py:46-49](file:///Users/lin/trae_projects/carrymem/src/carrymem/coordinators/classification_pipeline.py#L46-L49) — No priority resolution
 
 **Fix**:
 1. Move decision detector before task detector in the loop
@@ -87,10 +87,10 @@
 - Cross-type preference changes not detected (correction overriding preference)
 
 **Files**:
-- [conflict_detector.py:19-24](file:///Users/lin/trae_projects/carrymem/src/memory_classification_engine/conflict_detector.py#L19-L24) — Missing OVERLAP type
-- [conflict_detector.py:198-222](file:///Users/lin/trae_projects/carrymem/src/memory_classification_engine/conflict_detector.py#L198-L222) — Narrow preference change detection
-- [rules/conflict_detector.py:80-84](file:///Users/lin/trae_projects/carrymem/src/memory_classification_engine/rules/conflict_detector.py#L80-L84) — Narrow OVERLAPPING_PAIRS
-- [carrymem.py:1433-1445](file:///Users/lin/trae_projects/carrymem/src/memory_classification_engine/carrymem.py#L1433-L1445) — No bridge to rule-level detection
+- [conflict_detector.py:19-24](file:///Users/lin/trae_projects/carrymem/src/carrymem/conflict_detector.py#L19-L24) — Missing OVERLAP type
+- [conflict_detector.py:198-222](file:///Users/lin/trae_projects/carrymem/src/carrymem/conflict_detector.py#L198-L222) — Narrow preference change detection
+- [rules/conflict_detector.py:80-84](file:///Users/lin/trae_projects/carrymem/src/carrymem/rules/conflict_detector.py#L80-L84) — Narrow OVERLAPPING_PAIRS
+- [carrymem.py:1433-1445](file:///Users/lin/trae_projects/carrymem/src/carrymem/carrymem.py#L1433-L1445) — No bridge to rule-level detection
 
 **Fix**:
 1. Add `OVERLAP` to memory-level `ConflictType` enum

@@ -9,7 +9,7 @@ import pytest
 from datetime import datetime, timezone
 from dataclasses import dataclass
 
-from memory_classification_engine.adapters.base import (
+from carrymem.adapters.base import (
     MemoryEntry,
     StoredMemory,
     StorageAdapter,

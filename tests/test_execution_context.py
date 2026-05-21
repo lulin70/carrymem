@@ -3,7 +3,7 @@
 测试执行反馈信号接入 Layer 2
 """
 
-from memory_classification_engine import MemoryClassificationEngine
+from carrymem import MemoryClassificationEngine
 import sys
 import os
 

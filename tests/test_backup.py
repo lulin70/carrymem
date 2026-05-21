@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from memory_classification_engine.backup import BackupManager
+from carrymem.backup import BackupManager
 
 
 @pytest.fixture

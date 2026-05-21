@@ -12,14 +12,14 @@ Validates:
 import tempfile
 import os
 
-from memory_classification_engine.rules.models import Rule
-from memory_classification_engine.rules.conflict_detector import (
+from carrymem.rules.models import Rule
+from carrymem.rules.conflict_detector import (
     RuleConflictDetector,
     RuleConflict,
     ConflictType,
     ConflictSeverity,
 )
-from memory_classification_engine.rules.storage import RuleStorage
+from carrymem.rules.storage import RuleStorage
 
 
 class TestContradictionDetection:

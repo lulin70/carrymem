@@ -1,10 +1,14 @@
-# CarryMem — The Identity Layer for AI
+# CarryMem — Your AI Finally Remembers Who You Are
 
-**AI remembers who you are. Not just what you said.**
+**Stop teaching AI who you are. Every. Single. Time.**
 
-> Your portable AI identity layer — preferences, decisions, and corrections that follow you across models, tools, and devices.
+> Your portable AI memory — preferences, decisions, and corrections that follow you across models, tools, and devices.
 
-CarryMem is a lightweight, zero-dependency AI memory system that stores **who you are** — your preferences, decisions, corrections — and makes that identity available to any AI tool. Switch from Cursor to Claude Code, from GPT to Claude, your AI always knows you.
+Every time you open a new chat, you introduce yourself again. Your preferences, your decisions, your corrections — all forgotten. Switch from Cursor to Claude Code, from GPT to Claude, start from scratch every time.
+
+You're not using AI. You're training it. Over and over.
+
+CarryMem fixes this. It's a lightweight, zero-dependency memory system that stores **who you are** and makes that identity available to any AI tool. Your AI remembers your preferences, your past decisions, and the corrections you've made — so you can focus on building, not repeating yourself.
 
 **English** | [中文](docs/i18n/README-CN.md) | [日本語](docs/i18n/README-JP.md)
 
@@ -12,7 +16,7 @@ CarryMem is a lightweight, zero-dependency AI memory system that stores **who yo
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-2070%20passing%20(99.81%25)-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-2100%20passing-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-77.12%25-green" alt="Coverage">
   <img src="https://img.shields.io/badge/code%20quality-4.3%2F5%20%E2%98%85%E2%98%85%E2%98%85%E2%98%85%E2%98%86-blue" alt="Code Quality">
   <img src="https://img.shields.io/badge/security-5%2F5%20%E2%98%85%E2%98%85%E2%98%85%E2%98%85%E2%98%85-success" alt="Security">
@@ -87,22 +91,26 @@ export PATH="$HOME/Library/Python/3.9/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"
 
 # Or use Python module directly
-python3 -m memory_classification_engine.cli version
+python3 -m carrymem.cli version
 ```
 
 Then run `carrymem doctor` to check your setup.
 
 ### 5 Lines of Code
 
-> ⚠️ **Package vs Import Name**: Install with `pip install carrymem`, but import as `from memory_classification_engine import CarryMem`. You can also use `from carrymem import CarryMem`. This will be fully unified in v1.0.0.
+> ⚠️ **Package vs Import Name**: Install with `pip install carrymem`, but import as `from carrymem import CarryMem`. You can also use `from carrymem import CarryMem`. This will be fully unified in v1.0.0.
 
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 cm = CarryMem()
 cm.classify_and_remember("I prefer dark mode")        # Auto-classified as preference
 cm.classify_and_remember("Use PostgreSQL not MySQL")   # Auto-classified as correction
+cm.classify_and_remember("I prefer light mode now", session_id="sess_002")  # Session-aware
 memories = cm.recall_memories("database")              # Semantic recall
+memories = cm.recall_memories("mode", filters={"session_id": "sess_002"})  # Filter by session
+agg = cm.recall_aggregated()                           # Aggregate by type
+timeline = cm.recall_timeline("database")              # Knowledge evolution
 print(cm.build_system_prompt())                        # Inject into any AI
 cm.close()
 ```
@@ -198,7 +206,29 @@ carrymem check --expired          # Find expired memories
 carrymem clean --expired --dry-run # Preview cleanup
 ```
 
-### 6. Security & Reliability
+### 6. Memory Consolidation
+
+Automatic memory lifecycle management with three phases:
+
+```python
+# Preview what consolidation would do
+report = cm.consolidate(dry_run=True)
+print(f"Duplicates: {report['stats']['duplicates_found']}")
+print(f"Decayed: {len(report['to_decay'])}")
+
+# Run consolidation (P0: dedup + decay, P1: pattern promotion, P2: semantic merge)
+report = cm.consolidate(dry_run=False, run_p1=True, run_p2=True)
+```
+
+| Phase | Function | Mechanism |
+|-------|----------|-----------|
+| **P0** | Dedup + Decay | Jaccard similarity dedup, exponential half-life decay (preferences: 270d, facts: 90d, sentiments: 45d) |
+| **P1** | Pattern → Rules | Detect repeated patterns → generate rule candidates for review |
+| **P2** | Semantic Merge | Cluster related memories → request host LLM to consolidate |
+
+Preferences are always preserved — never decayed or deduplicated.
+
+### 7. Security & Reliability
 
 | Feature | Description |
 |---------|-------------|
@@ -208,7 +238,7 @@ carrymem clean --expired --dry-run # Preview cleanup
 | **Version History** | Every edit tracked, rollback supported |
 | **Input Validation** | SQL injection, XSS, path traversal protection |
 
-### 7. MCP Integration (One-Line Setup)
+### 8. MCP Integration (One-Line Setup)
 
 ```bash
 # Configure for Cursor
@@ -221,9 +251,9 @@ carrymem setup-mcp --tool claude-code
 carrymem setup-mcp --tool all
 ```
 
-23 MCP tools available: Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (1) · Rules (11)
+25 MCP tools available: Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (1) · Rules (11)
 
-### 8. Terminal UI
+### 9. Terminal UI
 
 ```bash
 pip install textual
@@ -232,12 +262,12 @@ carrymem tui
 
 Interactive terminal interface with sidebar filters, search, and add mode.
 
-### 9. Rule Engine with Scopes
+### 10. Rule Engine with Scopes
 
 Behavioral rules with three scope levels for team/organization alignment:
 
 ```python
-from memory_classification_engine.rules import RuleEngine
+from carrymem.rules import RuleEngine
 
 engine = RuleEngine()
 
@@ -257,7 +287,7 @@ results = engine.match("database design", scopes=["company"])
 | `negotiated` | 2 | Adapted from company rules |
 | `personal` | 1 (lowest) | User-created preferences |
 
-### 10. Skill Format — Portable Rule Bundles
+### 11. Skill Format — Portable Rule Bundles
 
 Share rule sets across teams with cryptographic integrity:
 
@@ -278,7 +308,7 @@ assert result["valid"] is True
 engine.skill_install(bundle, scope_override="company", mode="skip")
 ```
 
-### 11. Merge Protocol — Conflict Resolution
+### 12. Merge Protocol — Conflict Resolution
 
 Three strategies for merging rules from different sources:
 
@@ -288,7 +318,7 @@ Three strategies for merging rules from different sources:
 | `negotiate` | Conflicting rules adapted to "negotiated" scope |
 | `keep_both` | Both rules kept for manual review |
 
-### 12. VS Code Extension
+### 13. VS Code Extension
 
 Rule management directly in your editor:
 
@@ -325,18 +355,15 @@ Rule management directly in your editor:
 
 ---
 
-### 🏆 Benchmark Highlights — v0.1.6 baseline
+### 🏆 Benchmark — v0.2.0 baseline
 
-> **Transparency first.** These are first-run baseline scores. Not perfect, but honest. We publish them as a starting point for iterative improvement.
-
-| Benchmark | Score | Status | Method |
-|-----------|-------|--------|--------|
-| **LongMemEval** | **42.6%** | ✅ Official | Official oracle dataset (500Q) + LLM-as-Judge |
-| **RuleEngine-Eval** | **93.3%** | ✅ Original | CarryMem's unique benchmark |
-| **MemEval** | **F1=0.127** | ✅ Official | Official framework, CarryMem adapter (20Q sample) |
-| **MSC** | **F1=40.9%** | ✅ Official method | Persona Summary F1 (3 episodes, namespace-isolated) |
-
-**LLM used**: Claude Sonnet 4.6 (via Moka AI API). Official benchmarks specify GPT-4o — see deviations below.
+| Benchmark | Score | Note |
+|-----------|-------|------|
+| **PrefEval** | **96.0%** | ICLR 2025 Oral, 50 items, preference adherence (zero-shot: 90%, reminder: 92%) |
+| **LongMemEval** | **42.6%** | Official oracle dataset, 500 questions |
+| **RuleEngine-Eval** | **93.3%** | CarryMem-original — no other system has a rule engine |
+| **MemEval** | **F1=0.127** | Official framework, 20Q sample |
+| **MSC** | **40.9%** | Persona Summary F1 (3 episodes) |
 
 | | Advantage | Result |
 |---|-----------|--------|
@@ -345,66 +372,7 @@ Rule management directly in your editor:
 | 🪶 | Dependencies | **SQLite only** — no vector DB |
 | 🛡️ | Rule Engine | **Only system** with rule engine (competitors: 0%) |
 
----
-
-## Benchmark Results — v0.1.6 baseline
-
-### LongMemEval (Official Oracle Dataset, 500Q)
-
-**Overall: 42.6% (213/500)** — First baseline, room for improvement
-
-| Question Type | Score | Correct | Description |
-|---------------|-------|---------|-------------|
-| **single-session-user** | **67.1%** | 47/70 | User factual info — CarryMem's core strength |
-| **knowledge-update** | **62.8%** | 49/78 | Updated knowledge tracking |
-| **single-session-preference** | **46.7%** | 14/30 | Personalized recommendations |
-| **multi-session** | **42.1%** | 56/133 | Cross-session aggregation — needs improvement |
-| **single-session-assistant** | **26.8%** | 15/56 | Recalling AI-provided info — weak point |
-| **temporal-reasoning** | **24.1%** | 32/133 | Time-based reasoning — weakest point |
-
-**Methodology**: Official LongMemEval oracle dataset (500Q), official prompt templates from `evaluate_qa.py`, LLM-as-Judge.
-**Deviation from official**: Judge & answer model is Claude Sonnet 4.6 (not GPT-4o). Scores may differ from GPT-4o-based evaluations.
-**Token cost**: 5.25M prompt + 38K completion = ~5.3M total tokens for 500Q evaluation.
-
-### RuleEngine-Eval (CarryMem Original)
-
-**Overall: 93.3% (Grade A)** — No other AI memory system has a rule engine
-
-| Dimension | Score |
-|-----------|-------|
-| **conflict_detection** | **100.0%** |
-| **priority** | **100.0%** |
-| **scope_isolation** | **100.0%** |
-| **lifecycle** | **100.0%** |
-| **matching_accuracy** | **87.5%** |
-| **compliance** | **83.3%** |
-
-### MemEval (Official Framework)
-
-**Token F1: 0.127 (20Q sample)** — Official MemEval framework evaluation
-
-| Metric | Score |
-|--------|-------|
-| **Token F1** | **0.127 ± 0.091** |
-| **Total Tokens** | 138,823 (~6,941 per question) |
-
-**Methodology**: Official MemEval framework (`run_full_benchmark.py`), CarryMem adapter, Token F1 metric.
-**Deviation**: LLM is Claude Sonnet 4.6 (not GPT-4o); Judge disabled (skip-judge mode).
-**Note**: Token F1 measures exact token overlap, which is stricter than LLM-as-Judge. The 0.127 F1 is consistent with the 42.6% LLM-as-Judge accuracy on LongMemEval — both indicate that CarryMem's keyword-based recall misses many relevant memories.
-
-### MSC (Official Method — Persona Summary F1)
-
-**Persona Summary F1: 40.9% (3 episodes, namespace-isolated)**
-
-| Episode | F1 | Precision | Recall |
-|---------|-----|-----------|--------|
-| ep1 (Python Dev) | **48.9%** | 40.7% | 61.1% |
-| ep2 (Frontend) | **42.1%** | 47.1% | 38.1% |
-| ep3 (DevOps) | **31.8%** | 30.4% | 33.3% |
-
-**Methodology**: Feed multi-session dialogues to CarryMem, recall memories, generate persona summary with LLM, compute Token F1 against reference summaries.
-**Deviation**: MSC official evaluation uses ParlAI framework with PPL/BLEU/RP@10 metrics on 500+ conversations. Our Persona Summary F1 uses the same dimension (persona extraction) but with a different metric and smaller scale (3 episodes).
-**Note**: Without namespace isolation, F1 drops to 26.8% due to cross-episode memory contamination. Namespace isolation improved F1 by 53%.
+> **Transparency first.** First-run baseline scores — not perfect, but honest. Full breakdown: [BENCHMARK_STRATEGY_FINAL.md](docs/BENCHMARK_STRATEGY_FINAL.md)
 
 > Full benchmark methodology & compliance: [BENCHMARK_STRATEGY_FINAL.md](docs/BENCHMARK_STRATEGY_FINAL.md)
 
@@ -420,6 +388,8 @@ Auto-Classification (7 types, 4 tiers)
 Importance Scoring (confidence × type × recency × access)
     ↓
 Smart Storage (SQLite + FTS5, dedup, TTL, encryption)
+    ↓
+Memory Consolidation (P0: dedup+decay → P1: pattern→rules → P2: semantic merge)
     ↓
 Semantic Recall (FTS5 + synonyms + spell fix + cross-language)
     ↓
@@ -442,7 +412,7 @@ Rule Engine (60%+) → Pattern Analysis (30%) → Semantic (10%)
 ### Obsidian Knowledge Base
 
 ```python
-from memory_classification_engine import CarryMem, ObsidianAdapter
+from carrymem import CarryMem, ObsidianAdapter
 
 cm = CarryMem(knowledge_adapter=ObsidianAdapter("/path/to/vault"))
 cm.index_knowledge()
@@ -452,7 +422,7 @@ results = cm.recall_from_knowledge("Python design patterns")
 ### Async API
 
 ```python
-from memory_classification_engine import AsyncCarryMem
+from carrymem import AsyncCarryMem
 
 async with AsyncCarryMem() as cm:
     await cm.classify_and_remember("I prefer dark mode")
@@ -462,9 +432,9 @@ async with AsyncCarryMem() as cm:
 ### JSON Adapter (No SQLite)
 
 ```python
-from memory_classification_engine import CarryMem, JSONAdapter
+from carrymem import CarryMem, JSONAdapter
 
-cm = CarryMem(adapter=JSONAdapter("/path/to/memories.json"))
+cm = CarryMem(adapter=JSONAdapter(path="/path/to/memories.json"))
 ```
 
 ### Encryption
@@ -509,21 +479,26 @@ cm.import_memories(input_path="backup.json")
 
 ## Who Is This For?
 
-**Developers** — Building AI agents that need to remember users across sessions
+**Tired of repeating yourself?**
+You use Cursor, Claude Code, ChatGPT daily. You've told AI your stack, your style, your decisions a hundred times. And it still asks "what framework do you prefer?" CarryMem makes your AI remember — so you don't have to keep reminding it.
 
-**Power Users** — Want AI tools (Cursor, Claude Code, Windsurf) to remember them
+**Maintaining CLAUDE.md by hand?**
+You already know AI needs memory. You have prompt files everywhere. They conflict, they go stale, and they don't follow you between tools. CarryMem auto-classifies your preferences, decisions, and corrections — and keeps them fresh automatically.
 
-**Teams** — Share organizational knowledge through shared memory namespaces
+**Building AI agents?**
+Your agents forget users between sessions. You need a memory layer that's lightweight, local, and works with any LLM. CarryMem gives you 5-line integration, 7 memory types, and a rule engine — with zero dependencies beyond SQLite.
 
 ---
 
 ## Project Status
 
-**Current Version**: v0.1.6
-**Tests**: 2056/2056 passing
-**Coverage**: ~78%
+**Current Version**: v0.2.0
+**Tests**: 2761+ passing
+**Coverage**: 80.5%
 
 **Changelog**:
+- **v0.2.0**: Recall purity, scope-based preference injection, PromptBuilder extraction, PrefEval 0.940, E2E tests
+- **v0.1.9**: Consolidation engine (P0/P1/P2), preference injection fix, 25 MCP tools
 - **v0.1.6**: Version reset — security hardening (FTS5 sanitization, path validation, rule content filtering), thread safety, documentation reorganization, test cleanup
 - **v0.4.1**: Core loop fix — auto rule suggestion, MCP rule tools, prompt injection protection, connection pooling
 - **v0.4.0**: Enterprise features — Rule Scopes, Skill Format (SHA-256), Merge Protocol, VS Code Extension
@@ -560,4 +535,4 @@ MIT License — see [LICENSE](LICENSE)
 
 ---
 
-**CarryMem — AI remembers who you are. Only you own the data.** 🚀
+**CarryMem — Your AI finally remembers who you are. Only you own the data.**

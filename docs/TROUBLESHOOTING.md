@@ -1,6 +1,6 @@
 # CarryMem Troubleshooting Guide
 
-**Version**: v0.1.6
+**Version**: v0.2.0
 
 ---
 
@@ -78,7 +78,7 @@ Run `carrymem doctor` for a full health check. Use `--fix` to auto-repair where 
 | Error Message | Issue |
 |---|---|
 | `command not found: carrymem` | [#1](#1-cli-command-not-found) |
-| `No module named 'memory_classification_engine'` | [#2](#2-import-error) |
+| `No module named 'carrymem'` | [#2](#2-import-error) |
 | `No module named 'carrymem'` | [#2](#2-import-error) |
 | `carrymem version shows wrong version` | [#3](#3-version-mismatch) |
 | `error: externally-managed-environment` | [#4](#4-pip-install-fails) |
@@ -113,7 +113,7 @@ Run `carrymem doctor` for a full health check. Use `--fix` to auto-repair where 
 
 **Quick Fix** (works everywhere):
 ```bash
-python3 -m memory_classification_engine.cli version
+python3 -m carrymem.cli version
 ```
 
 **Standard Fix**:
@@ -143,7 +143,7 @@ source ~/.bashrc
 **Windows (native PowerShell)**:
 ```powershell
 pip install carrymem
-python -m memory_classification_engine.cli version
+python -m carrymem.cli version
 ```
 
 **Deep Fix** — if the above doesn't work, use pipx for isolated install:
@@ -165,11 +165,11 @@ carrymem doctor
 **Severity**: 🔴 Critical  
 **Doctor check**: `carrymem_import`
 
-**Problem**: `ImportError: No module named 'memory_classification_engine'` or `No module named 'carrymem'`
+**Problem**: `ImportError: No module named 'carrymem'` or `No module named 'carrymem'`
 
 **Error example**:
 ```
-ModuleNotFoundError: No module named 'memory_classification_engine'
+ModuleNotFoundError: No module named 'carrymem'
 ```
 
 **Root Cause**: CarryMem is not installed in the current Python environment.
@@ -200,7 +200,7 @@ pip install carrymem
 
 4. Use compatible import path:
    ```python
-   from carrymem import CarryMem  # works the same as from memory_classification_engine
+   from carrymem import CarryMem  # works the same as from carrymem
    ```
 
 **Deep Fix** — virtual environment conflict:
@@ -215,7 +215,7 @@ pip install carrymem
 
 **Verification**:
 ```bash
-python3 -c "from memory_classification_engine import CarryMem; print('OK')"
+python3 -c "from carrymem import CarryMem; print('OK')"
 carrymem doctor
 # carrymem_import should show: ok
 ```
@@ -242,7 +242,7 @@ pip install --force-reinstall carrymem
    ```bash
    pip show carrymem
    carrymem version
-   python3 -c "from memory_classification_engine.__version__ import __version__; print(__version__)"
+   python3 -c "from carrymem.__version__ import __version__; print(__version__)"
    ```
 
 2. If versions differ, clean up:
@@ -254,7 +254,7 @@ pip install --force-reinstall carrymem
 **Deep Fix** — multiple Python environments:
 ```bash
 # Find all carrymem installations
-find / -name "__version__.py" -path "*/memory_classification_engine/*" 2>/dev/null
+find / -name "__version__.py" -path "*/carrymem/*" 2>/dev/null
 
 # Remove stale ones and reinstall
 pipx install --force carrymem
@@ -263,7 +263,7 @@ pipx install --force carrymem
 **Verification**:
 ```bash
 carrymem version
-# Should show: 0.1.6
+# Should show: 0.2.0
 ```
 
 ---
@@ -365,7 +365,7 @@ carrymem add "your content" --force
 
 **Deep Fix** — classification logic debugging:
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 cm = CarryMem()
 result = cm.classify_and_remember("your content")
 print(result)
@@ -469,7 +469,7 @@ carrymem add "your content" --type user_preference
 
 **Deep Fix** — classification priority:
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 cm = CarryMem()
 result = cm.classify_and_remember("I always use vim for editing")
 print(f"Type: {result['memory_type']}, Reason: {result.get('reason', 'N/A')}")
@@ -501,14 +501,14 @@ sqlite3.OperationalError: database is locked
 
 **Quick Fix**:
 ```bash
-pkill -f memory_classification_engine
+pkill -f carrymem
 ```
 
 **Standard Fix**:
 
 1. Close other CarryMem instances:
    ```bash
-   pkill -f memory_classification_engine
+   pkill -f carrymem
    ```
 
 2. Remove stale WAL/SHM files:
@@ -871,7 +871,7 @@ carrymem setup-mcp --tool claude-code
      "mcpServers": {
        "carrymem": {
          "command": "python3",
-         "args": ["-m", "memory_classification_engine.integration.layer2_mcp"]
+         "args": ["-m", "carrymem.integration.layer2_mcp"]
        }
      }
    }
@@ -889,7 +889,7 @@ cat > .cursor/mcp.json << 'EOF'
   "mcpServers": {
     "carrymem": {
       "command": "python3",
-      "args": ["-m", "memory_classification_engine.integration.layer2_mcp"]
+      "args": ["-m", "carrymem.integration.layer2_mcp"]
     }
   }
 }
@@ -902,7 +902,7 @@ cat > .claude/mcp.json << 'EOF'
   "mcpServers": {
     "carrymem": {
       "command": "python3",
-      "args": ["-m", "memory_classification_engine.integration.layer2_mcp"]
+      "args": ["-m", "carrymem.integration.layer2_mcp"]
     }
   }
 }
@@ -935,7 +935,7 @@ carrymem doctor
 
 1. Test MCP server manually:
    ```bash
-   python3 -m memory_classification_engine.integration.layer2_mcp
+   python3 -m carrymem.integration.layer2_mcp
    # Should start without errors
    ```
 
@@ -946,7 +946,7 @@ carrymem doctor
 
 3. Check for import errors:
    ```bash
-   python3 -c "from memory_classification_engine.integration.layer2_mcp import mcp; print('OK')"
+   python3 -c "from carrymem.integration.layer2_mcp import mcp; print('OK')"
    ```
 
 **Deep Fix** — slow first import:
@@ -954,7 +954,7 @@ carrymem doctor
 The first MCP call may be slow due to Python module loading. To pre-warm:
 ```bash
 # Add to your shell startup
-python3 -c "from memory_classification_engine import CarryMem" &
+python3 -c "from carrymem import CarryMem" &
 ```
 
 **Verification**:
@@ -1071,7 +1071,7 @@ carrymem export ~/my_export.json
 
 If using the Python API, you can specify an `allowed_base`:
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 cm = CarryMem()
 cm.export_memories(output_path="/data/exports/backup.json")
 # This will work if /data/exports is not a system directory
@@ -1117,7 +1117,7 @@ carrymem doctor
 
 3. Reconfigure the adapter:
    ```python
-   from memory_classification_engine import CarryMem
+   from carrymem import CarryMem
    cm = CarryMem(storage_adapter="obsidian", vault_path="/path/to/vault")
    cm.close()
    ```
@@ -1215,7 +1215,7 @@ carrymem doctor
 
 3. Reinstall the extension:
    ```bash
-   code --install-extension vscode-carrymem-0.1.6.vsix
+   code --install-extension vscode-carrymem-0.2.0.vsix
    ```
 
 **Deep Fix** — Python path in VS Code:
@@ -1224,7 +1224,7 @@ If VS Code uses a different Python than your terminal:
 ```bash
 # Find the Python with CarryMem installed
 which python3
-python3 -c "import memory_classification_engine; print(memory_classification_engine.__file__)"
+python3 -c "import carrymem; print(carrymem.__file__)"
 
 # Configure VS Code to use this Python
 # Command Palette → Python: Select Interpreter → choose the correct one
@@ -1256,7 +1256,7 @@ RuntimeError: Event loop is closed
 **Quick Fix**:
 ```python
 import asyncio
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 async def main():
     cm = CarryMem()
@@ -1295,7 +1295,7 @@ asyncio.run(main())
 ```python
 python3 -c "
 import asyncio
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 async def test():
     cm = CarryMem()
     print('Async API available:', hasattr(cm, 'classify_and_remember_async'))
@@ -1401,7 +1401,7 @@ carrymem clean --expired --force
 
 3. Run optimization:
    ```python
-   from memory_classification_engine import CarryMem
+   from carrymem import CarryMem
    cm = CarryMem()
    cm.optimize()
    cm.close()
@@ -1459,7 +1459,7 @@ carrymem clean --quality 0.3 --force
 
 3. VACUUM the database:
    ```python
-   from memory_classification_engine import CarryMem
+   from carrymem import CarryMem
    cm = CarryMem()
    cm.optimize()
    cm.close()
@@ -1516,8 +1516,8 @@ pip show carrymem
 
 3. Use compatible import paths:
    ```python
-   # Both work in v0.1.6+
-   from memory_classification_engine import CarryMem
+   # Both work in v0.2.0+
+   from carrymem import CarryMem
    from carrymem import CarryMem
    ```
 

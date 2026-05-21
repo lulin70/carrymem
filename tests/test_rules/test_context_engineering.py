@@ -13,9 +13,9 @@ import pytest
 import tempfile
 import os
 
-from memory_classification_engine.rules.storage import RuleStorage
-from memory_classification_engine.rules.matcher import RuleMatcher
-from memory_classification_engine.rules.injector import (
+from carrymem.rules.storage import RuleStorage
+from carrymem.rules.matcher import RuleMatcher
+from carrymem.rules.injector import (
     RuleInjector,
     ContextBudget,
 )

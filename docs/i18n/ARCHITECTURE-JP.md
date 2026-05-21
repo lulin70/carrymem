@@ -1,7 +1,7 @@
 # CarryMem アーキテクチャ
 
-**バージョン**: v0.1.6
-**日付**: 2026-05-01
+**バージョン**: v0.2.0
+**日付**: 2026-05-13
 **状態**: 安定
 
 ---
@@ -89,6 +89,14 @@ User Input → Auto-Classify → Smart Store → Semantic Recall
 │  │  (Exact)     │  │   Expander   │  │    Merger    │ │
 │  └──────────────┘  └──────────────┘  └──────────────┘ │
 └─────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│          記憶統合レイヤー                                │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
+│  │  P0: 重複排除│  │  P1: パターン│  │  P2: 意味    │ │
+│  │  + 減衰      │  │  → ルール    │  │  マージ      │ │
+│  └──────────────┘  └──────────────┘  └──────────────┘ │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -101,7 +109,7 @@ User Input → Auto-Classify → Smart Store → Semantic Recall
 
 #### 1.1 Python API
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 with CarryMem() as cm:
     cm.classify_and_remember("I prefer dark mode")
@@ -121,7 +129,7 @@ carrymem stats
   "mcpServers": {
     "carrymem": {
       "command": "python3",
-      "args": ["-m", "memory_classification_engine.integration.layer2_mcp"]
+      "args": ["-m", "carrymem.integration.layer2_mcp"]
     }
   }
 }
@@ -213,6 +221,7 @@ CREATE TABLE memories (
     type TEXT NOT NULL,
     content TEXT NOT NULL,
     original_message TEXT,
+    raw_text TEXT,              -- NEW: ユーザー生入力、FTS5デュアルインデックス用
     confidence REAL NOT NULL,
     tier INTEGER NOT NULL,
     namespace TEXT NOT NULL,
@@ -220,7 +229,9 @@ CREATE TABLE memories (
     expires_at TEXT,
     access_count INTEGER,
     content_hash TEXT NOT NULL,
-    metadata TEXT
+    metadata TEXT,
+    superseded_at TEXT,         -- NEW: この記憶が置換された日時
+    supersedes TEXT             -- NEW: この記憶が置換する記憶ID
 );
 
 CREATE VIRTUAL TABLE memories_fts USING fts5(
@@ -259,6 +270,48 @@ class ResultMerger:
         # 3. Sort by relevance
         # 4. Return top-K
 ```
+
+### 6. ナレッジライフサイクルレイヤー
+
+**責務**: 知識の変遷を追跡し、記憶の置換を管理
+
+#### 6.1 自動置換パイプライン
+
+```
+新規記憶 → Jaccard 類似度チェック → 矛盾検出 → 旧記憶を置換済みとしてマーク
+    ↓            ↓                      ↓                    ↓
+ INSERT    ≥ 0.25 閾値            単語境界正規表現       superseded_at = now
+           + 更新マーカー検出    (like/dislike 等)        supersedes = new_key
+                                  + アシスタント除外
+```
+
+#### 6.2 セッション認識ストレージ
+
+```
+classify_and_remember(session_id="s_20260513")
+     ↓
+session_id → metadata JSON → recall() の session_id フィルタ
+```
+
+#### 6.3 時間表現パース
+
+```
+クエリ: "最近データベースについて何を決めた？"
+     ↓
+_parse_time_expressions() → created_after = 7日前
+     ↓
+recall_memories(query="データベース", filters={"created_after": "2026-05-06T..."})
+```
+
+### 7. 記憶統合レイヤー
+
+**責務**: 記憶ライフサイクル管理、重複排除・減衰・意味マージ
+
+- **記憶統合エンジン** (`consolidation.py`)：記憶ライフサイクル管理、3フェーズ：
+  - P0：Jaccard ベースの重複排除（≥0.85）+ 指数半減期減衰
+  - P1：パターン検出 → PromotionPipeline によるルール候補生成
+  - P2：意味クラスタリング → ホストLLM統合リクエスト
+  - 嗜好は常に保持（減衰・重複排除なし）
 
 ---
 
@@ -342,7 +395,7 @@ class ValidationError(CarryMemError):
 ### 3. Logging
 
 ```python
-from memory_classification_engine.utils.logger import logger
+from carrymem.utils.logger import logger
 
 # Log levels: DEBUG, INFO, WARNING, ERROR
 # File: ~/.carrymem/logs/carrymem.log (if configured)
@@ -517,7 +570,7 @@ When rule injection approaches context window limits:
 ### 1. Custom Storage Adapter
 
 ```python
-from memory_classification_engine.adapters import StorageAdapter
+from carrymem.adapters import StorageAdapter
 
 class PostgreSQLAdapter(StorageAdapter):
     def remember(self, entry: MemoryEntry) -> StoredMemory: ...

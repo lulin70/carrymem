@@ -33,9 +33,9 @@ def check_files():
         "README.md", "CONTRIBUTING.md", "LICENSE", "CHANGELOG.md",
         "docs/README.md", "docs/i18n/README-CN.md", "docs/i18n/README-JP.md",
         ".github/workflows/ci.yml",
-        "src/memory_classification_engine/__init__.py",
-        "src/memory_classification_engine/utils/__init__.py",
-        "src/memory_classification_engine/layers/__init__.py",
+        "src/carrymem/__init__.py",
+        "src/carrymem/utils/__init__.py",
+        "src/carrymem/layers/__init__.py",
     ]
     for f in required:
         if not os.path.exists(f):
@@ -109,7 +109,7 @@ def check_mangled():
 
 @gate("GATE 2c: i18n — English labels in helpers.py")
 def check_helpers_labels():
-    with open('src/memory_classification_engine/utils/helpers.py') as f:
+    with open('src/carrymem/utils/helpers.py') as f:
         content = f.read()
     chinese = re.findall(r'(MEMORY_TYPES|MEMORY_TIERS)\[.*?\]\s*=\s*["\']([^"\']*[\u4e00-\u9fff][^"\']*)["\']', content)
     if chinese:
@@ -158,7 +158,7 @@ def check_bare_except():
 
 @gate("GATE 5: Version consistency")
 def check_version():
-    with open('src/memory_classification_engine/__version__.py') as f:
+    with open('src/carrymem/__version__.py') as f:
         src_ver = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', f.read()).group(1)
     
     setup_ver = None
@@ -186,7 +186,7 @@ def check_version():
 @gate("GATE 6: __init__.py in all sub-packages")
 def check_init_py():
     required_dirs = ['utils', 'layers', 'adapters', 'security', 'semantic']
-    base = 'src/memory_classification_engine'
+    base = 'src/carrymem'
     for d in required_dirs:
         init_path = os.path.join(base, d, '__init__.py')
         if not os.path.exists(init_path):

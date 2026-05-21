@@ -1,8 +1,8 @@
 # CarryMem Product Roadmap
 
-**Last Updated**: 2026-05-03
+**Last Updated**: 2026-05-13
 **Product Positioning**: AI Identity Layer — Memory + Rules + Knowledge
-**Version Scheme**: v0.1.6 (Version Reset — Security + Quality) → v0.2.0 (Next)
+**Version Scheme**: v0.2.0 (Version Reset — Security + Quality) → v0.2.0 (Next)
 
 ---
 
@@ -23,6 +23,7 @@ v0.2.0 ─── Design Baseline (Memory Foundation + Rules Design Docs)
   ├── v0.3.0  GA Release           (Production Ready + Knowledge Adapter) ✅
   ├── v0.4.0  Enterprise           (Scopes + Skill + Merge + VS Code)     ✅
   └── v0.4.1  Core Loop Fix        (Auto Rule Suggestion + Security)      ✅
+  └── v0.1.7  Memory Layer Enhancement (Session + Supersession + Time Reasoning + Structured Prompt) ✅
 ```
 
 **Versioning Rules**:
@@ -30,7 +31,7 @@ v0.2.0 ─── Design Baseline (Memory Foundation + Rules Design Docs)
 - Second digit changes for GA milestones (API stability guarantee)
 - No "v1.0.0 jump" — earn it through proven production usage
 
-> **Note**: The v0.2.0–v0.4.1 versions listed above represent the project's development history. The version was reset to v0.1.6 to accurately reflect the product's current maturity (early beta). All features from those versions are included in v0.1.6 with security hardening and quality improvements. The next release will be v0.2.0.
+> **Note**: The v0.2.0–v0.4.1 versions listed above represent the project's development history. The version was reset to v0.1.6 to accurately reflect the product's current maturity (early beta). All features from those versions are included in v0.2.0 with security hardening and quality improvements. The next release will be v0.2.0.
 
 ---
 
@@ -58,6 +59,8 @@ v0.2.0 ─── Design Baseline (Memory Foundation + Rules Design Docs)
 │  │  "You prefer X, decided Y, corrected Z"          │    │
 │  │  • 7 memory types + 4-tier hierarchy             │    │
 │  │  • Cross-language semantic recall (FTS5)          │    │
+│  │  • Session-aware storage + knowledge supersession (v0.1.7)    │    │
+│  │  • Time reasoning + structured prompt injection (v0.1.7)      │    │
 │  │  • 2056 tests passing, 79% coverage              │    │
 │  └──────────────────────────────────────────────────┘    │
 │              ↑ reads from          ↑ injects into         │
@@ -368,7 +371,41 @@ See CHANGELOG.md for detailed history.
 - Rules: add_rule, list_rules, match_rules, inject_rules
 - **New**: my_rules, delete_rule, suggest_rules, promote_rules, update_rule, my_profile, onboard
 
+### v0.1.7 — Memory Layer Enhancement (Intelligent Memory Layer) ✅
+
+**Theme**: From retrieval system to intelligent memory layer
+**LLM Dependency**: None (all features work without LLM)
+
+**Phase 1: Session-Aware Storage + Knowledge Supersession**:
+- [x] `classify_and_remember(session_id=...)` — session identifier for cross-session awareness
+- [x] Auto-supersession — `superseded_at`/`supersedes` fields, contradiction detection, update markers
+- [x] `recall_aggregated()` — aggregate memories by type across all sessions
+- [x] `recall_timeline(topic)` — recall memories about a topic ordered by time
+- [x] New filter keys: `session_id`, `created_before`, `include_superseded`, `_order_oldest`
+
+**Phase 2: Time Reasoning + Context Rebuild**:
+- [x] `_parse_time_expressions()` — extract time constraints from queries (zero LLM)
+- [x] `_rebuild_context()` — extend FTS5 queries with related words from user profile
+- [x] `_order_oldest` filter — support "first/earliest" queries
+
+**Phase 3: Structured Prompt + Knowledge Updates**:
+- [x] Priority labels: `[MANDATORY]`, `[IMPORTANT]`, `[OUTDATED]`
+- [x] `_build_superseded_notes()` — knowledge update tracking
+- [x] Structured prompt sections: Mandatory → Important → Context → Outdated → Knowledge Updates
+- [x] `build_context()` safe access for `__new__()` created objects
+
+**Benchmark Results (LongMemEval 100-question sample)**:
+- temporal-reasoning: 0.110 → 0.127 (+15%)
+- single-session-assistant: 0.196 → 0.200
+- knowledge-update: 0.055 → 0.057
+- Overall: 0.107 → 0.105 (stable, value in new capabilities)
+
+**Next**: Phase 4 — Session Summary + Semantic Aggregation (requires LLM)
+
 ### v0.5.0 — Intelligence Enhancement
+- [x] Consolidation Engine (P0: dedup+decay, P1: pattern→rules, P2: semantic merge)
+- [x] PrefEval 96.0% preference adherence (50 items, ICLR 2025 Oral)
+- [x] 25 MCP tools (added consolidate_memories)
 - Vector-based semantic matching (optional embedding model)
 - Rule recommendation engine
 - Cross-user rule sharing (with anonymization)
@@ -468,7 +505,7 @@ See CHANGELOG.md for detailed history.
 
 ---
 
-**Last Updated**: 2026-05-03
+**Last Updated**: 2026-05-13
 **Maintainer**: CarryMem Team
-**Next Milestone**: v0.5.0 Intelligence Enhancement (Auto-tuning + Cross-scope Learning)
-**Status**: ✅ **v0.4.1 complete (2056 tests, 79% coverage)**
+**Next Milestone**: v0.1.8 Session Summary + Semantic Aggregation (Phase 4)
+**Status**: ✅ **v0.1.7 complete (2023+ tests, Phase 1-3 memory layer enhancement)**

@@ -16,10 +16,10 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 
-from memory_classification_engine import CarryMem, JSONAdapter, AsyncCarryMem
-from memory_classification_engine.adapters.json_adapter import JSONAdapter as JSONAdapterDirect
-from memory_classification_engine.adapters.loader import load_adapter, list_available_adapters
-from memory_classification_engine.integration.layer2_mcp.http_server import MCPHTTPServer
+from carrymem import CarryMem, JSONAdapter, AsyncCarryMem
+from carrymem.adapters.json_adapter import JSONAdapter as JSONAdapterDirect
+from carrymem.adapters.loader import load_adapter, list_available_adapters
+from carrymem.integration.layer2_mcp.http_server import MCPHTTPServer
 
 
 class TestJSONAdapter(unittest.TestCase):
@@ -32,7 +32,7 @@ class TestJSONAdapter(unittest.TestCase):
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     def test_remember_and_recall(self):
-        from memory_classification_engine.adapters.base import MemoryEntry
+        from carrymem.adapters.base import MemoryEntry
         entry = MemoryEntry(
             id="test1",
             type="user_preference",
@@ -50,7 +50,7 @@ class TestJSONAdapter(unittest.TestCase):
         self.assertEqual(results[0].content, "I prefer dark mode")
 
     def test_deduplication(self):
-        from memory_classification_engine.adapters.base import MemoryEntry
+        from carrymem.adapters.base import MemoryEntry
         entry = MemoryEntry(
             type="user_preference",
             content="I prefer dark mode",
@@ -64,7 +64,7 @@ class TestJSONAdapter(unittest.TestCase):
         self.assertEqual(len(results), 1)
 
     def test_forget(self):
-        from memory_classification_engine.adapters.base import MemoryEntry
+        from carrymem.adapters.base import MemoryEntry
         entry = MemoryEntry(
             type="user_preference",
             content="I prefer dark mode",
@@ -79,7 +79,7 @@ class TestJSONAdapter(unittest.TestCase):
         self.assertEqual(len(results), 0)
 
     def test_get_stats(self):
-        from memory_classification_engine.adapters.base import MemoryEntry
+        from carrymem.adapters.base import MemoryEntry
         entry = MemoryEntry(
             type="user_preference",
             content="I prefer dark mode",
@@ -93,7 +93,7 @@ class TestJSONAdapter(unittest.TestCase):
         self.assertEqual(stats["total_count"], 1)
 
     def test_importance_score(self):
-        from memory_classification_engine.adapters.base import MemoryEntry
+        from carrymem.adapters.base import MemoryEntry
         entry = MemoryEntry(
             type="correction",
             content="Use PostgreSQL not MySQL",
@@ -105,7 +105,7 @@ class TestJSONAdapter(unittest.TestCase):
         self.assertGreater(stored.importance_score, 0)
 
     def test_file_persistence(self):
-        from memory_classification_engine.adapters.base import MemoryEntry
+        from carrymem.adapters.base import MemoryEntry
         entry = MemoryEntry(
             type="fact_declaration",
             content="The sky is blue",
@@ -121,7 +121,7 @@ class TestJSONAdapter(unittest.TestCase):
         self.assertEqual(len(results), 1)
 
     def test_namespace_isolation(self):
-        from memory_classification_engine.adapters.base import MemoryEntry
+        from carrymem.adapters.base import MemoryEntry
         entry = MemoryEntry(
             type="user_preference",
             content="I prefer dark mode",

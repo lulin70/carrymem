@@ -45,7 +45,7 @@ carrymem init
 ### 2. 最初のメモリを保存（1分）
 
 ```python
-from memory_classification_engine import CarryMem
+from carrymem import CarryMem
 
 with CarryMem() as cm:
     cm.classify_and_remember("ダークモードが好きです")
@@ -132,6 +132,15 @@ with CarryMem() as cm:
     profile = cm.get_memory_profile()
     print(profile['summary'])
     # → "AIはあなたについて12のことを記憶：5つの好み、3つの修正、2つの決定"
+```
+
+### 記憶統合
+
+```python
+# 記憶統合（定期的に実行）
+report = cm.consolidate(dry_run=True)  # 変更をプレビュー
+print(f"重複 {report['stats']['duplicates_found']} 件を発見")
+report = cm.consolidate(dry_run=False)  # 実行
 ```
 
 ---
