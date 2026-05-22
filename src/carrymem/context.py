@@ -873,27 +873,13 @@ def build_qa_prompt(
             for m in non_pref_active:
                 parts.append(format_memory_entry(m, language))
     else:
-        parts.extend(t["answer_guidelines"])
-        for q, a in t.get("answer_examples", []):
-            parts.append(f"   Q: {q} A: {a}")
-        conflict_rule = t.get("answer_conflict_rule", "")
-        if conflict_rule:
-            parts.append(conflict_rule)
-        fallback = t.get("answer_fallback", "")
-        if fallback:
-            parts.append(fallback)
-        temporal_rule = t.get("answer_temporal_rule", "")
-        if temporal_rule:
-            parts.append(temporal_rule)
-        aggregation_rule = t.get("answer_aggregation_rule", "")
-        if aggregation_rule:
-            parts.append(aggregation_rule)
-        cot_rule = t.get("answer_cot_rule", "")
-        if cot_rule:
-            parts.append(cot_rule)
-        preference_rule = t.get("answer_preference_rule", "")
-        if preference_rule:
-            parts.append(preference_rule)
+        # No preferences — just list memories without memory-query instructions
+        # (answer_guidelines/answer_fallback/temporal/aggregation are for memory queries, not QA)
+        if non_pref_active:
+            parts.append("")
+            parts.append("### Additional context")
+            for m in non_pref_active:
+                parts.append(format_memory_entry(m, language))
 
     parts.append("")
 

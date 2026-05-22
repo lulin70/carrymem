@@ -508,7 +508,53 @@ class CarryMem:
         if session_id and isinstance(context, dict):
             context["session_id"] = session_id
 
-        classify_result = self.classify_message(message, context=context, language=language)
+        # Coreference resolution: resolve pronouns before classification
+        resolved_message = message
+        coreference_resolved = False
+        try:
+            from carrymem.coreference import resolve_coreference
+            context_str = ""
+            if context and isinstance(context, dict):
+                context_str = context.get("ai_reply", "") or context.get("previous_message", "")
+            recent_mems = []
+            try:
+                recent_mems = self.recall_memories(query="", limit=5, update_access=False)
+            except Exception:
+                pass
+            resolved_message, coreference_resolved = resolve_coreference(
+                message, context=context_str, recent_memories=recent_mems,
+            )
+            if coreference_resolved:
+                from carrymem.utils.logger import logger
+                logger.debug(f"Coreference resolved: '{message}' → '{resolved_message}'")
+        except Exception:
+            pass  # Non-critical: fall back to original message
+
+        # Auto-redaction: block sensitive content from storage
+        if not force_type:  # force_type allows user to override redaction
+            try:
+                from carrymem.security.redaction import should_redact
+                should_block, redact_reason = should_redact(resolved_message)
+                if should_block:
+                    from carrymem.utils.logger import logger
+                    logger.warning(f"Auto-redact blocked memory storage: {redact_reason}")
+                    return {
+                        "should_remember": False,
+                        "type": "auto_redacted",
+                        "content": resolved_message,
+                        "entries": [],
+                        "stored": False,
+                        "storage_keys": [],
+                        "rule_suggestions": [],
+                        "auto_rules": [],
+                        "updated_memories": [],
+                        "summary": {"total_entries": 0, "by_type": {}, "redacted": True, "redact_reason": redact_reason},
+                    }
+            except Exception:
+                pass  # Non-critical: if redaction fails, allow storage
+
+        # Use resolved message for classification, but keep original as raw_text
+        classify_result = self.classify_message(resolved_message, context=context, language=language)
 
         if not classify_result["should_remember"] and not force_type:
             return {
@@ -535,6 +581,9 @@ class CarryMem:
             entry = MemoryEntry.from_dict(entry_dict)
             if force_type:
                 entry.type = force_type
+            # Preserve original message as raw_text when coreference was resolved
+            if coreference_resolved:
+                entry.raw_text = message
             if session_id and isinstance(entry.metadata, dict):
                 entry.metadata["session_id"] = session_id
             elif session_id and not entry.metadata:

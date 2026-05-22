@@ -5,6 +5,31 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-05-22 (Coreference + Auto-Redact + QA Prompt Fix + PrefEval 200)
+
+### Added
+- **Coreference resolution**: Resolve pronouns (he/she/it/that/他/她/该) to entities before memory storage, improving retrievability of pronoun-containing messages. Inspired by M-Flow's coreference resolution.
+- **Auto-redaction**: Automatically detect and block sensitive content (API keys, passwords, tokens, private keys, connection strings) from memory storage. Inspired by claude-mem's `<private>` tag. 17 sensitive patterns with `force_type` override.
+- **English demonstrative resolution**: Resolve "this/that/these/those" to nearest neuter entity.
+- **Extended entity extraction**: Extract project/team/company/app/product as neuter entities for demonstrative resolution.
+- **False-positive protection**: Password patterns only match assignment syntax (`=`/`:`), not discussion ("password is incorrect" is allowed).
+
+### Fixed
+- **QA prompt memory-query instructions**: Removed answer_guidelines/answer_fallback/temporal/aggregation rules from `build_qa_prompt()` — these memory-query instructions caused "Information not available" responses in QA scenarios, reducing Unhelpful from 30→22 in PrefEval 200-sample.
+- **Dead code removal**: Removed unused `EN_ENTITY_PATTERNS`/`ZH_ENTITY_PATTERNS` constants from coreference.py.
+- **Gender bias fix**: Moved "boss" from male to neuter gender category in `_relationship_gender()`.
+
+### Benchmark Results
+- **PrefEval 200-sample**: Accuracy 0.855 (zero-shot: 0.775, reminder: 0.884)
+  - Acknowledged: 165/200 (highest across all conditions)
+  - Violated: 7/200, Hallucinated: 2/200, Unhelpful: 22/200
+- **Test coverage**: 80.91% (2878 tests passing)
+
+### Changed
+- `classify_and_remember()` now applies coreference resolution before classification, preserving original message as `raw_text`.
+- `classify_and_remember()` now applies auto-redaction before classification (bypassed with `force_type`).
+- `build_qa_prompt()` no longer injects memory-query instructions in non-preference path.
+
 ## [0.2.0] - 2026-05-21 (Recall Purity + Scope Injection + PromptBuilder + PrefEval 0.940)
 
 ### Added

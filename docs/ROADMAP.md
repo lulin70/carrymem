@@ -2,14 +2,14 @@
 
 **Last Updated**: 2026-05-13
 **Product Positioning**: AI Identity Layer — Memory + Rules + Knowledge
-**Version Scheme**: v0.2.0 (Version Reset — Security + Quality) → v0.2.0 (Next)
+**Version Scheme**: v0.3.0 (Version Reset — Security + Quality) → v0.3.0 (Next)
 
 ---
 
 ## Version Strategy
 
 ```
-v0.2.0 ─── Design Baseline (Memory Foundation + Rules Design Docs)
+v0.3.0 ─── Design Baseline (Memory Foundation + Rules Design Docs)
   │
   ├── v0.2.1  Rules Engine Alpha   (Manual CRUD + FTS5 Match + Security) ✅
   ├── v0.2.2  Rules Engine Alpha+  (Performance + Conflict Detection)    ✅
@@ -31,7 +31,7 @@ v0.2.0 ─── Design Baseline (Memory Foundation + Rules Design Docs)
 - Second digit changes for GA milestones (API stability guarantee)
 - No "v1.0.0 jump" — earn it through proven production usage
 
-> **Note**: The v0.2.0–v0.4.1 versions listed above represent the project's development history. The version was reset to v0.1.6 to accurately reflect the product's current maturity (early beta). All features from those versions are included in v0.2.0 with security hardening and quality improvements. The next release will be v0.2.0.
+> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. The version was reset to v0.1.6 to accurately reflect the product's current maturity (early beta). All features from those versions are included in v0.3.0 with security hardening and quality improvements. The next release will be v0.3.0.
 
 ---
 
@@ -54,7 +54,7 @@ v0.2.0 ─── Design Baseline (Memory Foundation + Rules Design Docs)
 │  │  • Context-anchored injection (v0.2.8)           │    │
 │  └──────────────────────────────────────────────────┘    │
 │              ↑ reads from          ↑ injects into         │
-│  Layer 2: Memory (WHO you are)     ← v0.2.0 STABLE       │
+│  Layer 2: Memory (WHO you are)     ← v0.3.0 STABLE       │
 │  ┌──────────────────────────────────────────────────┐    │
 │  │  "You prefer X, decided Y, corrected Z"          │    │
 │  │  • 7 memory types + 4-tier hierarchy             │    │
@@ -423,7 +423,7 @@ See CHANGELOG.md for detailed history.
 
 | Version | Total Tests | Coverage | Key Addition |
 |---------|-------------|----------|--------------|
-| v0.2.0 | 490 | 57.6% | Memory layer |
+| v0.3.0 | 490 | 57.6% | Memory layer |
 | v0.2.1 | 600+ | ~63% | +110 rules tests |
 | v0.2.4 | 718 | ~76% | +pattern detection |
 | v0.2.5 | 746 | ~77% | +auto-promotion |

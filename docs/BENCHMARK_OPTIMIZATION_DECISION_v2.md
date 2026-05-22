@@ -1,6 +1,6 @@
 # CarryMem 优化决策文档
 
-> 版本：v15.0 — **P0+P1完成：recall纯净读 + scope精准注入 + prompt优化 + PromptBuilder拆分 + 覆盖率80.5%**
+> 版本：v17.0 — **v0.3.0实施完成：共指消解 + 自动脱敏 + QA Prompt修复 + PrefEval 200样本三组对照**
 > 核心定位：CarryMem 是 AI 的**身份层**——让 AI 从"认识所有人"变成"认识你"
 > 护城河逻辑：**用得越久，越懂你；越懂你，越难离开。**
 
@@ -1661,3 +1661,266 @@ Query 2: 偏好+纠正召回（合并核心偏好+情境偏好+纠正）
 - `test_json_adapter_extra.py` — 5个测试
 
 **综合成熟度：4.5/5 → 4.7/5** — P0+P1完成，架构可维护性大幅提升
+
+## 附录R：v0.3.0 实施计划（2026-05-21）
+
+> **竞品触发**：claude-mem（64.6K Star）验证"自动捕获+注入"市场需求，M-Flow（3.7K Star）验证"联想范式"技术可行性
+> **核心判断**：CarryMem的主动注入恰好是两者的交汇点——既自动又主动。现在缺的就是大规模PrefEval数据
+
+### R.1 竞品启发与行动项映射
+
+| 竞品 | 启发 | CarryMem行动 | 优先级 |
+|------|------|-------------|--------|
+| claude-mem | 三层渐进披露（索引→时间线→详情）省10x token | P0-2: 渐进式披露 | **P0** |
+| claude-mem | SQLite+Chroma双数据库 | P0-1: sqlite-vec向量检索 | **P0** |
+| claude-mem | `<private>`隐私标签 | P0-4: auto-redact内置规则 | P1 |
+| claude-mem | 跨IDE支持（Gemini CLI/Cursor/OpenCode） | MCP多IDE兼容测试 | P2 |
+| M-Flow | Cone Graph四层粒度（Episode→Facet→FacetPoint→Entity） | P1: 粒度分层 | P1 |
+| M-Flow | 共指消解（he/she/it→具体实体） | P0-3: 共指消解 | **P0** |
+| M-Flow | 程序性记忆自动提取 | 规则引擎Phase 4/5（已有规划） | P2 |
+| M-Flow | LongMemEval 89% | 参照但不追分（定位不同） | 参考 |
+
+### R.2 v0.3.0 优先级排序
+
+| 优先级 | 改进方向 | 来源 | 预期收益 | 对PrefEval的影响 |
+|--------|---------|------|---------|-----------------|
+| **P0-1** | sqlite-vec向量检索 | claude-mem | 语义检索补齐短板 | 找到更相关的偏好 → Violated↓ |
+| **P0-2** | 渐进式披露（摘要→详情） | claude-mem | 记忆多时省10x token | prompt更精炼 → Unhelpful↓ |
+| **P0-3** | 共指消解（入库前消解代词） | M-Flow | "她喜欢吃辣"→可检索 | 遗漏偏好减少 → Acknowledged↑ |
+| **P0-4** | auto-redact内置规则 | claude-mem | 自动跳过API key/密码 | 安全性提升，间接提升信任 |
+| **P1-1** | 粒度分层（画像/场景/决策） | M-Flow | 按上下文选粒度，控prompt长度 | 精准注入升级 |
+| **P1-2** | MCP多IDE兼容测试 | claude-mem | 低成本获客 | 不直接影响 |
+| **P2** | PrefEval 200样本跑分 | 自身 | 数据公信力 | 最终验证 |
+
+### R.3 P0-1：sqlite-vec向量检索
+
+**现状**：CarryMem使用FTS5全文检索，对精确关键词匹配有效，但语义相似性检索弱。例如：
+- 偏好="I prefer Python for data analysis"，问题="What's a good language for machine learning?"
+- FTS5搜索"machine learning"找不到"Python for data analysis"
+- sqlite-vec可以在不引入外部依赖的情况下实现向量检索
+
+**设计方案**：
+
+```
+存储层（记忆入库时）：
+  content → embedding模型 → 向量 → sqlite-vec存储
+
+检索层（recall时）：
+  query → embedding模型 → 向量 → sqlite-vec ANN检索 → 与FTS5结果RRF融合
+
+embedding模型选择（零外部服务依赖）：
+  方案A：本地sentence-transformers（需下载模型，~100MB）
+  方案B：借宿主LLM生成embedding（MCP协议，零本地模型）
+  方案C：OpenAI兼容API（需API key，非零依赖）
+  
+  推荐：方案B（借宿主LLM），与CarryMem"借宿主"理念一致
+```
+
+**实现步骤**：
+
+| 步骤 | 动作 | 产出 |
+|------|------|------|
+| 1 | SQLiteAdapter新增vec扩展初始化 | sqlite-vec扩展加载 |
+| 2 | 记忆入库时生成embedding | 新增`embedding`字段 |
+| 3 | recall时向量检索+FTS5 RRF融合 | 检索质量提升 |
+| 4 | 借宿主LLM生成embedding的MCP tool | 零本地模型依赖 |
+
+**成功标准**：
+- 语义相似查询的recall准确率提升（如"machine learning"能找到"Python for data analysis"）
+- 不引入任何外部服务依赖（sqlite-vec是SQLite扩展，符合零依赖原则）
+- PrefEval Violated ≤ 1/200
+
+### R.4 P0-2：渐进式披露（摘要→详情）
+
+**现状**：CarryMem直接注入最相关的记忆，没有中间筛选层。当记忆数量多时，一次性注入可能超token限制。
+
+**设计方案**：
+
+```
+三层渐进披露：
+
+Layer 1 — 索引层（始终注入，极短）
+  "用户偏好：Python（编程）、PostgreSQL（数据库）、 boutique hotels（旅行）"
+  ≈ 50 tokens
+
+Layer 2 — 摘要层（按相关性注入）
+  "编程场景：偏好Python进行数据分析和Web开发，不喜欢Java"
+  ≈ 200 tokens
+
+Layer 3 — 详情层（仅在深度查询时注入）
+  "用户在2026年3月选择Python作为项目主语言，原因是丰富的数据科学生态..."
+  ≈ 500 tokens
+```
+
+**注入逻辑**：
+
+| 场景 | 注入层 | token消耗 |
+|------|--------|----------|
+| 简单查询（"推荐一个数据库"） | Layer 1 | ~50 |
+| 中等查询（"数据分析用什么语言"） | Layer 1 + Layer 2 | ~250 |
+| 深度查询（"为什么选Python而不是R"） | Layer 1 + Layer 2 + Layer 3 | ~750 |
+
+**实现步骤**：
+
+| 步骤 | 动作 | 产出 |
+|------|------|------|
+| 1 | Consolidation生成摘要层（已有P2语义整合） | 每条记忆有content + summary + index_entry |
+| 2 | PromptBuilder新增三层注入逻辑 | 按查询深度选择注入层 |
+| 3 | 记忆schema新增summary和index_entry字段 | 存储层支持 |
+
+**成功标准**：
+- 50+偏好时system prompt不超token预算
+- PrefEval Unhelpful ≤ 5/200（vs v0.2.0的4/50比例8%）
+
+### R.5 P0-3：共指消解（入库前消解代词）
+
+**现状**："她喜欢吃辣"这样的记忆如果没有上下文，检索时无法匹配"她"是谁。M-Flow在索引前解析代词（he/she/it/那个/该公司），把引用消解为具体实体。
+
+**设计方案**：
+
+```
+入库前处理管线：
+
+原始消息 → 共指消解 → 消解后内容 → 分类存储
+
+示例：
+  原始："她喜欢吃辣"
+  上下文：上一轮提到"我妈妈是四川人"
+  消解后："用户妈妈喜欢吃辣"
+
+  原始："那个项目用React"
+  上下文：之前提到"OPC-Agents项目"
+  消解后："OPC-Agents项目用React"
+```
+
+**消解方式**（零LLM依赖优先）：
+
+| 方式 | 说明 | 精度 | 成本 |
+|------|------|------|------|
+| 规则消解 | 代词→最近实体（启发式） | 中 | 零 |
+| 借宿主LLM消解 | MCP tool让宿主AI做消解 | 高 | 零（复用宿主） |
+| 混合 | 规则消解+LLM消解回退 | 高 | 低 |
+
+**推荐**：混合方式。规则消解处理常见模式（他/她/它/这个/那个→最近实体），LLM消解处理复杂情况。
+
+**实现步骤**：
+
+| 步骤 | 动作 | 产出 |
+|------|------|------|
+| 1 | 新增`coreference.py`模块 | 代词检测+规则消解 |
+| 2 | classification_pipeline集成 | 入库前自动消解 |
+| 3 | 借宿主LLM消解MCP tool | 复杂情况回退 |
+| 4 | 消解前后对比测试 | 验证可检索性提升 |
+
+**成功标准**：
+- 含代词的记忆可检索率提升（"她喜欢吃辣"→搜索"妈妈饮食偏好"可命中）
+- PrefEval Acknowledged ≥ 85%（vs v0.2.0的62%）
+
+### R.6 P0-4：auto-redact内置规则
+
+**现状**：claude-mem的`<private>`标签让用户主动标记敏感内容不进入记忆库。CarryMem的forbid类型可以部分覆盖，但没有自动检测。
+
+**设计方案**：
+
+```
+内置auto-redact规则（不可删除，不可修改）：
+
+模式列表：
+  - API key: sk-*, ghp_*, ak-*, key=*
+  - 密码: password=*, passwd=*, pwd=*
+  - Token: token=*, bearer *
+  - 私钥: -----BEGIN PRIVATE KEY-----
+  - 连接串: mongodb://*:*@*, postgresql://*:*@*
+  - 其他: secret=*, credential=*
+
+行为：
+  1. classify_and_remember时检测content
+  2. 命中模式 → should_remember=false + 日志记录
+  3. 用户显式force_type → 允许（用户知情同意）
+```
+
+**实现步骤**：
+
+| 步骤 | 动作 | 产出 |
+|------|------|------|
+| 1 | 新增`security/redaction.py` | 敏感模式检测 |
+| 2 | classification_pipeline集成 | 入库前自动检测 |
+| 3 | 内置规则注册 | forbid类型auto-redact规则 |
+
+### R.7 PrefEval 200样本跑分计划
+
+**时机**：P0-1/2/3完成后
+
+**配置**：
+
+| 参数 | 值 |
+|------|-----|
+| 样本量 | 200（统计置信度±7%） |
+| Topics | 20个全覆盖 |
+| 干扰轮次 | 50轮 |
+| 生成模型 | Claude Sonnet 4.6 |
+| Judge模型 | Claude Sonnet 4.6 |
+| 三组条件 | zero-shot / reminder / CarryMem |
+
+**预期目标**：
+
+| 指标 | v0.2.0 (50样本) | v0.3.0 目标 (200样本) | 提升 |
+|------|----------------|---------------------|------|
+| Accuracy | 0.940 | ≥ 0.960 | +2pp |
+| Violated | 0/50 | 0/200 | 持平 |
+| Hallucinated | 0/50 | ≤ 2/200 | 持平 |
+| Unhelpful | 3/50 | ≤ 6/200 | 比例持平或改善 |
+
+**对比报告结构**：
+1. v0.2.0 vs v0.3.0 对比（证明优化有效）
+2. CarryMem vs zero-shot vs reminder（证明主动注入价值）
+3. 与M-Flow LongMemEval 89%的维度对比（不同定位，不同指标）
+
+### R.8 执行计划
+
+```
+Phase 1: P0核心优化（sqlite-vec + 渐进式披露 + 共指消解）
+  ├── P0-1: sqlite-vec向量检索实现
+  ├── P0-2: 渐进式披露（摘要→详情）
+  ├── P0-3: 共指消解（入库前消解代词）
+  └── 回归测试 + PrefEval 50样本快速验证
+
+Phase 2: P0辅助 + P1
+  ├── P0-4: auto-redact内置规则
+  ├── P1-1: 粒度分层（画像/场景/决策）
+  └── 回归测试
+
+Phase 3: PrefEval 200样本
+  ├── 三组对照实验（zero-shot/reminder/CarryMem）
+  ├── 对比报告（v0.2.0 vs v0.3.0）
+  └── 决策文档更新
+
+Phase 4: 文档 + Git推送
+  ├── CHANGELOG更新
+  ├── 版本号统一到v0.3.0
+  └── Git推送
+```
+
+### R.9 风险与缓解
+
+| 风险 | 概率 | 影响 | 缓解 |
+|------|------|------|------|
+| sqlite-vec编译/兼容性问题 | 中 | 高 | 预研sqlite-vec的Python绑定可用性 |
+| 渐进式披露摘要质量不够 | 中 | 中 | 借宿主LLM生成摘要，Consolidation P2已有基础 |
+| 共指消解规则覆盖不全 | 中 | 中 | 规则消解+LLM消解回退，渐进完善 |
+| PrefEval 200样本API成本高 | 低 | 中 | 预估约$20-40（200×3条件×2次LLM调用） |
+| 优化后PrefEval准确率未提升 | 低 | 高 | 50样本快速验证先行，不行则调整方向 |
+
+### R.10 项目成熟度目标
+
+| 维度 | v0.2.0 | v0.3.0 目标 | 关键提升 |
+|------|--------|-----------|---------|
+| 功能完整性 | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | 向量检索+渐进披露+共指消解 |
+| 代码质量 | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | 不变 |
+| 测试覆盖 | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | 80.5% → 85%+ |
+| 性能 | ⭐⭐⭐☆ | ⭐⭐⭐⭐⭐ | 向量检索+渐进披露省token |
+| Benchmark | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | PrefEval 200样本 ≥ 0.960 |
+| 安全性 | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | auto-redact内置规则 |
+| 架构 | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | 共指消解模块化 |
+
+**综合成熟度目标：4.7/5 → 4.9/5**
