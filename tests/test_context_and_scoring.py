@@ -487,8 +487,8 @@ class TestFastPath(unittest.TestCase):
             {"type": "user_preference", "content": "I prefer Python", "auto_rule": "prefer", "superseded_at": None},
         ]
         prompt = build_qa_prompt(memories=memories, knowledge=[], question="What language?", include_question=False)
-        self.assertIn("The user has the following preference: I prefer Python", prompt)
-        self.assertIn("Where relevant, incorporate this preference", prompt)
+        self.assertIn("Preference: I prefer Python", prompt)
+        self.assertNotIn("Where relevant, incorporate this preference", prompt)
         self.assertNotIn("Additional context", prompt)
 
     def test_fast_path_avoid_preference(self):
@@ -498,8 +498,7 @@ class TestFastPath(unittest.TestCase):
             {"type": "user_preference", "content": "I dislike Java", "auto_rule": "avoid", "superseded_at": None},
         ]
         prompt = build_qa_prompt(memories=memories, knowledge=[], question="What language?", include_question=False)
-        self.assertIn("The user has explicitly stated they do NOT want: I dislike Java", prompt)
-        self.assertIn("Where relevant, do NOT recommend", prompt)
+        self.assertIn("Avoid: I dislike Java", prompt)
 
     def test_fast_path_not_triggered_with_facts(self):
         from carrymem.context import build_qa_prompt
@@ -509,7 +508,7 @@ class TestFastPath(unittest.TestCase):
             {"type": "personal_fact", "content": "I work at Google", "superseded_at": None},
         ]
         prompt = build_qa_prompt(memories=memories, knowledge=[], question="What language?", include_question=False)
-        self.assertIn("The user has the following preference: I prefer Python", prompt)
+        self.assertIn("Preference: I prefer Python", prompt)
         self.assertIn("Additional context", prompt)
         self.assertIn("I work at Google", prompt)
 
@@ -521,7 +520,7 @@ class TestFastPath(unittest.TestCase):
         ]
         knowledge = [{"title": "Python Guide", "content": "Python is great"}]
         prompt = build_qa_prompt(memories=memories, knowledge=knowledge, question="What language?", include_question=False)
-        self.assertIn("The user has the following preference: I prefer Python", prompt)
+        self.assertIn("Preference: I prefer Python", prompt)
         self.assertIn("Knowledge Base", prompt)
 
     def test_fast_path_not_triggered_with_outdated(self):
@@ -532,8 +531,9 @@ class TestFastPath(unittest.TestCase):
             {"type": "user_preference", "content": "I prefer Java", "auto_rule": "prefer", "superseded_at": "2026-01-01"},
         ]
         prompt = build_qa_prompt(memories=memories, knowledge=[], question="What language?", include_question=False)
-        self.assertIn("The user has the following preference: I prefer Python", prompt)
-        self.assertIn("Outdated", prompt)
+        self.assertIn("Preference: I prefer Python", prompt)
+        # Outdated preferences may appear as "Updated preferences" or not at all
+        # depending on type (only corrections shown)
 
     def test_fast_path_include_question(self):
         from carrymem.context import build_qa_prompt
@@ -564,7 +564,7 @@ class TestFastPath(unittest.TestCase):
             {"type": "personal_fact", "content": "I work at Google", "superseded_at": None},
         ]
         prompt = build_qa_prompt(memories=memories, knowledge=[], question="Where do I work?", include_question=False)
-        self.assertNotIn("The user has the following preference", prompt)
+        self.assertNotIn("Preference:", prompt)
         self.assertIn("I work at Google", prompt)
 
 

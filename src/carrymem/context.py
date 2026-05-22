@@ -830,11 +830,9 @@ def build_qa_prompt(
             content = m.get("content", "")
             auto_rule = m.get("auto_rule", "")
             if auto_rule == "avoid":
-                parts.append(f"\nContext: The user has explicitly stated they do NOT want: {content}")
-                parts.append(f"Where relevant, do NOT recommend or suggest anything related to: {content}")
+                parts.append(f"- Avoid: {content}")
             else:
-                parts.append(f"\nContext: The user has the following preference: {content}")
-                parts.append(f"Where relevant, incorporate this preference into your response.")
+                parts.append(f"- Preference: {content}")
         if rules:
             parts.append("")
             parts.append(rules)
@@ -846,7 +844,7 @@ def build_qa_prompt(
 
     has_preference = bool(pref_memories)
 
-    parts = [t["header"]]
+    parts = [t.get("preference_qa_header", "") or t["header"]]
 
     if has_preference:
         pref_header = t.get("preference_qa_header", "")
@@ -857,15 +855,14 @@ def build_qa_prompt(
             parts.extend(pref_guidelines)
 
         if pref_memories:
+            parts.append("### User Preferences")
             for m in pref_memories:
                 content = m.get("content", "")
                 auto_rule = m.get("auto_rule", "")
                 if auto_rule == "avoid":
-                    parts.append(f"\nContext: The user has explicitly stated they do NOT want: {content}")
-                    parts.append(f"Where relevant, do NOT recommend or suggest anything related to: {content}")
+                    parts.append(f"- Avoid: {content}")
                 else:
-                    parts.append(f"\nContext: The user has the following preference: {content}")
-                    parts.append(f"Where relevant, incorporate this preference into your response.")
+                    parts.append(f"- Preference: {content}")
 
         if non_pref_active:
             parts.append("")
@@ -886,52 +883,23 @@ def build_qa_prompt(
     if memories:
         if has_preference:
             if non_pref_active:
-                mandatory = [m for m in non_pref_active if m.get("type") in ("correction", "decision")]
-                important = [m for m in non_pref_active if m.get("type") not in ("correction", "decision") and m.get("confidence", 0) >= 0.8]
-                optional = [m for m in non_pref_active if m not in mandatory and m not in important]
-
-                if mandatory:
-                    parts.append("### Mandatory (must follow)")
-                    for m in mandatory:
-                        parts.append(format_memory_entry(m, language))
-                if important:
-                    parts.append("### Important (high confidence)")
-                    for m in important:
-                        parts.append(format_memory_entry(m, language))
-                if optional:
-                    parts.append("### Context (for reference)")
-                    for m in optional:
-                        parts.append(format_memory_entry(m, language))
+                parts.append("### Context")
+                for m in non_pref_active:
+                    parts.append(format_memory_entry(m, language))
         else:
-            mandatory = [m for m in active if m.get("type") in ("correction", "decision", "user_preference")]
-            important = [m for m in active if m.get("type") not in ("correction", "decision", "user_preference") and m.get("confidence", 0) >= 0.8]
-            optional = [m for m in active if m not in mandatory and m not in important]
-
-            if mandatory:
-                parts.append("### Mandatory (must follow)")
-                for m in mandatory:
-                    parts.append(format_memory_entry(m, language))
-            if important:
-                parts.append("### Important (high confidence)")
-                for m in important:
-                    parts.append(format_memory_entry(m, language))
-            if optional:
-                parts.append("### Context (for reference)")
-                for m in optional:
-                    parts.append(format_memory_entry(m, language))
-
-        if outdated:
-            parts.append("### Outdated (superseded, do NOT use)")
-            for m in outdated[:3]:
+            parts.append("### Context")
+            for m in active:
                 parts.append(format_memory_entry(m, language))
 
-        update_notes = _build_superseded_notes(memories, language)
-        if update_notes:
-            if language == "zh":
-                parts.append("### 知识更新记录")
-            else:
-                parts.append("### Knowledge Updates")
-            parts.extend(update_notes)
+        if outdated:
+            # Only show outdated if there are corrections (user explicitly changed preference)
+            corrections = [m for m in outdated if m.get("type") in ("correction", "decision")]
+            if corrections:
+                parts.append("### Updated preferences")
+                for m in corrections[:2]:
+                    parts.append(format_memory_entry(m, language))
+
+        # Knowledge updates omitted for QA prompts (not needed for answering questions)
 
     if knowledge:
         parts.append("")

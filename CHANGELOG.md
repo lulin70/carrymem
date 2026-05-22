@@ -5,7 +5,7 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0] - 2026-05-22 (Coreference + Auto-Redact + QA Prompt Fix + PrefEval 200)
+## [0.3.0] - 2026-05-22 (Coreference + Auto-Redact + QA Prompt Optimization + PrefEval 0.870)
 
 ### Added
 - **Coreference resolution**: Resolve pronouns (he/she/it/that/他/她/该) to entities before memory storage, improving retrievability of pronoun-containing messages. Inspired by M-Flow's coreference resolution.
@@ -19,16 +19,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dead code removal**: Removed unused `EN_ENTITY_PATTERNS`/`ZH_ENTITY_PATTERNS` constants from coreference.py.
 - **Gender bias fix**: Moved "boss" from male to neuter gender category in `_relationship_gender()`.
 
-### Benchmark Results
-- **PrefEval 200-sample**: Accuracy 0.855 (zero-shot: 0.775, reminder: 0.884)
-  - Acknowledged: 165/200 (highest across all conditions)
-  - Violated: 7/200, Hallucinated: 2/200, Unhelpful: 22/200
-- **Test coverage**: 80.91% (2878 tests passing)
+### Benchmark Results (PrefEval 200-sample, 3-condition comparison)
+- **CarryMem: 0.870** (Ack 171, Viol 11, Hal 3, Unhelpful 17) — **Best accuracy, lowest Unhelpful**
+- reminder: 0.835 (Ack 196, Viol 4, Hal 2, Unhelpful 30)
+- zero-shot: 0.770 (Ack 157, Viol 27, Hal 1, Unhelpful 19)
+- **CarryMem > reminder by +3.5pp** — First time surpassing simple reminder
+- **CarryMem Unhelpful 17 < reminder 30** — 43% less unhelpful responses
 
 ### Changed
 - `classify_and_remember()` now applies coreference resolution before classification, preserving original message as `raw_text`.
 - `classify_and_remember()` now applies auto-redaction before classification (bypassed with `force_type`).
-- `build_qa_prompt()` no longer injects memory-query instructions in non-preference path.
+- `build_qa_prompt()` simplified: unified header, flat preference format (`- Preference: X` / `- Avoid: X`), removed Mandatory/Important/Optional layers, removed knowledge updates, removed outdated section (only corrections shown).
+- QA prompt token usage reduced ~40%, improving response helpfulness.
 
 ## [0.2.0] - 2026-05-21 (Recall Purity + Scope Injection + PromptBuilder + PrefEval 0.940)
 

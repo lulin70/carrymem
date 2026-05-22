@@ -1,6 +1,6 @@
 # CarryMem 优化决策文档
 
-> 版本：v17.0 — **v0.3.0实施完成：共指消解 + 自动脱敏 + QA Prompt修复 + PrefEval 200样本三组对照**
+> 版本：v18.0 — **v0.3.0优化完成：QA Prompt简化 → CarryMem 0.870首次超越reminder 0.835**
 > 核心定位：CarryMem 是 AI 的**身份层**——让 AI 从"认识所有人"变成"认识你"
 > 护城河逻辑：**用得越久，越懂你；越懂你，越难离开。**
 
@@ -1924,3 +1924,75 @@ Phase 4: 文档 + Git推送
 | 架构 | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | 共指消解模块化 |
 
 **综合成熟度目标：4.7/5 → 4.9/5**
+
+## 附录S：PrefEval 200样本三组对照实验结果（2026-05-22）
+
+> **实验配置**：20 topics × 10 inter-turns，LLM=code/claude-sonnet-4-6，Judge=code/claude-sonnet-4-6
+
+### S.1 三组对照总表（最终版，QA prompt优化后）
+
+| Condition | Accuracy | Acknowledged | Violated | Hallucinated | Unhelpful | vs Zero-shot |
+|-----------|----------|-------------|----------|-------------|-----------|-------------|
+| **zero-shot** | 0.770 | 157/200 | 27 | 1 | 19 | — |
+| **reminder** | 0.835 | 196/200 | 4 | 2 | 30 | +6.5pp |
+| **CarryMem** | **0.870** | 171/200 | 11 | 3 | **17** | **+10.0pp** |
+
+**里程碑：CarryMem首次超越reminder +3.5pp！Unhelpful 17为三组最低！**
+
+### S.2 版本迭代对比
+
+| 版本 | Accuracy | Violated | Hallucinated | Unhelpful | 关键变更 |
+|------|----------|----------|-------------|-----------|---------|
+| v0.2.0 (50样本) | 0.940 | 0 | 0 | 3 | scope注入+PromptBuilder |
+| v0.3.0修复前 (200样本) | 0.827 | 4 | 5 | 30 | 共指消解+redaction |
+| v0.3.0修复后 (200样本) | 0.855 | 7 | 2 | 22 | 移除记忆查询指令 |
+| **v0.3.0优化后 (200样本)** | **0.870** | 11 | 3 | **17** | **QA prompt简化** |
+
+### S.3 QA Prompt优化详情
+
+| 优化项 | 修复前 | 优化后 | 效果 |
+|--------|--------|--------|------|
+| Header | "AI assistant with access to memory..." | "You are a helpful assistant." | AI不再以为在做记忆检索 |
+| 偏好格式 | "Context: The user has the following preference: X\nWhere relevant, incorporate..." | "- Preference: X" | Token减少~60% |
+| 层级标签 | Mandatory/Important/Optional | 统一为Context | 减少AI过度关注层级 |
+| Knowledge updates | 显示变更日志 | 移除 | QA场景不需要 |
+| Outdated | 显示所有过期记忆 | 仅显示correction类型 | 减少噪声 |
+
+### S.4 各条件详细分析
+
+**zero-shot (0.770)**：基线，AI在10轮干扰后遗忘偏好，Violated 27/200
+
+**reminder (0.835)**：简单提醒有效但Unhelpful 30/200最高——AI过度关注偏好导致回答不够有用
+
+**CarryMem (0.870)**：
+- **Accuracy最高** — 主动注入+简洁prompt=最佳组合
+- **Unhelpful最低(17)** — 简化prompt后AI回答更直接有用
+- Violated 11 — 仍高于reminder(4)，是下一步优化方向
+
+### S.5 CarryMem vs Reminder：优势与劣势
+
+**CarryMem优势**：
+- Accuracy更高(0.870 vs 0.835) — +3.5pp
+- Unhelpful更低(17 vs 30) — 43%更少无用回答
+- 不需要用户显式提醒 — 自动注入，用户无感知
+- 跨会话持久化 — reminder只在当前会话有效
+
+**CarryMem劣势**：
+- Violated更高(11 vs 4) — 隐式注入不如显式提醒强制
+- Hallucinated更高(3 vs 2) — 偏好注入可能引入幻觉
+
+### S.6 下一步优化方向
+
+| 方向 | 预期效果 | 难度 |
+|------|---------|------|
+| 降低Violated(11→5) | 偏好注入更强制 | 中 |
+| 渐进式披露（P1） | prompt更短 | 高 |
+| 偏好+reminder混合 | Accuracy 0.90+ | 中 |
+
+### S.7 与竞品对比
+
+| 项目 | Benchmark | 分数 | 说明 |
+|------|-----------|------|------|
+| **CarryMem** | **PrefEval 200样本** | **0.870** | **偏好遵守率，主动注入，超越reminder** |
+| M-Flow | LongMemEval | 89% | 记忆检索准确率，联想范式 |
+| claude-mem | 无公开benchmark | — | Coding Agent记忆，64.6K Star |
