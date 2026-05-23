@@ -245,6 +245,50 @@ CarryMem概念映射到DDD概念，实现与企业架构师的对话：
 - 跨用户规则共享 (匿名化)
 - 本体驱动的触发器匹配
 
+### v0.2.2 — PrefEval 违反率优化（下一步）
+
+**主题**：将 PrefEval 违反率从 11 降至 5，目标 CarryMem ≥ 89%
+**原则**：#3 PrefEval 专注 — 在我们最强方向持续优化
+
+**P0 — 违反率优化**：
+- [ ] 分析 PrefEval 200 样本违反案例（分类：注入遗漏 / LLM 未遵守 / 分类错误）
+- [ ] 修复共指消解替换文本注入漏洞（安全）
+- [ ] 修复 build_context() 高优先级规则被 token budget 截断问题
+- [ ] PrefEval 200 样本回归：CarryMem ≥ 89%
+- [ ] 更新 README PrefEval 进步表格（英/中/日三版）
+
+### v0.2.3 — 状态型/事件型版本链 + 代码健康
+
+**主题**：轻量级时间感知 + context.py 模块化
+**原则**：#1 轻量级 — 状态型/事件型是图存储的轻量替代
+
+**P0 — 版本链**：
+- [ ] 新增 `memory_nature`(state/event) + `version_chain_id` + `version_number` 字段
+- [ ] 状态型记忆：写入时自动替代旧版本，维护版本链
+- [ ] 事件型记忆：不合并，完整保留，衰减更快
+- [ ] 查询：状态型→只返回最新版本，事件型→按时间倒序
+- [ ] 向后兼容：user_preference/correction→state，其余→event
+
+**P1 — context.py 模块化**：
+- [ ] 拆分 context.py（920行）为：selection.py, scope.py, format.py, templates.py, prompt.py
+- [ ] 每个模块 < 250 行，原 API 通过 re-export 保持不变
+- [ ] 版本链测试 ≥ 30
+
+### v0.2.4 — 自动维护 + 评测标准化
+
+**主题**：Consolidation 定时触发 + 可复现 PrefEval
+**原则**：#1 轻量级 — 自动维护减少手动负担
+
+**P1 — Consolidation 定时触发**：
+- [ ] `schedule_consolidation(interval_hours=1)` 方法
+- [ ] CLI：`carrymem consolidate --schedule 1h`
+- [ ] 集成 APScheduler（可选依赖）
+
+**P2 — 评测标准化**：
+- [ ] 统一 PrefEval 脚本：200样本、三组对照、固定随机种子
+- [ ] 自动生成 Markdown 对比报告
+- [ ] 每次优化后更新 README PrefEval 进步记录
+
 ### v1.0.0 — 自主身份
 - 全自动规则学习
 - 预测性规则建议

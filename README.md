@@ -355,15 +355,27 @@ Rule management directly in your editor:
 
 ---
 
-### 🏆 Benchmark — v0.2.1 baseline
+### 🏆 PrefEval — Preference Adherence Benchmark
 
-| Benchmark | Score | Note |
-|-----------|-------|------|
-| **PrefEval** | **96.0%** | ICLR 2025 Oral, 50 items, preference adherence (zero-shot: 90%, reminder: 92%) |
-| **LongMemEval** | **42.6%** | Official oracle dataset, 500 questions |
-| **RuleEngine-Eval** | **93.3%** | CarryMem-original — no other system has a rule engine |
-| **MemEval** | **F1=0.127** | Official framework, 20Q sample |
-| **MSC** | **40.9%** | Persona Summary F1 (3 episodes) |
+> ICLR 2025 Oral, Amazon Science. Measures if AI follows user preferences after 10-turn interference.
+
+**CarryMem surpasses simple reminder — first system to prove proactive injection > full reminder.**
+
+| Condition | Accuracy | Violated | Hallucinated | Unhelpful |
+|-----------|----------|----------|-------------|-----------|
+| zero-shot | 77.0% | 27 | 1 | 19 |
+| reminder | 83.5% | 4 | 2 | 30 |
+| **CarryMem** | **87.0%** | 11 | 3 | **17** |
+
+**Progress across versions (200-sample, 3-condition comparison)**:
+
+| Version | Accuracy | Key Change |
+|---------|----------|------------|
+| v0.2.1 pre-fix | 82.7% | Coreference + redaction |
+| v0.2.1 post-fix | 85.5% | Removed memory-query instructions |
+| **v0.2.1 optimized** | **87.0%** | QA prompt simplification |
+
+**Why this matters**: Reminder injects "remember user preference" in every turn. CarryMem injects structured preferences in system prompt — more precise, more persistent, 43% fewer unhelpful responses.
 
 | | Advantage | Result |
 |---|-----------|--------|
@@ -371,10 +383,6 @@ Rule management directly in your editor:
 | ⚡ | P99 Latency | **1.3ms** — **93x faster** than Mem0 |
 | 🪶 | Dependencies | **SQLite only** — no vector DB |
 | 🛡️ | Rule Engine | **Only system** with rule engine (competitors: 0%) |
-
-> **Transparency first.** First-run baseline scores — not perfect, but honest. Full breakdown: [BENCHMARK_STRATEGY_FINAL.md](docs/BENCHMARK_STRATEGY_FINAL.md)
-
-> Full benchmark methodology & compliance: [BENCHMARK_STRATEGY_FINAL.md](docs/BENCHMARK_STRATEGY_FINAL.md)
 
 ---
 

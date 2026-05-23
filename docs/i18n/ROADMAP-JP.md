@@ -236,6 +236,50 @@ CarryMemの概念をDDD概念にマッピング、エンタープライズアー
 - クロスユーザールール共有 (匿名化)
 - オントロジーベースのトリガーマッチング
 
+### v0.2.2 — PrefEval 違反率最適化（次期）
+
+**テーマ**：PrefEval 違反率を 11→5 に削減、目標 CarryMem ≥ 89%
+**原則**：#3 PrefEval 注力 — 最も強い方向で継続的最適化
+
+**P0 — 違反率最適化**：
+- [ ] PrefEval 200サンプル違反ケースの分析（分類：注入漏れ / LLM非遵守 / 分類エラー）
+- [ ] 共参照解決置換テキスト注入脆弱性の修正（セキュリティ）
+- [ ] build_context() 高優先度ルールのトークンバジェット切り捨て修正
+- [ ] PrefEval 200サンプル回帰：CarryMem ≥ 89%
+- [ ] README PrefEval 進歩テーブルの更新（英/中/日3版）
+
+### v0.2.3 — 状態型/イベント型バージョンチェーン + コード健全性
+
+**テーマ**：軽量時間認識 + context.py モジュール化
+**原則**：#1 軽量 — 状態型/イベント型はグラフストレージの軽量代替
+
+**P0 — バージョンチェーン**：
+- [ ] `memory_nature`(state/event) + `version_chain_id` + `version_number` フィールドの追加
+- [ ] 状態型メモリ：書き込み時に旧バージョンを自動置換、バージョンチェーンを維持
+- [ ] イベント型メモリ：マージなし、完全保持、より速い減衰
+- [ ] クエリ：状態型→最新バージョンのみ、イベント型→時系列降順
+- [ ] 後方互換性：user_preference/correction→state、その他→event
+
+**P1 — context.py モジュール化**：
+- [ ] context.py（920行）を分割：selection.py, scope.py, format.py, templates.py, prompt.py
+- [ ] 各モジュール < 250行、元のAPIはre-exportで維持
+- [ ] バージョンチェーンテスト ≥ 30
+
+### v0.2.4 — 自動メンテナンス + 評価標準化
+
+**テーマ**：Consolidation スケジューリング + 再現可能な PrefEval
+**原則**：#1 軽量 — 自動メンテナンスで手動負担を削減
+
+**P1 — Consolidation スケジューリング**：
+- [ ] `schedule_consolidation(interval_hours=1)` メソッド
+- [ ] CLI：`carrymem consolidate --schedule 1h`
+- [ ] APScheduler 統合（オプション依存関係）
+
+**P2 — 評価標準化**：
+- [ ] 統一 PrefEval スクリプト：200サンプル、3条件比較、固定シード
+- [ ] 自動生成 Markdown 比較レポート
+- [ ] 各改善後に README PrefEval 進歩記録を更新
+
 ### v1.0.0 — 自律アイデンティティ
 - 完全自動ルール学習
 - 予測的ルール提案

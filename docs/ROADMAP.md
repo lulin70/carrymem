@@ -417,18 +417,19 @@ See CHANGELOG.md for detailed history.
 ### v0.2.2 — PrefEval Violation Optimization (Next)
 
 **Theme**: Reduce PrefEval violated rate from 11→5, target CarryMem ≥ 89%
-**Prerequisite**: v0.2.1 (completed)
+**Principle**: #3 PrefEval focus — keep optimizing in our strongest direction
 
 **P0 — Violation Rate Optimization**:
 - [ ] Analyze PrefEval 200-sample violation cases (categorize: injection miss / LLM non-compliance / classification error)
 - [ ] Fix coreference replacement text injection vulnerability (security)
 - [ ] Fix build_context() high-priority rule truncation by token budget
 - [ ] PrefEval 200-sample regression: CarryMem ≥ 89%
+- [ ] Update README PrefEval progress table (EN/CN/JP)
 
-### v0.2.3 — State/Event Version Chain
+### v0.2.3 — State/Event Version Chain + Code Health
 
-**Theme**: Systematic state vs event memory distinction + context.py modularization
-**Prerequisite**: v0.2.2
+**Theme**: Lightweight time-awareness + context.py modularization
+**Principle**: #1 Lightweight — state/event is a lightweight alternative to graph storage
 
 **P0 — Version Chain**:
 - [ ] Add `memory_nature`(state/event) + `version_chain_id` + `version_number` fields
@@ -442,35 +443,20 @@ See CHANGELOG.md for detailed history.
 - [ ] Each module < 250 lines, original API preserved via re-export
 - [ ] Version chain tests ≥ 30
 
-### v0.2.4 — Smart Enhancement
+### v0.2.4 — Auto-Maintenance + Evaluation Standardization
 
-**Theme**: Consolidation scheduling + Motive mechanism
-**Prerequisite**: v0.2.3
+**Theme**: Consolidation scheduling + reproducible PrefEval
+**Principle**: #1 Lightweight — auto-maintenance reduces manual burden
 
 **P1 — Consolidation Scheduling**:
 - [ ] `schedule_consolidation(interval_hours=1)` method
 - [ ] CLI: `carrymem consolidate --schedule 1h`
 - [ ] Integration with APScheduler (optional dependency)
 
-**P1 — Motive Mechanism**:
-- [ ] New `motive` memory type (pending→activated→completed lifecycle)
-- [ ] Motive injection in build_context()
-- [ ] `activate_motive()`, `complete_motive()` API
-
 **P2 — Evaluation Standardization**:
 - [ ] Unified PrefEval script: 200-sample, 3-condition, fixed seed
 - [ ] Auto-generated Markdown comparison report
-
-### v0.2.5 — Architecture Health
-
-**Theme**: carrymem.py modularization + performance optimization
-**Prerequisite**: v0.2.4
-
-**P3 — God Module Split**:
-- [ ] Split carrymem.py (1749 lines) into facade + sub-modules (each < 400 lines)
-- [ ] MMR algorithm optimization (P99 latency -50%)
-- [ ] Scope inference caching (800+ regex/call → -70% time)
-- [ ] 7-dimension code review rating ≥ 4.0/5
+- [ ] Update README PrefEval progress on each improvement
 
 ### v1.0.0 — Autonomous Identity
 - Fully automatic rule learning
