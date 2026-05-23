@@ -880,24 +880,13 @@ def build_qa_prompt(
 
     parts.append("")
 
-    if memories:
-        if has_preference:
-            if non_pref_active:
-                parts.append("### Context")
-                for m in non_pref_active:
-                    parts.append(format_memory_entry(m, language))
-        else:
-            parts.append("### Context")
-            for m in active:
+    if outdated:
+        # Only show outdated if there are corrections (user explicitly changed preference)
+        corrections = [m for m in outdated if m.get("type") in ("correction", "decision")]
+        if corrections:
+            parts.append("### Updated preferences")
+            for m in corrections[:2]:
                 parts.append(format_memory_entry(m, language))
-
-        if outdated:
-            # Only show outdated if there are corrections (user explicitly changed preference)
-            corrections = [m for m in outdated if m.get("type") in ("correction", "decision")]
-            if corrections:
-                parts.append("### Updated preferences")
-                for m in corrections[:2]:
-                    parts.append(format_memory_entry(m, language))
 
         # Knowledge updates omitted for QA prompts (not needed for answering questions)
 

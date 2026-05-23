@@ -355,7 +355,7 @@ Rule management directly in your editor:
 
 ---
 
-### 🏆 Benchmark — v0.2.0 baseline
+### 🏆 Benchmark — v0.2.1 baseline
 
 | Benchmark | Score | Note |
 |-----------|-------|------|
@@ -492,11 +492,12 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 
 ## Project Status
 
-**Current Version**: v0.2.0
+**Current Version**: v0.2.1
 **Tests**: 2761+ passing
 **Coverage**: 80.5%
 
 **Changelog**:
+- **v0.2.1**: Coreference resolution, auto-redaction, QA prompt optimization, PrefEval 0.870 (first time surpassing reminder)
 - **v0.2.0**: Recall purity, scope-based preference injection, PromptBuilder extraction, PrefEval 0.940, E2E tests
 - **v0.1.9**: Consolidation engine (P0/P1/P2), preference injection fix, 25 MCP tools
 - **v0.1.6**: Version reset — security hardening (FTS5 sanitization, path validation, rule content filtering), thread safety, documentation reorganization, test cleanup

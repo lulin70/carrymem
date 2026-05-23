@@ -1,6 +1,6 @@
 # CarryMem Troubleshooting Guide
 
-**Version**: v0.3.0
+**Version**: v0.2.1
 
 ---
 
@@ -263,7 +263,7 @@ pipx install --force carrymem
 **Verification**:
 ```bash
 carrymem version
-# Should show: 0.3.0
+# Should show: 0.2.1
 ```
 
 ---
@@ -1215,7 +1215,7 @@ carrymem doctor
 
 3. Reinstall the extension:
    ```bash
-   code --install-extension vscode-carrymem-0.3.0.vsix
+   code --install-extension vscode-carrymem-0.2.1.vsix
    ```
 
 **Deep Fix** — Python path in VS Code:
@@ -1516,7 +1516,7 @@ pip show carrymem
 
 3. Use compatible import paths:
    ```python
-   # Both work in v0.3.0+
+   # Both work in v0.2.1+
    from carrymem import CarryMem
    from carrymem import CarryMem
    ```

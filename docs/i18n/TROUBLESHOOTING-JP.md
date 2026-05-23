@@ -1,6 +1,6 @@
 # CarryMem トラブルシューティングガイド
 
-**バージョン**: v0.3.0
+**バージョン**: v0.2.1
 
 ---
 
@@ -263,7 +263,7 @@ pipx install --force carrymem
 **検証**:
 ```bash
 carrymem version
-# 0.3.0 を表示
+# 0.2.1 を表示
 ```
 
 ---
@@ -1187,7 +1187,7 @@ carrymem doctor
 
 3. 拡張機能を再インストール:
    ```bash
-   code --install-extension vscode-carrymem-0.3.0.vsix
+   code --install-extension vscode-carrymem-0.2.1.vsix
    ```
 
 **詳細修正** — VS Code の Python パス:
@@ -1470,7 +1470,7 @@ pip show carrymem
 
 3. 互換インポートパスを使用:
    ```python
-   # v0.3.0+ では両方動作
+   # v0.2.1+ では両方動作
    from carrymem import CarryMem
    from carrymem import CarryMem
    ```

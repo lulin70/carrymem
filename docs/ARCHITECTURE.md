@@ -1,6 +1,6 @@
 # CarryMem Architecture
 
-**Version**: v0.3.0
+**Version**: v0.2.1
 **Date**: 2026-05-13
 **Status**: Stable
 

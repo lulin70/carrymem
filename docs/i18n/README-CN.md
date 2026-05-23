@@ -347,7 +347,7 @@ AI 工具（Cursor / Claude Code / 任意 MCP 客户端）
 
 ---
 
-### 🏆 Benchmark — v0.3.0 基线
+### 🏆 Benchmark — v0.2.1 基线
 
 | Benchmark | 得分 | 说明 |
 |-----------|------|------|
@@ -396,7 +396,7 @@ AI 工具（Cursor / Claude Code / 任意 MCP 客户端）
 
 ## 项目状态
 
-**当前版本**：v0.3.0
+**当前版本**：v0.2.1
 **测试**：2100+ passing
 **覆盖率**：~78%
 
