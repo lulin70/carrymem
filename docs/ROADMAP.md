@@ -1,8 +1,8 @@
 # CarryMem Product Roadmap
 
-**Last Updated**: 2026-05-13
+**Last Updated**: 2026-05-23
 **Product Positioning**: AI Identity Layer — Memory + Rules + Knowledge
-**Version Scheme**: v0.3.0 (Version Reset — Security + Quality) → v0.3.0 (Next)
+**Version Scheme**: v0.2.x (Incremental) → v0.3.0 (GA Milestone)
 
 ---
 
@@ -31,7 +31,7 @@ v0.3.0 ─── Design Baseline (Memory Foundation + Rules Design Docs)
 - Second digit changes for GA milestones (API stability guarantee)
 - No "v1.0.0 jump" — earn it through proven production usage
 
-> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. The version was reset to v0.1.6 to accurately reflect the product's current maturity (early beta). All features from those versions are included in v0.3.0 with security hardening and quality improvements. The next release will be v0.3.0.
+> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. Current version is v0.2.1, including all historical features plus security hardening, QA prompt optimization, coreference resolution, and auto-redaction. Next milestones: v0.2.2 (PrefEval violation optimization) → v0.2.3 (state/event version chain) → v0.2.4 (smart enhancement) → v0.2.5 (architecture health) → v0.3.0 (GA).
 
 ---
 
@@ -406,10 +406,71 @@ See CHANGELOG.md for detailed history.
 - [x] Consolidation Engine (P0: dedup+decay, P1: pattern→rules, P2: semantic merge)
 - [x] PrefEval 96.0% preference adherence (50 items, ICLR 2025 Oral)
 - [x] 25 MCP tools (added consolidate_memories)
+- [ ] Consolidation scheduled trigger (auto dedup+decay)
+- [ ] Motive memory type (pending→activated→completed lifecycle)
+- [ ] PrefEval evaluation standardization (reproducible scripts + report template)
 - Vector-based semantic matching (optional embedding model)
 - Rule recommendation engine
 - Cross-user rule sharing (with anonymization)
 - Ontology-based trigger matching
+
+### v0.2.2 — PrefEval Violation Optimization (Next)
+
+**Theme**: Reduce PrefEval violated rate from 11→5, target CarryMem ≥ 89%
+**Prerequisite**: v0.2.1 (completed)
+
+**P0 — Violation Rate Optimization**:
+- [ ] Analyze PrefEval 200-sample violation cases (categorize: injection miss / LLM non-compliance / classification error)
+- [ ] Fix coreference replacement text injection vulnerability (security)
+- [ ] Fix build_context() high-priority rule truncation by token budget
+- [ ] PrefEval 200-sample regression: CarryMem ≥ 89%
+
+### v0.2.3 — State/Event Version Chain
+
+**Theme**: Systematic state vs event memory distinction + context.py modularization
+**Prerequisite**: v0.2.2
+
+**P0 — Version Chain**:
+- [ ] Add `memory_nature`(state/event) + `version_chain_id` + `version_number` fields
+- [ ] State memory: auto-supersede old version on write, maintain version chain
+- [ ] Event memory: no merge, full retention, faster decay
+- [ ] Query: state→latest version only, event→chronological DESC
+- [ ] Backward compatibility: user_preference/correction→state, others→event
+
+**P1 — context.py Modularization**:
+- [ ] Split context.py (920 lines) into: selection.py, scope.py, format.py, templates.py, prompt.py
+- [ ] Each module < 250 lines, original API preserved via re-export
+- [ ] Version chain tests ≥ 30
+
+### v0.2.4 — Smart Enhancement
+
+**Theme**: Consolidation scheduling + Motive mechanism
+**Prerequisite**: v0.2.3
+
+**P1 — Consolidation Scheduling**:
+- [ ] `schedule_consolidation(interval_hours=1)` method
+- [ ] CLI: `carrymem consolidate --schedule 1h`
+- [ ] Integration with APScheduler (optional dependency)
+
+**P1 — Motive Mechanism**:
+- [ ] New `motive` memory type (pending→activated→completed lifecycle)
+- [ ] Motive injection in build_context()
+- [ ] `activate_motive()`, `complete_motive()` API
+
+**P2 — Evaluation Standardization**:
+- [ ] Unified PrefEval script: 200-sample, 3-condition, fixed seed
+- [ ] Auto-generated Markdown comparison report
+
+### v0.2.5 — Architecture Health
+
+**Theme**: carrymem.py modularization + performance optimization
+**Prerequisite**: v0.2.4
+
+**P3 — God Module Split**:
+- [ ] Split carrymem.py (1749 lines) into facade + sub-modules (each < 400 lines)
+- [ ] MMR algorithm optimization (P99 latency -50%)
+- [ ] Scope inference caching (800+ regex/call → -70% time)
+- [ ] 7-dimension code review rating ≥ 4.0/5
 
 ### v1.0.0 — Autonomous Identity
 - Fully automatic rule learning
@@ -434,6 +495,8 @@ See CHANGELOG.md for detailed history.
 | **v0.3.0** | **1900+** | **~85%** | **+Knowledge CJK +relevance scoring +trigger_count activation +effectiveness metrics** |
 | **v0.4.0** | **1814** | **~77%** | **+Rule Scopes +Skill Format +Merge Protocol +VS Code Extension** |
 | **v0.4.1** | **2056** | **79%** | **+Core Loop Fix +Auto Rule Suggestion +Security +Connection Pooling** |
+| **v0.2.0** | **2761** | **80.5%** | **+Recall Purity +Scope Injection +PromptBuilder +PrefEval 0.940** |
+| **v0.2.1** | **2883** | **80.86%** | **+Coreference +Auto-redact +QA Prompt Optimization +PrefEval 0.870** |
 
 ---
 
