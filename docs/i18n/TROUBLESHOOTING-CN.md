@@ -1,6 +1,6 @@
 # CarryMem 故障排查指南
 
-**版本**: v0.2.1
+**版本**: v0.2.2
 
 ---
 
@@ -263,7 +263,7 @@ pipx install --force carrymem
 **验证**:
 ```bash
 carrymem version
-# 应显示: 0.2.1
+# 应显示: 0.2.2
 ```
 
 ---
@@ -1213,7 +1213,7 @@ carrymem doctor
 
 3. 重装扩展:
    ```bash
-   code --install-extension vscode-carrymem-0.2.1.vsix
+   code --install-extension vscode-carrymem-0.2.2.vsix
    ```
 
 **深度修复** — VS Code 中的 Python 路径:
@@ -1513,7 +1513,7 @@ pip show carrymem
 
 3. 使用兼容的导入路径:
    ```python
-   # v0.2.1+ 两种均可
+   # v0.2.2+ 两种均可
    from carrymem import CarryMem
    from carrymem import CarryMem
    ```

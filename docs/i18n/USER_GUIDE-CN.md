@@ -274,7 +274,7 @@ carrymem consolidate --no-p1 --no-p2
 ### 安装
 
 1. 打开 VS Code
-2. 从 VSIX 安装：`code --install-extension vscode-carrymem-0.2.1.vsix`
+2. 从 VSIX 安装：`code --install-extension vscode-carrymem-0.2.2.vsix`
 3. 或在扩展目录中按 F5 以调试模式运行
 
 ### 功能

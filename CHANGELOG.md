@@ -5,6 +5,22 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-05-23 (PrefEval Violation Optimization + Security Hardening)
+
+### Changed
+- **Preference enforcement strengthened**: Added "You must respect these preferences in your response." after preference list in `build_qa_prompt()`, reducing LLM non-compliance violations.
+- **Preference token budget increased**: From 40% to 60% of memories budget, preventing high-priority preferences from being truncated.
+- **Coreference injection protection**: Added `_sanitize_replacement()` to strip injection patterns and control characters from entity replacement text. Both English and Chinese pronoun resolution now sanitize before substitution.
+
+### Fixed
+- **Dead code in build_qa_prompt**: Removed duplicate `non_pref_active` rendering path (L883-892) that caused the same memories to appear twice under different headers.
+- **Version unification**: All 30 files unified from 0.3.0 to 0.2.1 (per version policy: first two digits require approval).
+
+### Docs
+- **README PrefEval progress table**: Replaced multi-benchmark table with PrefEval version-by-version progress (82.7% → 85.5% → 87.0%) in EN/CN/JP.
+- **Optimization 4 principles**: Added to decision doc v20.0 — lightweight, differentiated, PrefEval focus, continuous progress.
+- **ROADMAP simplified**: v0.2.2-v0.2.4, removed Motive/graph storage (not aligned with lightweight principle).
+
 ## [0.2.1] - 2026-05-22 (Coreference + Auto-Redact + QA Prompt Optimization + PrefEval 0.870)
 
 ### Added

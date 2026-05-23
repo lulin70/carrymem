@@ -1,6 +1,6 @@
 # CarryMem — User Installation & Usage Manual
 
-**Version**: 0.2.1  
+**Version**: 0.2.2  
 **Date**: 2026-05-03  
 **Audience**: End Users (Developers, Power Users, Teams)  
 **Prerequisites**: Python 3.9+, pip
@@ -18,7 +18,7 @@ pip install carrymem
 **Verify installation:**
 ```bash
 carrymem version
-# Output: CarryMem v0.2.1
+# Output: CarryMem v0.2.2
 ```
 
 ### Step 2: Initialize
@@ -75,7 +75,7 @@ $ carrymem doctor
   CarryMem Doctor - Diagnostics
   =============================================
   [OK] Python 3.11+ (>= 3.9)
-  [OK] CarryMem v0.2.1
+  [OK] CarryMem v0.2.2
   [OK] Config directory: /Users/you/.carrymem
   [OK] Database: /Users/you/.carrymem/memories.db (0.14 MB)
   
@@ -731,7 +731,7 @@ $ carrymem add-rule "normal" --trigger "*" --type prefer
 - **Security Reports**: Please email maintainers (do NOT post publicly)
 
 ### Version History
-- **v0.2.1** (Current): Version reset — security hardening, thread safety, documentation reorganization
+- **v0.2.2** (Current): Version reset — security hardening, thread safety, documentation reorganization
 - **v0.3.0**: Memory layer foundation, Rules Engine, PyPI release
 - **Changelog**: See [CHANGELOG.md](../CHANGELOG.md)
 

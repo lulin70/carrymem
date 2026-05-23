@@ -826,6 +826,7 @@ def build_qa_prompt(
         pref_guidelines = t.get("preference_qa_guidelines", [])
         if pref_guidelines:
             parts.extend(pref_guidelines)
+        parts.append("### User Preferences")
         for m in pref_memories:
             content = m.get("content", "")
             auto_rule = m.get("auto_rule", "")
@@ -833,6 +834,7 @@ def build_qa_prompt(
                 parts.append(f"- Avoid: {content}")
             else:
                 parts.append(f"- Preference: {content}")
+        parts.append("You must respect these preferences in your response.")
         if rules:
             parts.append("")
             parts.append(rules)
@@ -863,6 +865,7 @@ def build_qa_prompt(
                     parts.append(f"- Avoid: {content}")
                 else:
                     parts.append(f"- Preference: {content}")
+            parts.append("You must respect these preferences in your response.")
 
         if non_pref_active:
             parts.append("")

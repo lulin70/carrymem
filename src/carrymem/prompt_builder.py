@@ -176,7 +176,7 @@ class PromptBuilder:
         budget_filtered = []
         type_counts: Dict[str, int] = {}
         pref_token_total = 0
-        pref_token_budget = int(memories_budget * 0.4)
+        pref_token_budget = int(memories_budget * 0.6)
 
         for m in all_memories:
             mtype = m.get("type", "unknown")

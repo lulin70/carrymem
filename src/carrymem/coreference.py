@@ -216,16 +216,20 @@ def resolve_coreference(
         if pronoun in resolved:
             target = _find_matching_entity(pronoun, entities)
             if target:
-                resolved = resolved.replace(pronoun, target, 1)
-                any_resolved = True
+                target = _sanitize_replacement(target)
+                if target:
+                    resolved = resolved.replace(pronoun, target, 1)
+                    any_resolved = True
 
     # Chinese demonstrative resolution
     for pronoun in ZH_DEMONSTRATIVE:
         if pronoun in resolved:
             target = _find_matching_entity(pronoun, entities)
             if target:
-                resolved = resolved.replace(pronoun, target, 1)
-                any_resolved = True
+                target = _sanitize_replacement(target)
+                if target:
+                    resolved = resolved.replace(pronoun, target, 1)
+                    any_resolved = True
 
     return resolved, any_resolved
 
@@ -262,8 +266,40 @@ def _find_matching_entity(
     return None
 
 
+def _sanitize_replacement(text: str) -> str:
+    """Sanitize replacement text to prevent prompt injection.
+
+    Strips control characters, common injection patterns, and limits length.
+    """
+    if not text:
+        return text
+    # Remove control characters (except space)
+    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+    # Remove common injection patterns
+    injection_patterns = [
+        r'(?i)ignore\s+(all\s+)?previous\s+instructions',
+        r'(?i)system\s*:',
+        r'(?i)assistant\s*:',
+        r'(?i)user\s*:',
+        r'(?i)<\s*/?\s*(system|instruction|prompt)\s*>',
+        r'(?i)you\s+are\s+now',
+        r'(?i)forget\s+(everything|all)',
+        r'(?i)new\s+instructions?\s*:',
+    ]
+    for pattern in injection_patterns:
+        text = re.sub(pattern, '', text)
+    # Limit length to prevent abuse
+    if len(text) > 100:
+        text = text[:100]
+    return text.strip()
+
+
 def _replace_pronoun(text: str, pronoun: str, replacement: str) -> str:
     """Replace a pronoun in text with the replacement, preserving case."""
+    # Sanitize replacement to prevent injection
+    replacement = _sanitize_replacement(replacement)
+    if not replacement:
+        return text
     # Handle possessive pronouns specially
     if pronoun in EN_POSSESSIVE_PRONOUNS:
         # "her preference" → "user's preference" (not "user preference")

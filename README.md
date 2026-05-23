@@ -500,7 +500,7 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 
 ## Project Status
 
-**Current Version**: v0.2.1
+**Current Version**: v0.2.2
 **Tests**: 2761+ passing
 **Coverage**: 80.5%
 
