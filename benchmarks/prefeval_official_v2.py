@@ -24,8 +24,10 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
+import random
 import re
 import sys
 import tempfile
@@ -57,9 +59,11 @@ JUDGE_MODEL = os.environ.get("JUDGE_MODEL", "code/claude-sonnet-4-6")
 REMINDER_TEXT = "\nIn your response, please ensure that you take into account our earlier discussion, and provide an answer that is consistent with my preference."
 
 
-def load_official_data(num_topics: int = 20, limit: int = 0):
+def load_official_data(num_topics: int = 20, limit: int = 0, seed: int = 42):
     topics = sorted([f.replace('.json', '') for f in os.listdir(DATA_DIR) if f.endswith('.json')])
     if num_topics < len(topics):
+        rng = random.Random(seed)
+        rng.shuffle(topics)
         topics = topics[:num_topics]
 
     all_items = []
@@ -71,9 +75,11 @@ def load_official_data(num_topics: int = 20, limit: int = 0):
         all_items.extend(items)
 
     if limit > 0:
+        rng = random.Random(seed + 1)
+        rng.shuffle(all_items)
         all_items = all_items[:limit]
 
-    print(f"Loaded {len(all_items)} items from {len(topics)} topics")
+    print(f"Loaded {len(all_items)} items from {len(topics)} topics (seed={seed})")
     return all_items
 
 
@@ -335,6 +341,8 @@ def main():
     parser.add_argument("--limit", type=int, default=0, help="Max items to evaluate (0=all)")
     parser.add_argument("--llm-model", type=str, default=None)
     parser.add_argument("--skip-judge", action="store_true")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
+    parser.add_argument("--report", action="store_true", help="Generate Markdown comparison report")
     args = parser.parse_args()
 
     from dotenv import load_dotenv
@@ -356,7 +364,7 @@ def main():
     llm_model = args.llm_model or os.environ.get("LLM_MODEL", LLM_MODEL)
     conditions = [c.strip() for c in args.conditions.split(",")]
     inter_turns = load_inter_turns()
-    items = load_official_data(args.num_topics, args.limit)
+    items = load_official_data(args.num_topics, args.limit, seed=args.seed)
 
     llm_client = OpenAI(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
     judge_client = OpenAI(api_key=JUDGE_API_KEY, base_url=JUDGE_BASE_URL)
@@ -467,13 +475,19 @@ def main():
     for cond, data in all_condition_results.items():
         summary[cond] = data["accuracy"]
 
+    # Config fingerprint for reproducibility tracking
+    config_str = f"{llm_model}|{JUDGE_MODEL}|{args.num_topics}|{args.num_turns}|{args.seed}|{','.join(sorted(conditions))}"
+    config_hash = hashlib.md5(config_str.encode()).hexdigest()[:8]
+
     payload = {
         "timestamp": datetime.now().isoformat(),
         "num_topics": args.num_topics,
         "num_turns": args.num_turns,
+        "seed": args.seed,
         "llm_model": llm_model,
         "judge_model": JUDGE_MODEL,
         "conditions": conditions,
+        "config_hash": config_hash,
         "summary": summary,
         "results": {cond: data["results"] for cond, data in all_condition_results.items()},
     }
@@ -491,6 +505,90 @@ def main():
     for cond in conditions:
         acc = summary[cond]
         print(f"  {cond:15} {acc['accuracy']:>10.3f} {acc['acknowledged']:>6} {acc['violated']:>8} {acc['hallucinated']:>8} {acc['unhelpful']:>8}")
+
+    # Generate Markdown report
+    if args.report:
+        report_path = out_dir / f"prefeval_report_{ts}.md"
+        _generate_markdown_report(payload, report_path, len(items))
+        print(f"\n  Report: {report_path}")
+
+
+def _generate_markdown_report(payload: dict, report_path: Path, total_items: int):
+    """Generate a structured Markdown comparison report."""
+    lines = []
+    lines.append("# PrefEval Evaluation Report\n")
+    lines.append(f"**Date**: {payload['timestamp']}")
+    lines.append(f"**Config Hash**: `{payload['config_hash']}`")
+    lines.append(f"**Seed**: {payload['seed']}")
+    lines.append(f"**LLM Model**: {payload['llm_model']}")
+    lines.append(f"**Judge Model**: {payload['judge_model']}")
+    lines.append(f"**Topics**: {payload['num_topics']}")
+    lines.append(f"**Inter-turns**: {payload['num_turns']}")
+    lines.append(f"**Total Items**: {total_items}")
+    lines.append("")
+
+    # Summary table
+    lines.append("## Results Summary\n")
+    lines.append("| Condition | Accuracy | Acknowledged | Violated | Hallucinated | Unhelpful |")
+    lines.append("|-----------|----------|-------------|----------|-------------|-----------|")
+    for cond in payload["conditions"]:
+        acc = payload["summary"][cond]
+        lines.append(
+            f"| {cond} | {acc['accuracy']:.3f} | {acc['acknowledged']}/{acc['total']} "
+            f"| {acc['violated']}/{acc['total']} | {acc['hallucinated']}/{acc['total']} "
+            f"| {acc['unhelpful']}/{acc['total']} |"
+        )
+    lines.append("")
+
+    # Per-topic breakdown (if available)
+    results = payload.get("results", {})
+    if results:
+        topic_stats = {}
+        for cond, items_list in results.items():
+            for item in items_list:
+                topic = item.get("topic", "unknown")
+                if topic not in topic_stats:
+                    topic_stats[topic] = {}
+                if cond not in topic_stats[topic]:
+                    topic_stats[topic][cond] = {"total": 0, "violated": 0, "hallucinated": 0, "unhelpful": 0}
+                topic_stats[topic][cond]["total"] += 1
+                if item.get("violated"):
+                    topic_stats[topic][cond]["violated"] += 1
+                if item.get("hallucinated"):
+                    topic_stats[topic][cond]["hallucinated"] += 1
+                if not item.get("helpful", True):
+                    topic_stats[topic][cond]["unhelpful"] += 1
+
+        if topic_stats:
+            lines.append("## Per-Topic Breakdown\n")
+            lines.append("| Topic | Condition | Violated | Hallucinated | Unhelpful |")
+            lines.append("|-------|-----------|----------|-------------|-----------|")
+            for topic in sorted(topic_stats.keys()):
+                for cond in payload["conditions"]:
+                    if cond in topic_stats[topic]:
+                        s = topic_stats[topic][cond]
+                        lines.append(
+                            f"| {topic} | {cond} | {s['violated']}/{s['total']} "
+                            f"| {s['hallucinated']}/{s['total']} | {s['unhelpful']}/{s['total']} |"
+                        )
+            lines.append("")
+
+    # CarryMem vs Reminder comparison
+    carrymem_acc = payload["summary"].get("carrymem", {}).get("accuracy")
+    reminder_acc = payload["summary"].get("reminder", {}).get("accuracy")
+    if carrymem_acc is not None and reminder_acc is not None:
+        lines.append("## CarryMem vs Reminder\n")
+        diff = carrymem_acc - reminder_acc
+        lines.append(f"- CarryMem: **{carrymem_acc:.3f}**")
+        lines.append(f"- Reminder: {reminder_acc:.3f}")
+        lines.append(f"- Delta: **{diff:+.3f}** ({'CarryMem leads' if diff > 0 else 'Reminder leads'})")
+        lines.append("")
+
+    lines.append("---")
+    lines.append(f"*Generated by PrefEval Official V2 (seed={payload['seed']}, config={payload['config_hash']})*")
+
+    with open(report_path, "w") as f:
+        f.write("\n".join(lines))
 
 
 if __name__ == "__main__":

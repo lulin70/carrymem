@@ -5,6 +5,19 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2026-05-24 (Consolidation Scheduling + PrefEval Standardization + Context Modularization)
+
+### Added
+- **Scheduled consolidation**: `schedule_consolidation(interval_hours=1.0)` method with background `threading.Timer`. `stop_consolidation()` to cancel. No external dependencies.
+- **CLI `consolidate` command**: `carrymem consolidate` for one-shot, `carrymem consolidate --schedule 1h` for periodic, `carrymem consolidate --stop` to cancel. Supports `--dry-run`, `--no-p1`, `--no-p2`.
+- **PrefEval random seed**: `--seed` parameter (default 42) for reproducible topic/item sampling.
+- **PrefEval config fingerprint**: MD5 hash of (model, seed, topics, turns, conditions) saved in results JSON for reproducibility tracking.
+- **PrefEval Markdown report**: `--report` flag generates structured report with summary table, per-topic breakdown, and CarryMem vs Reminder comparison.
+
+### Changed
+- **context.py modularized**: Split 910-line monolith into 4 focused sub-modules: `selection.py`, `scope.py`, `format.py`, `prompt.py`. Original `context.py` preserves all APIs via re-export.
+- **ROADMAP updated**: v0.2.2 marked as ✅ with all version chain items completed.
+
 ## [0.2.2] - 2026-05-24 (PrefEval Violation Optimization + Version Chain + Security Hardening)
 
 ### Added

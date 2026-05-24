@@ -1744,6 +1744,89 @@ class CarryMem:
 
         return report
 
+    # --- Scheduled Consolidation ---
+
+    _consolidation_timer: Optional[Any] = None  # class-level timer reference
+
+    def schedule_consolidation(
+        self,
+        interval_hours: float = 1.0,
+        dry_run: bool = False,
+        run_p1: bool = True,
+        run_p2: bool = False,
+    ) -> Dict[str, Any]:
+        """Start periodic memory consolidation on a background timer.
+
+        Uses threading.Timer for lightweight scheduling (no external dependencies).
+        Only one scheduled consolidation can run at a time; calling again replaces
+        the previous schedule.
+
+        Args:
+            interval_hours: Hours between consolidation runs (minimum 0.1 = 6 min).
+            dry_run: If True, consolidation only reports without making changes.
+            run_p1: If True, also run P1 pattern recognition.
+            run_p2: If True, also run P2 semantic consolidation.
+
+        Returns:
+            Dict with schedule status.
+        """
+        import threading
+
+        min_interval = 0.1  # 6 minutes minimum
+        if interval_hours < min_interval:
+            interval_hours = min_interval
+
+        # Stop existing timer if any
+        self.stop_consolidation()
+
+        interval_sec = interval_hours * 3600
+        status = {
+            "scheduled": True,
+            "interval_hours": interval_hours,
+            "dry_run": dry_run,
+            "run_p1": run_p1,
+            "run_p2": run_p2,
+        }
+
+        def _run_consolidation():
+            try:
+                logger.info(f"Scheduled consolidation starting (interval={interval_hours}h)")
+                result = self.consolidate(dry_run=dry_run, run_p1=run_p1, run_p2=run_p2)
+                logger.info(
+                    f"Scheduled consolidation complete: "
+                    f"{result.get('superseded_count', 0)} superseded, "
+                    f"{result.get('forgotten_count', 0)} forgotten"
+                )
+            except Exception as e:
+                logger.error(f"Scheduled consolidation failed: {e}")
+            finally:
+                # Schedule next run
+                if self._consolidation_timer is not None:
+                    self._consolidation_timer = threading.Timer(interval_sec, _run_consolidation)
+                    self._consolidation_timer.daemon = True
+                    self._consolidation_timer.start()
+
+        # Start first timer
+        self._consolidation_timer = threading.Timer(interval_sec, _run_consolidation)
+        self._consolidation_timer.daemon = True
+        self._consolidation_timer.start()
+
+        logger.info(f"Consolidation scheduled every {interval_hours}h")
+        return status
+
+    def stop_consolidation(self) -> Dict[str, Any]:
+        """Stop the scheduled consolidation timer.
+
+        Returns:
+            Dict with stopped status.
+        """
+        if self._consolidation_timer is not None:
+            self._consolidation_timer.cancel()
+            self._consolidation_timer = None
+            logger.info("Consolidation schedule stopped")
+            return {"stopped": True}
+        return {"stopped": False, "reason": "no_active_schedule"}
+
     def _count_by_type(self, entries: List[MemoryEntry]) -> Dict[str, int]:
         counts: Dict[str, int] = {}
         for e in entries:

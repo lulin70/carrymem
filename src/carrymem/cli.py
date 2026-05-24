@@ -540,6 +540,81 @@ def cmd_clean(args):
     return 0 if errors == 0 else 1
 
 
+def cmd_consolidate(args):
+    """Run or schedule memory consolidation (dedup, decay, cleanup)."""
+    parser = _make_parser("consolidate")
+    parser.add_argument("--namespace", "-n", default="default", help="Namespace")
+    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--dry-run", action="store_true", help="Show what would be done without making changes")
+    parser.add_argument("--no-p1", action="store_true", help="Skip P1 pattern recognition")
+    parser.add_argument("--no-p2", action="store_true", help="Skip P2 semantic consolidation")
+    parser.add_argument("--schedule", type=float, default=0, metavar="HOURS",
+                        help="Schedule periodic consolidation (e.g., --schedule 1 for hourly)")
+    parser.add_argument("--stop", action="store_true", help="Stop scheduled consolidation")
+
+    parsed = parser.parse_args(args)
+    cm = _get_carrymem(parsed.db, parsed.namespace)
+
+    if parsed.stop:
+        result = cm.stop_consolidation()
+        if result.get("stopped"):
+            print(f"  {_green('Consolidation schedule stopped')}")
+        else:
+            print(f"  {_dim('No active consolidation schedule')}")
+        cm.close()
+        return 0
+
+    if parsed.schedule > 0:
+        result = cm.schedule_consolidation(
+            interval_hours=parsed.schedule,
+            dry_run=parsed.dry_run,
+            run_p1=not parsed.no_p1,
+            run_p2=not parsed.no_p2,
+        )
+        print(f"\n  {_green('Consolidation scheduled')}")
+        print(f"    Interval: {result['interval_hours']}h")
+        print(f"    Dry run:  {result['dry_run']}")
+        print(f"    P1:       {result['run_p1']}")
+        print(f"    P2:       {result['run_p2']}")
+        print(f"\n  {_dim('Use --stop to cancel')}")
+        # Keep process alive for scheduled mode
+        try:
+            import time
+            while True:
+                time.sleep(60)
+        except KeyboardInterrupt:
+            print(f"\n  {_dim('Stopping consolidation schedule...')}")
+            cm.stop_consolidation()
+        cm.close()
+        return 0
+
+    # One-shot consolidation
+    print(f"\n  {_bold('Running consolidation...')}\n")
+    report = cm.consolidate(
+        dry_run=parsed.dry_run,
+        run_p1=not parsed.no_p1,
+        run_p2=not parsed.no_p2,
+    )
+
+    if report.get("dry_run"):
+        print(f"  {_yellow('[DRY RUN]')} No changes made\n")
+
+    print(f"  Superseded: {report.get('superseded_count', len(report.get('to_supersede', [])))}")
+    print(f"  Decayed:    {len(report.get('to_decay', []))}")
+    print(f"  Forgotten:  {report.get('forgotten_count', len(report.get('to_forget', [])))}")
+
+    p1 = report.get("p1_promotion")
+    if p1:
+        print(f"  P1 promotions: {p1.get('promotion_count', 0)}")
+
+    p2 = report.get("p2_consolidation")
+    if p2:
+        print(f"  P2 consolidation requests: {len(p2.get('consolidation_requests', []))}")
+
+    cm.close()
+    return 0
+
+
 def cmd_export(args):
     parser = _make_parser("export")
     parser.add_argument("output", help="Output file path")
@@ -2623,6 +2698,7 @@ def main():
         "delete": cmd_forget,
         "rm": cmd_forget,
         "clean": cmd_clean,
+        "consolidate": cmd_consolidate,
         "export": cmd_export,
         "import": cmd_import,
         "stats": cmd_stats,
