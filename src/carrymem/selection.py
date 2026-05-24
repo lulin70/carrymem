@@ -6,12 +6,11 @@ Extracted from context.py for modularity.
 import re
 from typing import Any, Dict, List, Optional
 
+from .utils.language import has_cjk
+
 
 def _estimate_tokens(text: str) -> int:
-    cjk_count = sum(
-        1 for c in text
-        if '\u4e00' <= c <= '\u9fff' or '\u3040' <= c <= '\u30ff' or '\u30a0' <= c <= '\u30ff'
-    )
+    cjk_count = sum(1 for c in text if has_cjk(c))
     other_count = len(text) - cjk_count
     return max(1, cjk_count + other_count // 4)
 
@@ -20,7 +19,7 @@ def _tokenize_text(text: str) -> set:
     words = set(re.findall(r'[a-zA-Z]{2,}', text.lower()))
     cjk_chars = set()
     for c in text:
-        if '\u4e00' <= c <= '\u9fff' or '\u3040' <= c <= '\u30ff':
+        if has_cjk(c):
             cjk_chars.add(c)
     return words | cjk_chars
 

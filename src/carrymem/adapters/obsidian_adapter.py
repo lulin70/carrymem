@@ -309,6 +309,7 @@ class ObsidianAdapter(StorageAdapter):
         filters: Optional[Dict[str, Any]] = None,
         limit: int = 20,
         update_access: bool = True,
+        namespaces: Optional[List[str]] = None,
         **kwargs,
     ) -> list:
         full_content = kwargs.get("full_content", False)

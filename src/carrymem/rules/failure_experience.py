@@ -21,6 +21,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
+from ..utils.language import has_cjk
+
 
 class FailureSignal(str, Enum):
     MISTAKE = "mistake"
@@ -326,8 +328,7 @@ class FailureExperienceExtractor:
                 return match.group(1).strip()
 
         template = _ACTION_TEMPLATES.get(signal_type, _ACTION_TEMPLATES["mistake"])
-        has_cjk = bool(re.search(r"[\u4e00-\u9fff]", content))
-        lang = "zh" if has_cjk else "en"
+        lang = "zh" if has_cjk(content) else "en"
         return template[lang].format(lesson=lesson[:100])
 
     def _infer_trigger(self, content: str) -> str:
@@ -336,8 +337,7 @@ class FailureExperienceExtractor:
         if domain and domain in _TRIGGER_TEMPLATES:
             return _TRIGGER_TEMPLATES[domain]
 
-        has_cjk = bool(re.search(r"[\u4e00-\u9fff]", content))
-        if has_cjk:
+        if has_cjk(content):
             return "related scenarios"
 
         return "related scenarios"

@@ -40,6 +40,8 @@ try:
     from carrymem.security.input_validator import InputValidator
     _cli_validator = InputValidator(strict_mode=False)
 except ImportError:
+    import logging
+    logging.getLogger(__name__).warning("InputValidator not available — input validation disabled")
     _cli_validator = None
 
 

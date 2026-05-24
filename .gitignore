@@ -65,6 +65,11 @@ config/encryption_keys.json
 # Database files (user data)
 *.db
 *.sqlite
+*.sqlite3
+
+# Swap and temp files
+*.swp
+*.tmp
 
 # Node modules (VSCode extension)
 node_modules/

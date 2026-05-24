@@ -14,6 +14,8 @@ import logging
 from typing import List, Tuple
 from dataclasses import dataclass
 
+from ..utils.language import has_cjk
+
 _logger = logging.getLogger(__name__)
 
 from .models import Rule
@@ -322,9 +324,7 @@ class RuleMatcher:
         if not text or not text.strip():
             return []
 
-        has_cjk = any('\u4e00' <= ch <= '\u9fff' for ch in text)
-
-        if has_cjk:
+        if has_cjk(text):
             if cls._jieba_available is None:
                 try:
                     import jieba

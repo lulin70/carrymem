@@ -1673,13 +1673,7 @@ class SQLiteAdapter(StorageAdapter):
             clean = token.replace('"', '').strip()
             if not clean:
                 continue
-            has_cjk = any(
-                "\u4e00" <= c <= "\u9fff"
-                or "\u3040" <= c <= "\u309f"
-                or "\u30a0" <= c <= "\u30ff"
-                for c in clean
-            )
-            if has_cjk:
+            if has_cjk(clean):
                 sanitized.append(clean)
             else:
                 sanitized.append(f'"{clean}"')

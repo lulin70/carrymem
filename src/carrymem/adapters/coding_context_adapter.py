@@ -414,6 +414,7 @@ class CodingContextAdapter(StorageAdapter):
         filters: Optional[Dict] = None,
         limit: int = 10,
         update_access: bool = True,
+        namespaces: Optional[List[str]] = None,
         **kwargs,
     ) -> List[Dict[str, Any]]:
         conn = self._get_connection()
