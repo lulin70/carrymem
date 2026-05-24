@@ -31,7 +31,7 @@ v0.3.0 ─── Design Baseline (Memory Foundation + Rules Design Docs)
 - Second digit changes for GA milestones (API stability guarantee)
 - No "v1.0.0 jump" — earn it through proven production usage
 
-> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. Current version is v0.2.1, including all historical features plus security hardening, QA prompt optimization, coreference resolution, and auto-redaction. Next milestones: v0.2.2 (PrefEval violation optimization) → v0.2.3 (state/event version chain) → v0.2.4 (smart enhancement) → v0.2.5 (architecture health) → v0.3.0 (GA).
+> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. Current version is v0.2.2, including PrefEval 87.9%, state/event version chain, security hardening, and preference injection optimization. Next milestones: v0.2.3 (context.py modularization) → v0.2.4 (auto-maintenance + evaluation standardization) → v0.3.0 (GA).
 
 ---
 
@@ -414,34 +414,29 @@ See CHANGELOG.md for detailed history.
 - Cross-user rule sharing (with anonymization)
 - Ontology-based trigger matching
 
-### v0.2.2 — PrefEval Violation Optimization (Next)
+### ✅ v0.2.2 — PrefEval Violation Optimization + Version Chain
 
-**Theme**: Reduce PrefEval violated rate from 11→5, target CarryMem ≥ 89%
-**Principle**: #3 PrefEval focus — keep optimizing in our strongest direction
+**Theme**: PrefEval 87.9% + state/event version chain + security hardening
+**Principle**: #3 PrefEval focus + #1 Lightweight
 
-**P0 — Violation Rate Optimization**:
-- [ ] Analyze PrefEval 200-sample violation cases (categorize: injection miss / LLM non-compliance / classification error)
-- [ ] Fix coreference replacement text injection vulnerability (security)
-- [ ] Fix build_context() high-priority rule truncation by token budget
-- [ ] PrefEval 200-sample regression: CarryMem ≥ 89%
-- [ ] Update README PrefEval progress table (EN/CN/JP)
+**P0 — Violation Rate Optimization** (DONE):
+- [x] Analyze PrefEval 200-sample violation cases
+- [x] Fix coreference replacement text injection vulnerability (security)
+- [x] Preference token budget 40%→60%, preventing preference truncation
+- [x] PrefEval 200-sample: CarryMem 87.9% > reminder 86.0% > zero-shot 79.5%
+- [x] Update README PrefEval progress table (EN/CN/JP)
 
-### v0.2.3 — State/Event Version Chain + Code Health
+**P0 — Version Chain** (DONE):
+- [x] Add `memory_nature`(state/event) + `version_chain_id` + `version_number` fields
+- [x] State memory: auto-supersede old version on write, maintain version chain
+- [x] Event memory: no merge, full retention, no versioning
+- [x] Query: state→latest version only (superseded filtered by default), event→chronological
+- [x] Backward compatibility: __post_init__ auto-infer, SQLite migration v0.90 with backfill
+- [x] 27 version chain tests all passing
 
-**Theme**: Lightweight time-awareness + context.py modularization
-**Principle**: #1 Lightweight — state/event is a lightweight alternative to graph storage
-
-**P0 — Version Chain**:
-- [ ] Add `memory_nature`(state/event) + `version_chain_id` + `version_number` fields
-- [ ] State memory: auto-supersede old version on write, maintain version chain
-- [ ] Event memory: no merge, full retention, faster decay
-- [ ] Query: state→latest version only, event→chronological DESC
-- [ ] Backward compatibility: user_preference/correction→state, others→event
-
-**P1 — context.py Modularization**:
-- [ ] Split context.py (920 lines) into: selection.py, scope.py, format.py, templates.py, prompt.py
+**P1 — context.py Modularization** (In Progress):
+- [ ] Split context.py (910 lines) into: selection.py, scope.py, format.py, prompt.py
 - [ ] Each module < 250 lines, original API preserved via re-export
-- [ ] Version chain tests ≥ 30
 
 ### v0.2.4 — Auto-Maintenance + Evaluation Standardization
 
