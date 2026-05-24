@@ -25,6 +25,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
 
+from carrymem.domain import infer_domain
+
 
 @dataclass
 class MemoryEntry:
@@ -51,6 +53,7 @@ class MemoryEntry:
     memory_nature: str = "state"  # "state" (evolving, versioned) or "event" (immutable fact)
     version_chain_id: Optional[str] = None  # Shared ID for versions of the same concept
     version_number: int = 1  # Sequence number within version chain
+    domain: Optional[str] = None  # Auto-inferred professional domain
 
     # Types that represent evolving state (superseded by newer values)
     STATE_TYPES = {"user_preference", "correction", "decision", "fact_declaration", "relationship", "sentiment_marker"}
@@ -64,9 +67,11 @@ class MemoryEntry:
         return "state"
 
     def __post_init__(self):
-        """Auto-infer memory_nature if still at default."""
+        """Auto-infer memory_nature and domain if not set."""
         if self.memory_nature == "state" and self.type in self.EVENT_TYPES:
             self.memory_nature = "event"
+        if not self.domain:
+            self.domain = infer_domain(self.raw_text or self.content or "")
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize to plain dict (JSON-safe)."""
@@ -85,6 +90,7 @@ class MemoryEntry:
             "memory_nature": self.memory_nature,
             "version_chain_id": self.version_chain_id,
             "version_number": self.version_number,
+            "domain": self.domain,
         }
 
     @classmethod
@@ -105,6 +111,7 @@ class MemoryEntry:
             memory_nature=data.get("memory_nature", "state"),
             version_chain_id=data.get("version_chain_id"),
             version_number=data.get("version_number", 1),
+            domain=data.get("domain"),
         )
 
     def __repr__(self) -> str:
@@ -165,6 +172,7 @@ class StoredMemory(MemoryEntry):
             "memory_nature": self.memory_nature,
             "version_chain_id": self.version_chain_id,
             "version_number": self.version_number,
+            "domain": self.domain,
         })
         return base
 
@@ -194,6 +202,7 @@ class StoredMemory(MemoryEntry):
             memory_nature=entry.memory_nature,
             version_chain_id=entry.version_chain_id,
             version_number=entry.version_number,
+            domain=entry.domain,
         )
 
     @classmethod
@@ -273,6 +282,7 @@ class StoredMemory(MemoryEntry):
             memory_nature=data.get("memory_nature", "state"),
             version_chain_id=data.get("version_chain_id"),
             version_number=data.get("version_number", 1),
+            domain=data.get("domain"),
         )
 
 

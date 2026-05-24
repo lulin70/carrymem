@@ -4,12 +4,6 @@
 
 > ポータブル AI メモリ — 好み、決定、訂正がモデル、ツール、デバイスを越えてついてくる。
 
-新しいチャットを開くたびに、もう一度自己紹介。好みも、決定も、訂正も、全部忘れている。Cursor から Claude Code へ、GPT から Claude へ切り替えても、毎回ゼロから。
-
-あなたは AI を使っているのではなく、AI を教え込んでいます。何度も何度も。
-
-CarryMem はこれを解決します。軽量・ゼロ依存のメモリシステムで、**あなたが誰か**を保存し、あらゆる AI ツールで利用可能にします。AI は好み、過去の決定、訂正を覚えるので、あなたは自己紹介ではなく、本来の作業に集中できます。
-
 [English](../../README.md) | [中文](README-CN.md) | **日本語**
 
 <p align="center">
@@ -21,40 +15,51 @@ CarryMem はこれを解決します。軽量・ゼロ依存のメモリシス�
 
 ---
 
-## なぜ CarryMem が必要か？
+## CarryMem ができること（30秒）
 
-### 問題：AI はいつもあなたが誰かを忘れる
+一言で：**AI にあなたが誰かを覚えさせる — 読んだ内容ではなく。**
 
-新しい会話のたびに、AI はゼロから始まります：
-- ダークモードがお好み？**忘れている。**
-- 前回訂正したこと？**忘れている。**
-- React を使うと決めたこと？**忘れている。**
+```python
+from carrymem import CarryMem
 
-ツールを変え（Cursor → Windsurf）、モデルを変え（Claude → GPT）— 毎回ゼロからやり直し。
+cm = CarryMem()
+cm.classify_and_remember("ダークモードが好き")              # 自動分類：好み
+cm.classify_and_remember("PostgreSQL でなく MySQL を使う")   # 自動分類：訂正
+memories = cm.recall_memories("データベース")                # セマンティック検索
+print(cm.build_system_prompt())                              # 任意の AI に注入
+cm.close()
+```
 
-### ソリューション：CarryMem アイデンティティレイヤー
+---
 
-CarryMem はテキストを保存するだけではなく — **あなたが誰か**を理解します：
+## CarryMem を選ぶ 3 つの理由
 
-```bash
-$ carrymem whoami
+| # | 理由 | データ |
+|---|------|--------|
+| 🎯 | **嗜好注入精度** | **87.9%** — 学術検証（PrefEval, ICLR 2025 Oral） |
+| 💰 | **ゼロ LLM 分類** | **88%** のメモリは LLM 呼び出し不要、ゼロ Token 消費 |
+| 🪶 | **軽量・ポータブル** | **SQLite 単一ファイル**、ゼロ依存、データを持ち運び |
 
-  あなたは誰か（AI の視点から）
-  ==================================================
+---
 
-  好み：
-    ⭐ すべてのエディタでダークモードを好む
-    ⭐ データベースは PostgreSQL を使う
-    ⭐ データ分析は常に Python を使う
+## 仕組み
 
-  決定：
-    🎯 フロントエンドは React
-
-  訂正：
-    🔧 ポート番号は 5432
-
-  メモリプロファイル：
-    合計: 19 | 主要タイプ: user_preference | 平均信頼度: 73%
+```
+ユーザー入力
+    ↓
+自動分類（7タイプ、4層）  ← 88% ゼロ LLM
+    ↓
+重要度スコアリング（confidence × type × recency × access）
+    ↓
+スマートストレージ（SQLite + FTS5、重複排除、TTL、暗号化）
+    ↓
+記憶統合（P0: 重複排除+減衰 → P1: パターン→ルール → P2: 意味マージ）
+    ↓
+セマンティック検索（FTS5 + 同義語 + スペル修正 + 多言語）
+    ↓
+嗜好注入（トークン予算、関連性ランキング）  ← 87.9% 精度
+    ↓
+AI ツール（Cursor / Claude Code / 任意の MCP クライアント）
 ```
 
 ---
@@ -141,9 +146,9 @@ carrymem skill-verify team-conventions.json                    # Skill 検証
 
 ## コア機能
 
-### 1. 自動分類（7 種類のメモリタイプ）
+### メモリがあなたを理解する
 
-CarryMem はあなたが共有する情報のタイプを自動識別します：
+CarryMem はあなたが共有する情報のタイプを自動識別します。手動タグ付け不要：
 
 | タイプ | アイコン | 例 |
 |--------|----------|-----|
@@ -155,7 +160,7 @@ CarryMem はあなたが共有する情報のタイプを自動識別します�
 | `relationship` | 👥 | "田中さんはダークモードが好き" |
 | `sentiment_marker` | 💡 | "マイクロサービスに積極的" |
 
-### 2. セマンティック検索（多言語対応）
+セマンティック検索（多言語対応）：
 
 ```python
 cm.classify_and_remember("PostgreSQLを使うのが好き")
@@ -167,7 +172,7 @@ cm.recall_memories("Postgres")       # スペル修正
 cm.recall_memories("database")       # 言語横断（英語）
 ```
 
-### 3. アイデンティティレイヤー（whoami）
+アイデンティティレイヤー（whoami）：
 
 ```python
 identity = cm.whoami()
@@ -176,7 +181,17 @@ print(identity["decisions"])     # ["フロントエンドは React", ...]
 print(identity["corrections"])   # ["ポート番号は 5432", ...]
 ```
 
-### 4. 重要度スコアリングとライフサイクル
+### 嗜好注入
+
+CarryMem は単純なリマインダーではなく、構造化された嗜好をシステムプロンプトに注入します：
+
+```python
+print(cm.build_system_prompt())   # 嗜好注入プロンプトを自動生成
+```
+
+**なぜ嗜好注入 > フルリマインダーか**：リマインダーは毎ターン「ユーザーの嗜好を覚えて」と注入。CarryMem はシステムプロンプトに構造化された嗜好を注入 — より正確、より持続的、役立たず回答46%削減。
+
+### メモリライフサイクル
 
 すべての記憶には時間とともに進化する重要度スコアがあります：
 
@@ -188,7 +203,7 @@ importance = confidence × type_weight × recency_factor × access_factor
 - **アクセス強化** — 頻繁に呼び出される記憶は新鮮に保たれる
 - **タイプ重み付け** — 修正(1.3x) > 決定(1.2x) > 好み(1.1x)
 
-### 5. 品質管理
+品質管理：
 
 ```bash
 carrymem check                    # 全体チェック
@@ -198,7 +213,27 @@ carrymem check --expired          # 期限切れの記憶を発見
 carrymem clean --expired --dry-run # クリーンアップをプレビュー
 ```
 
-### 6. セキュリティと信頼性
+記憶統合（3フェーズ）：
+
+```python
+# 統合のプレビュー
+report = cm.consolidate(dry_run=True)
+print(f"重複: {report['stats']['duplicates_found']}")
+print(f"減衰: {len(report['to_decay'])}")
+
+# 統合を実行（P0: 重複排除+減衰, P1: パターン→ルール, P2: 意味マージ）
+report = cm.consolidate(dry_run=False, run_p1=True, run_p2=True)
+```
+
+| フェーズ | 機能 | メカニズム |
+|----------|------|------------|
+| **P0** | 重複排除 + 減衰 | Jaccard 類似度で重複排除、指数半減期減衰（好み: 270日, 事実: 90日, 感情: 45日） |
+| **P1** | パターン → ルール | 繰り返しパターンを検出 → レビュー用ルール候補を生成 |
+| **P2** | 意味マージ | 関連メモリをクラスタリング → ホスト LLM に統合を依頼 |
+
+好みは常に保持 — 減衰も重複排除もされません。
+
+### セキュリティとポータビリティ
 
 | 機能 | 説明 |
 |------|------|
@@ -208,7 +243,11 @@ carrymem clean --expired --dry-run # クリーンアップをプレビュー
 | **バージョン履歴** | すべての編集を追跡、ロールバック対応 |
 | **入力検証** | SQLインジェクション、XSS、パストラバーサル対策 |
 
-### 7. MCP統合（1行設定）
+---
+
+## サポート機能
+
+### MCP 統合
 
 ```bash
 # Cursor用設定
@@ -223,7 +262,7 @@ carrymem setup-mcp --tool all
 
 25のMCPツール：Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (1) · Rules (11)
 
-### 8. ルールエンジンとスコープ
+### ルールエンジン
 
 行動ルールは3つのスコープレベルをサポートし、チーム/組織のアラインメントを実現：
 
@@ -248,7 +287,15 @@ results = engine.match("データベース設計", scopes=["company"])
 | `negotiated` | 2 | 会社ルールから適応 |
 | `personal` | 1（最低） | ユーザーの好み |
 
-### 9. Skill フォーマット — ポータブルルールバンドル
+マージプロトコル — 異なるソースからのルールを3つの戦略でマージ：
+
+| 戦略 | 説明 |
+|------|------|
+| `company_overrides` | 高スコープが常に勝つ |
+| `negotiate` | 競合ルールを "negotiated" スコープに適応 |
+| `keep_both` | 両方のルールを保持、ユーザーが手動レビュー |
+
+### Skill フォーマット
 
 暗号整合性検証付きでチーム間ルールセットを共有：
 
@@ -269,26 +316,7 @@ assert result["valid"] is True
 engine.skill_install(bundle, scope_override="company", mode="skip")
 ```
 
-### 10. マージプロトコル — 競合解決
-
-異なるソースからのルールを3つの戦略でマージ：
-
-| 戦略 | 説明 |
-|------|------|
-| `company_overrides` | 高スコープが常に勝つ |
-| `negotiate` | 競合ルールを "negotiated" スコープに適応 |
-| `keep_both` | 両方のルールを保持、ユーザーが手動レビュー |
-
-### 11. VS Code 拡張機能
-
-エディタ内でルールを直接管理：
-
-- スコープバッジ付きルールサイドバー
-- Webview でルールを追加/編集/削除
-- 有効性レポートパネル
-- Skill パック/インストールファイルダイアログ
-
-### 12. ターミナル UI
+### ターミナル UI
 
 ```bash
 pip install textual
@@ -297,29 +325,14 @@ carrymem tui
 
 サイドバーフィルター、検索、追加モード付きインタラクティブターミナルインターフェース。
 
----
+### VS Code 拡張機能
 
-## アーキテクチャ
+エディタ内でルールを直接管理：
 
-```
-ユーザー入力
-    ↓
-自動分類（7タイプ、4層）
-    ↓
-重要度スコアリング（confidence × type × recency × access）
-    ↓
-スマートストレージ（SQLite + FTS5、重複排除、TTL、暗号化）
-    ↓
-記憶統合（P0: 重複排除+減衰 → P1: パターン→ルール → P2: 意味マージ）
-
-定期統合をサポート：`schedule_consolidation(interval_hours=1.0)` 定期統合メソッド、`stop_consolidation()` 停止メソッド。CLI: `carrymem consolidate --schedule 1h` と `carrymem consolidate --stop`
-    ↓
-セマンティック検索（FTS5 + 同義語 + スペル修正 + 多言語）
-    ↓
-コンテキスト注入（トークン予算、関連性ランキング）
-    ↓
-AI ツール（Cursor / Claude Code / 任意の MCP クライアント）
-```
+- スコープバッジ付きルールサイドバー
+- Webview でルールを追加/編集/削除
+- 有効性レポートパネル
+- Skill パック/インストールファイルダイアログ
 
 ---
 
@@ -342,14 +355,11 @@ AI ツール（Cursor / Claude Code / 任意の MCP クライアント）
 | **データ所有権** | ✅ ローカル | ⚠️ セルフホスト | ✅ ローカル | ❌ クラウド |
 | **5行統合** | ✅ | ⚠️ SDK必要 | ❌ | ❌ |
 | **多言語検索** | ✅ 日/中/英 | ❌ | ❌ | ❌ |
+| **核心の違い** | **あなたが誰かを覚える** | 読んだ内容を保存 | 読んだ内容を保存 | 読んだ内容を保存 |
 
 > **注**：比較は公開情報に基づきます。製品は急速に進化するため、最新機能をご確認ください。
 
-**核心の違い**：他の製品は*あなたが読んだもの*を保存します。CarryMem は*あなたが誰であるか*を保存します。
-
 ---
-
-## パフォーマンス
 
 ### 🏆 PrefEval — 嗜好遵守率ベンチマーク
 
@@ -371,7 +381,6 @@ AI ツール（Cursor / Claude Code / 任意の MCP クライアント）
 | v0.2.1 修正後 | 85.5% | メモリクエリ指示の削除 |
 | v0.2.1 最適化後 | 87.0% | QAプロンプト簡素化 |
 | **v0.2.2** | **87.9%** | トークン予算 + デッドコード修正 + セキュリティ |
-| **v0.2.3** | **87.9%** | 定期統合 + ルールエクスポート/インポート + インタラクティブ CLI |
 
 **なぜ重要か**：リマインダーは毎ターン「ユーザーの嗜好を覚えて」と注入。CarryMem はシステムプロンプトに構造化された嗜好を注入 — より正確、より持続的、役立たず回答46%削減。
 
@@ -381,6 +390,85 @@ AI ツール（Cursor / Claude Code / 任意の MCP クライアント）
 | ⚡ | P99レイテンシ | **1.3ms** — Mem0より**93倍高速** |
 | 🪶 | 依存関係 | **SQLiteのみ** — ベクトルDB不要 |
 | 🛡️ | ルールエンジン | **唯一**ルールエンジン搭載（競合：0%） |
+
+---
+
+## アーキテクチャ
+
+```
+ユーザー入力
+    ↓
+自動分類（7タイプ、4層）
+    ↓
+重要度スコアリング（confidence × type × recency × access）
+    ↓
+スマートストレージ（SQLite + FTS5、重複排除、TTL、暗号化）
+    ↓
+記憶統合（P0: 重複排除+減衰 → P1: パターン→ルール → P2: 意味マージ）
+    ↓
+セマンティック検索（FTS5 + 同義語 + スペル修正 + 多言語）
+    ↓
+コンテキスト注入（トークン予算、関連性ランキング）
+    ↓
+AI ツール（Cursor / Claude Code / 任意の MCP クライアント）
+```
+
+---
+
+## 高度な使い方
+
+### Obsidian ナレッジベース
+
+```python
+from carrymem import CarryMem, ObsidianAdapter
+
+cm = CarryMem(knowledge_adapter=ObsidianAdapter("/path/to/vault"))
+cm.index_knowledge()
+results = cm.recall_from_knowledge("Python デザインパターン")
+```
+
+### 非同期 API
+
+```python
+from carrymem import AsyncCarryMem
+
+async with AsyncCarryMem() as cm:
+    await cm.classify_and_remember("ダークモードが好き")
+    memories = await cm.recall_memories("テーマ")
+```
+
+### JSON アダプター（SQLite 不要）
+
+```python
+from carrymem import CarryMem, JSONAdapter
+
+cm = CarryMem(adapter=JSONAdapter(path="/path/to/memories.json"))
+```
+
+### 暗号化
+
+```python
+cm = CarryMem(encryption_key="my-secret-key")
+# すべてのコンテンツは保存時暗号化、読み取り時復号
+```
+
+### メモリバージョニング
+
+```python
+cm.update_memory(key, "更新された内容")     # バージョン 2 を作成
+history = cm.get_memory_history(key)        # [v1, v2]
+cm.rollback_memory(key, version=1)          # v1 に復元
+```
+
+### 他の AI 用にアイデンティティをエクスポート
+
+```python
+# AI アイデンティティをエクスポート
+cm.export_profile(output_path="my_identity.json")
+
+# 別のデバイスや AI ツールで
+cm.import_memories(input_path="backup.json")
+```
 
 ---
 

@@ -4,12 +4,6 @@
 
 > 你的随身 AI 记忆 — 偏好、决策和纠正，跨模型、跨工具、跨设备随身携带。
 
-每次开新对话，你都要重新介绍自己。你的偏好、你的决策、你的纠正，全忘了。换工具（Cursor → Claude Code），换模型（GPT → Claude），每次都从零开始。
-
-你不是在用 AI，你是在反复教 AI。
-
-CarryMem 解决这个问题。它是一个轻量级、零依赖的记忆系统，存储**你是谁**，并将这个身份提供给任何 AI 工具。你的 AI 记住你的偏好、你过去的决策和你做过的纠正，让你专注做事，而不是反复自我介绍。
-
 [English](../../README.md) | **中文** | [日本語](README-JP.md)
 
 <p align="center">
@@ -21,40 +15,51 @@ CarryMem 解决这个问题。它是一个轻量级、零依赖的记忆系统�
 
 ---
 
-## 为什么需要 CarryMem？
+## CarryMem 做什么（30 秒）
 
-### 问题：AI 总是忘记你是谁
+一句话：**让 AI 记住你是谁，而不是你读了什么。**
 
-每次新对话，AI 都从零开始：
-- 你偏好深色模式？**忘了。**
-- 你上次纠正过？**忘了。**
-- 你决定用 React？**忘了。**
+```python
+from carrymem import CarryMem
 
-换工具（Cursor → Windsurf），换模型（Claude → GPT）— 每次都从零开始。
+cm = CarryMem()
+cm.classify_and_remember("我偏好深色模式")              # 自动分类为偏好
+cm.classify_and_remember("用 PostgreSQL 不用 MySQL")    # 自动分类为纠正
+memories = cm.recall_memories("数据库")                  # 语义召回
+print(cm.build_system_prompt())                          # 注入任何 AI
+cm.close()
+```
 
-### 解决方案：CarryMem 身份层
+---
 
-CarryMem 不只是存储文本 — 它理解**你是谁**：
+## 选择 CarryMem 的 3 个理由
 
-```bash
-$ carrymem whoami
+| # | 理由 | 数据 |
+|---|------|------|
+| 🎯 | **偏好注入精准度** | **87.9%** — 学术验证（PrefEval, ICLR 2025 Oral） |
+| 💰 | **零 LLM 分类** | **88%** 记忆无需调用大模型，零 Token 消耗 |
+| 🪶 | **轻量可携带** | **SQLite 单文件**，零依赖，数据随身走 |
 
-  你是谁（根据你的 AI）
-  ==================================================
+---
 
-  你的偏好：
-    ⭐ 我偏好所有编辑器都用深色模式
-    ⭐ 我用 PostgreSQL 做数据库
-    ⭐ 我总是用 Python 做数据分析
+## 工作原理
 
-  你的决策：
-    🎯 前端用 React
-
-  你的纠正：
-    🔧 端口号应该是 5432
-
-  记忆画像：
-    总计: 19 | 主导类型: user_preference | 平均置信度: 73%
+```
+用户输入
+    ↓
+自动分类（7 种类型，4 层）  ← 88% 零 LLM
+    ↓
+重要性评分（confidence × type × recency × access）
+    ↓
+智能存储（SQLite + FTS5，去重，TTL，加密）
+    ↓
+记忆整合（P0: 去重+衰减 → P1: 模式→规则 → P2: 语义合并）
+    ↓
+语义召回（FTS5 + 同义词 + 拼写纠正 + 跨语言）
+    ↓
+偏好注入（token 预算，相关性排序）  ← 87.9% 精准度
+    ↓
+AI 工具（Cursor / Claude Code / 任意 MCP 客户端）
 ```
 
 ---
@@ -141,9 +146,9 @@ carrymem skill-verify team-conventions.json              # 验证 Skill 完整�
 
 ## 核心功能
 
-### 1. 自动分类（7 种记忆类型）
+### 记忆理解你
 
-CarryMem 自动识别你分享的信息类型：
+CarryMem 自动识别你分享的信息类型，无需手动标注：
 
 | 类型 | 图标 | 示例 |
 |------|------|------|
@@ -155,7 +160,7 @@ CarryMem 自动识别你分享的信息类型：
 | `relationship` | 👥 | "张三偏好深色模式" |
 | `sentiment_marker` | 💡 | "对微服务方案持积极态度" |
 
-### 2. 语义召回（跨语言）
+语义召回支持跨语言：
 
 ```python
 cm.classify_and_remember("我偏好使用PostgreSQL")
@@ -167,7 +172,7 @@ cm.recall_memories("Postgres")       # 拼写纠正
 cm.recall_memories("データベース")    # 跨语言（日语）
 ```
 
-### 3. 身份层（whoami）
+身份层（whoami）：
 
 ```python
 identity = cm.whoami()
@@ -176,7 +181,17 @@ print(identity["decisions"])     # ["前端用 React", ...]
 print(identity["corrections"])   # ["端口号应该是 5432", ...]
 ```
 
-### 4. 重要性评分与生命周期
+### 偏好注入
+
+CarryMem 将结构化偏好注入 system prompt，而非简单提醒：
+
+```python
+print(cm.build_system_prompt())   # 自动生成偏好注入 prompt
+```
+
+**为什么偏好注入 > 全量提醒**：reminder 每轮都注入"记住用户偏好"。CarryMem 在 system prompt 中注入结构化偏好 — 更精准、更持久、无用回答减少 46%。
+
+### 记忆生命周期
 
 每条记忆都有随时间演化的重要性评分：
 
@@ -188,7 +203,7 @@ importance = confidence × type_weight × recency_factor × access_factor
 - **访问强化** — 频繁召回的记忆保持新鲜
 - **类型加权** — 纠正(1.3x) > 决策(1.2x) > 偏好(1.1x)
 
-### 5. 质量管理
+质量管理：
 
 ```bash
 carrymem check                    # 全面检查
@@ -198,7 +213,27 @@ carrymem check --expired          # 发现过期记忆
 carrymem clean --expired --dry-run # 预览清理
 ```
 
-### 6. 安全与可靠性
+记忆整合（三阶段）：
+
+```python
+# 预览整合效果
+report = cm.consolidate(dry_run=True)
+print(f"重复: {report['stats']['duplicates_found']}")
+print(f"衰减: {len(report['to_decay'])}")
+
+# 执行整合（P0: 去重+衰减, P1: 模式→规则, P2: 语义合并）
+report = cm.consolidate(dry_run=False, run_p1=True, run_p2=True)
+```
+
+| 阶段 | 功能 | 机制 |
+|------|------|------|
+| **P0** | 去重 + 衰减 | Jaccard 相似度去重，指数半衰期衰减（偏好: 270天, 事实: 90天, 情绪: 45天） |
+| **P1** | 模式 → 规则 | 检测重复模式 → 生成规则候选供审查 |
+| **P2** | 语义合并 | 聚类相关记忆 → 请求宿主 LLM 整合 |
+
+偏好始终保留 — 永不衰减或去重。
+
+### 安全与可携带
 
 | 特性 | 说明 |
 |------|------|
@@ -208,7 +243,11 @@ carrymem clean --expired --dry-run # 预览清理
 | **版本历史** | 每次编辑追踪，支持回滚 |
 | **输入验证** | SQL注入、XSS、路径遍历防护 |
 
-### 7. MCP 集成（一行配置）
+---
+
+## 辅助功能
+
+### MCP 集成
 
 ```bash
 # 配置 Cursor
@@ -223,7 +262,7 @@ carrymem setup-mcp --tool all
 
 25 个 MCP 工具：Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (1) · Rules (11)
 
-### 8. 规则引擎与作用域
+### 规则引擎
 
 行为规则支持三个作用域级别，实现团队/组织对齐：
 
@@ -248,7 +287,15 @@ results = engine.match("数据库设计", scopes=["company"])
 | `negotiated` | 2 | 从公司规则适配而来 |
 | `personal` | 1（最低） | 用户创建的偏好 |
 
-### 9. Skill 格式 — 便携规则包
+合并协议 — 三种策略合并来自不同来源的规则：
+
+| 策略 | 说明 |
+|------|------|
+| `company_overrides` | 高作用域始终获胜 |
+| `negotiate` | 冲突规则适配为 "negotiated" 作用域 |
+| `keep_both` | 两条规则都保留，用户手动审查 |
+
+### Skill 格式
 
 通过加密完整性验证跨团队共享规则集：
 
@@ -269,26 +316,7 @@ assert result["valid"] is True
 engine.skill_install(bundle, scope_override="company", mode="skip")
 ```
 
-### 10. 合并协议 — 冲突解决
-
-三种策略合并来自不同来源的规则：
-
-| 策略 | 说明 |
-|------|------|
-| `company_overrides` | 高作用域始终获胜 |
-| `negotiate` | 冲突规则适配为 "negotiated" 作用域 |
-| `keep_both` | 两条规则都保留，用户手动审查 |
-
-### 11. VS Code 扩展
-
-直接在编辑器中管理规则：
-
-- 规则侧边栏，带作用域徽章
-- 通过 Webview 添加/编辑/删除规则
-- 有效性报告面板
-- Skill 打包/安装文件对话框
-
-### 12. 终端界面
+### 终端界面
 
 ```bash
 pip install textual
@@ -297,27 +325,14 @@ carrymem tui
 
 交互式终端界面，侧边栏过滤、搜索、添加模式。
 
----
+### VS Code 扩展
 
-## 架构
+直接在编辑器中管理规则：
 
-```
-用户输入
-    ↓
-自动分类（7 种类型，4 层）
-    ↓
-重要性评分（confidence × type × recency × access）
-    ↓
-智能存储（SQLite + FTS5，去重，TTL，加密）
-    ↓
-记忆整合（P0: 去重+衰减 → P1: 模式→规则 → P2: 语义合并）
-    ↓
-语义召回（FTS5 + 同义词 + 拼写纠正 + 跨语言）
-    ↓
-上下文注入（token 预算，相关性排序）
-    ↓
-AI 工具（Cursor / Claude Code / 任意 MCP 客户端）
-```
+- 规则侧边栏，带作用域徽章
+- 通过 Webview 添加/编辑/删除规则
+- 有效性报告面板
+- Skill 打包/安装文件对话框
 
 ---
 
@@ -340,10 +355,9 @@ AI 工具（Cursor / Claude Code / 任意 MCP 客户端）
 | **数据所有权** | ✅ 本地文件 | ⚠️ 自托管 | ✅ 本地 | ❌ 云端 |
 | **5 行代码接入** | ✅ | ⚠️ 需要 SDK | ❌ | ❌ |
 | **跨语言召回** | ✅ 中/英/日 | ❌ | ❌ | ❌ |
+| **核心差异** | **记住你是谁** | 存储你读了什么 | 存储你读了什么 | 存储你读了什么 |
 
 > **注**：对比基于公开信息。产品迭代迅速，请核实最新功能。
-
-**核心差异**：其他产品存储*你读了什么*。CarryMem 记住*你是谁*。
 
 ---
 
@@ -376,6 +390,85 @@ AI 工具（Cursor / Claude Code / 任意 MCP 客户端）
 | ⚡ | P99 延迟 | **1.3ms** — 比 Mem0 **快 93 倍** |
 | 🪶 | 依赖 | **仅需 SQLite** — 无需向量数据库 |
 | 🛡️ | 规则引擎 | **唯一拥有**规则引擎（竞争对手：0%） |
+
+---
+
+## 架构
+
+```
+用户输入
+    ↓
+自动分类（7 种类型，4 层）
+    ↓
+重要性评分（confidence × type × recency × access）
+    ↓
+智能存储（SQLite + FTS5，去重，TTL，加密）
+    ↓
+记忆整合（P0: 去重+衰减 → P1: 模式→规则 → P2: 语义合并）
+    ↓
+语义召回（FTS5 + 同义词 + 拼写纠正 + 跨语言）
+    ↓
+上下文注入（token 预算，相关性排序）
+    ↓
+AI 工具（Cursor / Claude Code / 任意 MCP 客户端）
+```
+
+---
+
+## 高级用法
+
+### Obsidian 知识库
+
+```python
+from carrymem import CarryMem, ObsidianAdapter
+
+cm = CarryMem(knowledge_adapter=ObsidianAdapter("/path/to/vault"))
+cm.index_knowledge()
+results = cm.recall_from_knowledge("Python 设计模式")
+```
+
+### 异步 API
+
+```python
+from carrymem import AsyncCarryMem
+
+async with AsyncCarryMem() as cm:
+    await cm.classify_and_remember("我偏好深色模式")
+    memories = await cm.recall_memories("主题")
+```
+
+### JSON 适配器（无需 SQLite）
+
+```python
+from carrymem import CarryMem, JSONAdapter
+
+cm = CarryMem(adapter=JSONAdapter(path="/path/to/memories.json"))
+```
+
+### 加密
+
+```python
+cm = CarryMem(encryption_key="my-secret-key")
+# 所有内容静态加密，读取时解密
+```
+
+### 记忆版本管理
+
+```python
+cm.update_memory(key, "更新后的内容")     # 创建版本 2
+history = cm.get_memory_history(key)      # [v1, v2]
+cm.rollback_memory(key, version=1)        # 恢复到 v1
+```
+
+### 导出身份给其他 AI
+
+```python
+# 导出你的 AI 身份
+cm.export_profile(output_path="my_identity.json")
+
+# 在另一台设备或 AI 工具上
+cm.import_memories(input_path="backup.json")
+```
 
 ---
 

@@ -32,6 +32,7 @@ from carrymem.engine import MemoryClassificationEngine
 from carrymem.adapters.base import MemoryEntry, StorageAdapter
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.adapters.obsidian_adapter import ObsidianAdapter
+from carrymem.domain import infer_domains_from_memories, get_domain_description
 
 
 def _validate_file_path(path: str, allowed_base: str = None) -> str:
@@ -970,6 +971,10 @@ class CarryMem:
 
         summary = " | ".join(identity_parts) if identity_parts else f"User with {total} memories"
 
+        # Auto-infer domains from all memories
+        all_memories = preferences + decisions + corrections
+        domains = infer_domains_from_memories(all_memories)
+
         return {
             "identity": "known_user",
             "summary": summary,
@@ -980,6 +985,7 @@ class CarryMem:
             "decisions": decision_list,
             "corrections": correction_list,
             "by_type": by_type,
+            "domains": [get_domain_description(d) for d in domains],
         }
 
     def export_profile(self, output_path: Optional[str] = None) -> Dict[str, Any]:
