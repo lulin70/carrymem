@@ -100,6 +100,12 @@ def _mmr_select(
     if len(scored) <= max_count:
         return scored
 
+    # Pre-compute token sets for all candidates (avoid repeated tokenization)
+    candidate_tokens = []
+    for _, mem in scored:
+        text = (mem.get("raw_text", "") or "") + " " + (mem.get("content", "") or "")
+        candidate_tokens.append(_tokenize_text(text))
+
     selected_indices = []
     selected_tokens_list = []
     remaining = list(range(len(scored)))
@@ -116,9 +122,7 @@ def _mmr_select(
             score, mem = scored[idx]
             norm_score = score / max_score
 
-            mem_tokens = _tokenize_text(
-                (mem.get("raw_text", "") or "") + " " + (mem.get("content", "") or "")
-            )
+            mem_tokens = candidate_tokens[idx]
 
             if selected_tokens_list:
                 max_sim = max(
@@ -140,12 +144,7 @@ def _mmr_select(
 
         selected_indices.append(best_idx)
         remaining.remove(best_idx)
-        _, best_mem = scored[best_idx]
-        selected_tokens_list.append(
-            _tokenize_text(
-                (best_mem.get("raw_text", "") or "") + " " + (best_mem.get("content", "") or "")
-            )
-        )
+        selected_tokens_list.append(candidate_tokens[best_idx])
 
     return [scored[i] for i in selected_indices]
 

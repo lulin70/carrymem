@@ -143,34 +143,52 @@ class ObsidianAdapter(StorageAdapter):
         self._db_path = db_path
         self._content_truncate = content_truncate
         self._lock = threading.Lock()
-        self._conn = sqlite3.connect(self._db_path, check_same_thread=False)
-        self._conn.row_factory = sqlite3.Row
-        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._local = threading.local()
+        self._all_connections: Dict[int, sqlite3.Connection] = {}
+        self._conn_lock = threading.Lock()
+        self._closed = False
+        conn = self._get_connection()
+        conn.execute("PRAGMA journal_mode=WAL")
         self._init_schema()
 
+    def _get_connection(self) -> sqlite3.Connection:
+        if self._closed:
+            raise RuntimeError("ObsidianAdapter has been closed")
+
+        if not hasattr(self._local, 'conn') or self._local.conn is None:
+            conn = sqlite3.connect(self._db_path)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA journal_mode=WAL")
+            self._local.conn = conn
+            with self._conn_lock:
+                self._all_connections[id(conn)] = conn
+        return self._local.conn
+
     def _init_schema(self):
-        self._conn.executescript(_OBSIDIAN_SCHEMA_SQL)
-        self._conn.commit()
+        conn = self._get_connection()
+        conn.executescript(_OBSIDIAN_SCHEMA_SQL)
+        conn.commit()
         self._migrate_trigram()
 
     def _migrate_trigram(self):
-        cursor = self._conn.execute(
+        conn = self._get_connection()
+        cursor = conn.execute(
             "SELECT sql FROM sqlite_master WHERE type='table' AND name='notes_fts'"
         )
         row = cursor.fetchone()
         if row and "unicode61" in (row["sql"] or ""):
-            self._conn.execute("INSERT INTO notes_fts(notes_fts) VALUES('rebuild')")
-            self._conn.execute(
+            conn.execute("INSERT INTO notes_fts(notes_fts) VALUES('rebuild')")
+            conn.execute(
                 "DROP TABLE IF EXISTS notes_fts"
             )
-            self._conn.execute(
+            conn.execute(
                 """CREATE VIRTUAL TABLE notes_fts USING fts5(
                     title, content,
                     content='notes', content_rowid='rowid', tokenize='trigram'
                 )"""
             )
-            self._conn.execute("INSERT INTO notes_fts(notes_fts) VALUES('rebuild')")
-            self._conn.commit()
+            conn.execute("INSERT INTO notes_fts(notes_fts) VALUES('rebuild')")
+            conn.commit()
 
     @property
     def name(self) -> str:
@@ -197,6 +215,7 @@ class ObsidianAdapter(StorageAdapter):
             return self._index_vault_impl()
 
     def _index_vault_impl(self) -> Dict[str, int]:
+        conn = self._get_connection()
         md_files = list(self._vault_path.rglob("*.md"))
         new_count = 0
         updated_count = 0
@@ -214,7 +233,7 @@ class ObsidianAdapter(StorageAdapter):
 
             c_hash = content_hash(content)
 
-            existing = self._conn.execute(
+            existing = conn.execute(
                 "SELECT content_hash FROM notes WHERE file_path = ?",
                 (str(md_file.relative_to(self._vault_path)),),
             ).fetchone()
@@ -236,7 +255,7 @@ class ObsidianAdapter(StorageAdapter):
             note_id = f"obs_{c_hash[:8]}_{title[:30].replace(' ', '_')}"
 
             if existing:
-                self._conn.execute(
+                conn.execute(
                     """UPDATE notes SET title=?, content=?, tags=?, wiki_links=?,
                        frontmatter=?, file_modified=?, content_hash=?, indexed_at=?
                        WHERE file_path=?""",
@@ -250,7 +269,7 @@ class ObsidianAdapter(StorageAdapter):
                 )
                 updated_count += 1
             else:
-                self._conn.execute(
+                conn.execute(
                     """INSERT INTO notes (id, title, file_path, content, tags,
                        wiki_links, frontmatter, file_modified, content_hash, indexed_at)
                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
@@ -265,7 +284,7 @@ class ObsidianAdapter(StorageAdapter):
                 )
                 new_count += 1
 
-        self._conn.commit()
+        conn.commit()
 
         return {
             "total_files": len(md_files),
@@ -289,8 +308,10 @@ class ObsidianAdapter(StorageAdapter):
         query: str,
         filters: Optional[Dict[str, Any]] = None,
         limit: int = 20,
-        full_content: bool = False,
+        update_access: bool = True,
+        **kwargs,
     ) -> list:
+        full_content = kwargs.get("full_content", False)
         with self._lock:
             filters = filters or {}
 
@@ -338,7 +359,7 @@ class ObsidianAdapter(StorageAdapter):
         params_with_query = [fts_query] + params + [limit]
 
         try:
-            rows = self._conn.execute(sql, params_with_query).fetchall()
+            rows = self._get_connection().execute(sql, params_with_query).fetchall()
         except sqlite3.OperationalError:
             rows = self._fallback_search(query, filters, limit)
             return [self._row_to_dict(row) for row in rows]
@@ -397,7 +418,7 @@ class ObsidianAdapter(StorageAdapter):
 
         sql = f"SELECT * FROM notes {where_clause} ORDER BY indexed_at DESC LIMIT ?"
         params.append(limit)
-        return self._conn.execute(sql, params).fetchall()
+        return self._get_connection().execute(sql, params).fetchall()
 
     def _filtered_search(self, filters: Dict[str, Any], limit: int) -> list:
         conditions = []
@@ -419,7 +440,7 @@ class ObsidianAdapter(StorageAdapter):
 
         sql = f"SELECT * FROM notes {where_clause} ORDER BY indexed_at DESC LIMIT ?"
         params.append(limit)
-        rows = self._conn.execute(sql, params).fetchall()
+        rows = self._get_connection().execute(sql, params).fetchall()
 
         return [self._row_to_dict(row) for row in rows]
 
@@ -430,8 +451,9 @@ class ObsidianAdapter(StorageAdapter):
 
     def get_stats(self) -> Dict[str, Any]:
         with self._lock:
-            total = self._conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
-            tag_rows = self._conn.execute(
+            conn = self._get_connection()
+            total = conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
+            tag_rows = conn.execute(
                 "SELECT tags FROM notes WHERE tags IS NOT NULL AND tags != '[]'"
             ).fetchall()
 
@@ -453,7 +475,7 @@ class ObsidianAdapter(StorageAdapter):
             }
 
     def get_tags(self) -> Dict[str, int]:
-        tag_rows = self._conn.execute(
+        tag_rows = self._get_connection().execute(
             "SELECT tags FROM notes WHERE tags IS NOT NULL AND tags != '[]'"
         ).fetchall()
 
@@ -469,7 +491,7 @@ class ObsidianAdapter(StorageAdapter):
         return dict(sorted(all_tags.items(), key=lambda x: -x[1]))
 
     def get_linked_notes(self, note_title: str) -> List[Dict[str, Any]]:
-        rows = self._conn.execute(
+        rows = self._get_connection().execute(
             "SELECT * FROM notes WHERE wiki_links LIKE ? ESCAPE '\\'",
             (f'%"{escape_like(note_title)}"%',),
         ).fetchall()
@@ -517,8 +539,16 @@ class ObsidianAdapter(StorageAdapter):
         return result
 
     def close(self):
-        if self._conn:
-            self._conn.close()
+        self._closed = True
+        with self._conn_lock:
+            for conn in self._all_connections.values():
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+            self._all_connections.clear()
+        if hasattr(self._local, 'conn'):
+            self._local.conn = None
 
     def __del__(self):
         self.close()

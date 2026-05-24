@@ -16,6 +16,8 @@ import threading
 from typing import List, Optional
 from pathlib import Path
 
+from carrymem.utils.language import has_cjk
+
 _logger = logging.getLogger(__name__)
 
 from .models import Rule
@@ -414,16 +416,6 @@ class RuleStorage:
         return min(score, 1.0)
 
     @staticmethod
-    def _has_cjk(text: str) -> bool:
-        """Check if text contains CJK characters."""
-        return any(
-            "\u4e00" <= char <= "\u9fff"
-            or "\u3400" <= char <= "\u4dbf"
-            or "\u30a0" <= char <= "\u30ff"
-            for char in text
-        )
-
-    @staticmethod
     def _sanitize_field(value: str, field_name: str) -> str:
         danger_pattern = re.compile(
             r'(?:ignore\s+(?:previous|above|all)\s+(?:instructions?|rules?)|'
@@ -479,7 +471,7 @@ class RuleStorage:
                 return results
         except sqlite3.OperationalError as e:
             _logger.warning(f"FTS5 search failed ({e}), falling back to LIKE")
-        if self._has_cjk(query_text) or len(query_text) < 3:
+        if has_cjk(query_text) or len(query_text) < 3:
             like_results = self._fallback_search(query_text, limit)
             if like_results:
                 return like_results
@@ -518,7 +510,7 @@ class RuleStorage:
                 return results
         except sqlite3.OperationalError as e:
             _logger.warning(f"FTS5 search_with_rank failed ({e}), falling back")
-        if self._has_cjk(query_text) or len(query_text) < 3:
+        if has_cjk(query_text) or len(query_text) < 3:
             like_rules = self._fallback_search(query_text, limit)
             if like_rules:
                 return [(r, self._estimate_rank(r, query_text)) for r in like_rules]

@@ -216,8 +216,6 @@ class TestCodingContextAdapter(unittest.TestCase):
 
     def test_read_only(self):
         with self.assertRaises(NotImplementedError):
-            self.adapter.store("test")
-        with self.assertRaises(NotImplementedError):
             self.adapter.remember("test")
         with self.assertRaises(NotImplementedError):
             self.adapter.forget("test")

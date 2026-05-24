@@ -289,14 +289,31 @@ class CodingContextAdapter(StorageAdapter):
 
         self._db_path = db_path
         self._lock = threading.Lock()
-        self._conn = sqlite3.connect(self._db_path, check_same_thread=False)
-        self._conn.row_factory = sqlite3.Row
-        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._local = threading.local()
+        self._all_connections: Dict[int, sqlite3.Connection] = {}
+        self._conn_lock = threading.Lock()
+        self._closed = False
+        conn = self._get_connection()
+        conn.execute("PRAGMA journal_mode=WAL")
         self._init_schema()
 
+    def _get_connection(self) -> sqlite3.Connection:
+        if self._closed:
+            raise RuntimeError("CodingContextAdapter has been closed")
+
+        if not hasattr(self._local, 'conn') or self._local.conn is None:
+            conn = sqlite3.connect(self._db_path)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA journal_mode=WAL")
+            self._local.conn = conn
+            with self._conn_lock:
+                self._all_connections[id(conn)] = conn
+        return self._local.conn
+
     def _init_schema(self):
-        self._conn.executescript(_CODING_SCHEMA_SQL)
-        self._conn.commit()
+        conn = self._get_connection()
+        conn.executescript(_CODING_SCHEMA_SQL)
+        conn.commit()
 
     @property
     def name(self) -> str:
@@ -331,6 +348,7 @@ class CodingContextAdapter(StorageAdapter):
         }
 
         with self._lock:
+            conn = self._get_connection()
             for file_path in config_files:
                 try:
                     content_raw = file_path.read_text(encoding="utf-8", errors="replace")
@@ -341,7 +359,7 @@ class CodingContextAdapter(StorageAdapter):
                 chash = hashlib.md5(content_raw.encode()).hexdigest()
 
                 if not force:
-                    existing = self._conn.execute(
+                    existing = conn.execute(
                         "SELECT content_hash FROM coding_entries WHERE file_path = ?",
                         (str(file_path),),
                     ).fetchone()
@@ -354,7 +372,7 @@ class CodingContextAdapter(StorageAdapter):
                     stats["files_skipped"] += 1
                     continue
 
-                self._conn.execute(
+                conn.execute(
                     "DELETE FROM coding_entries WHERE file_path = ?",
                     (str(file_path),),
                 )
@@ -364,7 +382,7 @@ class CodingContextAdapter(StorageAdapter):
                         f"{file_path}:{entry['title']}".encode()
                     ).hexdigest()[:12]
 
-                    self._conn.execute(
+                    conn.execute(
                         """INSERT OR REPLACE INTO coding_entries
                            (id, title, file_path, content, memory_type, source_type,
                             language, framework, content_hash, indexed_at)
@@ -386,19 +404,27 @@ class CodingContextAdapter(StorageAdapter):
 
                 stats["files_indexed"] += 1
 
-            self._conn.commit()
+            conn.commit()
 
         return stats
 
-    def recall(self, query: str, limit: int = 10, filters: Optional[Dict] = None) -> List[Dict[str, Any]]:
+    def recall(
+        self,
+        query: str,
+        filters: Optional[Dict] = None,
+        limit: int = 10,
+        update_access: bool = True,
+        **kwargs,
+    ) -> List[Dict[str, Any]]:
+        conn = self._get_connection()
         if not query.strip():
-            cursor = self._conn.execute(
+            cursor = conn.execute(
                 """SELECT * FROM coding_entries ORDER BY indexed_at DESC LIMIT ?""",
                 (limit,),
             )
         else:
             escaped = escape_like(query)
-            cursor = self._conn.execute(
+            cursor = conn.execute(
                 """SELECT ce.*, rank
                    FROM coding_entries ce
                    JOIN coding_fts cf ON ce.rowid = cf.rowid
@@ -434,7 +460,7 @@ class CodingContextAdapter(StorageAdapter):
         return self.recall(query="", limit=50, filters=filters)
 
     def get_tech_stack(self) -> Dict[str, Any]:
-        cursor = self._conn.execute(
+        cursor = self._get_connection().execute(
             """SELECT DISTINCT language, framework FROM coding_entries
                WHERE source_type = 'project_meta'"""
         )
@@ -446,9 +472,6 @@ class CodingContextAdapter(StorageAdapter):
                 stack[lang] = fw or ""
         return stack
 
-    def store(self, *args, **kwargs) -> Any:
-        raise NotImplementedError("CodingContextAdapter is read-only")
-
     def remember(self, *args, **kwargs) -> Any:
         raise NotImplementedError("CodingContextAdapter is read-only")
 
@@ -456,5 +479,13 @@ class CodingContextAdapter(StorageAdapter):
         raise NotImplementedError("CodingContextAdapter is read-only")
 
     def close(self):
-        if self._conn:
-            self._conn.close()
+        self._closed = True
+        with self._conn_lock:
+            for conn in self._all_connections.values():
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+            self._all_connections.clear()
+        if hasattr(self._local, 'conn'):
+            self._local.conn = None

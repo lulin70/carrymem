@@ -24,6 +24,36 @@ from .base import MemoryEntry, StorageAdapter, StoredMemory
 from ..exceptions import DatabaseError, DBConnectionError, QueryError
 from ..scoring import calculate_importance
 from ..utils.helpers import escape_like, content_hash, TIER_TTL
+from ..utils.language import has_cjk, _STOP_WORDS
+
+_QUERY_EXPANSIONS = {
+    "theme": ["dark mode", "light mode", "theme preference"],
+    "database": ["postgresql", "mysql", "database selection", "database choice", "decided to use", "sqlite"],
+    "db": ["database", "sqlite", "postgresql", "mysql"],
+    "api": ["api rate", "api design", "graphql", "rest", "rate limit"],
+    "typescript": ["typescript strict", "typescript configuration"],
+    "cloud": ["aws", "gcp", "cloud hosting", "cloud provider", "chose aws"],
+    "deployment": ["deploy", "friday", "deployment rules", "never deploy"],
+    "server": ["server address", "server port", "staging server", "ip", "staging"],
+    "cache": ["redis", "cache ttl", "cache settings"],
+    "workflow": ["trunk-based", "development workflow", "git workflow", "trunk"],
+    "design": ["composition", "inheritance", "design pattern", "class design"],
+    "editor": ["vscode", "intellij", "ide", "vim"],
+    "language": ["python", "programming language"],
+    "indentation": ["spaces", "tabs", "indentation style"],
+    "version": ["git", "version control", "github"],
+    "security": ["oauth", "jwt", "authentication", "tls"],
+    "framework": ["react", "vue", "angular", "django", "flask", "frontend", "backend"],
+    "preference": ["prefer", "like", "always use", "never"],
+    "ip": ["staging server", "server address", "10.0"],
+    "port": ["server port", "9090", "8080"],
+    "数据库": ["postgresql", "mysql", "database"],
+    "偏好": ["prefer", "like", "preference"],
+    "深色": ["dark mode", "dark theme"],
+    "主题": ["theme", "theme preference"],
+    "ダークモード": ["dark mode", "dark theme"],
+    "データベース": ["database", "postgresql", "mysql"],
+}
 
 
 try:
@@ -500,6 +530,7 @@ class SQLiteAdapter(StorageAdapter):
                 "SELECT storage_key, confidence, type, created_at, access_count FROM memories"
             ).fetchall()
             now = datetime.now(timezone.utc)
+            updates = []
             for row in rows:
                 try:
                     created_at = datetime.fromisoformat(row["created_at"]) if row["created_at"] else now
@@ -510,13 +541,15 @@ class SQLiteAdapter(StorageAdapter):
                         access_count=row["access_count"],
                         now=now,
                     )
-                    conn.execute(
-                        "UPDATE memories SET importance_score = ? WHERE storage_key = ?",
-                        (score, row["storage_key"]),
-                    )
+                    updates.append((score, row["storage_key"]))
                 except (ValueError, TypeError):
                     continue
-            conn.commit()
+            if updates:
+                conn.executemany(
+                    "UPDATE memories SET importance_score = ? WHERE storage_key = ?",
+                    updates,
+                )
+                conn.commit()
         except sqlite3.Error as e:
             from carrymem.utils.logger import logger
             logger.warning(f"Failed to recalculate importance scores: {e}")
@@ -696,7 +729,7 @@ class SQLiteAdapter(StorageAdapter):
         with self._lock:
             result = self._remember_impl(entry, _skip_commit)
         if self._enable_cache and self._cache:
-            self._cache.invalidate()
+            self._cache.invalidate(self._namespace)
         return result
 
     def _remember_impl(self, entry: MemoryEntry, _skip_commit: bool = False) -> StoredMemory:
@@ -841,7 +874,7 @@ class SQLiteAdapter(StorageAdapter):
                 logger.warning(f"Batch remember failed, rolled back: {e}")
                 raise
         if self._enable_cache and self._cache:
-            self._cache.invalidate()
+            self._cache.invalidate(self._namespace)
         return results
 
     _SUPERSEDE_TYPES = {"user_preference", "decision", "fact_declaration", "correction"}
@@ -1193,6 +1226,180 @@ class SQLiteAdapter(StorageAdapter):
         rows = conn.execute(sql, params).fetchall()
         return [self._row_to_stored(r) for r in rows if self._row_to_stored(r)]
 
+    def _recall_fts_phase(self, query, where_clause, params, limit):
+        """FTS search + context reconstruction."""
+        keywords = " ".join(
+            w for w in query.lower().split()
+            if w not in _STOP_WORDS and len(w) > 1
+        )
+
+        if keywords and keywords != query.strip().lower():
+            rows = self._fts_search(keywords, where_clause, params, limit)
+        else:
+            rows = self._fts_search(query, where_clause, params, limit)
+
+        if not rows and has_cjk(query):
+            rows = self._like_search(query, where_clause, params, limit)
+
+        if not rows or len(rows) < max(3, limit // 4):
+            rebuilt_query = self._rebuild_context(query, keywords)
+            if rebuilt_query and rebuilt_query != query and rebuilt_query != keywords:
+                extra_rows = self._fts_search(rebuilt_query, where_clause, params, limit)
+                if extra_rows:
+                    seen_ids = {r[0] for r in rows if r}
+                    for r in extra_rows:
+                        if r and r[0] not in seen_ids:
+                            rows.append(r)
+                            seen_ids.add(r[0])
+
+        return rows
+
+    def _recall_vector_phase(self, query, where_clause, params, limit, rows):
+        """Vector search + RRF fusion."""
+        if self._enable_vector:
+            vec_rows = self._vector_search(query, where_clause, params, limit)
+            if vec_rows:
+                rows = self._rrf_fuse(rows, vec_rows, limit)
+        return rows
+
+    def _recall_expansion_phase(self, query, where_clause, params, limit, rows):
+        """Query expansion + semantic recall.
+
+        Returns (results, is_final):
+        - If semantic expansion succeeded: (list[StoredMemory], True)
+        - Otherwise: (raw_rows, False)
+        """
+        expanded_queries = self._expand_query(query)
+        if expanded_queries:
+            seen_ids = set()
+            for r in rows:
+                rid = r[0] if r else None
+                if rid:
+                    seen_ids.add(rid)
+
+            for eq in expanded_queries:
+                eq_rows = self._fts_search(eq, where_clause, params, limit)
+                for r in eq_rows:
+                    rid = r[0] if r else None
+                    if rid and rid not in seen_ids:
+                        rows.append(r)
+                        seen_ids.add(rid)
+                if len(rows) >= limit:
+                    break
+
+            if len(rows) < limit:
+                for eq in expanded_queries:
+                    eq_rows = self._like_search(eq, where_clause, params, limit)
+                    for r in eq_rows:
+                        rid = r[0] if r else None
+                        if rid and rid not in seen_ids:
+                            rows.append(r)
+                            seen_ids.add(rid)
+                    if len(rows) >= limit:
+                        break
+
+        # Semantic expansion if results insufficient
+        if self._enable_semantic and len(rows) < limit and self._expander and self._merger:
+            original_results = [self._row_to_stored(r) for r in rows if r]
+            expanded_rows = self._semantic_recall(query, where_clause, params, limit)
+            expanded_results = [self._row_to_stored(r) for r in expanded_rows if r]
+
+            if expanded_results:
+                merged = self._merger.merge(
+                    original_results=original_results,
+                    expanded_results=expanded_results,
+                    query=query,
+                    limit=limit,
+                    source="synonym",
+                )
+                final_results = []
+                for item in merged:
+                    if isinstance(item, StoredMemory):
+                        final_results.append(item)
+                    elif isinstance(item, dict):
+                        stored = self._dict_to_stored(item)
+                        if stored:
+                            final_results.append(stored)
+                return final_results, True
+
+        return rows, False
+
+    def _recall_update_access(self, rows, update_access=True, filters=None, limit=20, is_stored=False):
+        """Batch access count update.
+
+        If is_stored=True: rows are StoredMemory objects (from semantic expansion).
+        If is_stored=False: rows are raw database rows (normal path with diversity filtering).
+        """
+        filters = filters or {}
+        conn = self._get_connection()
+        now_iso = datetime.now(timezone.utc).isoformat()
+        results = []
+        seen_keys = set()
+        batch_updates = []
+
+        if is_stored:
+            for stored in rows:
+                if stored.storage_key not in seen_keys:
+                    seen_keys.add(stored.storage_key)
+                    if update_access:
+                        new_count = stored.access_count + 1
+                        new_score = calculate_importance(
+                            confidence=stored.confidence,
+                            memory_type=stored.type,
+                            created_at=stored.created_at or datetime.now(timezone.utc),
+                            access_count=new_count,
+                        )
+                        batch_updates.append((new_count, new_score, now_iso, stored.storage_key))
+                        stored.access_count = new_count
+                        stored.importance_score = new_score
+                        stored.last_accessed_at = datetime.now(timezone.utc)
+                    results.append(stored)
+            if update_access and batch_updates:
+                conn.executemany(
+                    "UPDATE memories SET access_count = ?, importance_score = ?, last_accessed_at = ? WHERE storage_key = ?",
+                    batch_updates,
+                )
+        else:
+            # P1-2: Diversity filtering - limit same-type dominance
+            type_counts = {}
+            max_per_type = max(3, limit // 3)
+
+            for row in rows:
+                stored = self._row_to_stored(row)
+                if stored and stored.storage_key not in seen_keys:
+                    mtype = stored.type or "unknown"
+                    type_counts[mtype] = type_counts.get(mtype, 0) + 1
+
+                    if type_counts[mtype] > max_per_type and mtype == "sentiment_marker":
+                        continue
+
+                    seen_keys.add(stored.storage_key)
+                    if update_access:
+                        new_count = stored.access_count + 1
+                        new_score = calculate_importance(
+                            confidence=stored.confidence,
+                            memory_type=stored.type,
+                            created_at=stored.created_at or datetime.now(timezone.utc),
+                            access_count=new_count,
+                        )
+                        batch_updates.append((new_count, new_score, now_iso, stored.storage_key))
+                        stored.access_count = new_count
+                        stored.importance_score = new_score
+                        stored.last_accessed_at = datetime.now(timezone.utc)
+                    results.append(stored)
+            if update_access and batch_updates:
+                conn.executemany(
+                    "UPDATE memories SET access_count = access_count + 1, importance_score = ?, last_accessed_at = ? WHERE storage_key = ?",
+                    [(score, ts, key) for (_, score, ts, key) in batch_updates],
+                )
+
+        conn.commit()
+
+        if not is_stored and filters.get("_order_oldest") and results:
+            results.sort(key=lambda m: m.created_at or datetime.min.replace(tzinfo=timezone.utc))
+
+        return results
+
     def _recall_impl(
         self,
         query: str,
@@ -1278,123 +1485,18 @@ class SQLiteAdapter(StorageAdapter):
         where_clause = "WHERE " + " AND ".join(conditions)
 
         if query and query.strip():
-            stop_words = {"what", "is", "the", "did", "does", "do", "a", "an", "how",
-                           "who", "which", "when", "where", "why", "can", "could", "would",
-                           "should", "team", "user", "use", "used", "using", "for", "of",
-                           "in", "on", "to", "and", "or", "that", "this", "it", "be", "are",
-                           "was", "were", "been", "has", "have", "had", "will", "would"}
-            keywords = " ".join(
-                w for w in query.lower().split()
-                if w not in stop_words and len(w) > 1
-            )
+            # Phase 1: FTS search + context reconstruction
+            rows = self._recall_fts_phase(query, where_clause, params, limit)
 
-            if keywords and keywords != query.strip().lower():
-                rows = self._fts_search(keywords, where_clause, params, limit)
-            else:
-                rows = self._fts_search(query, where_clause, params, limit)
+            # Phase 2: Vector search + RRF fusion
+            rows = self._recall_vector_phase(query, where_clause, params, limit, rows)
 
-            if not rows and self._has_cjk(query):
-                rows = self._like_search(query, where_clause, params, limit)
+            # Phase 3: Query expansion + semantic recall
+            rows, is_final = self._recall_expansion_phase(query, where_clause, params, limit, rows)
 
-            if not rows or len(rows) < max(3, limit // 4):
-                rebuilt_query = self._rebuild_context(query, keywords)
-                if rebuilt_query and rebuilt_query != query and rebuilt_query != keywords:
-                    extra_rows = self._fts_search(rebuilt_query, where_clause, params, limit)
-                    if extra_rows:
-                        seen_ids = {r[0] for r in rows if r}
-                        for r in extra_rows:
-                            if r and r[0] not in seen_ids:
-                                rows.append(r)
-                                seen_ids.add(r[0])
-
-            if self._enable_vector:
-                vec_rows = self._vector_search(query, where_clause, params, limit)
-                if vec_rows:
-                    rows = self._rrf_fuse(rows, vec_rows, limit)
-
-            expanded_queries = self._expand_query(query)
-            if expanded_queries:
-                seen_ids = set()
-                for r in rows:
-                    rid = r[0] if r else None
-                    if rid:
-                        seen_ids.add(rid)
-
-                for eq in expanded_queries:
-                    eq_rows = self._fts_search(eq, where_clause, params, limit)
-                    for r in eq_rows:
-                        rid = r[0] if r else None
-                        if rid and rid not in seen_ids:
-                            rows.append(r)
-                            seen_ids.add(rid)
-                    if len(rows) >= limit:
-                        break
-
-                if len(rows) < limit:
-                    for eq in expanded_queries:
-                        eq_rows = self._like_search(eq, where_clause, params, limit)
-                        for r in eq_rows:
-                            rid = r[0] if r else None
-                            if rid and rid not in seen_ids:
-                                rows.append(r)
-                                seen_ids.add(rid)
-                        if len(rows) >= limit:
-                            break
-
-            # Phase 2: Semantic expansion if results insufficient
-            if self._enable_semantic and len(rows) < limit and self._expander and self._merger:
-                original_results = [self._row_to_stored(r) for r in rows if r]
-                expanded_rows = self._semantic_recall(query, where_clause, params, limit)
-                expanded_results = [self._row_to_stored(r) for r in expanded_rows if r]
-
-                # Only use semantic results if we got new matches
-                if expanded_results:
-                    merged = self._merger.merge(
-                        original_results=original_results,
-                        expanded_results=expanded_results,
-                        query=query,
-                        limit=limit,
-                        source="synonym",
-                    )
-                    # Convert merged dicts back to StoredMemory objects
-                    final_results = []
-                    for item in merged:
-                        if isinstance(item, StoredMemory):
-                            final_results.append(item)
-                        elif isinstance(item, dict):
-                            stored = self._dict_to_stored(item)
-                            if stored:
-                                final_results.append(stored)
-
-                    # Update access counts and return
-                    conn = self._get_connection()
-                    now_iso = datetime.now(timezone.utc).isoformat()
-                    seen_keys = set()
-                    results = []
-                    batch_updates = []
-                    for stored in final_results:
-                        if stored.storage_key not in seen_keys:
-                            seen_keys.add(stored.storage_key)
-                            if update_access:
-                                new_count = stored.access_count + 1
-                                new_score = calculate_importance(
-                                    confidence=stored.confidence,
-                                    memory_type=stored.type,
-                                    created_at=stored.created_at or datetime.now(timezone.utc),
-                                    access_count=new_count,
-                                )
-                                batch_updates.append((new_count, new_score, now_iso, stored.storage_key))
-                                stored.access_count = new_count
-                                stored.importance_score = new_score
-                                stored.last_accessed_at = datetime.now(timezone.utc)
-                            results.append(stored)
-                    if update_access and batch_updates:
-                        conn.executemany(
-                            "UPDATE memories SET access_count = ?, importance_score = ?, last_accessed_at = ? WHERE storage_key = ?",
-                            batch_updates,
-                        )
-                    conn.commit()
-                    return results
+            if is_final:
+                # Semantic expansion succeeded — update access and return
+                return self._recall_update_access(rows, update_access, filters, limit, is_stored=True)
         else:
             conn = self._get_connection()
             sql = f"""
@@ -1406,50 +1508,8 @@ class SQLiteAdapter(StorageAdapter):
             params.append(limit)
             rows = conn.execute(sql, params).fetchall()
 
-        conn = self._get_connection()
-        now_iso = datetime.now(timezone.utc).isoformat()
-        results = []
-        seen_keys = set()
-        batch_updates = []
-
-        # P1-2: Diversity filtering - limit same-type dominance
-        type_counts = {}
-        max_per_type = max(3, limit // 3)
-
-        for row in rows:
-            stored = self._row_to_stored(row)
-            if stored and stored.storage_key not in seen_keys:
-                mtype = stored.type or "unknown"
-                type_counts[mtype] = type_counts.get(mtype, 0) + 1
-
-                if type_counts[mtype] > max_per_type and mtype == "sentiment_marker":
-                    continue
-
-                seen_keys.add(stored.storage_key)
-                if update_access:
-                    new_count = stored.access_count + 1
-                    new_score = calculate_importance(
-                        confidence=stored.confidence,
-                        memory_type=stored.type,
-                        created_at=stored.created_at or datetime.now(timezone.utc),
-                        access_count=new_count,
-                    )
-                    batch_updates.append((new_count, new_score, now_iso, stored.storage_key))
-                    stored.access_count = new_count
-                    stored.importance_score = new_score
-                    stored.last_accessed_at = datetime.now(timezone.utc)
-                results.append(stored)
-        if update_access and batch_updates:
-            conn.executemany(
-                "UPDATE memories SET access_count = access_count + 1, importance_score = ?, last_accessed_at = ? WHERE storage_key = ?",
-                [(score, ts, key) for (_, score, ts, key) in batch_updates],
-            )
-        conn.commit()
-
-        if filters.get("_order_oldest") and results:
-            results.sort(key=lambda m: m.created_at or datetime.min.replace(tzinfo=timezone.utc))
-
-        return results
+        # Phase 4: Batch access count update (normal path)
+        return self._recall_update_access(rows, update_access, filters, limit, is_stored=False)
 
     def _semantic_recall(self, query: str, where_clause: str, params: List, limit: int):
         """Perform semantic expansion search.
@@ -1488,7 +1548,7 @@ class SQLiteAdapter(StorageAdapter):
 
                 if len(all_expanded_rows) < limit:
                     for exp_query in valid_expansions:
-                        if self._has_cjk(exp_query):
+                        if has_cjk(exp_query):
                             like_rows = self._like_search(exp_query, where_clause, params, limit)
                             for row in like_rows:
                                 row_id = row["id"] if hasattr(row, "__getitem__") else None
@@ -1580,65 +1640,15 @@ class SQLiteAdapter(StorageAdapter):
         mtype = row["type"] if row and "type" in row.keys() else ""
         return self._rrf_type_boosts.get(mtype, 1.0)
 
-    def _has_cjk(self, text: str) -> bool:
-        return any(
-            "\u4e00" <= char <= "\u9fff"
-            or "\u3040" <= char <= "\u309f"
-            or "\u30a0" <= char <= "\u30ff"
-            for char in text
-        )
-
     @staticmethod
     def _expand_query(query: str) -> List[str]:
-        """Expand a short query with related terms for better recall.
-
-        Args:
-            query: The original search query.
-
-        Returns:
-            List of expanded query strings.
-        """
-        expansions = {
-            "theme": ["dark mode", "light mode", "theme preference"],
-            "database": ["postgresql", "mysql", "database selection", "database choice", "decided to use", "sqlite"],
-            "db": ["database", "sqlite", "postgresql", "mysql"],
-            "api": ["api rate", "api design", "graphql", "rest", "rate limit"],
-            "typescript": ["typescript strict", "typescript configuration"],
-            "cloud": ["aws", "gcp", "cloud hosting", "cloud provider", "chose aws"],
-            "deployment": ["deploy", "friday", "deployment rules", "never deploy"],
-            "server": ["server address", "server port", "staging server", "ip", "staging"],
-            "cache": ["redis", "cache ttl", "cache settings"],
-            "workflow": ["trunk-based", "development workflow", "git workflow", "trunk"],
-            "design": ["composition", "inheritance", "design pattern", "class design"],
-            "editor": ["vscode", "intellij", "ide", "vim"],
-            "language": ["python", "programming language"],
-            "indentation": ["spaces", "tabs", "indentation style"],
-            "version": ["git", "version control", "github"],
-            "security": ["oauth", "jwt", "authentication", "tls"],
-            "framework": ["react", "vue", "angular", "django", "flask", "frontend", "backend"],
-            "preference": ["prefer", "like", "always use", "never"],
-            "ip": ["staging server", "server address", "10.0"],
-            "port": ["server port", "9090", "8080"],
-            "数据库": ["postgresql", "mysql", "database"],
-            "偏好": ["prefer", "like", "preference"],
-            "深色": ["dark mode", "dark theme"],
-            "主题": ["theme", "theme preference"],
-            "ダークモード": ["dark mode", "dark theme"],
-            "データベース": ["database", "postgresql", "mysql"],
-        }
-
-        stop_words = {"what", "is", "the", "did", "does", "do", "a", "an", "how",
-                       "who", "which", "when", "where", "why", "can", "could", "would",
-                       "should", "team", "user", "use", "used", "using", "for", "of",
-                       "in", "on", "to", "and", "or", "that", "this", "it", "be", "are",
-                       "was", "were", "been", "has", "have", "had", "will", "would"}
-
+        """Expand a short query with related terms for better recall."""
         query_lower = query.lower().strip()
-        words = [w for w in query_lower.split() if w not in stop_words and len(w) > 1]
+        words = [w for w in query_lower.split() if w not in _STOP_WORDS and len(w) > 1]
         expanded = []
 
         for word in words:
-            for key, terms in expansions.items():
+            for key, terms in _QUERY_EXPANSIONS.items():
                 if key == word or key in word or word in key:
                     expanded.extend(terms)
 
@@ -1737,7 +1747,7 @@ class SQLiteAdapter(StorageAdapter):
             conn.commit()
             result = cursor.rowcount > 0
         if self._enable_cache and self._cache:
-            self._cache.invalidate()
+            self._cache.invalidate(self._namespace)
         if self._audit:
             self._audit.log_operation(
                 operation="forget",
@@ -1757,7 +1767,7 @@ class SQLiteAdapter(StorageAdapter):
             conn.commit()
             count = cursor.rowcount
         if self._enable_cache and self._cache and count > 0:
-            self._cache.invalidate()
+            self._cache.invalidate(self._namespace)
         return count
 
     def recalculate_importance(self) -> int:

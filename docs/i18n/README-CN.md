@@ -420,7 +420,7 @@ AI 工具（Cursor / Claude Code / 任意 MCP 客户端）
 - **v0.2.6**：经验学习 — 失败→规避规则、learn-experience/review-lessons CLI
 - **v0.2.5**：自动提升管道 — 记忆模式→规则候选、promotion-log CLI
 - **v0.2.4**：从记忆中检测模式、suggest-rules CLI、候选规则生成器
-- **v0.2.3**：导出/导入规则、交互式 CLI、规则模板、edit-rule、12 个 CLI 命令
+- **v0.2.3**：定时整合（schedule_consolidation/stop_consolidation）、规则导出/导入、交互式 CLI、规则模板、edit-rule、12 个 CLI 命令
 - **v0.2.2**：性能基准 + 冲突检测（check-rules 命令）
 - **v0.2.1**：规则引擎 Alpha — 手动 CRUD、FTS5 匹配、安全、8 个 CLI 命令
 - **v0.3.0**：PyPI 发布、身份层（whoami、profile 导出）、490 测试

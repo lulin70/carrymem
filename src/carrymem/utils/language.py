@@ -16,6 +16,31 @@ try:
 except ImportError:
     _CLD2_AVAILABLE = False
 
+_STOP_WORDS = frozenset({
+    "what", "is", "the", "did", "does", "do", "a", "an", "how",
+    "who", "which", "when", "where", "why", "can", "could", "would",
+    "should", "team", "user", "use", "used", "using", "for", "of",
+    "in", "on", "to", "and", "or", "that", "this", "it", "be", "are",
+    "was", "were", "been", "has", "have", "had", "will", "would",
+})
+
+
+def has_cjk(text: str) -> bool:
+    """Check if text contains CJK characters.
+
+    Covers CJK Unified Ideographs (U+4E00–U+9FFF),
+    CJK Unified Ideographs Extension A (U+3400–U+4DBF),
+    Hiragana (U+3040–U+309F), and Katakana (U+30A0–U+30FF).
+    """
+    return any(
+        "\u4e00" <= char <= "\u9fff"
+        or "\u3400" <= char <= "\u4dbf"
+        or "\u3040" <= char <= "\u309f"
+        or "\u30a0" <= char <= "\u30ff"
+        for char in text
+    )
+
+
 class LanguageManager:
     """Language detection and management for multi-language support."""
     
