@@ -1156,6 +1156,8 @@ class CarryMem:
         message: str,
         context: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        validate_message(message)
+        validate_context(context)
         if not self._adapter:
             raise StorageNotConfiguredError()
 

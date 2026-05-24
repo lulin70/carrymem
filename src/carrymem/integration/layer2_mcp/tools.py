@@ -351,6 +351,45 @@ CONSOLIDATION_TOOLS: List[Dict[str, Any]] = [
             }
         }
     },
+    {
+        "name": "schedule_consolidation",
+        "description": "Schedule periodic memory consolidation (dedup, decay, cleanup) at a fixed interval",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "interval_hours": {
+                    "type": "number",
+                    "description": "Hours between consolidation runs (minimum 0.1 = 6 minutes)",
+                    "default": 1.0,
+                },
+                "dry_run": {
+                    "type": "boolean",
+                    "description": "If true, only report what would be done without making changes",
+                    "default": False,
+                },
+                "run_p1": {
+                    "type": "boolean",
+                    "description": "If true, also run P1 pattern recognition",
+                    "default": True,
+                },
+                "run_p2": {
+                    "type": "boolean",
+                    "description": "If true, also run P2 semantic consolidation",
+                    "default": False,
+                },
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "stop_consolidation",
+        "description": "Stop the scheduled periodic memory consolidation",
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    },
 ]
 
 RULE_TOOLS: List[Dict[str, Any]] = [
@@ -612,6 +651,7 @@ OPTIONAL_TOOL_NAMES = {tool["name"] for tool in OPTIONAL_TOOLS}
 KNOWLEDGE_TOOL_NAMES = {tool["name"] for tool in KNOWLEDGE_TOOLS}
 PROFILE_TOOL_NAMES = {tool["name"] for tool in PROFILE_TOOLS}
 PROMPT_TOOL_NAMES = {tool["name"] for tool in PROMPT_TOOLS}
+CONSOLIDATION_TOOL_NAMES = {tool["name"] for tool in CONSOLIDATION_TOOLS}
 RULE_TOOL_NAMES = {tool["name"] for tool in RULE_TOOLS}
 
 CLASSIFICATION_SCHEMA = {

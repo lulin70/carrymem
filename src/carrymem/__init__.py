@@ -2,7 +2,7 @@
 
 CarryMem = MCE Classification Engine + SQLite Default Storage + Replaceable Adapters
 
-v0.2.0: Recall purity + Scope-based preference injection + PromptBuilder extraction + PrefEval 0.940
+v0.2.3: Consolidation scheduling + PrefEval standardization + Context modularization + Security hardening
 
 Quick Start:
     from carrymem import CarryMem

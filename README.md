@@ -16,7 +16,7 @@ CarryMem fixes this. It's a lightweight, zero-dependency memory system that stor
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-2100%20passing-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-3000%2B%20passing-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-77.12%25-green" alt="Coverage">
   <img src="https://img.shields.io/badge/code%20quality-4.3%2F5%20%E2%98%85%E2%98%85%E2%98%85%E2%98%85%E2%98%86-blue" alt="Code Quality">
   <img src="https://img.shields.io/badge/security-5%2F5%20%E2%98%85%E2%98%85%E2%98%85%E2%98%85%E2%98%85-success" alt="Security">
@@ -228,6 +228,25 @@ report = cm.consolidate(dry_run=False, run_p1=True, run_p2=True)
 
 Preferences are always preserved — never decayed or deduplicated.
 
+#### Scheduled Consolidation
+
+Run consolidation automatically on a recurring interval:
+
+```python
+# Schedule consolidation every hour (runs in background thread)
+cm.schedule_consolidation(interval_hours=1.0)
+
+# Stop the scheduled consolidation
+cm.stop_consolidation()
+```
+
+CLI:
+
+```bash
+carrymem consolidate --schedule 1h   # Run consolidation every hour
+carrymem consolidate --stop          # Stop scheduled consolidation
+```
+
 ### 7. Security & Reliability
 
 | Feature | Description |
@@ -375,6 +394,7 @@ Rule management directly in your editor:
 | v0.2.1 post-fix | 85.5% | Removed memory-query instructions |
 | v0.2.1 optimized | 87.0% | QA prompt simplification |
 | **v0.2.2** | **87.9%** | Token budget + dead code fix + security |
+| **v0.2.3** | **87.9%** | Consolidation Scheduling + PrefEval Standardization |
 
 **Why this matters**: Reminder injects "remember user preference" in every turn. CarryMem injects structured preferences in system prompt — more precise, more persistent, 46% fewer unhelpful responses.
 
@@ -501,7 +521,7 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 
 ## Project Status
 
-**Current Version**: v0.2.2
+**Current Version**: v0.2.3
 **Tests**: 2761+ passing
 **Coverage**: 80.5%
 
@@ -516,7 +536,7 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 - **v0.2.6**: Experience learning — failure→avoidance rules, learn-experience/review-lessons CLI
 - **v0.2.5**: Auto-promotion pipeline — memory patterns→rule candidates, promotion-log CLI
 - **v0.2.4**: Pattern detection from memories, suggest-rules CLI, candidate rule generator
-- **v0.2.3**: Export/import rules, interactive CLI, rule templates, edit-rule, 12 CLI commands
+- **v0.2.3**: Consolidation scheduling (schedule/stop), PrefEval standardization
 - **v0.2.2**: Performance benchmarks + conflict detection (check-rules command)
 - **v0.2.1**: Rules Engine Alpha — manual CRUD, FTS5 matching, security, 8 CLI commands
 - **v0.2.0**: PyPI release, identity layer (whoami, profile export), 490 tests

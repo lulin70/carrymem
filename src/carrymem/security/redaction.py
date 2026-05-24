@@ -30,6 +30,12 @@ SENSITIVE_PATTERNS: List[Tuple[str, re.Pattern, str]] = [
     ("anthropic_key", re.compile(r'\bsk-ant-[a-zA-Z0-9\-]{20,}\b'), "Anthropic API key"),
     ("aws_access_key", re.compile(r'\bAKIA[A-Z0-9]{16}\b'), "AWS access key ID"),
     ("aws_secret_key", re.compile(r'(?i)aws_secret_access_key\s*[=:]\s*\S+'), "AWS secret key"),
+    ("google_api_key", re.compile(r'\bAIza[a-zA-Z0-9\-_]{35}\b'), "Google API key"),
+    ("stripe_secret_key", re.compile(r'\bsk_live_[a-zA-Z0-9]{24,}\b'), "Stripe secret key"),
+    ("stripe_publishable_key", re.compile(r'\bpk_live_[a-zA-Z0-9]{24,}\b'), "Stripe publishable key"),
+    ("slack_bot_token", re.compile(r'\bxoxb-[a-zA-Z0-9\-]{10,}\b'), "Slack bot token"),
+    ("slack_user_token", re.compile(r'\bxoxp-[a-zA-Z0-9\-]{10,}\b'), "Slack user token"),
+    ("sendgrid_key", re.compile(r'\bSG\.[a-zA-Z0-9\-_]{22,}\.[a-zA-Z0-9\-_]{43,}\b'), "SendGrid API key"),
     ("generic_api_key", re.compile(r'(?i)(?:api[_-]?key|apikey)\s*[=:]\s*["\']?[a-zA-Z0-9\-_]{20,}["\']?'), "Generic API key"),
 
     # Passwords

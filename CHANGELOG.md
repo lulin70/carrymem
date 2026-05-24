@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **context.py modularized**: Split 910-line monolith into 4 focused sub-modules: `selection.py`, `scope.py`, `format.py`, `prompt.py`. Original `context.py` preserves all APIs via re-export.
 - **ROADMAP updated**: v0.2.2 marked as ✅ with all version chain items completed.
+- **Security: `declare()` input validation**: Added input validation to the `declare()` method to reject malformed or injection-bearing content before storage.
+- **Security: `_sanitize_replacement` blocking mode**: `_sanitize_replacement()` now operates in blocking mode — patterns matching injection signatures are rejected entirely rather than stripped, preventing partial bypass.
+- **Security: Redaction Google/Stripe/Slack patterns**: Auto-redaction expanded with Google API key (`AIza...`), Stripe key (`sk_live_...`/`rk_live_...`), and Slack token (`xox[bpors]-...`) patterns.
 
 ## [0.2.2] - 2026-05-24 (PrefEval Violation Optimization + Version Chain + Security Hardening)
 
@@ -27,7 +30,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **27 version chain tests**: Full coverage of nature inference, chain creation, supersede linking, persistence, and migration.
 
 ### Changed
-- **context.py modularized**: Split 910-line monolith into 4 focused sub-modules: `selection.py` (scoring/ranking), `scope.py` (scope inference), `format.py` (entry formatting), `prompt.py` (prompt construction). Original `context.py` preserves all APIs via re-export.
 - **Preference token budget increased**: From 40% to 60% of memories budget, preventing high-priority preferences from being truncated.
 - **Coreference injection protection**: Added `_sanitize_replacement()` to strip injection patterns and control characters from entity replacement text. Both English and Chinese pronoun resolution now sanitize before substitution.
 - **Benchmark judge error monitoring**: Added consecutive judge error detection — pauses 30s after 3 consecutive errors, stops after retry failure to avoid wasting time.

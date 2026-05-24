@@ -14,7 +14,7 @@ CarryMem はこれを解決します。軽量・ゼロ依存のメモリシス�
 
 <p align="center">
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI バージョン"></a>
-  <img src="https://img.shields.io/badge/tests-2100%20passing-green" alt="テスト">
+  <img src="https://img.shields.io/badge/tests-3000%2B%20passing-green" alt="テスト">
   <img src="https://img.shields.io/badge/coverage-78%25-green" alt="カバレッジ">
   <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python">
 </p>
@@ -311,6 +311,8 @@ carrymem tui
 スマートストレージ（SQLite + FTS5、重複排除、TTL、暗号化）
     ↓
 記憶統合（P0: 重複排除+減衰 → P1: パターン→ルール → P2: 意味マージ）
+
+定期統合をサポート：`schedule_consolidation(interval_hours=1.0)` 定期統合メソッド、`stop_consolidation()` 停止メソッド。CLI: `carrymem consolidate --schedule 1h` と `carrymem consolidate --stop`
     ↓
 セマンティック検索（FTS5 + 同義語 + スペル修正 + 多言語）
     ↓
@@ -369,6 +371,7 @@ AI ツール（Cursor / Claude Code / 任意の MCP クライアント）
 | v0.2.1 修正後 | 85.5% | メモリクエリ指示の削除 |
 | v0.2.1 最適化後 | 87.0% | QAプロンプト簡素化 |
 | **v0.2.2** | **87.9%** | トークン予算 + デッドコード修正 + セキュリティ |
+| **v0.2.3** | **87.9%** | 定期統合 + ルールエクスポート/インポート + インタラクティブ CLI |
 
 **なぜ重要か**：リマインダーは毎ターン「ユーザーの嗜好を覚えて」と注入。CarryMem はシステムプロンプトに構造化された嗜好を注入 — より正確、より持続的、役立たず回答46%削減。
 
@@ -409,8 +412,8 @@ AI にはメモリが必要だと知っている。プロンプトファイル�
 
 ## プロジェクトステータス
 
-**現在のバージョン**: v0.2.2
-**テスト**: 2100+ passing
+**現在のバージョン**: v0.2.3
+**テスト**: 3000+ passing
 **カバレッジ**: ~78%
 
 **チェンジログ**:
@@ -422,7 +425,7 @@ AI にはメモリが必要だと知っている。プロンプトファイル�
 - **v0.2.6**: 経験学習 — 失敗→回避ルール、learn-experience/review-lessons CLI
 - **v0.2.5**: 自動プロモーションパイプライン — メモリパターン→ルール候補、promotion-log CLI
 - **v0.2.4**: メモリからのパターン検出、suggest-rules CLI、候補ルールジェネレーター
-- **v0.2.3**: ルールエクスポート/インポート、インタラクティブ CLI、ルールテンプレート、edit-rule、12 CLI コマンド
+- **v0.2.3**: 定期統合（schedule_consolidation/stop_consolidation）、ルールエクスポート/インポート、インタラクティブ CLI、ルールテンプレート、edit-rule、12 CLI コマンド
 - **v0.2.2**: パフォーマンスベンチマーク + 競合検出（check-rules コマンド）
 - **v0.2.1**: ルールエンジン Alpha — 手動 CRUD、FTS5 マッチング、セキュリティ、8 CLI コマンド
 - **v0.3.0**: PyPI リリース、アイデンティティレイヤー（whoami、profile エクスポート）、490 テスト

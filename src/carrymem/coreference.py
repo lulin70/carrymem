@@ -269,13 +269,15 @@ def _find_matching_entity(
 def _sanitize_replacement(text: str) -> str:
     """Sanitize replacement text to prevent prompt injection.
 
-    Strips control characters, common injection patterns, and limits length.
+    If injection patterns are detected, returns '[filtered]' instead of
+    attempting to strip them (stripping can leave behind manipulative content).
+    Otherwise strips control characters and limits length.
     """
     if not text:
         return text
     # Remove control characters (except space)
     text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
-    # Remove common injection patterns
+    # Check for injection patterns — if found, block entirely
     injection_patterns = [
         r'(?i)ignore\s+(all\s+)?previous\s+instructions',
         r'(?i)system\s*:',
@@ -285,9 +287,13 @@ def _sanitize_replacement(text: str) -> str:
         r'(?i)you\s+are\s+now',
         r'(?i)forget\s+(everything|all)',
         r'(?i)new\s+instructions?\s*:',
+        r'(?i)<\|im_start\|>',
+        r'(?i)<\|im_end\|>',
+        r'(?i)role\s*:',
     ]
     for pattern in injection_patterns:
-        text = re.sub(pattern, '', text)
+        if re.search(pattern, text):
+            return "[filtered]"
     # Limit length to prevent abuse
     if len(text) > 100:
         text = text[:100]

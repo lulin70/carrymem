@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from carrymem.__version__ import __version__ as _version
-from .tools import CLASSIFICATION_SCHEMA, TOOL_NAMES, CORE_TOOL_NAMES, OPTIONAL_TOOL_NAMES, KNOWLEDGE_TOOL_NAMES, PROFILE_TOOL_NAMES, PROMPT_TOOL_NAMES, RULE_TOOL_NAMES
+from .tools import CLASSIFICATION_SCHEMA, TOOL_NAMES, CORE_TOOL_NAMES, OPTIONAL_TOOL_NAMES, KNOWLEDGE_TOOL_NAMES, PROFILE_TOOL_NAMES, PROMPT_TOOL_NAMES, CONSOLIDATION_TOOL_NAMES, RULE_TOOL_NAMES
 
 try:
     from carrymem.security.input_validator import InputValidator
@@ -420,6 +420,28 @@ def handle_consolidate_memories(carrymem, arguments: Dict[str, Any]) -> Dict[str
         return {"error": _safe_error(e)}
 
 
+def handle_schedule_consolidation(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    interval = arguments.get("interval_hours", 1.0)
+    dry_run = arguments.get("dry_run", False)
+    run_p1 = arguments.get("run_p1", True)
+    run_p2 = arguments.get("run_p2", False)
+    try:
+        result = carrymem.schedule_consolidation(
+            interval_hours=interval, dry_run=dry_run, run_p1=run_p1, run_p2=run_p2
+        )
+        return result
+    except Exception as e:
+        return {"error": _safe_error(e)}
+
+
+def handle_stop_consolidation(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        result = carrymem.stop_consolidation()
+        return result
+    except Exception as e:
+        return {"error": _safe_error(e)}
+
+
 def handle_add_rule(engine, args: Dict[str, Any]) -> Dict[str, Any]:
     try:
         trigger = _validate_input(args.get("trigger", ""), "trigger")
@@ -813,6 +835,8 @@ handler_map = {
     "get_system_prompt": handle_get_system_prompt,
     "summarize_and_store": handle_summarize_and_store,
     "consolidate_memories": handle_consolidate_memories,
+    "schedule_consolidation": handle_schedule_consolidation,
+    "stop_consolidation": handle_stop_consolidation,
     "add_rule": handle_add_rule,
     "list_rules": handle_list_rules,
     "match_rules": handle_match_rules,
@@ -870,7 +894,7 @@ class Handlers:
 
         handler_func = handler_map[tool_name]
         try:
-            if tool_name in OPTIONAL_TOOL_NAMES or tool_name in KNOWLEDGE_TOOL_NAMES or tool_name in PROFILE_TOOL_NAMES or tool_name in PROMPT_TOOL_NAMES or tool_name in ("my_profile", "onboard"):
+            if tool_name in OPTIONAL_TOOL_NAMES or tool_name in KNOWLEDGE_TOOL_NAMES or tool_name in PROFILE_TOOL_NAMES or tool_name in PROMPT_TOOL_NAMES or tool_name in CONSOLIDATION_TOOL_NAMES or tool_name in ("my_profile", "onboard"):
                 target = self._carrymem
             elif tool_name in RULE_TOOL_NAMES:
                 target = self._rule_engine

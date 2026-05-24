@@ -1,6 +1,6 @@
 # CarryMem Product Roadmap
 
-**Last Updated**: 2026-05-23
+**Last Updated**: 2026-05-24
 **Product Positioning**: AI Identity Layer — Memory + Rules + Knowledge
 **Version Scheme**: v0.2.x (Incremental) → v0.3.0 (GA Milestone)
 
@@ -31,7 +31,7 @@ v0.3.0 ─── Design Baseline (Memory Foundation + Rules Design Docs)
 - Second digit changes for GA milestones (API stability guarantee)
 - No "v1.0.0 jump" — earn it through proven production usage
 
-> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. Current version is v0.2.2, including PrefEval 87.9%, state/event version chain, security hardening, and preference injection optimization. Next milestones: v0.2.3 (context.py modularization) → v0.2.4 (auto-maintenance + evaluation standardization) → v0.3.0 (GA).
+> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. Current version is v0.2.3, including PrefEval 87.9%, state/event version chain, security hardening, preference injection optimization, context.py modularization, and consolidation scheduling. Next milestones: v0.2.4 (auto-maintenance + evaluation standardization) → v0.3.0 (GA).
 
 ---
 
@@ -434,9 +434,9 @@ See CHANGELOG.md for detailed history.
 - [x] Backward compatibility: __post_init__ auto-infer, SQLite migration v0.90 with backfill
 - [x] 27 version chain tests all passing
 
-**P1 — context.py Modularization** (In Progress):
-- [ ] Split context.py (910 lines) into: selection.py, scope.py, format.py, prompt.py
-- [ ] Each module < 250 lines, original API preserved via re-export
+**P1 — context.py Modularization** (DONE):
+- [x] Split context.py (910 lines) into: selection.py, scope.py, format.py, prompt.py
+- [x] Each module < 250 lines, original API preserved via re-export
 
 ### v0.2.4 — Auto-Maintenance + Evaluation Standardization
 
@@ -444,8 +444,8 @@ See CHANGELOG.md for detailed history.
 **Principle**: #1 Lightweight — auto-maintenance reduces manual burden
 
 **P1 — Consolidation Scheduling**:
-- [ ] `schedule_consolidation(interval_hours=1)` method
-- [ ] CLI: `carrymem consolidate --schedule 1h`
+- [x] `schedule_consolidation(interval_hours=1)` method
+- [x] CLI: `carrymem consolidate --schedule 1h`
 - [ ] Integration with APScheduler (optional dependency)
 
 **P2 — Evaluation Standardization**:
@@ -549,7 +549,7 @@ See CHANGELOG.md for detailed history.
 
 ---
 
-**Last Updated**: 2026-05-13
+**Last Updated**: 2026-05-24
 **Maintainer**: CarryMem Team
 **Next Milestone**: v0.1.8 Session Summary + Semantic Aggregation (Phase 4)
 **Status**: ✅ **v0.1.7 complete (2023+ tests, Phase 1-3 memory layer enhancement)**
