@@ -5,19 +5,26 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.2] - 2026-05-23 (PrefEval Violation Optimization + Security Hardening)
+## [0.2.2] - 2026-05-24 (PrefEval Violation Optimization + Security Hardening)
 
 ### Changed
-- **Preference enforcement strengthened**: Added "You must respect these preferences in your response." after preference list in `build_qa_prompt()`, reducing LLM non-compliance violations.
 - **Preference token budget increased**: From 40% to 60% of memories budget, preventing high-priority preferences from being truncated.
 - **Coreference injection protection**: Added `_sanitize_replacement()` to strip injection patterns and control characters from entity replacement text. Both English and Chinese pronoun resolution now sanitize before substitution.
+- **Benchmark judge error monitoring**: Added consecutive judge error detection — pauses 30s after 3 consecutive errors, stops after retry failure to avoid wasting time.
 
 ### Fixed
 - **Dead code in build_qa_prompt**: Removed duplicate `non_pref_active` rendering path (L883-892) that caused the same memories to appear twice under different headers.
 - **Version unification**: All 30 files unified from 0.3.0 to 0.2.1 (per version policy: first two digits require approval).
 
+### Benchmark Results (PrefEval 200-sample, 3-condition comparison)
+- **CarryMem: 0.879** (Ack 160, Viol 11, Hal 3, Unhelpful 14) — **Best accuracy, lowest Unhelpful**
+- reminder: 0.860 (Ack 197, Viol 3, Hal 2, Unhelpful 26)
+- zero-shot: 0.795 (Ack 158, Viol 23, Hal 3, Unhelpful 18)
+- **CarryMem > reminder by +1.9pp** — Consistent lead confirmed
+- **CarryMem Unhelpful 14 < reminder 26** — 46% less unhelpful responses
+
 ### Docs
-- **README PrefEval progress table**: Replaced multi-benchmark table with PrefEval version-by-version progress (82.7% → 85.5% → 87.0%) in EN/CN/JP.
+- **README PrefEval progress table**: Replaced multi-benchmark table with PrefEval version-by-version progress (82.7% → 85.5% → 87.0% → 87.9%) in EN/CN/JP.
 - **Optimization 4 principles**: Added to decision doc v20.0 — lightweight, differentiated, PrefEval focus, continuous progress.
 - **ROADMAP simplified**: v0.2.2-v0.2.4, removed Motive/graph storage (not aligned with lightweight principle).
 

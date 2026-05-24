@@ -834,7 +834,6 @@ def build_qa_prompt(
                 parts.append(f"- Avoid: {content}")
             else:
                 parts.append(f"- Preference: {content}")
-        parts.append("You must respect these preferences in your response.")
         if rules:
             parts.append("")
             parts.append(rules)
@@ -865,7 +864,6 @@ def build_qa_prompt(
                     parts.append(f"- Avoid: {content}")
                 else:
                     parts.append(f"- Preference: {content}")
-            parts.append("You must respect these preferences in your response.")
 
         if non_pref_active:
             parts.append("")

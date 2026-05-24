@@ -363,9 +363,9 @@ Rule management directly in your editor:
 
 | Condition | Accuracy | Violated | Hallucinated | Unhelpful |
 |-----------|----------|----------|-------------|-----------|
-| zero-shot | 77.0% | 27 | 1 | 19 |
-| reminder | 83.5% | 4 | 2 | 30 |
-| **CarryMem** | **87.0%** | 11 | 3 | **17** |
+| zero-shot | 79.5% | 23 | 3 | 18 |
+| reminder | 86.0% | 3 | 2 | 26 |
+| **CarryMem** | **87.9%** | 11 | 3 | **14** |
 
 **Progress across versions (200-sample, 3-condition comparison)**:
 
@@ -373,9 +373,10 @@ Rule management directly in your editor:
 |---------|----------|------------|
 | v0.2.1 pre-fix | 82.7% | Coreference + redaction |
 | v0.2.1 post-fix | 85.5% | Removed memory-query instructions |
-| **v0.2.1 optimized** | **87.0%** | QA prompt simplification |
+| v0.2.1 optimized | 87.0% | QA prompt simplification |
+| **v0.2.2** | **87.9%** | Token budget + dead code fix + security |
 
-**Why this matters**: Reminder injects "remember user preference" in every turn. CarryMem injects structured preferences in system prompt — more precise, more persistent, 43% fewer unhelpful responses.
+**Why this matters**: Reminder injects "remember user preference" in every turn. CarryMem injects structured preferences in system prompt — more precise, more persistent, 46% fewer unhelpful responses.
 
 | | Advantage | Result |
 |---|-----------|--------|

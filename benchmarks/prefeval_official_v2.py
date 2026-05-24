@@ -374,6 +374,7 @@ def main():
     print("=" * 70)
 
     all_condition_results = {}
+    consecutive_judge_errors = 0
 
     for condition in conditions:
         print(f"\n{'='*60}")
@@ -412,6 +413,24 @@ def main():
                 ack = evaluate_acknowledge(judge_client, question, response)
                 result["acknowledged"] = ack["acknowledged"]
                 result["restatement"] = ack.get("restatement", "")
+
+                # Check for judge errors and pause if API is unstable
+                if ack.get("error"):
+                    consecutive_judge_errors += 1
+                    if consecutive_judge_errors >= 3:
+                        print(f"  ⚠️  {consecutive_judge_errors} consecutive judge errors — pausing 30s for API recovery...")
+                        import time as _time
+                        _time.sleep(30)
+                        ack = evaluate_acknowledge(judge_client, question, response)
+                        result["acknowledged"] = ack["acknowledged"]
+                        result["restatement"] = ack.get("restatement", "")
+                        if ack.get("error"):
+                            print(f"  ❌ Judge still failing after pause. Stopping to avoid wasting time.")
+                            print(f"  Completed {i}/{len(items)} items. Run with --skip-judge to continue without judging.")
+                            break
+                        consecutive_judge_errors = 0
+                else:
+                    consecutive_judge_errors = 0
 
                 hal = evaluate_hallucination(judge_client, preference, result.get("restatement", ""))
                 result["hallucinated"] = hal["hallucinated"]
