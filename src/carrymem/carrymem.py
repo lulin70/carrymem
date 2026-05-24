@@ -475,6 +475,8 @@ class CarryMem:
                 recall_hint=m.get("recall_hint"),
                 metadata=m.get("metadata", {}),
             )
+            # Auto-infer memory_nature from type
+            entry.memory_nature = entry.infer_memory_nature()
             entries.append(entry)
 
         return {

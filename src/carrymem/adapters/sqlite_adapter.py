@@ -152,6 +152,18 @@ _V080_INDEX_SQL = [
     "CREATE INDEX IF NOT EXISTS idx_memories_supersedes ON memories(supersedes)",
 ]
 
+_V090_MIGRATION_SQL = [
+    "ALTER TABLE memories ADD COLUMN memory_nature TEXT NOT NULL DEFAULT 'state'",
+    "ALTER TABLE memories ADD COLUMN version_chain_id TEXT",
+    "ALTER TABLE memories ADD COLUMN version_number INTEGER NOT NULL DEFAULT 1",
+]
+
+_V090_INDEX_SQL = [
+    "CREATE INDEX IF NOT EXISTS idx_memories_nature ON memories(memory_nature)",
+    "CREATE INDEX IF NOT EXISTS idx_memories_chain ON memories(version_chain_id)",
+    "CREATE INDEX IF NOT EXISTS idx_memories_chain_version ON memories(version_chain_id, version_number)",
+]
+
 _V060_FTS_REBUILD_SQL = [
     "DROP TABLE IF EXISTS memories_fts",
     """CREATE VIRTUAL TABLE memories_fts USING fts5(
@@ -286,6 +298,7 @@ class SQLiteAdapter(StorageAdapter):
         self._migrate_v050()
         self._migrate_v060()
         self._migrate_v080()
+        self._migrate_v090()
 
         # Initialize semantic recall components
         self._enable_semantic = enable_semantic_recall and SEMANTIC_AVAILABLE
@@ -587,6 +600,29 @@ class SQLiteAdapter(StorageAdapter):
                 except sqlite3.OperationalError:
                     pass
 
+    def _migrate_v090(self):
+        """Add memory_nature, version_chain_id, version_number columns."""
+        conn = self._get_connection()
+        try:
+            conn.execute("SELECT memory_nature FROM memories LIMIT 1")
+        except sqlite3.OperationalError:
+            for sql in _V090_MIGRATION_SQL:
+                try:
+                    conn.execute(sql)
+                except sqlite3.OperationalError:
+                    pass
+            for sql in _V090_INDEX_SQL:
+                try:
+                    conn.execute(sql)
+                except sqlite3.OperationalError:
+                    pass
+            # Backfill: infer memory_nature from type
+            conn.execute(
+                "UPDATE memories SET memory_nature = 'event' "
+                "WHERE type IN ('session_summary', 'task_pattern')"
+            )
+            conn.commit()
+
     def close(self):
         self._closed = True
         with self._conn_lock:
@@ -716,8 +752,9 @@ class SQLiteAdapter(StorageAdapter):
                (id, type, content, raw_text, original_message, confidence, tier,
                 source_layer, reasoning, suggested_action, recall_hint,
                 metadata, storage_key, namespace, created_at, updated_at, expires_at,
-                access_count, content_hash, importance_score, last_accessed_at, version)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, NULL, 1)""",
+                access_count, content_hash, importance_score, last_accessed_at, version,
+                memory_nature, version_chain_id, version_number)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, NULL, 1, ?, ?, ?)""",
             (
                 entry.id or storage_key,
                 entry.type,
@@ -738,6 +775,9 @@ class SQLiteAdapter(StorageAdapter):
                 expires_at,
                 c_hash,
                 imp_score,
+                entry.memory_nature,
+                entry.version_chain_id,
+                entry.version_number,
             ),
         )
         if not _skip_commit:
@@ -769,6 +809,16 @@ class SQLiteAdapter(StorageAdapter):
             )
 
         self._auto_supersede(conn, storage_key, entry, self._namespace)
+
+        # Set initial version_chain_id for state memories (if not set by supersede)
+        if entry.memory_nature == "state" and not entry.version_chain_id:
+            try:
+                conn.execute(
+                    "UPDATE memories SET version_chain_id = ? WHERE storage_key = ? AND version_chain_id IS NULL",
+                    (storage_key, storage_key),
+                )
+            except sqlite3.Error:
+                pass
 
         stored = StoredMemory.from_memory_entry(entry, storage_key=storage_key, created_at=now)
         stored.importance_score = imp_score
@@ -878,9 +928,36 @@ class SQLiteAdapter(StorageAdapter):
 
             now_iso = datetime.now(timezone.utc).isoformat()
             try:
+                # Get old memory's version chain info
+                old_chain_id = None
+                old_version = 1
+                try:
+                    chain_row = conn.execute(
+                        "SELECT version_chain_id, version_number FROM memories WHERE id = ?",
+                        (row["id"],),
+                    ).fetchone()
+                    if chain_row:
+                        old_chain_id = chain_row["version_chain_id"]
+                        old_version = chain_row["version_number"] or 1
+                except sqlite3.OperationalError:
+                    pass
+
+                # Determine chain_id: reuse old if exists, otherwise use new storage_key
+                chain_id = old_chain_id or new_storage_key
+                new_version = old_version + 1
+
+                # Mark old memory as superseded and link to chain
                 conn.execute(
-                    "UPDATE memories SET superseded_at = ?, supersedes = ? WHERE id = ?",
-                    (now_iso, new_storage_key, row["id"]),
+                    "UPDATE memories SET superseded_at = ?, supersedes = ?, "
+                    "version_chain_id = ? WHERE id = ?",
+                    (now_iso, new_storage_key, chain_id, row["id"]),
+                )
+
+                # Update new memory's version chain info
+                conn.execute(
+                    "UPDATE memories SET version_chain_id = ?, version_number = ? "
+                    "WHERE storage_key = ?",
+                    (chain_id, new_version, new_storage_key),
                 )
             except sqlite3.Error:
                 pass
@@ -2057,6 +2134,9 @@ class SQLiteAdapter(StorageAdapter):
             version=version,
             superseded_at=superseded_at,
             supersedes=supersedes,
+            memory_nature=row["memory_nature"] if "memory_nature" in row.keys() else "state",
+            version_chain_id=row["version_chain_id"] if "version_chain_id" in row.keys() else None,
+            version_number=row["version_number"] if "version_number" in row.keys() else 1,
         )
 
     def _dict_to_stored(self, d: Dict) -> Optional[StoredMemory]:
@@ -2127,6 +2207,9 @@ class SQLiteAdapter(StorageAdapter):
                 importance_score=d.get("importance_score", 0.0),
                 last_accessed_at=last_accessed_at,
                 version=d.get("version", 1),
+                memory_nature=d.get("memory_nature", "state"),
+                version_chain_id=d.get("version_chain_id"),
+                version_number=d.get("version_number", 1),
             )
         except Exception as e:
             from carrymem.utils.logger import logger

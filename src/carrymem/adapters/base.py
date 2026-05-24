@@ -48,6 +48,25 @@ class MemoryEntry:
     suggested_action: str = "store"
     recall_hint: Optional[Dict[str, Any]] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
+    memory_nature: str = "state"  # "state" (evolving, versioned) or "event" (immutable fact)
+    version_chain_id: Optional[str] = None  # Shared ID for versions of the same concept
+    version_number: int = 1  # Sequence number within version chain
+
+    # Types that represent evolving state (superseded by newer values)
+    STATE_TYPES = {"user_preference", "correction", "decision", "fact_declaration", "relationship", "sentiment_marker"}
+    # Types that represent immutable events (complete retention, no versioning)
+    EVENT_TYPES = {"session_summary", "task_pattern"}
+
+    def infer_memory_nature(self) -> str:
+        """Infer memory_nature from type field."""
+        if self.type in self.EVENT_TYPES:
+            return "event"
+        return "state"
+
+    def __post_init__(self):
+        """Auto-infer memory_nature if still at default."""
+        if self.memory_nature == "state" and self.type in self.EVENT_TYPES:
+            self.memory_nature = "event"
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize to plain dict (JSON-safe)."""
@@ -63,6 +82,9 @@ class MemoryEntry:
             "suggested_action": self.suggested_action,
             "recall_hint": self.recall_hint,
             "metadata": self.metadata,
+            "memory_nature": self.memory_nature,
+            "version_chain_id": self.version_chain_id,
+            "version_number": self.version_number,
         }
 
     @classmethod
@@ -80,6 +102,9 @@ class MemoryEntry:
             suggested_action=data.get("suggested_action", "store"),
             recall_hint=data.get("recall_hint"),
             metadata=data.get("metadata", {}),
+            memory_nature=data.get("memory_nature", "state"),
+            version_chain_id=data.get("version_chain_id"),
+            version_number=data.get("version_number", 1),
         )
 
     def __repr__(self) -> str:
@@ -137,6 +162,9 @@ class StoredMemory(MemoryEntry):
             "storage_metadata": self.storage_metadata,
             "superseded_at": self.superseded_at.isoformat() if self.superseded_at else None,
             "supersedes": self.supersedes,
+            "memory_nature": self.memory_nature,
+            "version_chain_id": self.version_chain_id,
+            "version_number": self.version_number,
         })
         return base
 
@@ -163,6 +191,9 @@ class StoredMemory(MemoryEntry):
             storage_key=storage_key,
             created_at=created_at or datetime.now(timezone.utc),
             updated_at=created_at or datetime.now(timezone.utc),
+            memory_nature=entry.memory_nature,
+            version_chain_id=entry.version_chain_id,
+            version_number=entry.version_number,
         )
 
     @classmethod
@@ -239,6 +270,9 @@ class StoredMemory(MemoryEntry):
             version=data.get("version", 1),
             superseded_at=superseded_at,
             supersedes=data.get("supersedes"),
+            memory_nature=data.get("memory_nature", "state"),
+            version_chain_id=data.get("version_chain_id"),
+            version_number=data.get("version_number", 1),
         )
 
 

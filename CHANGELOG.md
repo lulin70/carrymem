@@ -5,7 +5,13 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.2] - 2026-05-24 (PrefEval Violation Optimization + Security Hardening)
+## [0.2.2] - 2026-05-24 (PrefEval Violation Optimization + Version Chain + Security Hardening)
+
+### Added
+- **State/Event memory nature**: Memory types classified as `state` (evolving, versioned: user_preference, correction, decision, etc.) or `event` (immutable: session_summary, task_pattern). Auto-inferred via `__post_init__` and `infer_memory_nature()`.
+- **Version chain**: State memories linked via `version_chain_id` + `version_number`. When a preference is superseded, both old and new share the same chain_id. Recall returns only latest version by default.
+- **SQLite migration v0.90**: Added `memory_nature`, `version_chain_id`, `version_number` columns with automatic backfill for existing data.
+- **27 version chain tests**: Full coverage of nature inference, chain creation, supersede linking, persistence, and migration.
 
 ### Changed
 - **Preference token budget increased**: From 40% to 60% of memories budget, preventing high-priority preferences from being truncated.
