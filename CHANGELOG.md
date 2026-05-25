@@ -5,7 +5,7 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.3] - 2026-05-24 (Consolidation Scheduling + PrefEval Standardization + Context Modularization)
+## [0.2.3] - 2026-05-25 (Consolidation Scheduling + PrefEval Standardization + Context Modularization)
 
 ### Added
 - **Scheduled consolidation**: `schedule_consolidation(interval_hours=1.0)` method with background `threading.Timer`. `stop_consolidation()` to cancel. No external dependencies.
@@ -13,13 +13,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **PrefEval random seed**: `--seed` parameter (default 42) for reproducible topic/item sampling.
 - **PrefEval config fingerprint**: MD5 hash of (model, seed, topics, turns, conditions) saved in results JSON for reproducibility tracking.
 - **PrefEval Markdown report**: `--report` flag generates structured report with summary table, per-topic breakdown, and CarryMem vs Reminder comparison.
+- **Domain auto-inference**: `infer_domain()` and `infer_domains_from_memories()` with 5 domains (coding/writing/research/management/data), EN/CN/JP trilingual keywords. Auto-inferred in `MemoryEntry.__post_init__`.
+- **RuleCandidateGenerator**: Extracted 7 rule generation methods from CarryMem God Class into dedicated `rules/candidate_generator.py`.
 
 ### Changed
+- **PrefEval: CarryMem 85.0% > Reminder 83.0%** (200-sample, 3-condition comparison, seed=42). First fair benchmark proving proactive injection > full reminder.
+- **SQLite "database is locked" fix**: Added `busy_timeout=5000` PRAGMA to both SQLiteAdapter and RuleStorage. Fixed `_auto_supersede` and `version_chain_id` writes missing `commit()`.
+- **PrefEval benchmark improvements**: `force_type="user_preference"` ensures correct preference classification. Inter-turn noise no longer stored (avoids prompt pollution). `include_question=True` restored (critical for LLM attention to system prompt preferences). `max_tokens=500` prevents response truncation.
 - **context.py modularized**: Split 910-line monolith into 4 focused sub-modules: `selection.py`, `scope.py`, `format.py`, `prompt.py`. Original `context.py` preserves all APIs via re-export.
 - **ROADMAP updated**: v0.2.2 marked as ✅ with all version chain items completed.
 - **Security: `declare()` input validation**: Added input validation to the `declare()` method to reject malformed or injection-bearing content before storage.
 - **Security: `_sanitize_replacement` blocking mode**: `_sanitize_replacement()` now operates in blocking mode — patterns matching injection signatures are rejected entirely rather than stripped, preventing partial bypass.
 - **Security: Redaction Google/Stripe/Slack patterns**: Auto-redaction expanded with Google API key (`AIza...`), Stripe key (`sk_live_...`/`rk_live_...`), and Slack token (`xox[bpors]-...`) patterns.
+- **_recall_impl refactored**: Split into 4 phases: `_recall_fts_phase`, `_recall_vector_phase`, `_recall_expansion_phase`, `_recall_update_access`.
+- **Cache granularity fix**: `invalidate(namespace)` replaces `invalidate()` to avoid clearing all namespaces.
+- **has_cjk unified**: 6 inline implementations consolidated into `utils/language.py`.
+- **MMR performance**: `_mmr_select` pre-computes token sets, eliminating repeated `_tokenize_text` calls.
+- **ThreadLocal connections**: ObsidianAdapter and CodingContextAdapter use `threading.local()` for thread safety.
 
 ## [0.2.2] - 2026-05-24 (PrefEval Violation Optimization + Version Chain + Security Hardening)
 

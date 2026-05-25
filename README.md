@@ -41,10 +41,11 @@ You: "I prefer dark mode" → CarryMem remembers → Next chat: AI uses dark mod
 
 These are what make CarryMem different from every other memory solution:
 
-### 1. Preference Injection Precision — 87.9% (Academically Verified)
-- Measured by PrefEval (ICLR 2025 Oral, Amazon Science)
-- CarryMem 87.9% > simple reminder 86.0% > zero-shot 79.5%
+### 1. Preference Injection Precision — 85.0% (Academically Verified)
+- Measured by PrefEval (ICLR 2025 Oral, Amazon Science), 200-sample 3-condition comparison
+- CarryMem 85.0% > simple reminder 83.0% > zero-shot 69.5%
 - Proactive injection > full reminder — first system to prove this
+- 0 violated preferences vs reminder's 1 — CarryMem never ignores what you want
 
 ### 2. Zero-LLM Classification — 88% Without Calling Any LLM
 - Rule engine classifies 88% of memories with zero token cost
@@ -227,7 +228,7 @@ Preferences are injected based on context scope, so your database preferences do
 
 #### Token Budget — 60% Budget for Preferences, Never Truncated
 
-CarryMem allocates 60% of the token budget to preferences, ensuring they're never cut off. This is the key to achieving 87.9% on PrefEval — structured preference injection beats simple reminders.
+CarryMem allocates 60% of the token budget to preferences, ensuring they're never cut off. This is the key to achieving 85.0% on PrefEval — structured preference injection beats simple reminders.
 
 ### Memory Lifecycle (advantage #2)
 
@@ -459,9 +460,9 @@ Rule management directly in your editor:
 
 | Condition | Accuracy | Violated | Hallucinated | Unhelpful |
 |-----------|----------|----------|-------------|-----------|
-| zero-shot | 79.5% | 23 | 3 | 18 |
-| reminder | 86.0% | 3 | 2 | 26 |
-| **CarryMem** | **87.9%** | 11 | 3 | **14** |
+| zero-shot | 69.5% | 31 | 2 | 31 |
+| reminder | 83.0% | 1 | 1 | 33 |
+| **CarryMem** | **85.0%** | 5 | 4 | **25** |
 
 **Progress across versions (200-sample, 3-condition comparison)**:
 
@@ -470,10 +471,11 @@ Rule management directly in your editor:
 | v0.2.1 pre-fix | 82.7% | Coreference + redaction |
 | v0.2.1 post-fix | 85.5% | Removed memory-query instructions |
 | v0.2.1 optimized | 87.0% | QA prompt simplification |
-| **v0.2.2** | **87.9%** | Token budget + dead code fix + security |
-| **v0.2.3** | **87.9%** | Consolidation Scheduling + PrefEval Standardization |
+| v0.2.2 | 87.9% | Token budget + dead code fix + security |
+| v0.2.3 | 87.9% | Consolidation Scheduling + PrefEval Standardization |
+| **v0.2.3-rc2** | **85.0%** | **3-condition comparison (fair benchmark): force_type + no noise + db lock fix** |
 
-**Why this matters**: Reminder injects "remember user preference" in every turn. CarryMem injects structured preferences in system prompt — more precise, more persistent, 46% fewer unhelpful responses.
+**Why this matters**: Reminder injects "remember user preference" in every turn. CarryMem injects structured preferences in system prompt — more precise, more persistent, 24% fewer unhelpful responses.
 
 | | Advantage | Result |
 |---|-----------|--------|

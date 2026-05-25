@@ -433,6 +433,7 @@ class SQLiteAdapter(StorageAdapter):
                     conn = sqlite3.connect(self._db_path)
                     conn.row_factory = sqlite3.Row
                 conn.execute("PRAGMA journal_mode=WAL")
+                conn.execute("PRAGMA busy_timeout=5000")
                 conn.execute("PRAGMA foreign_keys=ON")
                 if use_pysqlite3 and SQLITE_VEC_AVAILABLE:
                     try:
@@ -843,6 +844,12 @@ class SQLiteAdapter(StorageAdapter):
 
         self._auto_supersede(conn, storage_key, entry, self._namespace)
 
+        # Commit any writes from _auto_supersede
+        try:
+            conn.commit()
+        except sqlite3.Error:
+            pass
+
         # Set initial version_chain_id for state memories (if not set by supersede)
         if entry.memory_nature == "state" and not entry.version_chain_id:
             try:
@@ -850,6 +857,7 @@ class SQLiteAdapter(StorageAdapter):
                     "UPDATE memories SET version_chain_id = ? WHERE storage_key = ? AND version_chain_id IS NULL",
                     (storage_key, storage_key),
                 )
+                conn.commit()
             except sqlite3.Error:
                 pass
 

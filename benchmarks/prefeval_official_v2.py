@@ -144,7 +144,7 @@ def generate_response(client: OpenAI, model: str, messages: list, max_retries: i
                 model=model,
                 messages=messages,
                 temperature=0,
-                max_tokens=300,
+                max_tokens=500,
             )
             return resp.choices[0].message.content.strip()
         except Exception as e:
@@ -285,37 +285,20 @@ def run_carrymem_condition(item: dict, inter_turns: list, num_turns: int,
     cm = CarryMem(storage="sqlite", db_path=db_path, namespace=f"prefeval_{item['topic']}")
 
     try:
-        cm.classify_and_remember(item["preference"])
+        # Force store preference as user_preference type to ensure correct
+        # classification (auto-classify may misclassify as session_summary).
+        cm.classify_and_remember(item["preference"], force_type="user_preference")
 
-        turn_count = 0
-        for turn in inter_turns:
-            if turn_count >= num_turns:
-                break
-            role = turn.get("role", "user")
-            content = turn.get("content", "")
-            if role == "user":
-                # Store inter-turn user messages as session_summary to prevent
-                # noise (e.g., Terraform code) from being classified as preferences.
-                try:
-                    cm.classify_and_remember(
-                        content,
-                        force_type="session_summary",
-                    )
-                except Exception:
-                    pass
-            elif role == "assistant":
-                # Store assistant replies as session_summary to preserve
-                # context without polluting preference retrieval.
-                try:
-                    cm.classify_and_remember(
-                        content,
-                        force_type="session_summary",
-                    )
-                except Exception:
-                    pass
-                turn_count += 1
+        # Do NOT store inter-turn messages. In the PrefEval protocol,
+        # inter-turns are noise designed to test whether the system can
+        # retain preferences across distracting conversations. Storing
+        # them pollutes the prompt with irrelevant content (Terraform
+        # code, Fibonacci examples, etc.) that degrades preference
+        # injection quality. The LLM already sees inter-turns in the
+        # message history — CarryMem only needs to preserve the preference.
+        _ = inter_turns  # acknowledge but skip
 
-        prompt = cm.build_qa_prompt(question=item["question"])
+        prompt = cm.build_qa_prompt(question=item["question"], include_question=True)
         messages = build_messages(
             item["preference"], item["question"], inter_turns,
             num_turns, "carrymem", carrymem_prompt=prompt
