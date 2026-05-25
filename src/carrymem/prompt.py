@@ -203,13 +203,6 @@ def build_qa_prompt(
                 parts.append(f"- Avoid: {content}")
             else:
                 parts.append(f"- Preference: {content}")
-        # Acknowledge instruction: LLM must reference user preferences in its answer
-        if language == "zh":
-            parts.append("\n回答时请先确认你注意到了用户的偏好和回避项，然后据此给出推荐。不要推荐用户回避的内容。")
-        elif language == "ja":
-            parts.append("\n回答する際、まずユーザーの好みと回避項目を確認し、それに基づいて推薦してください。ユーザーが回避する内容は推薦しないでください。")
-        else:
-            parts.append("\nWhen answering, first acknowledge the user's preferences and aversions, then provide recommendations accordingly. Do NOT recommend items the user wants to avoid.")
         if rules:
             parts.append("")
             parts.append(rules)
@@ -240,13 +233,6 @@ def build_qa_prompt(
                     parts.append(f"- Avoid: {content}")
                 else:
                     parts.append(f"- Preference: {content}")
-            # Acknowledge instruction for mixed memories path
-            if language == "zh":
-                parts.append("\n回答时请先确认你注意到了用户的偏好和回避项，然后据此给出推荐。不要推荐用户回避的内容。")
-            elif language == "ja":
-                parts.append("\n回答する際、まずユーザーの好みと回避項目を確認し、それに基づいて推薦してください。ユーザーが回避する内容は推薦しないでください。")
-            else:
-                parts.append("\nWhen answering, first acknowledge the user's preferences and aversions, then provide recommendations accordingly. Do NOT recommend items the user wants to avoid.")
 
         if non_pref_active:
             parts.append("")
