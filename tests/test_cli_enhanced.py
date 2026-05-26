@@ -16,6 +16,8 @@ from carrymem.cli import (
     cmd_add, cmd_list, cmd_search, cmd_show, cmd_edit, cmd_forget, cmd_clean,
     cmd_export, cmd_import, cmd_stats, cmd_doctor, cmd_setup_mcp, cmd_init,
     cmd_version, _format_time, _truncate, main,
+    _resolve_mcp_command, _build_mcp_server_config, _merge_json_file,
+    _merge_claude_global_config,
 )
 try:
     from carrymem import CarryMem
@@ -403,6 +405,299 @@ class TestMain:
             with patch.object(sys, "argv", ["carrymem", "--version"]):
                 main()
         assert exc_info.value.code == 0
+
+
+class TestResolveMcpCommand:
+    def test_returns_carrymem_if_on_path(self):
+        with patch("shutil.which", return_value="/usr/local/bin/carrymem"):
+            result = _resolve_mcp_command()
+            assert result["command"] == "carrymem"
+            assert result["args"] == ["mcp"]
+
+    def test_returns_python_fallback(self):
+        with patch("shutil.which", return_value=None):
+            result = _resolve_mcp_command()
+            assert result["command"] == sys.executable
+            assert result["args"] == ["-m", "carrymem.integration.layer2_mcp"]
+
+
+class TestBuildMcpServerConfig:
+    def test_default_db_path(self):
+        with patch("shutil.which", return_value="/usr/local/bin/carrymem"):
+            config = _build_mcp_server_config()
+            assert config["command"] == "carrymem"
+            assert config["args"] == ["mcp"]
+            assert config["env"]["CARRYMEM_DATA_PATH"] == "$HOME/.carrymem/memories.db"
+
+    def test_custom_db_path(self):
+        with patch("shutil.which", return_value="/usr/local/bin/carrymem"):
+            config = _build_mcp_server_config(db_path="/custom/path.db")
+            assert config["env"]["CARRYMEM_DATA_PATH"] == "/custom/path.db"
+
+    def test_python_fallback_config(self):
+        with patch("shutil.which", return_value=None):
+            config = _build_mcp_server_config()
+            assert config["command"] == sys.executable
+            assert config["args"] == ["-m", "carrymem.integration.layer2_mcp"]
+
+
+class TestMergeJsonFile:
+    def test_creates_new_file(self, tmp_path):
+        file_path = tmp_path / "mcp.json"
+        new_data = {"mcpServers": {"carrymem": {"command": "carrymem", "args": ["mcp"]}}}
+        success, updated, msg = _merge_json_file(file_path, new_data)
+        assert success is True
+        assert updated is True
+        assert msg == "configured"
+        with open(file_path) as f:
+            config = json.load(f)
+        assert "carrymem" in config["mcpServers"]
+
+    def test_merges_with_existing(self, tmp_path):
+        file_path = tmp_path / "mcp.json"
+        existing = {"mcpServers": {"other-tool": {"command": "other"}}}
+        with open(file_path, "w") as f:
+            json.dump(existing, f)
+        new_data = {"mcpServers": {"carrymem": {"command": "carrymem", "args": ["mcp"]}}}
+        success, updated, msg = _merge_json_file(file_path, new_data)
+        assert success is True
+        with open(file_path) as f:
+            config = json.load(f)
+        assert "carrymem" in config["mcpServers"]
+        assert "other-tool" in config["mcpServers"]
+
+    def test_idempotent_without_force(self, tmp_path):
+        file_path = tmp_path / "mcp.json"
+        new_data = {"mcpServers": {"carrymem": {"command": "carrymem", "args": ["mcp"]}}}
+        _merge_json_file(file_path, new_data)
+        success, updated, msg = _merge_json_file(file_path, new_data)
+        assert success is True
+        assert updated is False
+        assert msg == "already configured"
+
+    def test_force_overwrite(self, tmp_path):
+        file_path = tmp_path / "mcp.json"
+        new_data = {"mcpServers": {"carrymem": {"command": "carrymem", "args": ["mcp"]}}}
+        _merge_json_file(file_path, new_data)
+        updated_data = {"mcpServers": {"carrymem": {"command": "new-cmd", "args": ["new-arg"]}}}
+        success, updated, msg = _merge_json_file(file_path, updated_data, force=True)
+        assert success is True
+        assert updated is True
+        with open(file_path) as f:
+            config = json.load(f)
+        assert config["mcpServers"]["carrymem"]["command"] == "new-cmd"
+
+    def test_creates_parent_directory(self, tmp_path):
+        file_path = tmp_path / "subdir" / "mcp.json"
+        new_data = {"mcpServers": {"carrymem": {"command": "carrymem", "args": ["mcp"]}}}
+        success, updated, msg = _merge_json_file(file_path, new_data)
+        assert success is True
+        assert file_path.exists()
+
+    def test_handles_corrupt_json(self, tmp_path):
+        file_path = tmp_path / "mcp.json"
+        with open(file_path, "w") as f:
+            f.write("not valid json{{{")
+        new_data = {"mcpServers": {"carrymem": {"command": "carrymem", "args": ["mcp"]}}}
+        success, updated, msg = _merge_json_file(file_path, new_data)
+        assert success is False
+        assert "Failed to read" in msg
+
+
+class TestMergeClaudeGlobalConfig:
+    def test_creates_new_file(self, tmp_path):
+        claude_file = tmp_path / ".claude.json"
+        new_data = {"mcpServers": {"carrymem": {"command": "carrymem", "args": ["mcp"]}}}
+        with patch.object(Path, "home", return_value=tmp_path):
+            success, updated, msg = _merge_claude_global_config(new_data)
+        assert success is True
+        assert updated is True
+        with open(claude_file) as f:
+            config = json.load(f)
+        assert "carrymem" in config["mcpServers"]
+
+    def test_merges_with_existing_content(self, tmp_path):
+        claude_file = tmp_path / ".claude.json"
+        existing = {"mcpServers": {"other": {"command": "other"}}, "someKey": "someValue"}
+        with open(claude_file, "w") as f:
+            json.dump(existing, f)
+        new_data = {"mcpServers": {"carrymem": {"command": "carrymem", "args": ["mcp"]}}}
+        with patch.object(Path, "home", return_value=tmp_path):
+            success, updated, msg = _merge_claude_global_config(new_data)
+        assert success is True
+        with open(claude_file) as f:
+            config = json.load(f)
+        assert "carrymem" in config["mcpServers"]
+        assert "other" in config["mcpServers"]
+        assert config["someKey"] == "someValue"
+
+    def test_idempotent(self, tmp_path):
+        claude_file = tmp_path / ".claude.json"
+        new_data = {"mcpServers": {"carrymem": {"command": "carrymem", "args": ["mcp"]}}}
+        with patch.object(Path, "home", return_value=tmp_path):
+            _merge_claude_global_config(new_data)
+            success, updated, msg = _merge_claude_global_config(new_data)
+        assert msg == "already configured"
+
+
+class TestSetupMcpGlobal:
+    def test_global_cursor(self, tmp_path, capsys):
+        """Test --global flag writes to ~/.cursor/mcp.json."""
+        cursor_dir = tmp_path / ".cursor"
+        cursor_dir.mkdir()
+        with patch.object(Path, "home", return_value=tmp_path):
+            result = cmd_setup_mcp(["--global", "--tool", "cursor"])
+        assert result == 0
+        cursor_file = cursor_dir / "mcp.json"
+        assert cursor_file.exists()
+        with open(cursor_file) as f:
+            config = json.load(f)
+        assert "carrymem" in config["mcpServers"]
+        assert "CARRYMEM_DATA_PATH" in config["mcpServers"]["carrymem"]["env"]
+
+    def test_global_claude_code(self, tmp_path, capsys):
+        """Test --global flag writes to ~/.claude.json."""
+        with patch.object(Path, "home", return_value=tmp_path):
+            result = cmd_setup_mcp(["--global", "--tool", "claude-code"])
+        assert result == 0
+        claude_file = tmp_path / ".claude.json"
+        assert claude_file.exists()
+        with open(claude_file) as f:
+            config = json.load(f)
+        assert "carrymem" in config["mcpServers"]
+
+    def test_global_trae(self, tmp_path, capsys):
+        """Test --global flag writes to ~/.trae/mcp.json."""
+        trae_dir = tmp_path / ".trae"
+        trae_dir.mkdir()
+        with patch.object(Path, "home", return_value=tmp_path):
+            result = cmd_setup_mcp(["--global", "--tool", "trae"])
+        assert result == 0
+        trae_file = trae_dir / "mcp.json"
+        assert trae_file.exists()
+        with open(trae_file) as f:
+            config = json.load(f)
+        assert "carrymem" in config["mcpServers"]
+
+    def test_global_trae_cn_auto_detected(self, tmp_path, capsys):
+        """Test --global also configures ~/.trae-cn/mcp.json if dir exists."""
+        trae_dir = tmp_path / ".trae"
+        trae_dir.mkdir()
+        trae_cn_dir = tmp_path / ".trae-cn"
+        trae_cn_dir.mkdir()
+        with patch.object(Path, "home", return_value=tmp_path):
+            result = cmd_setup_mcp(["--global", "--tool", "trae"])
+        assert result == 0
+        trae_cn_file = trae_cn_dir / "mcp.json"
+        assert trae_cn_file.exists()
+        with open(trae_cn_file) as f:
+            config = json.load(f)
+        assert "carrymem" in config["mcpServers"]
+
+    def test_global_all(self, tmp_path, capsys):
+        """Test --global --tool all configures all tools."""
+        cursor_dir = tmp_path / ".cursor"
+        cursor_dir.mkdir()
+        trae_dir = tmp_path / ".trae"
+        trae_dir.mkdir()
+        with patch.object(Path, "home", return_value=tmp_path):
+            result = cmd_setup_mcp(["--global", "--tool", "all"])
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "Claude Code" in captured.out
+        assert "Cursor" in captured.out
+        assert "TRAE" in captured.out
+        assert "shared" in captured.out
+
+    def test_global_idempotent(self, tmp_path, capsys):
+        """Test running --global twice doesn't break config."""
+        cursor_dir = tmp_path / ".cursor"
+        cursor_dir.mkdir()
+        with patch.object(Path, "home", return_value=tmp_path):
+            cmd_setup_mcp(["--global", "--tool", "cursor"])
+            result = cmd_setup_mcp(["--global", "--tool", "cursor"])
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "already configured" in captured.out
+
+    def test_global_force_overwrite(self, tmp_path, capsys):
+        """Test --global --force overwrites existing config."""
+        cursor_dir = tmp_path / ".cursor"
+        cursor_dir.mkdir()
+        with patch.object(Path, "home", return_value=tmp_path):
+            cmd_setup_mcp(["--global", "--tool", "cursor"])
+            result = cmd_setup_mcp(["--global", "--tool", "cursor", "--force"])
+        assert result == 0
+
+    def test_global_merges_existing_servers(self, tmp_path, capsys):
+        """Test --global preserves other MCP servers in config."""
+        cursor_dir = tmp_path / ".cursor"
+        cursor_dir.mkdir()
+        existing = {"mcpServers": {"other-tool": {"command": "other"}}}
+        with open(cursor_dir / "mcp.json", "w") as f:
+            json.dump(existing, f)
+        with patch.object(Path, "home", return_value=tmp_path):
+            result = cmd_setup_mcp(["--global", "--tool", "cursor"])
+        assert result == 0
+        with open(cursor_dir / "mcp.json") as f:
+            config = json.load(f)
+        assert "carrymem" in config["mcpServers"]
+        assert "other-tool" in config["mcpServers"]
+
+    def test_global_shows_shared_db_path(self, tmp_path, capsys):
+        """Test --global output mentions shared database."""
+        cursor_dir = tmp_path / ".cursor"
+        cursor_dir.mkdir()
+        with patch.object(Path, "home", return_value=tmp_path):
+            result = cmd_setup_mcp(["--global", "--tool", "cursor"])
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "shared" in captured.out
+
+    def test_global_env_has_data_path(self, tmp_path, capsys):
+        """Test MCP config env includes CARRYMEM_DATA_PATH."""
+        cursor_dir = tmp_path / ".cursor"
+        cursor_dir.mkdir()
+        with patch.object(Path, "home", return_value=tmp_path):
+            result = cmd_setup_mcp(["--global", "--tool", "cursor"])
+        assert result == 0
+        with open(cursor_dir / "mcp.json") as f:
+            config = json.load(f)
+        env = config["mcpServers"]["carrymem"]["env"]
+        assert "CARRYMEM_DATA_PATH" in env
+        assert ".carrymem/memories.db" in env["CARRYMEM_DATA_PATH"]
+
+
+class TestSetupMcpProjectStillWorks:
+    """Ensure project-level setup-mcp still works after --global changes."""
+
+    def test_project_level_cursor(self, tmp_path, capsys):
+        result = cmd_setup_mcp(["--tool", "cursor", "--project", str(tmp_path)])
+        assert result == 0
+        cursor_file = tmp_path / ".cursor" / "mcp.json"
+        assert cursor_file.exists()
+        with open(cursor_file) as f:
+            config = json.load(f)
+        assert "carrymem" in config["mcpServers"]
+
+    def test_project_level_claude_code(self, tmp_path, capsys):
+        result = cmd_setup_mcp(["--tool", "claude-code", "--project", str(tmp_path)])
+        assert result == 0
+        claude_file = tmp_path / ".claude" / "mcp.json"
+        assert claude_file.exists()
+        with open(claude_file) as f:
+            config = json.load(f)
+        assert "carrymem" in config["mcpServers"]
+
+    def test_project_level_no_env_by_default(self, tmp_path, capsys):
+        """Project-level config should not include env (backward compat)."""
+        result = cmd_setup_mcp(["--tool", "cursor", "--project", str(tmp_path)])
+        assert result == 0
+        cursor_file = tmp_path / ".cursor" / "mcp.json"
+        with open(cursor_file) as f:
+            config = json.load(f)
+        # Project-level config doesn't include env field (backward compat)
+        assert "env" not in config["mcpServers"]["carrymem"]
 
 
 class TestHelperFunctions:
