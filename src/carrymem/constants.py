@@ -144,6 +144,34 @@ MCP_CONFIG_WINDSURF = get_mcp_config_path('windsurf')
 MCP_CONFIG_CLINE = get_mcp_config_path('cline')
 """Cline MCP configuration file path"""
 
+TRAE_MCP_CONFIG = HOME_DIR / ".trae" / "mcp.json"
+"""TRAE MCP configuration file path"""
+
+TRAE_CN_DIR = HOME_DIR / ".trae-cn"
+"""TRAE-CN configuration directory"""
+
+TRAE_CN_MCP_CONFIG = TRAE_CN_DIR / "mcp.json"
+"""TRAE-CN MCP configuration file path"""
+
+CLAUDE_GLOBAL_CONFIG = HOME_DIR / ".claude.json"
+"""Claude Code global configuration file path"""
+
+
+# ============================================================================
+# Security: Dangerous System Directories
+# ============================================================================
+
+DANGEROUS_SYSTEM_DIRS = [
+    Path('/etc'),
+    Path('/usr'),
+    Path('/bin'),
+    Path('/sbin'),
+    Path('/System'),
+    Path('/Library'),
+    Path('/private/etc'),
+]
+"""System directories that should never be written to or read from as data paths"""
+
 
 # ============================================================================
 # Knowledge Base Paths (Obsidian, etc.)
@@ -260,17 +288,7 @@ def validate_path_safety(path: Path, allowed_base: Optional[Path] = None) -> boo
             )
     
     # Check for dangerous system directories
-    dangerous_dirs = [
-        Path('/etc'),
-        Path('/usr'),
-        Path('/bin'),
-        Path('/sbin'),
-        Path('/System'),
-        Path('/Library'),
-        Path('/private/etc'),
-    ]
-    
-    for dangerous in dangerous_dirs:
+    for dangerous in DANGEROUS_SYSTEM_DIRS:
         try:
             path.relative_to(dangerous)
             raise ValueError(
@@ -349,7 +367,14 @@ __all__ = [
     'MCP_CONFIG_CLAUDE',
     'MCP_CONFIG_WINDSURF',
     'MCP_CONFIG_CLINE',
-    
+    'TRAE_MCP_CONFIG',
+    'TRAE_CN_DIR',
+    'TRAE_CN_MCP_CONFIG',
+    'CLAUDE_GLOBAL_CONFIG',
+
+    # Security
+    'DANGEROUS_SYSTEM_DIRS',
+
     # Knowledge base paths
     'OBSIDIAN_DEFAULT_VAULT',
     

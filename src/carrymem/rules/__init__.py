@@ -125,10 +125,9 @@ class RuleEngine:
             db_path: Path to SQLite database file. Defaults to ~/.carrymem/memories.db
         """
         if db_path is None:
-            from pathlib import Path
-            carrymem_dir = Path.home() / ".carrymem"
-            carrymem_dir.mkdir(exist_ok=True)
-            db_path = str(carrymem_dir / "memories.db")
+            from ..constants import DEFAULT_CONFIG_DIR, DB_PATH
+            DEFAULT_CONFIG_DIR.mkdir(exist_ok=True)
+            db_path = str(DB_PATH)
         self.storage = RuleStorage(db_path)
         self.matcher = RuleMatcher(self.storage)
         self.injector = RuleInjector(self.matcher)

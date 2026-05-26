@@ -135,7 +135,8 @@ class ObsidianAdapter(StorageAdapter):
             raise FileNotFoundError(f"Obsidian vault not found: {self._vault_path}")
 
         if db_path is None:
-            carrymem_dir = Path.home() / ".carrymem"
+            from ..constants import DEFAULT_CONFIG_DIR
+            carrymem_dir = DEFAULT_CONFIG_DIR
             carrymem_dir.mkdir(exist_ok=True)
             vault_hash = hashlib.md5(str(self._vault_path).encode()).hexdigest()[:8]
             db_path = str(carrymem_dir / f"obsidian_{vault_hash}.db")

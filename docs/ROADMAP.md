@@ -438,20 +438,38 @@ See CHANGELOG.md for detailed history.
 - [x] Split context.py (910 lines) into: selection.py, scope.py, format.py, prompt.py
 - [x] Each module < 250 lines, original API preserved via re-export
 
-### v0.2.4 — Auto-Maintenance + Evaluation Standardization
+### v0.2.4 — Auto-Maintenance + Evaluation Standardization ✅
 
-**Theme**: Consolidation scheduling + reproducible PrefEval
+**Theme**: Consolidation scheduling + reproducible PrefEval + non-technical user reach
 **Principle**: #1 Lightweight — auto-maintenance reduces manual burden
 
-**P1 — Consolidation Scheduling**:
+**P0 — PrefEval Fair Benchmark** (DONE):
+- [x] 200-sample, 3-condition comparison (zero-shot/reminder/carrymem)
+- [x] CarryMem 85.0% > reminder 83.0% > zero-shot 69.5% (seed=42)
+- [x] SQLite "database is locked" fix (busy_timeout + _auto_supersede commit)
+- [x] PrefEval script: force_type + no noise + include_question=True + max_tokens=500
+
+**P1 — Consolidation Scheduling** (DONE):
 - [x] `schedule_consolidation(interval_hours=1)` method
 - [x] CLI: `carrymem consolidate --schedule 1h`
-- [ ] Integration with APScheduler (optional dependency)
 
-**P2 — Evaluation Standardization**:
-- [ ] Unified PrefEval script: 200-sample, 3-condition, fixed seed
-- [ ] Auto-generated Markdown comparison report
-- [ ] Update README PrefEval progress on each improvement
+**P2 — Non-Technical User Reach** (DONE):
+- [x] README scenario entry points (EN/CN/JP)
+- [x] `carrymem pack` / `carrymem unpack` CLI (gzip .carry format)
+- [x] `carrymem setup-mcp --global` (one install, all agents share CarryMem)
+- [x] `carrymem mcp` subcommand (stdio transport)
+- [x] GitHub About/topics/description updated
+
+**P3 — Technical Debt Cleanup** (DONE):
+- [x] Unified path management (constants.py replaces hardcoded paths)
+- [x] Empty except:pass → debug/warning logging (35+ locations)
+- [x] pyproject.toml fail_under 55→75
+- [x] README data conflict resolved
+- [x] .gitignore updated (*.carry)
+
+**Remaining**:
+- [ ] Integration with APScheduler (optional dependency)
+- [ ] McNemar statistical significance test
 
 ### v1.0.0 — Autonomous Identity
 - Fully automatic rule learning

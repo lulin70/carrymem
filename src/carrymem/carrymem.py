@@ -42,12 +42,9 @@ def _validate_file_path(path: str, allowed_base: str = None) -> str:
         if not resolved.startswith(allowed + os.sep) and resolved != allowed:
             raise ValueError(f"Path escapes allowed directory: {path}")
     else:
-        _DANGEROUS = [
-            '/etc', '/usr', '/bin', '/sbin', '/System',
-            '/Library', '/private/etc',
-        ]
-        for d in _DANGEROUS:
-            if resolved == d or resolved.startswith(d + os.sep):
+        from carrymem.constants import DANGEROUS_SYSTEM_DIRS
+        for d in DANGEROUS_SYSTEM_DIRS:
+            if resolved == str(d) or resolved.startswith(str(d) + os.sep):
                 raise ValueError(f"Path traversal: system directory not allowed: {resolved}")
     return resolved
 

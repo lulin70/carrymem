@@ -282,7 +282,8 @@ class CodingContextAdapter(StorageAdapter):
             raise FileNotFoundError(f"Project directory not found: {self._project_path}")
 
         if db_path is None:
-            carrymem_dir = Path.home() / ".carrymem"
+            from ..constants import DEFAULT_CONFIG_DIR
+            carrymem_dir = DEFAULT_CONFIG_DIR
             carrymem_dir.mkdir(exist_ok=True)
             project_hash = hashlib.md5(str(self._project_path).encode()).hexdigest()[:8]
             db_path = str(carrymem_dir / f"coding_{project_hash}.db")

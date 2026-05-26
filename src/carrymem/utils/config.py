@@ -12,7 +12,8 @@ except ImportError:
 
 _logger = logging.getLogger('carrymem')
 
-_DEFAULT_CONFIG_PATH = str(Path.home() / ".carrymem" / "config.json")
+from carrymem.constants import CONFIG_FILE
+_DEFAULT_CONFIG_PATH = str(CONFIG_FILE)
 
 
 class ConfigManager:

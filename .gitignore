@@ -71,6 +71,9 @@ config/encryption_keys.json
 *.swp
 *.tmp
 
+# CarryMem identity pack files (user data)
+*.carry
+
 # Node modules (VSCode extension)
 node_modules/
 

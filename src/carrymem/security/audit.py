@@ -15,9 +15,12 @@ Design:
 """
 
 import json
+import logging
 import sqlite3
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+
+_audit_logger = logging.getLogger(__name__)
 
 
 _AUDIT_SCHEMA_SQL = """
@@ -52,8 +55,8 @@ class AuditLogger:
         try:
             conn.executescript(_AUDIT_SCHEMA_SQL)
             conn.commit()
-        except sqlite3.Error:
-            pass
+        except sqlite3.Error as e:
+            _audit_logger.warning(f"Audit schema initialization failed: {e}")
 
     def log_operation(
         self,
@@ -82,8 +85,8 @@ class AuditLogger:
                 ),
             )
             conn.commit()
-        except sqlite3.Error:
-            pass
+        except sqlite3.Error as e:
+            _audit_logger.warning(f"Audit log_operation failed: {e}")
 
     def query(
         self,
@@ -157,5 +160,6 @@ class AuditLogger:
                 "by_operation": by_op,
                 "last_activity": last_activity,
             }
-        except sqlite3.Error:
+        except sqlite3.Error as e:
+            _audit_logger.warning(f"Audit get_stats failed: {e}")
             return {"total_operations": 0, "by_operation": {}, "last_activity": None}

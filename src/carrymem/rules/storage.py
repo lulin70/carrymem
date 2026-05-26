@@ -60,7 +60,8 @@ class RuleStorage:
         else:
             try:
                 self._local.conn.execute("SELECT 1")
-            except Exception:
+            except Exception as e:
+                _logger.debug(f"[RuleStorage] Connection health check failed, reconnecting: {e}")
                 conn = sqlite3.connect(self.db_path, timeout=30.0)
                 conn.row_factory = sqlite3.Row
                 conn.execute("PRAGMA journal_mode=WAL")
@@ -73,8 +74,8 @@ class RuleStorage:
         if hasattr(self._local, 'conn') and self._local.conn is not None:
             try:
                 self._local.conn.close()
-            except Exception:
-                pass
+            except Exception as e:
+                _logger.debug(f"[RuleStorage] close failed: {e}")
             self._local.conn = None
 
     def _ensure_schema(self):
@@ -120,8 +121,8 @@ class RuleStorage:
                     conn.execute("ALTER TABLE rules ADD COLUMN expires_at TEXT DEFAULT ''")
                 if 'condition' not in columns:
                     conn.execute("ALTER TABLE rules ADD COLUMN condition TEXT DEFAULT ''")
-            except Exception:
-                pass
+            except Exception as e:
+                _logger.debug(f"[RuleStorage] Schema migration (add columns) skipped: {e}")
 
             conn.executescript("""
                 CREATE INDEX IF NOT EXISTS idx_rules_status ON rules(status);
@@ -160,8 +161,8 @@ class RuleStorage:
             )
             conn.commit()
             self._migrate_fts_tokenizer()
-        finally:
-            pass
+        except sqlite3.Error as e:
+            _logger.debug(f"[RuleStorage] _ensure_schema failed: {e}")
 
     def _migrate_fts_tokenizer(self):
         """Migrate rules_fts from unicode61 to trigram tokenizer if needed."""
@@ -247,8 +248,8 @@ class RuleStorage:
                 ),
             )
             conn.commit()
-        finally:
-            pass
+        except sqlite3.Error as e:
+            _logger.debug(f"[RuleStorage] _create_validated insert failed: {e}")
 
         return rule
 
@@ -329,8 +330,8 @@ class RuleStorage:
                 ),
             )
             conn.commit()
-        finally:
-            pass
+        except sqlite3.Error as e:
+            _logger.debug(f"[RuleStorage] create insert failed: {e}")
 
         return rule
 
@@ -351,8 +352,8 @@ class RuleStorage:
             if row is None:
                 return None
             return self._row_to_rule(row)
-        finally:
-            pass
+        except sqlite3.Error as e:
+            _logger.debug(f"[RuleStorage] get failed: {e}")
 
     def list_all(
         self,
@@ -398,8 +399,8 @@ class RuleStorage:
             cursor = conn.execute(query, params)
             rows = cursor.fetchall()
             return [self._row_to_rule(row) for row in rows]
-        finally:
-            pass
+        except sqlite3.Error as e:
+            _logger.debug(f"[RuleStorage] list_all failed: {e}")
 
     @staticmethod
     def _estimate_rank(rule: Rule, query_text: str) -> float:
@@ -538,8 +539,8 @@ class RuleStorage:
             )
             rows = cursor.fetchall()
             return [self._row_to_rule(row) for row in rows]
-        finally:
-            pass
+        except sqlite3.Error as e:
+            _logger.debug(f"[RuleStorage] _fallback_search failed: {e}")
 
     def update(self, rule_id: str, **updates) -> Optional[Rule]:
         existing = self.get(rule_id)
@@ -593,8 +594,8 @@ class RuleStorage:
                 f"UPDATE rules SET {', '.join(set_clauses)} WHERE id = ?", params
             )
             conn.commit()
-        finally:
-            pass
+        except sqlite3.Error as e:
+            _logger.debug(f"[RuleStorage] update failed: {e}")
 
         return self.get(rule_id)
 
@@ -613,8 +614,9 @@ class RuleStorage:
             cursor = conn.execute("DELETE FROM rules WHERE id = ?", (rule_id,))
             conn.commit()
             return cursor.rowcount > 0
-        finally:
-            pass
+        except sqlite3.Error as e:
+            _logger.debug(f"[RuleStorage] delete failed: {e}")
+            return False
 
     def count(self, status: Optional[str] = None) -> int:
         """
@@ -635,8 +637,9 @@ class RuleStorage:
             else:
                 cursor = conn.execute("SELECT COUNT(*) FROM rules")
             return cursor.fetchone()[0]
-        finally:
-            pass
+        except sqlite3.Error as e:
+            _logger.debug(f"[RuleStorage] count failed: {e}")
+            return 0
 
     def get_active_global_rules(self) -> List[Rule]:
         """
@@ -675,8 +678,9 @@ class RuleStorage:
             )
             conn.commit()
             return cursor.rowcount > 0
-        finally:
-            pass
+        except sqlite3.Error as e:
+            _logger.debug(f"[RuleStorage] increment_trigger_count failed: {e}")
+            return False
 
     def batch_increment_trigger_counts(self, rule_ids: List[str]) -> int:
         """
@@ -710,8 +714,8 @@ class RuleStorage:
                 )
                 updated += cursor.rowcount
             conn.commit()
-        finally:
-            pass
+        except sqlite3.Error as e:
+            _logger.debug(f"[RuleStorage] batch_increment_trigger_counts failed: {e}")
 
         return updated
 

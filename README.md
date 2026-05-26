@@ -16,8 +16,8 @@ CarryMem fixes this. It's a lightweight, zero-dependency memory system that stor
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-3000%2B%20passing-brightgreen" alt="Tests">
-  <img src="https://img.shields.io/badge/coverage-77.12%25-green" alt="Coverage">
+  <img src="https://img.shields.io/badge/tests-2987%2B%20passing-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/coverage-79.51%25-green" alt="Coverage">
   <img src="https://img.shields.io/badge/code%20quality-4.3%2F5%20%E2%98%85%E2%98%85%E2%98%85%E2%98%85%E2%98%86-blue" alt="Code Quality">
   <img src="https://img.shields.io/badge/security-5%2F5%20%E2%98%85%E2%98%85%E2%98%85%E2%98%85%E2%98%85-success" alt="Security">
   <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python">
@@ -636,8 +636,8 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 ## Project Status
 
 **Current Version**: v0.2.3
-**Tests**: 2761+ passing
-**Coverage**: 80.5%
+**Tests**: 2987+ passing
+**Coverage**: 79.51%
 
 **Changelog**:
 - **v0.2.3**: Consolidation scheduling (schedule/stop), PrefEval standardization

@@ -297,10 +297,11 @@ class SQLiteAdapter(StorageAdapter):
         try:
             from ..security.audit import AuditLogger
             self._audit = AuditLogger(self._get_connection, namespace=namespace)
-        except Exception:
-            pass
+        except Exception as e:
+            from carrymem.utils.logger import logger
+            logger.warning(f"Audit logger initialization failed: {e}")
 
-        # Pre-set vector search flag before _get_connection() is called
+        # Pre-set vector search flag
         self._enable_vector = False
         self._embedding_model = None
         self._embedding_dim = 384
@@ -386,8 +387,9 @@ class SQLiteAdapter(StorageAdapter):
                 if hasattr(self._local, 'conn') and self._local.conn is not None:
                     try:
                         self._local.conn.close()
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        from carrymem.utils.logger import logger
+                        logger.debug(f"Failed to close existing connection for vector switch: {e}")
                     with self._conn_lock:
                         self._all_connections.pop(id(self._local.conn), None)
                     self._local.conn = None
@@ -439,8 +441,9 @@ class SQLiteAdapter(StorageAdapter):
                     try:
                         conn.enable_load_extension(True)
                         sqlite_vec.load(conn)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        from carrymem.utils.logger import logger
+                        logger.debug(f"sqlite_vec extension loading failed: {e}")
                 self._local.conn = conn
                 with self._conn_lock:
                     self._all_connections[id(conn)] = conn
@@ -469,7 +472,9 @@ class SQLiteAdapter(StorageAdapter):
             if row:
                 return self._row_to_stored(row)
             return None
-        except sqlite3.Error:
+        except sqlite3.Error as e:
+            from carrymem.utils.logger import logger
+            logger.debug(f"_get_by_key failed: {e}")
             return None
 
     def _migrate_namespace(self):
@@ -493,8 +498,9 @@ class SQLiteAdapter(StorageAdapter):
             if row and 'unicode61' in (row[0] or ''):
                 conn.execute("INSERT INTO memories_fts(memories_fts) VALUES('rebuild')")
                 conn.commit()
-        except sqlite3.OperationalError:
-            pass
+        except sqlite3.OperationalError as e:
+            from carrymem.utils.logger import logger
+            logger.debug(f"FTS5 tokenizer migration skipped: {e}")
 
     def _migrate_v050(self):
         conn = self._get_connection()
@@ -663,8 +669,9 @@ class SQLiteAdapter(StorageAdapter):
             for conn_id, conn in self._all_connections.items():
                 try:
                     conn.close()
-                except Exception:
-                    pass
+                except Exception as e:
+                    from carrymem.utils.logger import logger
+                    logger.debug(f"Failed to close connection {conn_id}: {e}")
             self._all_connections.clear()
         if hasattr(self._local, 'conn'):
             self._local.conn = None
@@ -682,8 +689,9 @@ class SQLiteAdapter(StorageAdapter):
         """Destructor to ensure connections are closed."""
         try:
             self.close()
-        except Exception:
-            pass
+        except Exception as e:
+            from carrymem.utils.logger import logger
+            logger.debug(f"SQLiteAdapter.__del__ close failed: {e}")
 
     @property
     def namespace(self) -> str:
@@ -749,8 +757,9 @@ class SQLiteAdapter(StorageAdapter):
                         (self._encrypt_field(entry.raw_text), existing["storage_key"]),
                     )
                     conn.commit()
-                except sqlite3.Error:
-                    pass
+                except sqlite3.Error as e:
+                    from carrymem.utils.logger import logger
+                    logger.debug(f"Failed to update raw_text for existing memory: {e}")
             stored = self._row_to_stored(
                 conn.execute(
                     "SELECT * FROM memories WHERE content_hash = ? AND namespace = ?",
@@ -847,8 +856,9 @@ class SQLiteAdapter(StorageAdapter):
         # Commit any writes from _auto_supersede
         try:
             conn.commit()
-        except sqlite3.Error:
-            pass
+        except sqlite3.Error as e:
+            from carrymem.utils.logger import logger
+            logger.debug(f"Post-supersede commit failed: {e}")
 
         # Set initial version_chain_id for state memories (if not set by supersede)
         if entry.memory_nature == "state" and not entry.version_chain_id:
@@ -858,8 +868,9 @@ class SQLiteAdapter(StorageAdapter):
                     (storage_key, storage_key),
                 )
                 conn.commit()
-            except sqlite3.Error:
-                pass
+            except sqlite3.Error as e:
+                from carrymem.utils.logger import logger
+                logger.debug(f"Failed to set initial version_chain_id: {e}")
 
         stored = StoredMemory.from_memory_entry(entry, storage_key=storage_key, created_at=now)
         stored.importance_score = imp_score
@@ -901,6 +912,8 @@ class SQLiteAdapter(StorageAdapter):
     ]
 
     def _auto_supersede(self, conn, new_storage_key: str, entry: MemoryEntry, namespace: str):
+        from carrymem.utils.logger import logger
+
         if entry.type not in self._SUPERSEDE_TYPES:
             return
         if entry.type == "correction":
@@ -1000,9 +1013,8 @@ class SQLiteAdapter(StorageAdapter):
                     "WHERE storage_key = ?",
                     (chain_id, new_version, new_storage_key),
                 )
-            except sqlite3.Error:
-                pass
-            from carrymem.utils.logger import logger
+            except sqlite3.Error as e:
+                logger.debug(f"Auto-supersede update failed: {e}")
             logger.debug(
                 f"Auto-superseded memory {row['id'][:16]} with new {entry.type} "
                 f"(jaccard={jaccard:.2f}, update_marker={has_update_marker})"
@@ -1097,7 +1109,9 @@ class SQLiteAdapter(StorageAdapter):
                 "ORDER BY importance_score DESC LIMIT 5",
                 (self._namespace,),
             ).fetchall()
-        except sqlite3.Error:
+        except sqlite3.Error as e:
+            from carrymem.utils.logger import logger
+            logger.debug(f"_rebuild_context query failed: {e}")
             return original_query
 
         if not profile_rows:
@@ -1705,7 +1719,9 @@ class SQLiteAdapter(StorageAdapter):
             """
             params_with_query = params + [safe_query, limit]
             return conn.execute(fts_sql, params_with_query).fetchall()
-        except sqlite3.OperationalError:
+        except sqlite3.OperationalError as e:
+            from carrymem.utils.logger import logger
+            logger.debug(f"FTS5 search failed: {e}")
             return []
 
     def _like_search(self, query, where_clause, params, limit):
@@ -2043,7 +2059,9 @@ class SQLiteAdapter(StorageAdapter):
             return ciphertext
         try:
             return self._encryption.decrypt(ciphertext)
-        except Exception:
+        except Exception as e:
+            from carrymem.utils.logger import logger
+            logger.warning(f"Decryption failed, returning ciphertext: {e}")
             return ciphertext
 
     def _row_to_stored(self, row: Optional[sqlite3.Row]) -> Optional[StoredMemory]:

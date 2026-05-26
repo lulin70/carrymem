@@ -28,16 +28,24 @@ import sys
 import os
 import json
 import gzip
+import logging
 import sqlite3
 import socket
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
+_cli_logger = logging.getLogger(__name__)
+
 try:
     from carrymem import CarryMem
     from carrymem.__version__ import __version__
     from carrymem.adapters.sqlite_adapter import SQLiteAdapter
+    from carrymem.constants import (
+        DEFAULT_CONFIG_DIR, DB_PATH, CLAUDE_GLOBAL_CONFIG,
+        MCP_CONFIG_CURSOR, TRAE_MCP_CONFIG, TRAE_CN_DIR,
+        TRAE_CN_MCP_CONFIG, DANGEROUS_SYSTEM_DIRS,
+    )
 except ImportError:
     print("Error: CarryMem not properly installed")
     print("Try: pip install -e .")
@@ -54,8 +62,8 @@ except ImportError:
     _cli_validator = None
 
 
-_DEFAULT_DB = Path.home() / ".carrymem" / "memories.db"
-_DEFAULT_CONFIG_DIR = Path.home() / ".carrymem"
+_DEFAULT_DB = DB_PATH
+_DEFAULT_CONFIG_DIR = DEFAULT_CONFIG_DIR
 
 _TYPE_ICONS = {
     "user_preference": "\u2b50",
@@ -129,8 +137,8 @@ def _format_time(iso_str: Optional[str]) -> str:
             elif delta.days < 30:
                 return f"{delta.days}d ago"
             return dt.strftime("%Y-%m-%d")
-    except Exception:
-        pass
+    except Exception as e:
+        _cli_logger.debug(f"Failed to format time '{iso_str}': {e}")
     return str(iso_str)[:16]
 
 
@@ -946,7 +954,8 @@ def cmd_unpack(args):
             packed_display = dt.strftime("%Y-%m-%d")
         else:
             packed_display = "unknown"
-    except Exception:
+    except Exception as e:
+        _cli_logger.debug(f"Failed to parse packed_at date '{packed_at}': {e}")
         packed_display = str(packed_at)[:10]
 
     print(f"  Source: {source_machine}, packed {packed_display}, CarryMem v{carrymem_ver}")
@@ -1350,7 +1359,7 @@ def cmd_doctor(args):
                 cm = CarryMem(db_path=db_path)
                 cm.close()
             except Exception as e:
-                pass
+                _cli_logger.debug(f"Doctor: failed to create database: {e}")
 
     if db.exists():
         try:
@@ -1454,7 +1463,8 @@ def cmd_doctor(args):
         test_conn.execute("CREATE VIRTUAL TABLE t USING fts5(c)")
         test_conn.close()
         _record("fts5", "ok", "SQLite FTS5 support")
-    except Exception:
+    except Exception as e:
+        _cli_logger.debug(f"FTS5 check failed: {e}")
         _record("fts5", "fail", "SQLite FTS5 not available")
 
     try:
@@ -2467,17 +2477,8 @@ def cmd_check_rules(args):
 
 def _validate_cli_path(path: str) -> str:
     resolved = os.path.realpath(os.path.expanduser(path))
-    _DANGEROUS = [
-        "/etc",
-        "/usr",
-        "/bin",
-        "/sbin",
-        "/System",
-        "/Library",
-        "/private/etc",
-    ]
-    for d in _DANGEROUS:
-        if resolved == d or resolved.startswith(d + os.sep):
+    for d in DANGEROUS_SYSTEM_DIRS:
+        if resolved == str(d) or resolved.startswith(str(d) + os.sep):
             raise ValueError(f"Path traversal: system directory not allowed: {resolved}")
     return resolved
 

@@ -22,10 +22,11 @@ if not HAS_TEXTUAL:
 
 else:
     from carrymem import CarryMem
+    from carrymem.constants import DB_PATH
     from pathlib import Path
     from typing import Optional, List, Dict, Any
 
-    _DEFAULT_DB = Path.home() / ".carrymem" / "memories.db"
+    _DEFAULT_DB = DB_PATH
 
     _TYPE_ICONS = {
         "user_preference": "⭐",
