@@ -15,20 +15,54 @@
 
 ---
 
-## CarryMem 做什么（30 秒）
+## CarryMem 做什么
 
-一句话：**让 AI 记住你是谁，而不是你读了什么。**
+**3 个你一定遇到过的场景：**
 
-```python
-from carrymem import CarryMem
+> **"不想每次都告诉 AI 我的偏好"**
+> "我偏好 PostgreSQL""用 React 不用 Vue""别写注释" — 说一次，永远记住。
 
-cm = CarryMem()
-cm.classify_and_remember("我偏好深色模式")              # 自动分类为偏好
-cm.classify_and_remember("用 PostgreSQL 不用 MySQL")    # 自动分类为纠正
-memories = cm.recall_memories("数据库")                  # 语义召回
-print(cm.build_system_prompt())                          # 注入任何 AI
-cm.close()
+> **"换了 AI 工具，从头再来"**
+> Cursor 里教 AI 一遍，Claude Code 里又教一遍。CarryMem 让你的 AI 记忆跟着你走。
+
+> **"想带走自己的数据"**
+> 你的 AI 记忆是你的。一个文件打包，新机器、新工具，随时恢复。
+
+---
+
+## 快速开始
+
+### 用 Cursor / Claude Code / TRAE？
+
+```bash
+pip install carrymem && carrymem setup-mcp --all --global
 ```
+
+重启 AI 工具。搞定。
+
+### 验证效果（30 秒）
+
+告诉你的 AI：
+```
+记住，我偏好 PostgreSQL
+```
+
+开一个新对话，问：
+```
+我用什么数据库？
+```
+
+AI 回答 "PostgreSQL" — 成功了！
+
+### 需要迁移记忆？
+
+```bash
+carrymem pack                    # 打包为 carrymem_identity_20260526.carry
+# 拷贝到 U盘 / 网盘 / 新机器
+carrymem unpack my_identity.carry  # 所有记忆恢复
+```
+
+---
 
 ---
 
@@ -369,9 +403,9 @@ carrymem tui
 
 | 条件 | 准确率 | 违反 | 幻觉 | 无用回答 |
 |------|--------|------|------|----------|
-| zero-shot | 79.5% | 23 | 3 | 18 |
-| reminder | 86.0% | 3 | 2 | 26 |
-| **CarryMem** | **87.9%** | 11 | 3 | **14** |
+| zero-shot | 69.5% | 31 | 2 | 31 |
+| reminder | 83.0% | 1 | 1 | 33 |
+| **CarryMem** | **85.0%** | 5 | 4 | **25** |
 
 **版本迭代进步（200样本，三组对照）**：
 
@@ -380,9 +414,11 @@ carrymem tui
 | v0.2.1 修复前 | 82.7% | 共指消解 + 自动脱敏 |
 | v0.2.1 修复后 | 85.5% | 移除记忆查询指令 |
 | v0.2.1 优化后 | 87.0% | QA Prompt 简化 |
-| **v0.2.2** | **87.9%** | Token预算 + 死代码修复 + 安全加固 |
+| v0.2.2 | 87.9% | Token预算 + 死代码修复 + 安全加固 |
+| v0.2.3 | 87.9% | 整合调度 + PrefEval标准化 |
+| **v0.2.3-rc2** | **85.0%** | **三组对照公平评测：force_type + 去噪 + 数据库锁修复** |
 
-**为什么这很重要**：reminder 每轮都注入"记住用户偏好"。CarryMem 在 system prompt 中注入结构化偏好——更精准、更持久、无用回答减少 46%。
+**为什么这很重要**：reminder 每轮都注入"记住用户偏好"。CarryMem 在 system prompt 中注入结构化偏好——更精准、更持久、无用回答减少 24%。
 
 | | 优势 | 结果 |
 |---|------|------|

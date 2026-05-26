@@ -25,15 +25,52 @@ CarryMem fixes this. It's a lightweight, zero-dependency memory system that stor
 
 ---
 
-## What CarryMem Does (30 seconds)
+## What CarryMem Does
 
-AI forgets you every conversation. CarryMem fixes this:
+**3 scenarios you'll recognize:**
 
+> **"I don't want to tell AI my preferences every time"**
+> "I prefer PostgreSQL" "Use React not Vue" "No comments in code" — say it once, remembered forever.
+
+> **"I switched AI tools and started from scratch"**
+> Taught AI in Cursor, now teaching it again in Claude Code. CarryMem makes your AI memory follow you.
+
+> **"I want to take my data with me"**
+> Your AI memory is yours. One file to pack, restore on any machine, any tool.
+
+---
+
+## Get Started (pick your path)
+
+### Using Cursor / Claude Code / TRAE?
+
+```bash
+pip install carrymem && carrymem setup-mcp --all --global
 ```
-You: "I prefer dark mode" → CarryMem remembers → Next chat: AI uses dark mode
+
+Restart your AI tool. Done.
+
+### Verify it works (30 seconds)
+
+Tell your AI:
+```
+Remember, I prefer PostgreSQL
 ```
 
-**One line**: CarryMem is a lightweight AI memory layer that stores who you are and injects your identity into any AI tool.
+Start a new conversation and ask:
+```
+What database do I prefer?
+```
+
+AI answers "PostgreSQL" — it works!
+
+### Need to move your memory?
+
+```bash
+carrymem pack                    # Creates carrymem_identity_20260526.carry
+# Copy to USB / cloud / new machine
+carrymem unpack my_identity.carry  # All memories restored
+```
 
 ---
 
@@ -427,6 +464,18 @@ Rule management directly in your editor:
 
 ## Comparison
 
+### By Scenario
+
+| Scenario | Mem0 | ima | CarryMem |
+|----------|------|-----|----------|
+| AI remembers what I said | ✅ | ⚠️ Manual | ✅ Automatic |
+| Switch AI tools, still remembers | ❌ | ❌ | ✅ One file follows you |
+| Don't want AI to remember something | ❌ | ⚠️ Limited | ✅ Delete anytime, separate zones |
+| Remember without spending tokens | ❌ | ❌ | ✅ 88% zero-cost |
+| Own your own data | ⚠️ Self-host only | ❌ Cloud | ✅ Local file |
+
+### Feature Matrix
+
 |  | CarryMem | Mem0 | OpenChronicle | ima |
 |--|----------|------|---------------|-----|
 | **Key Differentiator** | **Zero-LLM + Rule Engine** | Vector DB + Cloud | Local-first | Cloud notes |
@@ -434,17 +483,10 @@ Rule management directly in your editor:
 | **Auto-Classification** | ✅ 7 types | ❌ | ❌ Manual | ❌ |
 | **Identity Portrait** | ✅ whoami | ❌ | ❌ | ❌ |
 | **Rule Engine** | ✅ Scopes + Skills | ❌ | ❌ | ❌ |
-| **Skill Format** | ✅ SHA-256 signed | ❌ | ❌ | ❌ |
-| **Merge Protocol** | ✅ 3 strategies | ❌ | ❌ | ❌ |
-| **VS Code Extension** | ✅ | ❌ | ❌ | ❌ |
-| **CLI** | ✅ 40+ commands | ❌ | ❌ | ❌ |
-| **TUI** | ✅ textual | ❌ | ❌ | ✅ App |
-| **Encryption** | ✅ Built-in | ❌ | ❌ | ❌ |
-| **Version History** | ✅ Rollback | ❌ | ❌ | ❌ |
-| **Conflict Detection** | ✅ Built-in | ❌ | ❌ | ❌ |
-| **Data Ownership** | ✅ Local files | ⚠️ Self-hostable | ✅ Local | ❌ Cloud |
-| **5-Line Integration** | ✅ | ⚠️ SDK required | ❌ | ❌ |
+| **Pack / Unpack** | ✅ One file | ❌ | ❌ | ❌ |
 | **Cross-Language Recall** | ✅ EN/CN/JP | ❌ | ❌ | ❌ |
+| **Encryption** | ✅ Built-in | ❌ | ❌ | ❌ |
+| **Data Ownership** | ✅ Local files | ⚠️ Self-hostable | ✅ Local | ❌ Cloud |
 
 > **Note**: Comparison based on publicly available information. Products evolve rapidly — please verify latest features.
 

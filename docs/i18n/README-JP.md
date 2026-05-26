@@ -15,19 +15,51 @@
 
 ---
 
-## CarryMem ができること（30秒）
+## CarryMem ができること
 
-一言で：**AI にあなたが誰かを覚えさせる — 読んだ内容ではなく。**
+**3 つのシナリオ：**
 
-```python
-from carrymem import CarryMem
+> **「毎回 AI に好みを伝えるのが面倒」**
+> "PostgreSQL が好き""React で Vue は使わない""コメントは不要" — 一度言えば永遠に覚えている。
 
-cm = CarryMem()
-cm.classify_and_remember("ダークモードが好き")              # 自動分類：好み
-cm.classify_and_remember("PostgreSQL でなく MySQL を使う")   # 自動分類：訂正
-memories = cm.recall_memories("データベース")                # セマンティック検索
-print(cm.build_system_prompt())                              # 任意の AI に注入
-cm.close()
+> **「AI ツールを変えたら最初から」**
+> Cursor で教えたのに、Claude Code でまた教え直し。CarryMem は AI メモリをあなたについてくる。
+
+> **「自分のデータを持ち運びたい」**
+> AI メモリはあなたのもの。1 ファイルでパック、新しいマシン、新しいツールでいつでも復元。
+
+---
+
+## はじめ方
+
+### Cursor / Claude Code / TRAE を使っている？
+
+```bash
+pip install carrymem && carrymem setup-mcp --all --global
+```
+
+AI ツールを再起動。完了。
+
+### 動作確認（30 秒）
+
+AI に伝える：
+```
+覚えて、PostgreSQL が好き
+```
+
+新しい会話を開始して聞く：
+```
+どんなデータベースが好き？
+```
+
+AI が "PostgreSQL" と答えたら — 成功！
+
+### メモリを移行したい？
+
+```bash
+carrymem pack                    # carrymem_identity_20260526.carry を作成
+# USB / クラウド / 新しいマシンにコピー
+carrymem unpack my_identity.carry  # すべてのメモリを復元
 ```
 
 ---

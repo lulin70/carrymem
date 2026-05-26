@@ -11,6 +11,8 @@ Usage:
     carrymem clean                        Remove expired/low-quality
     carrymem export backup.json           Export memories
     carrymem import backup.json           Import memories
+    carrymem pack                         Pack identity into .carry file
+    carrymem unpack backup.carry          Unpack .carry file
     carrymem stats                        Show statistics
     carrymem check                        Check quality & conflicts
     carrymem doctor                       Run diagnostics
@@ -23,7 +25,10 @@ Usage:
 import sys
 import os
 import json
+import gzip
 import sqlite3
+import socket
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
@@ -38,9 +43,11 @@ except ImportError:
 
 try:
     from carrymem.security.input_validator import InputValidator
+
     _cli_validator = InputValidator(strict_mode=False)
 except ImportError:
     import logging
+
     logging.getLogger(__name__).warning("InputValidator not available — input validation disabled")
     _cli_validator = None
 
@@ -61,7 +68,7 @@ _TYPE_ICONS = {
 
 _TIER_LABELS = {1: "Core", 2: "Standard", 3: "Background", 4: "Archive"}
 
-_HAS_COLOR = hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()
+_HAS_COLOR = hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
 
 
 def _c(code: str, text: str) -> str:
@@ -70,12 +77,28 @@ def _c(code: str, text: str) -> str:
     return f"\033[{code}m{text}\033[0m"
 
 
-def _green(t): return _c("32", t)
-def _red(t): return _c("31", t)
-def _yellow(t): return _c("33", t)
-def _cyan(t): return _c("36", t)
-def _dim(t): return _c("2", t)
-def _bold(t): return _c("1", t)
+def _green(t):
+    return _c("32", t)
+
+
+def _red(t):
+    return _c("31", t)
+
+
+def _yellow(t):
+    return _c("33", t)
+
+
+def _cyan(t):
+    return _c("36", t)
+
+
+def _dim(t):
+    return _c("2", t)
+
+
+def _bold(t):
+    return _c("1", t)
 
 
 def _get_carrymem(db_path: Optional[str] = None, namespace: str = "default") -> CarryMem:
@@ -88,6 +111,7 @@ def _format_time(iso_str: Optional[str]) -> str:
         return "N/A"
     try:
         from datetime import datetime
+
         if isinstance(iso_str, str):
             dt = datetime.fromisoformat(iso_str)
             now = datetime.now(dt.tzinfo)
@@ -111,11 +135,11 @@ def _format_time(iso_str: Optional[str]) -> str:
 def _truncate(text: str, max_len: int = 60) -> str:
     if len(text) <= max_len:
         return text
-    return text[:max_len - 3] + "..."
+    return text[: max_len - 3] + "..."
 
 
 def _find_memory(cm: CarryMem, key: str) -> Optional[Dict[str, Any]]:
-    if cm._adapter and hasattr(cm._adapter, '_get_by_key'):
+    if cm._adapter and hasattr(cm._adapter, "_get_by_key"):
         stored = cm._adapter._get_by_key(key)
         if stored:
             return stored.to_dict()
@@ -140,7 +164,9 @@ def _print_memory_card(m: Dict[str, Any], index: Optional[int] = None):
 
     prefix = f"  {index}." if index else "  "
     print(f"{prefix} {icon} {_bold(_truncate(content, 65))}")
-    print(f"     {_dim(f'Type: {mtype} | Conf: {confidence:.0%} | Importance: {importance:.2f} | {tier_label}')}")
+    print(
+        f"     {_dim(f'Type: {mtype} | Conf: {confidence:.0%} | Importance: {importance:.2f} | {tier_label}')}"
+    )
     print(f"     {_dim(f'Key: {key} | {_format_time(created)}')}")
 
 
@@ -149,7 +175,9 @@ def cmd_add(args):
     parser.add_argument("message", help="Message to remember")
     parser.add_argument("--namespace", "-n", default="default", help="Namespace")
     parser.add_argument("--context", "-c", help="Additional context (JSON)")
-    parser.add_argument("--force", "-f", action="store_true", help="Force store without classification")
+    parser.add_argument(
+        "--force", "-f", action="store_true", help="Force store without classification"
+    )
     parser.add_argument("--type", "-t", help="Override memory type (with --force)")
     parser.add_argument("--db", help="Database path")
 
@@ -213,7 +241,9 @@ def cmd_add(args):
 
             print(f"  {icon} [{mtype}] {_bold(_truncate(content, 70))}")
             key_display = keys[i] if i < len(keys) else "N/A"
-            print(f"     {_dim(f'Confidence: {confidence:.0%} | Tier: {tier_label} | Key: {key_display}')}")
+            print(
+                f"     {_dim(f'Confidence: {confidence:.0%} | Tier: {tier_label} | Key: {key_display}')}"
+            )
 
         print(f"\n  {_green(f'Remembered {len(entries)} item(s)')}")
 
@@ -226,7 +256,9 @@ def cmd_list(args):
     parser.add_argument("--limit", "-l", type=int, default=20, help="Number of memories to show")
     parser.add_argument("--type", "-t", help="Filter by memory type")
     parser.add_argument("--namespace", "-n", default="default", help="Namespace")
-    parser.add_argument("--format", "-f", choices=["table", "json", "plain"], default="table", help="Output format")
+    parser.add_argument(
+        "--format", "-f", choices=["table", "json", "plain"], default="table", help="Output format"
+    )
     parser.add_argument("--db", help="Database path")
 
     parsed = parser.parse_args(args)
@@ -249,7 +281,9 @@ def cmd_list(args):
         print(json.dumps(memories, ensure_ascii=False, indent=2))
     elif parsed.format == "plain":
         for m in memories:
-            print(f"{m.get('storage_key', '')}\t{m.get('type', '')}\t{m.get('content', '')}\t{m.get('confidence', 0):.2f}")
+            print(
+                f"{m.get('storage_key', '')}\t{m.get('type', '')}\t{m.get('content', '')}\t{m.get('confidence', 0):.2f}"
+            )
     else:
         print(f"\n  {_bold(f'Memories')} ({len(memories)} shown, namespace={parsed.namespace})\n")
         for i, m in enumerate(memories, 1):
@@ -266,7 +300,9 @@ def cmd_search(args):
     parser.add_argument("--limit", "-l", type=int, default=10, help="Max results")
     parser.add_argument("--type", "-t", help="Filter by memory type")
     parser.add_argument("--namespace", "-n", default="default", help="Namespace")
-    parser.add_argument("--format", "-f", choices=["table", "json", "plain"], default="table", help="Output format")
+    parser.add_argument(
+        "--format", "-f", choices=["table", "json", "plain"], default="table", help="Output format"
+    )
     parser.add_argument("--db", help="Database path")
 
     parsed = parser.parse_args(args)
@@ -295,7 +331,9 @@ def cmd_search(args):
         print(json.dumps(memories, ensure_ascii=False, indent=2))
     elif parsed.format == "plain":
         for m in memories:
-            print(f"{m.get('storage_key', '')}\t{m.get('type', '')}\t{m.get('content', '')}\t{m.get('confidence', 0):.2f}")
+            print(
+                f"{m.get('storage_key', '')}\t{m.get('type', '')}\t{m.get('content', '')}\t{m.get('confidence', 0):.2f}"
+            )
     else:
         print(f"\n  {_bold('Search:')} {_cyan(parsed.query)} ({len(memories)} results)\n")
         for i, m in enumerate(memories, 1):
@@ -474,7 +512,9 @@ def cmd_clean(args):
     parser.add_argument("--namespace", "-n", default="default", help="Namespace")
     parser.add_argument("--db", help="Database path")
     parser.add_argument("--expired", action="store_true", help="Remove expired memories")
-    parser.add_argument("--quality", type=float, default=0, help="Remove memories below quality threshold")
+    parser.add_argument(
+        "--quality", type=float, default=0, help="Remove memories below quality threshold"
+    )
     parser.add_argument("--dry-run", action="store_true", help="Show what would be removed")
     parser.add_argument("--force", "-y", action="store_true", help="Skip confirmation")
 
@@ -547,11 +587,18 @@ def cmd_consolidate(args):
     parser = _make_parser("consolidate")
     parser.add_argument("--namespace", "-n", default="default", help="Namespace")
     parser.add_argument("--db", help="Database path")
-    parser.add_argument("--dry-run", action="store_true", help="Show what would be done without making changes")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Show what would be done without making changes"
+    )
     parser.add_argument("--no-p1", action="store_true", help="Skip P1 pattern recognition")
     parser.add_argument("--no-p2", action="store_true", help="Skip P2 semantic consolidation")
-    parser.add_argument("--schedule", type=float, default=0, metavar="HOURS",
-                        help="Schedule periodic consolidation (e.g., --schedule 1 for hourly)")
+    parser.add_argument(
+        "--schedule",
+        type=float,
+        default=0,
+        metavar="HOURS",
+        help="Schedule periodic consolidation (e.g., --schedule 1 for hourly)",
+    )
     parser.add_argument("--stop", action="store_true", help="Stop scheduled consolidation")
 
     parsed = parser.parse_args(args)
@@ -582,6 +629,7 @@ def cmd_consolidate(args):
         # Keep process alive for scheduled mode
         try:
             import time
+
             while True:
                 time.sleep(60)
         except KeyboardInterrupt:
@@ -620,14 +668,18 @@ def cmd_consolidate(args):
 def cmd_export(args):
     parser = _make_parser("export")
     parser.add_argument("output", help="Output file path")
-    parser.add_argument("--format", "-f", choices=["json", "markdown"], default="json", help="Export format")
+    parser.add_argument(
+        "--format", "-f", choices=["json", "markdown"], default="json", help="Export format"
+    )
     parser.add_argument("--namespace", "-n", default="default", help="Namespace")
     parser.add_argument("--db", help="Database path")
 
     parsed = parser.parse_args(args)
     cm = _get_carrymem(parsed.db, parsed.namespace)
 
-    result = cm.export_memories(output_path=parsed.output, format=parsed.format, namespace=parsed.namespace)
+    result = cm.export_memories(
+        output_path=parsed.output, format=parsed.format, namespace=parsed.namespace
+    )
 
     if result.get("exported"):
         total = result.get("total_memories", 0)
@@ -646,7 +698,12 @@ def cmd_import(args):
     parser = _make_parser("import")
     parser.add_argument("input", help="Input file path")
     parser.add_argument("--namespace", "-n", default="default", help="Target namespace")
-    parser.add_argument("--merge", choices=["skip_existing", "overwrite"], default="skip_existing", help="Merge strategy")
+    parser.add_argument(
+        "--merge",
+        choices=["skip_existing", "overwrite"],
+        default="skip_existing",
+        help="Merge strategy",
+    )
     parser.add_argument("--db", help="Database path")
 
     parsed = parser.parse_args(args)
@@ -663,9 +720,333 @@ def cmd_import(args):
     errors = result.get("errors", 0)
     total = result.get("total_processed", 0)
 
-    print(f"  {_green('Import complete:')} {imported} imported, {skipped} skipped, {errors} errors ({total} total)")
+    print(
+        f"  {_green('Import complete:')} {imported} imported, {skipped} skipped, {errors} errors ({total} total)"
+    )
 
     if errors > 0:
+        cm.close()
+        return 1
+
+    cm.close()
+    return 0
+
+
+def cmd_pack(args):
+    """Pack CarryMem identity (memories, rules, config) into a portable .carry file."""
+    parser = _make_parser("pack")
+    parser.add_argument(
+        "--output", "-o", help="Output file path (default: ./carrymem_identity_YYYYMMDD.carry)"
+    )
+    parser.add_argument(
+        "--include-rules", action="store_true", default=True, help="Include rules (default: True)"
+    )
+    parser.add_argument("--no-rules", action="store_true", help="Exclude rules from pack")
+    parser.add_argument(
+        "--include-config", action="store_true", default=True, help="Include config (default: True)"
+    )
+    parser.add_argument("--no-config", action="store_true", help="Exclude config from pack")
+    parser.add_argument("--key", help="Encryption key to include encrypted entries")
+    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--namespace", "-n", default="default", help="Namespace to pack")
+
+    parsed = parser.parse_args(args)
+
+    include_rules = parsed.include_rules and not parsed.no_rules
+    include_config = parsed.include_config and not parsed.no_config
+
+    print(f"\n  {_bold('Packing CarryMem identity...')}\n")
+
+    cm = _get_carrymem(parsed.db, parsed.namespace)
+
+    try:
+        # Collect memories
+        stats = cm.get_stats()
+        total_count = stats.get("total_count", 0) if isinstance(stats, dict) else 0
+        export_limit = max(total_count, 1)
+
+        all_memories = cm._adapter.recall("", limit=export_limit) if cm._adapter else []
+        memories_data = []
+        encrypted_count = 0
+        type_counts = {}
+
+        for m in all_memories:
+            d = m.to_dict()
+            # Skip encrypted entries unless --key is provided
+            if d.get("is_encrypted", False) or (d.get("metadata", {}).get("is_encrypted", False)):
+                encrypted_count += 1
+                if not parsed.key:
+                    continue
+            # Remove vector embedding (too large, can be rebuilt)
+            d.pop("vector_embedding", None)
+            memories_data.append(d)
+            mtype = d.get("type", "unknown")
+            type_counts[mtype] = type_counts.get(mtype, 0) + 1
+
+        # Build type breakdown string
+        type_parts = []
+        for mtype, count in sorted(type_counts.items(), key=lambda x: -x[1]):
+            type_parts.append(f"{count} {mtype}")
+        type_breakdown = ", ".join(type_parts) if type_parts else "none"
+
+        print(f"  {_green('✓')} {len(memories_data)} memories ({type_breakdown})")
+
+        # Collect rules
+        rules_data = []
+        if include_rules:
+            try:
+                engine = _get_rule_engine(parsed.db)
+                rules = engine.list_rules(status="active", limit=10000)
+                rules_data = [r.to_dict() for r in rules]
+                print(f"  {_green('✓')} {len(rules_data)} rules")
+            except Exception as e:
+                print(f"  {_yellow('⚠')} Rules export skipped: {e}")
+
+        # Collect config
+        config_data = None
+        if include_config:
+            try:
+                config_file = _DEFAULT_CONFIG_DIR / "config.json"
+                if config_file.exists():
+                    with open(config_file, "r", encoding="utf-8") as f:
+                        config_data = json.load(f)
+                    print(f"  {_green('✓')} Config (namespace, consolidation settings)")
+                else:
+                    print(f"  {_dim('○')} No config file found")
+            except Exception as e:
+                print(f"  {_yellow('⚠')} Config export skipped: {e}")
+
+        # Encrypted entries info
+        if encrypted_count > 0:
+            if parsed.key:
+                print(f"  {_green('✓')} {encrypted_count} encrypted entries included")
+            else:
+                print(
+                    f"  {_yellow('✗')} Encrypted entries skipped ({encrypted_count}) (provide --key to include)"
+                )
+
+        # Build pack data
+        source_machine = socket.gethostname().lower().replace(" ", "-")
+        packed_at = datetime.now(timezone.utc).isoformat()
+
+        pack_data = {
+            "version": "1.0",
+            "carrymem_version": __version__,
+            "packed_at": packed_at,
+            "source_machine": source_machine,
+            "contents": {
+                "memories_count": len(memories_data),
+                "rules_count": len(rules_data),
+                "has_config": config_data is not None,
+                "has_encrypted": encrypted_count > 0 and bool(parsed.key),
+            },
+            "data": {
+                "memories": memories_data,
+                "rules": rules_data,
+                "config": config_data,
+            },
+        }
+
+        # Determine output path
+        date_str = datetime.now().strftime("%Y%m%d")
+        default_filename = f"carrymem_identity_{date_str}.carry"
+        output_path = parsed.output or default_filename
+
+        # Write gzip-compressed JSON
+        try:
+            safe_path = _validate_cli_path(output_path)
+            json_bytes = json.dumps(pack_data, ensure_ascii=False).encode("utf-8")
+            with gzip.open(safe_path, "wb") as f:
+                f.write(json_bytes)
+        except (OSError, ValueError) as e:
+            print(f"\n  {_red('Write error:')} {e}")
+            cm.close()
+            return 1
+
+        # Show file size
+        file_size = os.path.getsize(output_path)
+        if file_size >= 1024 * 1024:
+            size_str = f"{file_size / (1024 * 1024):.1f} MB"
+        elif file_size >= 1024:
+            size_str = f"{file_size / 1024:.1f} KB"
+        else:
+            size_str = f"{file_size} bytes"
+
+        print(f"  → Saved to {output_path} ({size_str})")
+
+    except Exception as e:
+        print(f"\n  {_red('Pack failed:')} {e}")
+        cm.close()
+        return 1
+
+    cm.close()
+    return 0
+
+
+def cmd_unpack(args):
+    """Unpack a .carry file to restore CarryMem identity."""
+    parser = _make_parser("unpack")
+    parser.add_argument("file", help="Path to .carry file to unpack")
+    parser.add_argument(
+        "--merge",
+        action="store_true",
+        default=True,
+        help="Keep existing memories, add only new ones (default)",
+    )
+    parser.add_argument("--replace", action="store_true", help="Overwrite existing memories")
+    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--namespace", "-n", default="default", help="Target namespace")
+
+    parsed = parser.parse_args(args)
+
+    # --replace overrides --merge
+    merge_mode = not parsed.replace
+
+    print(f"\n  {_bold('Unpacking CarryMem identity...')}\n")
+
+    # Read and decompress .carry file
+    try:
+        safe_path = _validate_cli_path(parsed.file)
+        with gzip.open(safe_path, "rb") as f:
+            json_bytes = f.read()
+        pack_data = json.loads(json_bytes.decode("utf-8"))
+    except FileNotFoundError:
+        print(f"  {_red('File not found:')} {parsed.file}")
+        return 1
+    except gzip.BadGzipFile:
+        # Try reading as plain JSON (for backwards compatibility)
+        try:
+            with open(parsed.file, "r", encoding="utf-8") as f:
+                pack_data = json.load(f)
+        except (json.JSONDecodeError, ValueError) as e:
+            print(f"  {_red('Invalid .carry file:')} {e}")
+            return 1
+    except json.JSONDecodeError as e:
+        print(f"  {_red('Invalid .carry file:')} {e}")
+        return 1
+    except (OSError, ValueError) as e:
+        print(f"  {_red('Read error:')} {e}")
+        return 1
+
+    # Validate pack format
+    if pack_data.get("version") != "1.0":
+        print(f"  {_red('Unsupported .carry format version:')} {pack_data.get('version')}")
+        return 1
+
+    # Show source info
+    source_machine = pack_data.get("source_machine", "unknown")
+    packed_at = pack_data.get("packed_at", "unknown")
+    carrymem_ver = pack_data.get("carrymem_version", "unknown")
+    # Format packed_at for display
+    try:
+        if packed_at != "unknown":
+            dt = datetime.fromisoformat(packed_at)
+            packed_display = dt.strftime("%Y-%m-%d")
+        else:
+            packed_display = "unknown"
+    except Exception:
+        packed_display = str(packed_at)[:10]
+
+    print(f"  Source: {source_machine}, packed {packed_display}, CarryMem v{carrymem_ver}")
+
+    cm = _get_carrymem(parsed.db, parsed.namespace)
+
+    try:
+        data = pack_data.get("data", {})
+        conflicts = 0
+
+        # Restore memories
+        memories_data = data.get("memories", [])
+        if memories_data:
+            merge_strategy = "skip_existing" if merge_mode else "overwrite"
+            import_result = cm.import_memories(
+                data={
+                    "memories": memories_data,
+                    "source": {
+                        "namespace": pack_data.get("data", {})
+                        .get("config", {})
+                        .get("namespace", "unknown")
+                    },
+                },
+                namespace=parsed.namespace,
+                merge_strategy=merge_strategy,
+            )
+            imported = import_result.get("imported", 0)
+            skipped = import_result.get("skipped", 0)
+            errors = import_result.get("errors", 0)
+            conflicts = skipped
+            print(f"  {_green('✓')} {imported} memories restored ({conflicts} conflicts)")
+            if errors > 0:
+                print(f"  {_yellow('⚠')} {errors} errors during memory import")
+        else:
+            print(f"  {_dim('○')} No memories to restore")
+
+        # Restore rules
+        rules_data = data.get("rules", [])
+        if rules_data:
+            try:
+                engine = _get_rule_engine(parsed.db)
+                import_mode = "skip" if merge_mode else "overwrite"
+                rules_import_data = {
+                    "format": "carrymem-rules-v1",
+                    "version": carrymem_ver,
+                    "rules": rules_data,
+                }
+                stats = engine.import_rules(rules_import_data, mode=import_mode)
+                print(f"  {_green('✓')} {stats['imported']} rules restored")
+                skipped_count = stats.get("skipped", 0)
+                overwritten_count = stats.get("overwritten", 0)
+                errors_list = stats.get("errors")
+                if skipped_count > 0:
+                    print(f"    {_dim(f'{skipped_count} rules skipped (already exist)')}")
+                if overwritten_count > 0:
+                    print(f"    {_dim(f'{overwritten_count} rules overwritten')}")
+                if errors_list:
+                    print(f"    {_yellow(f'{len(errors_list)} errors during rules import')}")
+            except Exception as e:
+                print(f"  {_yellow('⚠')} Rules import skipped: {e}")
+        else:
+            print(f"  {_dim('○')} No rules to restore")
+
+        # Restore config
+        config_data = data.get("config")
+        if config_data:
+            try:
+                config_file = _DEFAULT_CONFIG_DIR / "config.json"
+                _DEFAULT_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+                if config_file.exists() and merge_mode:
+                    # Merge: keep existing config, add new keys
+                    with open(config_file, "r", encoding="utf-8") as f:
+                        existing_config = json.load(f)
+                    # Deep merge: new values don't overwrite existing
+                    for key, value in config_data.items():
+                        if key not in existing_config:
+                            existing_config[key] = value
+                    with open(config_file, "w", encoding="utf-8") as f:
+                        json.dump(existing_config, f, indent=2, ensure_ascii=False)
+                else:
+                    # Replace or no existing config
+                    with open(config_file, "w", encoding="utf-8") as f:
+                        json.dump(config_data, f, indent=2, ensure_ascii=False)
+                print(f"  {_green('✓')} Config restored")
+            except Exception as e:
+                print(f"  {_yellow('⚠')} Config restore skipped: {e}")
+        else:
+            print(f"  {_dim('○')} No config to restore")
+
+        # Check embedding model availability
+        embedding_model = None
+        if cm._adapter and hasattr(cm._adapter, "_embedding_model_name"):
+            embedding_model = cm._adapter._embedding_model_name
+        if embedding_model:
+            print(
+                f"  {_dim(f'ℹ Embedding model: {embedding_model} (vectors will be rebuilt on next recall)')}"
+            )
+
+        print(f"\n  → Run {_cyan('carrymem setup-mcp --all --global')} to reconnect your AI tools")
+
+    except Exception as e:
+        print(f"\n  {_red('Unpack failed:')} {e}")
         cm.close()
         return 1
 
@@ -677,7 +1058,9 @@ def cmd_stats(args):
     parser = _make_parser("stats")
     parser.add_argument("--namespace", "-n", default="default", help="Namespace")
     parser.add_argument("--db", help="Database path")
-    parser.add_argument("--format", "-f", choices=["text", "json"], default="text", help="Output format")
+    parser.add_argument(
+        "--format", "-f", choices=["text", "json"], default="text", help="Output format"
+    )
 
     parsed = parser.parse_args(args)
     cm = _get_carrymem(parsed.db, parsed.namespace)
@@ -803,7 +1186,9 @@ def cmd_whoami(args):
 
 def cmd_profile(args):
     parser = _make_parser("profile")
-    parser.add_argument("action", choices=["export", "show"], default="show", nargs="?", help="Profile action")
+    parser.add_argument(
+        "action", choices=["export", "show"], default="show", nargs="?", help="Profile action"
+    )
     parser.add_argument("--output", "-o", help="Output file path (for export)")
     parser.add_argument("--namespace", "-n", default="default", help="Namespace")
     parser.add_argument("--db", help="Database path")
@@ -935,6 +1320,7 @@ def cmd_doctor(args):
 
     try:
         from carrymem import CarryMem
+
         _record("carrymem_import", "ok", f"CarryMem v{__version__}")
     except ImportError as e:
         _record("carrymem_import", "fail", f"CarryMem import: {e}")
@@ -949,7 +1335,12 @@ def cmd_doctor(args):
     db = Path(db_path)
     if db.exists():
         size_mb = db.stat().st_size / (1024 * 1024)
-        _record("database_file", "ok", f"Database: {db} ({size_mb:.2f} MB)", {"size_mb": round(size_mb, 2)})
+        _record(
+            "database_file",
+            "ok",
+            f"Database: {db} ({size_mb:.2f} MB)",
+            {"size_mb": round(size_mb, 2)},
+        )
     else:
         _record("database_file", "warn", f"Database not found: {db}")
         if parsed.fix:
@@ -983,14 +1374,20 @@ def cmd_doctor(args):
 
     try:
         import shutil
+
         disk_usage = shutil.disk_usage(str(db.parent) if db.exists() else str(Path.home()))
-        free_gb = disk_usage.free / (1024 ** 3)
+        free_gb = disk_usage.free / (1024**3)
         if free_gb < 0.1:
             _record("disk_space", "fail", f"Disk space critically low: {free_gb:.2f} GB free")
         elif free_gb < 1.0:
             _record("disk_space", "warn", f"Disk space low: {free_gb:.2f} GB free")
         else:
-            _record("disk_space", "ok", f"Disk space: {free_gb:.2f} GB free", {"free_gb": round(free_gb, 2)})
+            _record(
+                "disk_space",
+                "ok",
+                f"Disk space: {free_gb:.2f} GB free",
+                {"free_gb": round(free_gb, 2)},
+            )
     except Exception as e:
         _record("disk_space", "skip", f"Disk space check unavailable: {e}")
 
@@ -1022,26 +1419,33 @@ def cmd_doctor(args):
     optional_deps = []
     try:
         import pycld2
+
         optional_deps.append("pycld2")
     except ImportError:
         pass
     try:
         from cryptography.fernet import Fernet
+
         optional_deps.append("cryptography")
     except ImportError:
         pass
     try:
         import langdetect
+
         optional_deps.append("langdetect")
     except ImportError:
         pass
     try:
         import textual
+
         optional_deps.append("textual")
     except ImportError:
         pass
-    _record("optional_deps", "ok" if optional_deps else "info",
-            f"Optional deps: {', '.join(optional_deps)}" if optional_deps else "No optional deps")
+    _record(
+        "optional_deps",
+        "ok" if optional_deps else "info",
+        f"Optional deps: {', '.join(optional_deps)}" if optional_deps else "No optional deps",
+    )
 
     try:
         test_conn = sqlite3.connect(":memory:")
@@ -1053,6 +1457,7 @@ def cmd_doctor(args):
 
     try:
         from carrymem.security import InputValidator
+
         validator = InputValidator()
         test_result = validator.validate_content("test content")
         if test_result:
@@ -1072,8 +1477,15 @@ def cmd_doctor(args):
         mcp_configs.append(f"claude-code ({claude_mcp})")
     if cursor_mcp.exists():
         mcp_configs.append(f"cursor ({cursor_mcp})")
-    _record("mcp_configs", "ok" if mcp_configs else "info",
-            f"MCP configs: {', '.join(mcp_configs)}" if mcp_configs else "No MCP configs in current directory")
+    _record(
+        "mcp_configs",
+        "ok" if mcp_configs else "info",
+        (
+            f"MCP configs: {', '.join(mcp_configs)}"
+            if mcp_configs
+            else "No MCP configs in current directory"
+        ),
+    )
 
     if db.exists():
         try:
@@ -1090,46 +1502,65 @@ def cmd_doctor(args):
     if db.exists():
         try:
             from carrymem.rules import RuleEngine
+
             re = RuleEngine(db_path=db_path)
             rules = re.list_rules(status="active")
             expired = sum(1 for r in rules if r.is_expired())
             msg = f"Active rules: {len(rules)}"
             if expired:
                 msg += f" ({expired} expired)"
-            _record("rules_engine", "ok" if not expired else "warn", msg, {"active": len(rules), "expired": expired})
+            _record(
+                "rules_engine",
+                "ok" if not expired else "warn",
+                msg,
+                {"active": len(rules), "expired": expired},
+            )
         except Exception as e:
             _record("rules_engine", "warn", f"Rules engine: {e}")
     else:
         _record("rules_engine", "skip", "Rules engine (no database)")
 
     auto_inject = os.environ.get("CARRYMEM_AUTO_INJECT", "").lower() in ("true", "1", "yes")
-    _record("auto_inject", "ok" if auto_inject else "info",
-            f"Auto-inject: {'enabled' if auto_inject else 'disabled (set CARRYMEM_AUTO_INJECT=true)'}")
+    _record(
+        "auto_inject",
+        "ok" if auto_inject else "info",
+        f"Auto-inject: {'enabled' if auto_inject else 'disabled (set CARRYMEM_AUTO_INJECT=true)'}",
+    )
 
     import shutil
+
     carrymem_on_path = shutil.which("carrymem") is not None
     if carrymem_on_path:
         _record("cli_path", "ok", "CLI command 'carrymem' is on PATH")
     else:
         py_ver = f"{sys.version_info.major}.{sys.version_info.minor}"
         if sys.platform == "darwin":
-            path_hint = f"export PATH=\"$HOME/Library/Python/{py_ver}/bin:$PATH\""
+            path_hint = f'export PATH="$HOME/Library/Python/{py_ver}/bin:$PATH"'
         elif sys.platform.startswith("linux"):
             path_hint = 'export PATH="$HOME/.local/bin:$PATH"'
         else:
             path_hint = "Add Python Scripts directory to your PATH"
-        _record("cli_path", "warn",
-                f"CLI command 'carrymem' NOT on PATH. Fix: {path_hint}",
-                {"fix": path_hint})
+        _record(
+            "cli_path",
+            "warn",
+            f"CLI command 'carrymem' NOT on PATH. Fix: {path_hint}",
+            {"fix": path_hint},
+        )
 
     if parsed.json:
-        print(json.dumps({
-            "version": __version__,
-            "checks_passed": checks_passed,
-            "checks_total": checks_total,
-            "issues": issues,
-            "checks": check_results,
-        }, ensure_ascii=False, indent=2))
+        print(
+            json.dumps(
+                {
+                    "version": __version__,
+                    "checks_passed": checks_passed,
+                    "checks_total": checks_total,
+                    "issues": issues,
+                    "checks": check_results,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
         return 0 if not issues else 1
 
     print(f"\n  {_bold('CarryMem Doctor')} - Diagnostics\n")
@@ -1161,7 +1592,9 @@ def cmd_doctor(args):
 
 def cmd_setup_mcp(args):
     parser = _make_parser("setup-mcp")
-    parser.add_argument("--tool", "-t", choices=["claude-code", "cursor", "all"], default="all", help="Target tool")
+    parser.add_argument(
+        "--tool", "-t", choices=["claude-code", "cursor", "all"], default="all", help="Target tool"
+    )
     parser.add_argument("--project", "-p", default=".", help="Project directory (default: current)")
     parser.add_argument("--force", action="store_true", help="Overwrite existing config")
 
@@ -1204,7 +1637,9 @@ def cmd_setup_mcp(args):
                 try:
                     with open(claude_file) as f:
                         existing = json.load(f)
-                    existing.setdefault("mcpServers", {})["carrymem"] = mcp_config["mcpServers"]["carrymem"]
+                    existing.setdefault("mcpServers", {})["carrymem"] = mcp_config["mcpServers"][
+                        "carrymem"
+                    ]
                     with open(claude_file, "w") as f:
                         json.dump(existing, f, indent=2)
                 except Exception:
@@ -1238,7 +1673,9 @@ def cmd_setup_mcp(args):
                 try:
                     with open(cursor_file) as f:
                         existing = json.load(f)
-                    existing.setdefault("mcpServers", {})["carrymem"] = mcp_config["mcpServers"]["carrymem"]
+                    existing.setdefault("mcpServers", {})["carrymem"] = mcp_config["mcpServers"][
+                        "carrymem"
+                    ]
                     with open(cursor_file, "w") as f:
                         json.dump(existing, f, indent=2)
                 except Exception:
@@ -1269,6 +1706,7 @@ def cmd_serve(args):
     parsed = parser.parse_args(args)
 
     from carrymem.integration.layer2_mcp.http_server import run_http_server
+
     print(f"\n  {_bold('CarryMem MCP HTTP Server')}")
     print(f"  Host:   {parsed.host}")
     print(f"  Port:   {parsed.port}")
@@ -1282,6 +1720,7 @@ def cmd_serve(args):
 
 def cmd_tui(args):
     from carrymem.tui import run_tui, HAS_TEXTUAL
+
     if not HAS_TEXTUAL:
         print(f"  {_yellow('Textual is not installed.')}")
         print(f"  Install with: {_cyan('pip install textual')}")
@@ -1302,7 +1741,8 @@ def cmd_tutorial(args):
         print("  Usage: carrymem tutorial")
         print("  Show a 5-minute quick-start guide for CarryMem.")
         return 0
-    print(f"""
+    print(
+        f"""
   {_bold('Welcome to CarryMem!')} {_dim('Learn the basics in 5 minutes.')}
 
   {_bold('[1/5] Store your first memory')}
@@ -1331,7 +1771,8 @@ def cmd_tutorial(args):
     carrymem whoami          See what your AI knows about you
     carrymem doctor          Run diagnostics
     carrymem help            Full command reference
-""")
+"""
+    )
     return 0
 
 
@@ -1361,7 +1802,9 @@ def cmd_rules_hub(args):
         return handler(sub_args)
 
     print(f"  {_red('Unknown rules sub-command:')} {sub}")
-    print(f"  {_dim('Available: list, add, delete, match, edit, pause, resume, stats, check, export, import, suggest')}")
+    print(
+        f"  {_dim('Available: list, add, delete, match, edit, pause, resume, stats, check, export, import, suggest')}"
+    )
     return 1
 
 
@@ -1424,6 +1867,7 @@ def cmd_version(args):
 
 def _get_rule_engine(db_path: Optional[str] = None):
     from carrymem.rules import RuleEngine
+
     path = db_path or str(_DEFAULT_DB)
     return RuleEngine(path)
 
@@ -1432,17 +1876,26 @@ def cmd_add_rule(args):
     parser = _make_parser("add-rule")
     parser.add_argument("action", nargs="?", help="Behavior instruction (what AI should do)")
     parser.add_argument("--trigger", "-t", help="Scene description that activates this rule")
-    parser.add_argument("--type", choices=["avoid", "always", "prefer", "forbid", "format"],
-                        default=None, help="Rule type")
-    parser.add_argument("--soft", action="store_true", help="Make this a soft suggestion (AI can ignore)")
+    parser.add_argument(
+        "--type",
+        choices=["avoid", "always", "prefer", "forbid", "format"],
+        default=None,
+        help="Rule type",
+    )
+    parser.add_argument(
+        "--soft", action="store_true", help="Make this a soft suggestion (AI can ignore)"
+    )
     parser.add_argument("--template", help="Use a rule template (see: carrymem list-templates)")
-    parser.add_argument("--interactive", "-i", action="store_true", help="Guided interactive creation")
+    parser.add_argument(
+        "--interactive", "-i", action="store_true", help="Guided interactive creation"
+    )
     parser.add_argument("--db", help="Database path")
     parsed = parser.parse_args(args)
 
     # Template mode
     if parsed.template:
         from carrymem.rules.templates import get_template
+
         try:
             tmpl = get_template(parsed.template)
         except KeyError as e:
@@ -1480,7 +1933,9 @@ def cmd_add_rule(args):
             type_map = {"1": "avoid", "2": "always", "3": "prefer", "4": "forbid", "5": "format"}
             rule_type = type_map.get(type_input, "avoid")
 
-            strict_input = input(f"  {_bold('Hard rule?')} (AI cannot ignore) [Y/n]: ").strip().lower()
+            strict_input = (
+                input(f"  {_bold('Hard rule?')} (AI cannot ignore) [Y/n]: ").strip().lower()
+            )
             override = strict_input != "n"
 
         except (KeyboardInterrupt, EOFError):
@@ -1490,7 +1945,9 @@ def cmd_add_rule(args):
     # Normal mode
     else:
         if not parsed.action or not parsed.trigger:
-            print(f"\n  {_red('Missing required arguments. Use:')} carrymem add-rule <action> --trigger <scene>")
+            print(
+                f"\n  {_red('Missing required arguments. Use:')} carrymem add-rule <action> --trigger <scene>"
+            )
             print(f"  {_dim('Or use:')} carrymem add-rule --interactive")
             print(f"  {_dim('Or use:')} carrymem add-rule --template <name>")
             return 1
@@ -1524,10 +1981,16 @@ def cmd_add_rule(args):
 
 def cmd_list_rules(args):
     parser = _make_parser("list-rules")
-    parser.add_argument("--status", choices=["active", "paused", "deprecated"], help="Filter by status")
-    parser.add_argument("--type", choices=["avoid", "always", "prefer", "forbid", "format"], help="Filter by type")
+    parser.add_argument(
+        "--status", choices=["active", "paused", "deprecated"], help="Filter by status"
+    )
+    parser.add_argument(
+        "--type", choices=["avoid", "always", "prefer", "forbid", "format"], help="Filter by type"
+    )
     parser.add_argument("--limit", type=int, default=20, help="Max results (default: 20)")
-    parser.add_argument("--format", choices=["detail", "table", "compact"], default="detail", help="Output format")
+    parser.add_argument(
+        "--format", choices=["detail", "table", "compact"], default="detail", help="Output format"
+    )
     parser.add_argument("--db", help="Database path")
     parsed = parser.parse_args(args)
 
@@ -1544,16 +2007,22 @@ def cmd_list_rules(args):
         for rule in rules:
             marker = "!" if rule.override else "~"
             expired = " [EXPIRED]" if rule.is_expired() else ""
-            print(f"[{marker}] ({rule.scope}/{rule.rule_type}) {rule.trigger} → {rule.action}{expired}")
+            print(
+                f"[{marker}] ({rule.scope}/{rule.rule_type}) {rule.trigger} → {rule.action}{expired}"
+            )
         return 0
 
     if parsed.format == "table":
-        print(f"\n  {'ID':<14} {'Type':<8} {'Scope':<10} {'Override':<8} {'Trigger':<20} {'Action':<30}")
+        print(
+            f"\n  {'ID':<14} {'Type':<8} {'Scope':<10} {'Override':<8} {'Trigger':<20} {'Action':<30}"
+        )
         print(f"  {'─'*14} {'─'*8} {'─'*10} {'─'*8} {'─'*20} {'─'*30}")
         for rule in rules:
             expired = " [EXPIRED]" if rule.is_expired() else ""
             override_str = "HARD" if rule.override else "soft"
-            print(f"  {rule.id:<14} {rule.rule_type:<8} {rule.scope:<10} {override_str:<8} {rule.trigger[:20]:<20} {rule.action[:30]:<30}{expired}")
+            print(
+                f"  {rule.id:<14} {rule.rule_type:<8} {rule.scope:<10} {override_str:<8} {rule.trigger[:20]:<20} {rule.action[:30]:<30}{expired}"
+            )
         print(f"\n  Total: {len(rules)} rules")
         return 0
 
@@ -1571,7 +2040,9 @@ def cmd_list_rules(args):
         print(f"  {icon} {marker} {_bold(rule.id)}{status_str}{expired_str}")
         print(f"     Trigger: {rule.trigger}")
         print(f"     Action:  {rule.action}")
-        print(f"     Type: {rule.rule_type} | Used: {rule.trigger_count}x | Confidence: {rule.confidence:.0%}")
+        print(
+            f"     Type: {rule.rule_type} | Used: {rule.trigger_count}x | Confidence: {rule.confidence:.0%}"
+        )
         if rule.expires_at:
             print(f"     Expires: {rule.expires_at}")
         print()
@@ -1583,8 +2054,18 @@ def cmd_match_rules(args):
     parser = _make_parser("match-rules")
     parser.add_argument("scene", help="Scene description to match against")
     parser.add_argument("--limit", type=int, default=5, help="Max results (default: 5)")
-    parser.add_argument("--format", choices=["text", "json", "compact", "anchored", "ddd"], default="text", help="Output format")
-    parser.add_argument("--context-budget", type=int, default=None, help="Context budget in tokens (enables compression)")
+    parser.add_argument(
+        "--format",
+        choices=["text", "json", "compact", "anchored", "ddd"],
+        default="text",
+        help="Output format",
+    )
+    parser.add_argument(
+        "--context-budget",
+        type=int,
+        default=None,
+        help="Context budget in tokens (enables compression)",
+    )
     parser.add_argument("--db", help="Database path")
     parsed = parser.parse_args(args)
 
@@ -1600,14 +2081,18 @@ def cmd_match_rules(args):
         return 0
     elif parsed.format == "anchored":
         result = engine.inject(
-            parsed.scene, format="anchored", max_rules=parsed.limit,
+            parsed.scene,
+            format="anchored",
+            max_rules=parsed.limit,
             context_budget_tokens=parsed.context_budget,
         )
         print(result)
         return 0
     elif parsed.format == "ddd":
         result = engine.inject(
-            parsed.scene, format="ddd", max_rules=parsed.limit,
+            parsed.scene,
+            format="ddd",
+            max_rules=parsed.limit,
             context_budget_tokens=parsed.context_budget,
         )
         print(result)
@@ -1627,7 +2112,7 @@ def cmd_match_rules(args):
         rule = m.rule
         marker = "🔴" if rule.override else "🟡"
         print(f"  {marker} [{m.match_type}] {rule.rule_type.upper()}: {rule.action}")
-        print(f"     Trigger: \"{rule.trigger}\" | Score: {m.score:.2f}")
+        print(f'     Trigger: "{rule.trigger}" | Score: {m.score:.2f}')
         print()
 
     return 0
@@ -1707,14 +2192,14 @@ def cmd_rules_stats(args):
     print(f"  Global rules:   {stats['global_limit']}")
     print(f"  Capacity:       {stats['total_limit']} ({stats['utilization_percent']}%)")
 
-    if stats.get('rules_by_type'):
+    if stats.get("rules_by_type"):
         print(f"\n  {_bold('By Type:')}")
-        for rtype, count in stats['rules_by_type'].items():
+        for rtype, count in stats["rules_by_type"].items():
             print(f"    {rtype}: {count}")
 
-    if stats.get('rules_by_status'):
+    if stats.get("rules_by_status"):
         print(f"\n  {_bold('By Status:')}")
-        for status, count in stats['rules_by_status'].items():
+        for status, count in stats["rules_by_status"].items():
             print(f"    {status}: {count}")
     print()
     return 0
@@ -1722,6 +2207,7 @@ def cmd_rules_stats(args):
 
 def _make_parser(cmd_name: str):
     import argparse
+
     return argparse.ArgumentParser(
         prog=f"carrymem {cmd_name}",
         description=f"CarryMem {cmd_name} command",
@@ -1739,6 +2225,7 @@ def cmd_check_rules(args):
 
     if parsed.json:
         import json
+
         print(json.dumps(health, ensure_ascii=False, indent=2, default=str))
         return 0
 
@@ -1767,7 +2254,9 @@ def cmd_check_rules(args):
 
     if health["unused_rules"] > 0:
         unused_count = health["unused_rules"]
-        print(f"\n  {_dim(f'💡 {unused_count} rules have never been triggered. Consider reviewing them.')}")
+        print(
+            f"\n  {_dim(f'💡 {unused_count} rules have never been triggered. Consider reviewing them.')}"
+        )
 
     print()
     return 0 if health["is_healthy"] else 1
@@ -1776,8 +2265,13 @@ def cmd_check_rules(args):
 def _validate_cli_path(path: str) -> str:
     resolved = os.path.realpath(os.path.expanduser(path))
     _DANGEROUS = [
-        '/etc', '/usr', '/bin', '/sbin', '/System',
-        '/Library', '/private/etc',
+        "/etc",
+        "/usr",
+        "/bin",
+        "/sbin",
+        "/System",
+        "/Library",
+        "/private/etc",
     ]
     for d in _DANGEROUS:
         if resolved == d or resolved.startswith(d + os.sep):
@@ -1788,7 +2282,9 @@ def _validate_cli_path(path: str) -> str:
 def cmd_export_rules(args):
     parser = _make_parser("export-rules")
     parser.add_argument("path", help="Output file path (JSON)")
-    parser.add_argument("--status", choices=["active", "paused", "deprecated"], help="Filter by status")
+    parser.add_argument(
+        "--status", choices=["active", "paused", "deprecated"], help="Filter by status"
+    )
     parser.add_argument("--db", help="Database path")
     parsed = parser.parse_args(args)
 
@@ -1813,8 +2309,12 @@ def cmd_export_rules(args):
 def cmd_import_rules(args):
     parser = _make_parser("import-rules")
     parser.add_argument("path", help="Input file path (JSON)")
-    parser.add_argument("--mode", choices=["skip", "overwrite", "rename"],
-                        default="skip", help="Conflict resolution (default: skip)")
+    parser.add_argument(
+        "--mode",
+        choices=["skip", "overwrite", "rename"],
+        default="skip",
+        help="Conflict resolution (default: skip)",
+    )
     parser.add_argument("--db", help="Database path")
     parsed = parser.parse_args(args)
 
@@ -1858,10 +2358,15 @@ def cmd_skill_pack(args):
     parser.add_argument("--version", default="1.0.0", help="Semantic version")
     parser.add_argument("--author", default="", help="Author name")
     parser.add_argument("--description", default="", help="Skill description")
-    parser.add_argument("--scope", choices=["personal", "company", "negotiated"],
-                        default="personal", help="Default scope (default: personal)")
-    parser.add_argument("--status", choices=["active", "paused", "deprecated"],
-                        help="Filter rules by status")
+    parser.add_argument(
+        "--scope",
+        choices=["personal", "company", "negotiated"],
+        default="personal",
+        help="Default scope (default: personal)",
+    )
+    parser.add_argument(
+        "--status", choices=["active", "paused", "deprecated"], help="Filter rules by status"
+    )
     parser.add_argument("--tags", nargs="*", help="Categorization tags")
     parser.add_argument("--db", help="Database path")
     parsed = parser.parse_args(args)
@@ -1899,10 +2404,17 @@ def cmd_skill_pack(args):
 def cmd_skill_install(args):
     parser = _make_parser("skill-install")
     parser.add_argument("path", help="Skill bundle file path (JSON)")
-    parser.add_argument("--scope", choices=["personal", "company", "negotiated"],
-                        help="Override Skill's default scope")
-    parser.add_argument("--mode", choices=["skip", "overwrite", "rename"],
-                        default="skip", help="Conflict resolution (default: skip)")
+    parser.add_argument(
+        "--scope",
+        choices=["personal", "company", "negotiated"],
+        help="Override Skill's default scope",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["skip", "overwrite", "rename"],
+        default="skip",
+        help="Conflict resolution (default: skip)",
+    )
     parser.add_argument("--db", help="Database path")
     parsed = parser.parse_args(args)
 
@@ -1963,6 +2475,7 @@ def cmd_skill_verify(args):
         return 1
 
     from carrymem.rules import RuleEngine
+
     result = RuleEngine.skill_verify(data)
 
     if result["valid"]:
@@ -1988,7 +2501,9 @@ def cmd_edit_rule(args):
     parser.add_argument("rule_id", help="Rule ID to edit")
     parser.add_argument("--trigger", help="New trigger")
     parser.add_argument("--action", help="New action")
-    parser.add_argument("--type", choices=["avoid", "always", "prefer", "forbid", "format"], help="New rule type")
+    parser.add_argument(
+        "--type", choices=["avoid", "always", "prefer", "forbid", "format"], help="New rule type"
+    )
     parser.add_argument("--soft", action="store_true", help="Change to soft rule")
     parser.add_argument("--hard", action="store_true", help="Change to hard rule")
     parser.add_argument("--db", help="Database path")
@@ -2013,7 +2528,9 @@ def cmd_edit_rule(args):
         updates["override"] = True
 
     if not updates:
-        print(f"\n  {_yellow('No changes specified. Use --trigger, --action, --type, --soft, or --hard')}")
+        print(
+            f"\n  {_yellow('No changes specified. Use --trigger, --action, --type, --soft, or --hard')}"
+        )
         return 1
 
     updated = engine.update_rule(parsed.rule_id, **updates)
@@ -2053,10 +2570,20 @@ def cmd_list_templates(args):
 
 def cmd_suggest_rules(args):
     parser = _make_parser("suggest-rules")
-    parser.add_argument("--type", choices=["correction", "decision", "user_preference", "sentiment_marker", "task_pattern"],
-                        help="Filter by memory type")
-    parser.add_argument("--min-count", type=int, default=3, help="Minimum occurrences for pattern detection (default: 3)")
-    parser.add_argument("--accept", action="store_true", help="Accept all suggestions (create rules)")
+    parser.add_argument(
+        "--type",
+        choices=["correction", "decision", "user_preference", "sentiment_marker", "task_pattern"],
+        help="Filter by memory type",
+    )
+    parser.add_argument(
+        "--min-count",
+        type=int,
+        default=3,
+        help="Minimum occurrences for pattern detection (default: 3)",
+    )
+    parser.add_argument(
+        "--accept", action="store_true", help="Accept all suggestions (create rules)"
+    )
     parser.add_argument("--db", help="Database path")
     parsed = parser.parse_args(args)
 
@@ -2072,7 +2599,9 @@ def cmd_suggest_rules(args):
     memories = cm.recall_memories(filters=filters if filters else None, limit=200)
 
     if not memories:
-        print(f"\n  {_yellow('No memories found. Add memories first with:')} carrymem add <content>")
+        print(
+            f"\n  {_yellow('No memories found. Add memories first with:')} carrymem add <content>"
+        )
         print()
         return 0
 
@@ -2100,12 +2629,17 @@ def cmd_suggest_rules(args):
         print(f"\n  {_bold(f'#{i}')} [{cand.rule_type.upper()}] {marker}")
         print(f"    Trigger: {cand.trigger}")
         print(f"    Action:  {cand.action}")
-        print(f"    {_dim(f'Based on {len(cand.source_memories)} memories | Confidence: {cand.confidence:.0%}')}")
+        print(
+            f"    {_dim(f'Based on {len(cand.source_memories)} memories | Confidence: {cand.confidence:.0%}')}"
+        )
         print(f"    {_dim(cand.explanation)}")
 
     if parsed.accept:
         print()
-        print(f"  {_yellow(f'WARNING: This will create {len(candidates)} rules. Proceed? [y/N]')}", end=" ")
+        print(
+            f"  {_yellow(f'WARNING: This will create {len(candidates)} rules. Proceed? [y/N]')}",
+            end=" ",
+        )
         try:
             confirm = input().strip().lower()
         except (KeyboardInterrupt, EOFError):
@@ -2141,10 +2675,20 @@ def cmd_suggest_rules(args):
 
 def cmd_promote_rules(args):
     parser = _make_parser("promote-rules")
-    parser.add_argument("--type", choices=["correction", "decision", "user_preference", "sentiment_marker", "task_pattern"],
-                        help="Filter by memory type")
-    parser.add_argument("--auto-accept", action="store_true", help="Auto-accept all candidates (with confirmation)")
-    parser.add_argument("--expiry-days", type=int, default=7, help="Days before pending candidates expire (default: 7)")
+    parser.add_argument(
+        "--type",
+        choices=["correction", "decision", "user_preference", "sentiment_marker", "task_pattern"],
+        help="Filter by memory type",
+    )
+    parser.add_argument(
+        "--auto-accept", action="store_true", help="Auto-accept all candidates (with confirmation)"
+    )
+    parser.add_argument(
+        "--expiry-days",
+        type=int,
+        default=7,
+        help="Days before pending candidates expire (default: 7)",
+    )
     parser.add_argument("--db", help="Database path")
     parsed = parser.parse_args(args)
 
@@ -2192,7 +2736,11 @@ def cmd_review_promotions(args):
     parser = _make_parser("review-promotions")
     parser.add_argument("--accept", help="Accept a specific candidate by ID")
     parser.add_argument("--reject", help="Reject a specific candidate by ID")
-    parser.add_argument("--accept-all", action="store_true", help="Accept all pending candidates (with confirmation)")
+    parser.add_argument(
+        "--accept-all",
+        action="store_true",
+        help="Accept all pending candidates (with confirmation)",
+    )
     parser.add_argument("--note", help="Add a review note")
     parser.add_argument("--db", help="Database path")
     parsed = parser.parse_args(args)
@@ -2220,7 +2768,9 @@ def cmd_review_promotions(args):
         if not pending:
             print(f"\n  {_yellow('No pending candidates.')}")
             return 0
-        print(f"\n  {_yellow(f'This will accept {len(pending)} candidates. Proceed? [y/N]')}", end=" ")
+        print(
+            f"\n  {_yellow(f'This will accept {len(pending)} candidates. Proceed? [y/N]')}", end=" "
+        )
         try:
             confirm = input().strip().lower()
         except (KeyboardInterrupt, EOFError):
@@ -2245,7 +2795,9 @@ def cmd_review_promotions(args):
             total_s = stats.get("total", 0)
             accepted_s = stats.get("accepted", 0)
             rejected_s = stats.get("rejected", 0)
-            print(f"  {_dim(f'Total: {total_s} | Accepted: {accepted_s} | Rejected: {rejected_s}')}")
+            print(
+                f"  {_dim(f'Total: {total_s} | Accepted: {accepted_s} | Rejected: {rejected_s}')}"
+            )
         return 0
 
     print(f"\n  {_bold(f'Pending Promotions ({len(pending)})')}")
@@ -2255,7 +2807,9 @@ def cmd_review_promotions(args):
         print(f"    Trigger: {entry.candidate_trigger}")
         print(f"    Action:  {entry.candidate_action}")
         print(f"    Type:    {entry.candidate_rule_type} | Confidence: {entry.confidence:.0%}")
-        print(f"    {_dim(f'From {len(entry.source_memory_ids)} memories | Created: {entry.created_at[:10]}')}")
+        print(
+            f"    {_dim(f'From {len(entry.source_memory_ids)} memories | Created: {entry.created_at[:10]}')}"
+        )
         print(f"    {_dim('Accept: carrymem review-promotions --accept ' + entry.id)}")
 
     print()
@@ -2298,20 +2852,26 @@ def cmd_promotion_log(args):
     accepted_s = stats.get("accepted", 0)
     rejected_s = stats.get("rejected", 0)
     expired_s = stats.get("expired", 0)
-    print(f"\n  {_dim(f'Total: {total_s} | Pending: {pending_s} | Accepted: {accepted_s} | Rejected: {rejected_s} | Expired: {expired_s}')}")
+    print(
+        f"\n  {_dim(f'Total: {total_s} | Pending: {pending_s} | Accepted: {accepted_s} | Rejected: {rejected_s} | Expired: {expired_s}')}"
+    )
     print()
     return 0
 
 
 def cmd_refine_rule(args):
     parser = _make_parser("refine-rule")
-    parser.add_argument("--trigger", default="", help="Rule trigger/scene (required for new session)")
+    parser.add_argument(
+        "--trigger", default="", help="Rule trigger/scene (required for new session)"
+    )
     parser.add_argument("--action", default="", help="Rule action (required for new session)")
     parser.add_argument("--type", default="avoid", help="Rule type (default: avoid)")
     parser.add_argument("--answer", help="Answer to current question (for advancing session)")
     parser.add_argument("--option", help="Selected option for answer")
     parser.add_argument("--session", help="Continue existing session")
-    parser.add_argument("--confirm", action="store_true", help="Confirm current session and create rule")
+    parser.add_argument(
+        "--confirm", action="store_true", help="Confirm current session and create rule"
+    )
     parser.add_argument("--cancel", action="store_true", help="Cancel current session")
     parser.add_argument("--db", help="Database path")
     parsed = parser.parse_args(args)
@@ -2352,7 +2912,9 @@ def cmd_refine_rule(args):
         draft = result.get("refined_draft", {})
         next_q = result.get("next_question")
 
-        print(f"\n  {_bold('Round ' + str(result.get('round', '?')))} — Phase: {result.get('phase', '?')}")
+        print(
+            f"\n  {_bold('Round ' + str(result.get('round', '?')))} — Phase: {result.get('phase', '?')}"
+        )
         if draft:
             print(f"  Current trigger: {draft.get('trigger', '')}")
             print(f"  Current action:  {draft.get('action', '')}")
@@ -2364,7 +2926,9 @@ def cmd_refine_rule(args):
             answer_hint = f'carrymem refine-rule --session {parsed.session} --answer "your answer"'
             print(f"\n  {_dim(f'Answer: {answer_hint}')}")
         else:
-            print(f"\n  {_yellow('Ready to confirm.')} {_dim(f'carrymem refine-rule --session {parsed.session} --confirm')}")
+            print(
+                f"\n  {_yellow('Ready to confirm.')} {_dim(f'carrymem refine-rule --session {parsed.session} --confirm')}"
+            )
         print()
         return 0
 
@@ -2425,10 +2989,24 @@ def cmd_refinement_sessions(args):
 
 def cmd_learn_experience(args):
     parser = _make_parser("learn-experience")
-    parser.add_argument("--type", choices=["correction", "decision", "user_preference",
-                                           "sentiment_marker", "task_pattern", "fact_declaration"],
-                        help="Filter by memory type")
-    parser.add_argument("--expiry-days", type=int, default=14, help="Days before pending lessons expire (default: 14)")
+    parser.add_argument(
+        "--type",
+        choices=[
+            "correction",
+            "decision",
+            "user_preference",
+            "sentiment_marker",
+            "task_pattern",
+            "fact_declaration",
+        ],
+        help="Filter by memory type",
+    )
+    parser.add_argument(
+        "--expiry-days",
+        type=int,
+        default=14,
+        help="Days before pending lessons expire (default: 14)",
+    )
     parser.add_argument("--db", help="Database path")
     parsed = parser.parse_args(args)
 
@@ -2538,7 +3116,9 @@ def cmd_review_lessons(args):
         action = entry.action_hint
 
         print(f"\n  {_bold(entry.id)} [{signal}] confidence={confidence:.1f} domain={domain}")
-        print(f"    Source: {entry.source_content[:100]}{'...' if len(entry.source_content) > 100 else ''}")
+        print(
+            f"    Source: {entry.source_content[:100]}{'...' if len(entry.source_content) > 100 else ''}"
+        )
         print(f"    Lesson: {lesson_preview}")
         print(f"    Trigger: {trigger}")
         print(f"    Action:  {action}")
@@ -2581,13 +3161,16 @@ def cmd_lesson_log(args):
     accepted_s = stats.get("accepted", 0)
     rejected_s = stats.get("rejected", 0)
     expired_s = stats.get("expired", 0)
-    print(f"\n  {_dim(f'Total: {total_s} | Pending: {pending_s} | Accepted: {accepted_s} | Rejected: {rejected_s} | Expired: {expired_s}')}")
+    print(
+        f"\n  {_dim(f'Total: {total_s} | Pending: {pending_s} | Accepted: {accepted_s} | Rejected: {rejected_s} | Expired: {expired_s}')}"
+    )
     print()
     return 0
 
 
 def show_help():
-    print(f"""
+    print(
+        f"""
   {_bold(f'CarryMem v{__version__}')} - Your Portable AI Memory Layer
 
   {_dim('AI remembers you. Not the other way around.')}
@@ -2602,6 +3185,8 @@ def show_help():
     clean                Remove expired/low-quality
     export <path>        Export memories to file
     import <path>        Import memories from file
+    pack                 Pack identity into .carry file
+    unpack <file.carry>  Unpack .carry file to restore identity
     stats                Show memory statistics
     check                Check memory quality & conflicts
     whoami               Who your AI thinks you are
@@ -2648,6 +3233,10 @@ def show_help():
     carrymem clean --expired --dry-run
     carrymem list --type user_preference --limit 20
     carrymem export backup.json
+    carrymem pack
+    carrymem pack --output my_identity.carry
+    carrymem unpack carrymem_identity_20260526.carry
+    carrymem unpack backup.carry --replace
     carrymem setup-mcp --tool cursor
     carrymem doctor --fix
     carrymem add-rule "keep within 3 pages" --trigger "writing reports" --type format
@@ -2673,7 +3262,8 @@ def show_help():
     carrymem refine-rule --session ref_xxx --confirm
 
   {_dim('Documentation: https://github.com/lulin70/carrymem')}
-""")
+"""
+    )
 
 
 def main():
@@ -2703,6 +3293,8 @@ def main():
         "consolidate": cmd_consolidate,
         "export": cmd_export,
         "import": cmd_import,
+        "pack": cmd_pack,
+        "unpack": cmd_unpack,
         "stats": cmd_stats,
         "status": cmd_stats,
         "check": cmd_check,
