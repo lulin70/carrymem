@@ -81,9 +81,9 @@ def _extract_entities_en(text: str) -> List[Tuple[str, str]]:
 
     # Pattern: my/our + relationship noun
     for m in re.finditer(
-        r"(?:my|our)\s+(mom|mother|dad|father|sister|brother|wife|husband|son|daughter|friend|boss|colleague|teacher|student|project|team|company|app|product)",
-        text, re.IGNORECASE
-    ):
+    r"(?:my|our)\s+(mom|mother|dad|father|sister|brother|wife|husband|son|daughter|friend|boss|colleague|teacher|student|project|team|company|app|product)",
+    text,
+     re.IGNORECASE ):
         entity = m.group(0).lower()
         if entity not in seen:
             gender = _relationship_gender(m.group(1).lower())
@@ -130,7 +130,6 @@ def _relationship_gender(rel: str) -> str:
     """Map English relationship noun to gender hint."""
     male = {"dad", "father", "brother", "husband", "son"}
     female = {"mom", "mother", "sister", "wife", "daughter"}
-    neuter = {"project", "team", "company", "app", "product", "boss", "friend", "colleague", "teacher", "student"}
     if rel in male:
         return "male"
     if rel in female:
@@ -310,6 +309,7 @@ def _replace_pronoun(text: str, pronoun: str, replacement: str) -> str:
     if pronoun in EN_POSSESSIVE_PRONOUNS:
         # "her preference" → "user's preference" (not "user preference")
         pattern = r'\b' + re.escape(pronoun) + r'\b'
+
         def replacer(m):
             result = replacement + "'s"
             if m.group(0)[0].isupper():
@@ -319,6 +319,7 @@ def _replace_pronoun(text: str, pronoun: str, replacement: str) -> str:
 
     # Subject/object pronouns
     pattern = r'\b' + re.escape(pronoun) + r'\b'
+
     def replacer(m):
         result = replacement
         if m.group(0)[0].isupper():

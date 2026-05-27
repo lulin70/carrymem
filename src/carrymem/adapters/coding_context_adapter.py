@@ -19,13 +19,12 @@ Memory type mapping:
 
 import hashlib
 import json
-import os
 import re
 import sqlite3
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from .base import StorageAdapter
 from ..utils.helpers import escape_like
@@ -147,7 +146,8 @@ def _infer_language(file_path: str, content: str) -> Optional[str]:
     if "package.json" in path_lower:
         try:
             data = json.loads(content)
-            deps = list(data.get("dependencies", {}).keys()) + list(data.get("devDependencies", {}).keys())
+            deps = list(data.get("dependencies", {}).keys()) + \
+                        list(data.get("devDependencies", {}).keys())
             if any("react" in d for d in deps):
                 return "react"
             if any("vue" in d for d in deps):

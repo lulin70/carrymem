@@ -28,27 +28,23 @@ import sys
 import os
 import json
 import gzip
+import hashlib
 import logging
 import sqlite3
 import socket
+import getpass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Optional, Dict, Any
 
 _cli_logger = logging.getLogger(__name__)
 
 try:
     from carrymem import CarryMem
     from carrymem.__version__ import __version__
-    from carrymem.adapters.sqlite_adapter import SQLiteAdapter
     from carrymem.constants import (
         DEFAULT_CONFIG_DIR,
         DB_PATH,
-        CLAUDE_GLOBAL_CONFIG,
-        MCP_CONFIG_CURSOR,
-        TRAE_MCP_CONFIG,
-        TRAE_CN_DIR,
-        TRAE_CN_MCP_CONFIG,
         DANGEROUS_SYSTEM_DIRS,
     )
 except ImportError:
@@ -175,12 +171,15 @@ def _print_memory_card(m: Dict[str, Any], index: Optional[int] = None):
     created = m.get("created_at", "")
     tier = m.get("tier", 2)
     tier_label = _TIER_LABELS.get(tier, f"T{tier}")
-    access_count = m.get("access_count", 0)
 
     prefix = f"  {index}." if index else "  "
     print(f"{prefix} {icon} {_bold(_truncate(content, 65))}")
     print(
-        f"     {_dim(f'Type: {mtype} | Conf: {confidence:.0%} | Importance: {importance:.2f} | {tier_label}')}"
+        f"     {
+    _dim(
+        f'Type: {mtype} | Conf: {
+            confidence:.0%} | Importance: {
+                importance:.2f} | {tier_label}')}"
     )
     print(f"     {_dim(f'Key: {key} | {_format_time(created)}')}")
 
@@ -257,7 +256,10 @@ def cmd_add(args):
             print(f"  {icon} [{mtype}] {_bold(_truncate(content, 70))}")
             key_display = keys[i] if i < len(keys) else "N/A"
             print(
-                f"     {_dim(f'Confidence: {confidence:.0%} | Tier: {tier_label} | Key: {key_display}')}"
+                f"     {
+    _dim(
+        f'Confidence: {
+            confidence:.0%} | Tier: {tier_label} | Key: {key_display}')}"
             )
 
         print(f"\n  {_green(f'Remembered {len(entries)} item(s)')}")
@@ -297,7 +299,11 @@ def cmd_list(args):
     elif parsed.format == "plain":
         for m in memories:
             print(
-                f"{m.get('storage_key', '')}\t{m.get('type', '')}\t{m.get('content', '')}\t{m.get('confidence', 0):.2f}"
+                f"{m.get('storage_key',
+    '')}\t{m.get('type',
+    '')}\t{m.get('content',
+    '')}\t{m.get('confidence',
+     0):.2f}"
             )
     else:
         print(f"\n  {_bold(f'Memories')} ({len(memories)} shown, namespace={parsed.namespace})\n")
@@ -347,7 +353,11 @@ def cmd_search(args):
     elif parsed.format == "plain":
         for m in memories:
             print(
-                f"{m.get('storage_key', '')}\t{m.get('type', '')}\t{m.get('content', '')}\t{m.get('confidence', 0):.2f}"
+                f"{m.get('storage_key',
+    '')}\t{m.get('type',
+    '')}\t{m.get('content',
+    '')}\t{m.get('confidence',
+     0):.2f}"
             )
     else:
         print(f"\n  {_bold('Search:')} {_cyan(parsed.query)} ({len(memories)} results)\n")
@@ -736,7 +746,8 @@ def cmd_import(args):
     total = result.get("total_processed", 0)
 
     print(
-        f"  {_green('Import complete:')} {imported} imported, {skipped} skipped, {errors} errors ({total} total)"
+        f"  {
+    _green('Import complete:')} {imported} imported, {skipped} skipped, {errors} errors ({total} total)"
     )
 
     if errors > 0:
@@ -762,6 +773,10 @@ def cmd_pack(args):
     )
     parser.add_argument("--no-config", action="store_true", help="Exclude config from pack")
     parser.add_argument("--key", help="Encryption key to include encrypted entries")
+    parser.add_argument(
+        "--encrypt", action="store_true",
+        help="Encrypt the .carry file with a password (prompted)"
+    )
     parser.add_argument("--db", help="Database path")
     parser.add_argument("--namespace", "-n", default="default", help="Namespace to pack")
 
@@ -769,6 +784,22 @@ def cmd_pack(args):
 
     include_rules = parsed.include_rules and not parsed.no_rules
     include_config = parsed.include_config and not parsed.no_config
+
+    # Prompt for encryption password if --encrypt is specified
+    encrypt_password = None
+    if parsed.encrypt:
+        try:
+            encrypt_password = getpass.getpass("  Enter encryption password: ")
+            confirm_password = getpass.getpass("  Confirm encryption password: ")
+            if encrypt_password != confirm_password:
+                print(f"  {_red('Error:')} Passwords do not match")
+                return 1
+            if len(encrypt_password) < 4:
+                print(f"  {_red('Error:')} Password must be at least 4 characters")
+                return 1
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return 1
 
     print(f"\n  {_bold('Packing CarryMem identity...')}\n")
 
@@ -837,7 +868,8 @@ def cmd_pack(args):
                 print(f"  {_green('✓')} {encrypted_count} encrypted entries included")
             else:
                 print(
-                    f"  {_yellow('✗')} Encrypted entries skipped ({encrypted_count}) (provide --key to include)"
+                    f"  {
+    _yellow('✗')} Encrypted entries skipped ({encrypted_count}) (provide --key to include)"
                 )
 
         # Build pack data
@@ -845,7 +877,7 @@ def cmd_pack(args):
         packed_at = datetime.now(timezone.utc).isoformat()
 
         pack_data = {
-            "version": "1.0",
+            "version": "1.1",
             "carrymem_version": __version__,
             "packed_at": packed_at,
             "source_machine": source_machine,
@@ -867,12 +899,44 @@ def cmd_pack(args):
         default_filename = f"carrymem_identity_{date_str}.carry"
         output_path = parsed.output or default_filename
 
-        # Write gzip-compressed JSON
+        # Serialize to JSON bytes
+        json_bytes = json.dumps(pack_data, ensure_ascii=False).encode("utf-8")
+
+        # Compute SHA-256 checksum of the JSON payload (before compression/encryption)
+        payload_checksum = hashlib.sha256(json_bytes).hexdigest()
+
+        # Build the outer container with checksum
+        container = {
+            "version": "1.1",
+            "checksum": payload_checksum,
+            "encrypted": encrypt_password is not None,
+            "payload": None,  # will be filled below
+        }
+
+        if encrypt_password:
+            # Encrypt the JSON payload
+            try:
+                from carrymem.security.encryption import MemoryEncryption
+                enc = MemoryEncryption(key=encrypt_password)
+                container["payload"] = enc.encrypt(json_bytes.decode("utf-8"))
+                container["encryption_backend"] = enc.backend
+                print(f"  {_green('✓')} Encrypted ({enc.backend})")
+            except Exception as e:
+                print(f"  {_red('Encryption failed:')} {e}")
+                cm.close()
+                return 1
+        else:
+            # Store as base64 of gzip-compressed JSON
+            import base64
+            compressed = gzip.compress(json_bytes)
+            container["payload"] = base64.b64encode(compressed).decode("ascii")
+
+        # Write the container as gzip-compressed JSON
         try:
             safe_path = _validate_cli_path(output_path)
-            json_bytes = json.dumps(pack_data, ensure_ascii=False).encode("utf-8")
+            container_bytes = json.dumps(container, ensure_ascii=False).encode("utf-8")
             with gzip.open(safe_path, "wb") as f:
-                f.write(json_bytes)
+                f.write(container_bytes)
         except (OSError, ValueError) as e:
             print(f"\n  {_red('Write error:')} {e}")
             cm.close()
@@ -924,7 +988,7 @@ def cmd_unpack(args):
         safe_path = _validate_cli_path(parsed.file)
         with gzip.open(safe_path, "rb") as f:
             json_bytes = f.read()
-        pack_data = json.loads(json_bytes.decode("utf-8"))
+        raw_data = json.loads(json_bytes.decode("utf-8"))
     except FileNotFoundError:
         print(f"  {_red('File not found:')} {parsed.file}")
         return 1
@@ -932,7 +996,7 @@ def cmd_unpack(args):
         # Try reading as plain JSON (for backwards compatibility)
         try:
             with open(parsed.file, "r", encoding="utf-8") as f:
-                pack_data = json.load(f)
+                raw_data = json.load(f)
         except (json.JSONDecodeError, ValueError) as e:
             print(f"  {_red('Invalid .carry file:')} {e}")
             return 1
@@ -943,9 +1007,63 @@ def cmd_unpack(args):
         print(f"  {_red('Read error:')} {e}")
         return 1
 
+    # Detect format: v1.1 container vs v1.0 legacy
+    is_container_format = "payload" in raw_data and "checksum" in raw_data
+
+    if is_container_format:
+        # v1.1 format: container with checksum and optional encryption
+        container = raw_data
+        is_encrypted = container.get("encrypted", False)
+        expected_checksum = container.get("checksum", "")
+        payload_str = container.get("payload", "")
+
+        if is_encrypted:
+            # Prompt for decryption password
+            try:
+                password = getpass.getpass("  Enter decryption password: ")
+            except (EOFError, KeyboardInterrupt):
+                print()
+                return 1
+
+            try:
+                from carrymem.security.encryption import MemoryEncryption
+                dec = MemoryEncryption(key=password)
+                payload_json_str = dec.decrypt(payload_str)
+            except Exception as e:
+                print(f"  {_red('Decryption failed:')} {e}")
+                print(f"  {_dim('Check your password and try again.')}")
+                return 1
+        else:
+            # Decode base64 → decompress gzip → JSON
+            import base64
+            try:
+                compressed = base64.b64decode(payload_str)
+                payload_json_str = gzip.decompress(compressed).decode("utf-8")
+            except Exception as e:
+                print(f"  {_red('Payload decompression failed:')} {e}")
+                return 1
+
+        # Verify checksum
+        payload_bytes = payload_json_str.encode("utf-8")
+        actual_checksum = hashlib.sha256(payload_bytes).hexdigest()
+        if actual_checksum != expected_checksum:
+            print(f"  {_red('Checksum mismatch!')} File may be corrupted.")
+            print(f"  {_dim('Expected:')} {expected_checksum[:16]}...")
+            print(f"  {_dim('Actual:   ')} {actual_checksum[:16]}...")
+            return 1
+        print(f"  {_green('✓')} Checksum verified")
+
+        pack_data = json.loads(payload_json_str)
+    else:
+        # v1.0 legacy format: no checksum, no encryption
+        pack_data = raw_data
+        print(f"  {_yellow('⚠')} Legacy .carry format (no checksum verification available)")
+        print(f"  {_dim('Re-pack with the latest version for integrity protection.')}")
+
     # Validate pack format
-    if pack_data.get("version") != "1.0":
-        print(f"  {_red('Unsupported .carry format version:')} {pack_data.get('version')}")
+    version = pack_data.get("version", "1.0")
+    if version not in ("1.0", "1.1"):
+        print(f"  {_red('Unsupported .carry format version:')} {version}")
         return 1
 
     # Show source info
@@ -979,9 +1097,9 @@ def cmd_unpack(args):
                 data={
                     "memories": memories_data,
                     "source": {
-                        "namespace": pack_data.get("data", {})
-                        .get("config", {})
-                        .get("namespace", "unknown")
+                        "namespace": (pack_data.get("data", {})
+                                      .get("config") or {})
+                                      .get("namespace", "unknown")
                     },
                 },
                 namespace=parsed.namespace,
@@ -1056,7 +1174,9 @@ def cmd_unpack(args):
             embedding_model = cm._adapter._embedding_model_name
         if embedding_model:
             print(
-                f"  {_dim(f'ℹ Embedding model: {embedding_model} (vectors will be rebuilt on next recall)')}"
+                f"  {
+    _dim(
+        f'ℹ Embedding model: {embedding_model} (vectors will be rebuilt on next recall)')}"
             )
 
         print(f"\n  → Run {_cyan('carrymem setup-mcp --all --global')} to reconnect your AI tools")
@@ -1098,7 +1218,7 @@ def cmd_stats(args):
     print(f"\n  Total Memories: {_bold(str(total))}")
 
     if by_type:
-        print(f"\n  By Type:")
+        print("\n  By Type:")
         max_type_len = max(len(t) for t in by_type) if by_type else 10
         for mtype, count in sorted(by_type.items(), key=lambda x: -x[1]):
             icon = _TYPE_ICONS.get(mtype, "  ")
@@ -1109,7 +1229,7 @@ def cmd_stats(args):
     profile_stats = profile.get("stats", {})
     by_tier = profile_stats.get("by_tier", {})
     if by_tier:
-        print(f"\n  By Tier:")
+        print("\n  By Tier:")
         for tier_num in sorted(by_tier.keys()):
             count = by_tier[tier_num]
             label = _TIER_LABELS.get(tier_num, f"T{tier_num}")
@@ -1156,8 +1276,8 @@ def cmd_whoami(args):
         dont_know = "I don't know you yet."
         print(f"\n  {_dim(dont_know)}")
         print(f"  {_dim('Start by telling me about yourself:')}")
-        print(f'    carrymem add "I prefer dark mode"')
-        print(f'    carrymem add "I use Python for data analysis"')
+        print('    carrymem add "I prefer dark mode"')
+        print('    carrymem add "I use Python for data analysis"')
         print()
         cm.close()
         return 0
@@ -1245,7 +1365,7 @@ def cmd_check(args):
     print(f"  {'=' * 45}\n")
 
     if run_all or parsed.conflicts:
-        print(f"  Conflicts:")
+        print("  Conflicts:")
         try:
             conflicts = cm.check_conflicts()
             if not conflicts:
@@ -1265,7 +1385,7 @@ def cmd_check(args):
         print()
 
     if run_all or parsed.quality:
-        print(f"  Low Quality Memories:")
+        print("  Low Quality Memories:")
         try:
             low_quality = cm.check_quality(min_score=0.3)
             if not low_quality:
@@ -1284,7 +1404,7 @@ def cmd_check(args):
         print()
 
     if run_all or parsed.expired:
-        print(f"  Expired Memories:")
+        print("  Expired Memories:")
         try:
             expired = cm.list_expired()
             if not expired:
@@ -1434,25 +1554,25 @@ def cmd_doctor(args):
 
     optional_deps = []
     try:
-        import pycld2
+        import pycld2  # noqa: F401
 
         optional_deps.append("pycld2")
     except ImportError:
         pass
     try:
-        from cryptography.fernet import Fernet
+        from cryptography.fernet import Fernet  # noqa: F401
 
         optional_deps.append("cryptography")
     except ImportError:
         pass
     try:
-        import langdetect
+        import langdetect  # noqa: F401
 
         optional_deps.append("langdetect")
     except ImportError:
         pass
     try:
-        import textual
+        import textual  # noqa: F401
 
         optional_deps.append("textual")
     except ImportError:
@@ -1979,7 +2099,7 @@ def cmd_tui(args):
     if not HAS_TEXTUAL:
         print(f"  {_yellow('Textual is not installed.')}")
         print(f"  Install with: {_cyan('pip install textual')}")
-        print(f"  Then run: carrymem tui")
+        print("  Then run: carrymem tui")
         return 1
 
     parser = _make_parser("tui")
@@ -2058,8 +2178,8 @@ def cmd_rules_hub(args):
 
     print(f"  {_red('Unknown rules sub-command:')} {sub}")
     print(
-        f"  {_dim('Available: list, add, delete, match, edit, pause, resume, stats, check, export, import, suggest')}"
-    )
+    f"  {
+        _dim('Available: list, add, delete, match, edit, pause, resume, stats, check, export, import, suggest')}" )
     return 1
 
 
@@ -2197,11 +2317,11 @@ def cmd_init(args):
 
     print(f"\n  {_green(_bold('CarryMem is ready!'))}")
     print(f"\n  {_bold('Quick Start:')}")
-    print(f'    carrymem add "I prefer dark mode"')
-    print(f"    carrymem list")
-    print(f'    carrymem search "theme"')
-    print(f"    carrymem setup-mcp --tool cursor")
-    print(f"    carrymem tui")
+    print('    carrymem add "I prefer dark mode"')
+    print("    carrymem list")
+    print('    carrymem search "theme"')
+    print("    carrymem setup-mcp --tool cursor")
+    print("    carrymem tui")
     print()
     return 0
 
@@ -2274,11 +2394,11 @@ def cmd_add_rule(args):
                 return 1
 
             print(f"  {_bold('Rule Type:')}")
-            print(f"    1) avoid   — Avoid doing something")
-            print(f"    2) always  — Always do this")
-            print(f"    3) prefer  — Prefer this approach")
-            print(f"    4) forbid  — Never do this")
-            print(f"    5) format  — Format output this way")
+            print("    1) avoid   — Avoid doing something")
+            print("    2) always  — Always do this")
+            print("    3) prefer  — Prefer this approach")
+            print("    4) forbid  — Never do this")
+            print("    5) format  — Format output this way")
             type_input = input(f"  {_bold('Choose')} [1-5, default=1]: ").strip()
             type_map = {"1": "avoid", "2": "always", "3": "prefer", "4": "forbid", "5": "format"}
             rule_type = type_map.get(type_input, "avoid")
@@ -2296,7 +2416,8 @@ def cmd_add_rule(args):
     else:
         if not parsed.action or not parsed.trigger:
             print(
-                f"\n  {_red('Missing required arguments. Use:')} carrymem add-rule <action> --trigger <scene>"
+                f"\n  {
+    _red('Missing required arguments. Use:')} carrymem add-rule <action> --trigger <scene>"
             )
             print(f"  {_dim('Or use:')} carrymem add-rule --interactive")
             print(f"  {_dim('Or use:')} carrymem add-rule --template <name>")
@@ -2349,7 +2470,7 @@ def cmd_list_rules(args):
 
     if not rules:
         print(f"\n  {_dim('No rules found.')}")
-        print(f"  Create one with: carrymem add-rule <action> --trigger <scene>")
+        print("  Create one with: carrymem add-rule <action> --trigger <scene>")
         print()
         return 0
 
@@ -2364,14 +2485,28 @@ def cmd_list_rules(args):
 
     if parsed.format == "table":
         print(
-            f"\n  {'ID':<14} {'Type':<8} {'Scope':<10} {'Override':<8} {'Trigger':<20} {'Action':<30}"
+            f"\n  {
+    'ID':<14} {
+        'Type':<8} {
+            'Scope':<10} {
+                'Override':<8} {
+                    'Trigger':<20} {
+                        'Action':<30}"
         )
         print(f"  {'─'*14} {'─'*8} {'─'*10} {'─'*8} {'─'*20} {'─'*30}")
         for rule in rules:
             expired = " [EXPIRED]" if rule.is_expired() else ""
             override_str = "HARD" if rule.override else "soft"
             print(
-                f"  {rule.id:<14} {rule.rule_type:<8} {rule.scope:<10} {override_str:<8} {rule.trigger[:20]:<20} {rule.action[:30]:<30}{expired}"
+                f"  {
+    rule.id:<14} {
+        rule.rule_type:<8} {
+            rule.scope:<10} {
+                override_str:<8} {
+                    rule.trigger[
+                        :20]:<20} {
+                            rule.action[
+                                :30]:<30}{expired}"
             )
         print(f"\n  Total: {len(rules)} rules")
         return 0
@@ -2391,7 +2526,10 @@ def cmd_list_rules(args):
         print(f"     Trigger: {rule.trigger}")
         print(f"     Action:  {rule.action}")
         print(
-            f"     Type: {rule.rule_type} | Used: {rule.trigger_count}x | Confidence: {rule.confidence:.0%}"
+            f"     Type: {
+    rule.rule_type} | Used: {
+        rule.trigger_count}x | Confidence: {
+            rule.confidence:.0%}"
         )
         if rule.expires_at:
             print(f"     Expires: {rule.expires_at}")
@@ -2605,8 +2743,9 @@ def cmd_check_rules(args):
     if health["unused_rules"] > 0:
         unused_count = health["unused_rules"]
         print(
-            f"\n  {_dim(f'💡 {unused_count} rules have never been triggered. Consider reviewing them.')}"
-        )
+    f"\n  {
+        _dim(
+            f'💡 {unused_count} rules have never been triggered. Consider reviewing them.')}" )
 
     print()
     return 0 if health["is_healthy"] else 1
@@ -2870,7 +3009,8 @@ def cmd_edit_rule(args):
 
     if not updates:
         print(
-            f"\n  {_yellow('No changes specified. Use --trigger, --action, --type, --soft, or --hard')}"
+            f"\n  {
+    _yellow('No changes specified. Use --trigger, --action, --type, --soft, or --hard')}"
         )
         return 1
 
@@ -2890,7 +3030,7 @@ def cmd_edit_rule(args):
 
 def cmd_list_templates(args):
     parser = _make_parser("list-templates")
-    parsed = parser.parse_args(args)
+    parser.parse_args(args)
 
     from carrymem.rules.templates import list_templates
 
@@ -2929,7 +3069,6 @@ def cmd_suggest_rules(args):
     parsed = parser.parse_args(args)
 
     from carrymem.carrymem import CarryMem
-    from carrymem.rules import RuleEngine
 
     db_path = parsed.db or str(_DEFAULT_DB)
     cm = CarryMem(db_path=db_path)
@@ -3034,7 +3173,6 @@ def cmd_promote_rules(args):
     parsed = parser.parse_args(args)
 
     from carrymem.carrymem import CarryMem
-    from carrymem.rules import RuleEngine
 
     db_path = parsed.db or str(_DEFAULT_DB)
     cm = CarryMem(db_path=db_path)
@@ -3194,7 +3332,9 @@ def cmd_promotion_log(args):
     rejected_s = stats.get("rejected", 0)
     expired_s = stats.get("expired", 0)
     print(
-        f"\n  {_dim(f'Total: {total_s} | Pending: {pending_s} | Accepted: {accepted_s} | Rejected: {rejected_s} | Expired: {expired_s}')}"
+        f"\n  {
+    _dim(
+        f'Total: {total_s} | Pending: {pending_s} | Accepted: {accepted_s} | Rejected: {rejected_s} | Expired: {expired_s}')}"
     )
     print()
     return 0
@@ -3268,7 +3408,11 @@ def cmd_refine_rule(args):
             print(f"\n  {_dim(f'Answer: {answer_hint}')}")
         else:
             print(
-                f"\n  {_yellow('Ready to confirm.')} {_dim(f'carrymem refine-rule --session {parsed.session} --confirm')}"
+                f"\n  {
+    _yellow('Ready to confirm.')} {
+        _dim(
+            f'carrymem refine-rule --session {
+                parsed.session} --confirm')}"
             )
         print()
         return 0
@@ -3352,7 +3496,6 @@ def cmd_learn_experience(args):
     parsed = parser.parse_args(args)
 
     from carrymem.carrymem import CarryMem
-    from carrymem.rules import RuleEngine
 
     db_path = parsed.db or str(_DEFAULT_DB)
     cm = CarryMem(db_path=db_path)
@@ -3503,7 +3646,9 @@ def cmd_lesson_log(args):
     rejected_s = stats.get("rejected", 0)
     expired_s = stats.get("expired", 0)
     print(
-        f"\n  {_dim(f'Total: {total_s} | Pending: {pending_s} | Accepted: {accepted_s} | Rejected: {rejected_s} | Expired: {expired_s}')}"
+        f"\n  {
+    _dim(
+        f'Total: {total_s} | Pending: {pending_s} | Accepted: {accepted_s} | Rejected: {rejected_s} | Expired: {expired_s}')}"
     )
     print()
     return 0

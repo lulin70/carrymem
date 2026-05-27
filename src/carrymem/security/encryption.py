@@ -17,7 +17,6 @@ Key storage: ~/.carrymem/.key (file permission 600)
 import base64
 import hashlib
 import hmac
-import json
 import os
 import struct
 import warnings
@@ -47,7 +46,6 @@ class MemoryEncryption:
         self._fernet = None
 
         try:
-            from cryptography.fernet import Fernet
             self._fernet_available = True
         except ImportError:
             self._fernet_available = False

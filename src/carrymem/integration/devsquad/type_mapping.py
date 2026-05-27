@@ -34,11 +34,11 @@ def carrymem_rule_to_devsquad_dict(rule) -> dict:
 
 def devsquad_rule_to_carrymem_params(rule: str, metadata: dict = None) -> dict:
     params = {
-        "trigger": metadata.get("trigger", "") if metadata else "",
-        "action": rule,
-        "rule_type": devsquad_to_carrymem_type(metadata.get("rule_type", "avoid")) if metadata else "avoid",
-        "override": metadata.get("override", True) if metadata else True,
-    }
+    "trigger": metadata.get(
+        "trigger", "") if metadata else "", "action": rule, "rule_type": devsquad_to_carrymem_type(
+            metadata.get(
+                "rule_type", "avoid")) if metadata else "avoid", "override": metadata.get(
+                    "override", True) if metadata else True, }
     if metadata and metadata.get("source"):
         params["derived_from"] = metadata["source"]
     return params

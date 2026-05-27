@@ -45,8 +45,10 @@ class LLMClient:
     def __init__(self, config: Dict[str, Any] = None):
         self._enabled = self._resolve_enabled(config)
         self._api_key = self._resolve("llm.api_key", "CARRYMEM_LLM_API_KEY", config)
-        self._base_url = self._resolve("llm.base_url", "CARRYMEM_LLM_BASE_URL", config, default="https://api.openai.com/v1")
-        self._model = self._resolve("llm.model", "CARRYMEM_LLM_MODEL", config, default="gpt-4o-mini")
+        self._base_url = self._resolve(
+            "llm.base_url", "CARRYMEM_LLM_BASE_URL", config, default="https://api.openai.com/v1")
+        self._model = self._resolve("llm.model", "CARRYMEM_LLM_MODEL",
+                                    config, default="gpt-4o-mini")
         try:
             self._temperature = float(
                 self._resolve("llm.temperature", "CARRYMEM_LLM_TEMPERATURE", config, default="0.3")
@@ -115,7 +117,9 @@ class LLMClient:
     def __repr__(self):
         key = self._api_key
         masked = key[:4] + "..." + key[-4:] if key and len(key) > 8 else "***"
-        return f"LLMClient(backend={_BACKEND}, model={self._model}, api_key={masked}, available={self.is_available()})"
+        return f"LLMClient(backend={_BACKEND}, model={
+    self._model}, api_key={masked}, available={
+        self.is_available()})"
 
     def chat(self, prompt: str, system: str = None) -> Optional[str]:
         if not self.is_available():

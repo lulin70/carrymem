@@ -91,7 +91,8 @@ class RuleLimiter:
 
         if total_count >= cls.SOFT_LIMIT_TOTAL_RULES:
             warnings.warn(
-                f"Warning: You have {total_count} rules (soft limit: {cls.SOFT_LIMIT_TOTAL_RULES}). "
+                f"Warning: You have {total_count} rules (soft limit: {
+    cls.SOFT_LIMIT_TOTAL_RULES}). "
                 f"Consider reviewing and cleaning up old rules.",
                 UserWarning,
                 stacklevel=2,

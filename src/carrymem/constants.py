@@ -28,7 +28,7 @@ DEFAULT_CONFIG_DIR = HOME_DIR / ".carrymem"
 
 def get_config_dir() -> Path:
     """Get CarryMem configuration directory.
-    
+
     Environment variable: CARRYMEM_CONFIG_DIR
     Default: ~/.carrymem
     """
@@ -40,7 +40,7 @@ def get_config_dir() -> Path:
 
 def get_db_path() -> Path:
     """Get database file path.
-    
+
     Environment variable: CARRYMEM_DB_PATH
     Default: ~/.carrymem/memories.db
     """
@@ -52,7 +52,7 @@ def get_db_path() -> Path:
 
 def get_config_file() -> Path:
     """Get configuration file path.
-    
+
     Environment variable: CARRYMEM_CONFIG_FILE
     Default: ~/.carrymem/config.yaml
     """
@@ -64,7 +64,7 @@ def get_config_file() -> Path:
 
 def get_log_dir() -> Path:
     """Get log directory path.
-    
+
     Environment variable: CARRYMEM_LOG_DIR
     Default: ~/.carrymem/logs
     """
@@ -76,7 +76,7 @@ def get_log_dir() -> Path:
 
 def get_cache_dir() -> Path:
     """Get cache directory path.
-    
+
     Environment variable: CARRYMEM_CACHE_DIR
     Default: ~/.carrymem/cache
     """
@@ -88,7 +88,7 @@ def get_cache_dir() -> Path:
 
 def get_backup_dir() -> Path:
     """Get backup directory path.
-    
+
     Environment variable: CARRYMEM_BACKUP_DIR
     Default: ~/.carrymem/backups
     """
@@ -104,15 +104,15 @@ def get_backup_dir() -> Path:
 
 def get_mcp_config_path(tool: str) -> Optional[Path]:
     """Get MCP configuration file path for a specific tool.
-    
+
     Args:
         tool: Tool name ('cursor', 'claude', 'windsurf', 'cline', etc.)
-    
+
     Returns:
         Path to MCP config file, or None if tool not recognized
     """
     tool = tool.lower()
-    
+
     mcp_paths = {
         'cursor': HOME_DIR / ".cursor" / "mcp.json",
         'claude': HOME_DIR / ".claude" / "mcp.json",
@@ -122,13 +122,13 @@ def get_mcp_config_path(tool: str) -> Optional[Path]:
         'continue': HOME_DIR / ".continue" / "config.json",
         'aider': HOME_DIR / ".aider" / "mcp.json",
     }
-    
+
     # Check for environment variable override
     env_var = f"CARRYMEM_MCP_{tool.upper()}_CONFIG"
     custom_path = os.getenv(env_var)
     if custom_path:
         return Path(custom_path).expanduser().resolve()
-    
+
     return mcp_paths.get(tool)
 
 
@@ -179,25 +179,25 @@ DANGEROUS_SYSTEM_DIRS = [
 
 def get_obsidian_vault_path() -> Optional[Path]:
     """Get Obsidian vault path.
-    
+
     Environment variable: CARRYMEM_OBSIDIAN_VAULT
     Default: ~/Documents/Obsidian (if exists)
     """
     vault_path = os.getenv("CARRYMEM_OBSIDIAN_VAULT")
     if vault_path:
         return Path(vault_path).expanduser().resolve()
-    
+
     # Try common default locations
     common_locations = [
         HOME_DIR / "Documents" / "Obsidian",
         HOME_DIR / "Obsidian",
         HOME_DIR / "Documents" / "ObsidianVault",
     ]
-    
+
     for location in common_locations:
         if location.exists() and location.is_dir():
             return location
-    
+
     return None
 
 
@@ -211,21 +211,21 @@ OBSIDIAN_DEFAULT_VAULT = get_obsidian_vault_path()
 
 def get_temp_dir() -> Path:
     """Get temporary directory for CarryMem.
-    
+
     Environment variable: CARRYMEM_TEMP_DIR
     Default: System temp dir / carrymem
     """
     temp_dir = os.getenv("CARRYMEM_TEMP_DIR")
     if temp_dir:
         return Path(temp_dir).expanduser().resolve()
-    
+
     import tempfile
     return Path(tempfile.gettempdir()) / "carrymem"
 
 
 def get_lock_file() -> Path:
     """Get lock file path for preventing concurrent access.
-    
+
     Environment variable: CARRYMEM_LOCK_FILE
     Default: ~/.carrymem/carrymem.lock
     """
@@ -241,13 +241,13 @@ def get_lock_file() -> Path:
 
 def ensure_dir_exists(path: Path) -> Path:
     """Ensure directory exists, create if necessary.
-    
+
     Args:
         path: Directory path
-    
+
     Returns:
         The path (for chaining)
-    
+
     Raises:
         PermissionError: If cannot create directory
     """
@@ -264,19 +264,19 @@ def ensure_dir_exists(path: Path) -> Path:
 
 def validate_path_safety(path: Path, allowed_base: Optional[Path] = None) -> bool:
     """Validate that a path is safe to use.
-    
+
     Args:
         path: Path to validate
         allowed_base: If provided, path must be within this directory
-    
+
     Returns:
         True if path is safe
-    
+
     Raises:
         ValueError: If path is unsafe
     """
     path = Path(path).resolve()
-    
+
     # Check if path escapes allowed base
     if allowed_base:
         allowed_base = Path(allowed_base).resolve()
@@ -286,7 +286,7 @@ def validate_path_safety(path: Path, allowed_base: Optional[Path] = None) -> boo
             raise ValueError(
                 f"Path {path} escapes allowed directory {allowed_base}"
             )
-    
+
     # Check for dangerous system directories
     for dangerous in DANGEROUS_SYSTEM_DIRS:
         try:
@@ -297,7 +297,7 @@ def validate_path_safety(path: Path, allowed_base: Optional[Path] = None) -> boo
         except ValueError:
             # Path is not relative to dangerous dir, which is good
             continue
-    
+
     return True
 
 
@@ -307,7 +307,7 @@ def validate_path_safety(path: Path, allowed_base: Optional[Path] = None) -> boo
 
 def initialize_directories() -> None:
     """Initialize all required directories.
-    
+
     Creates config, log, cache, and backup directories if they don't exist.
     """
     directories = [
@@ -316,7 +316,7 @@ def initialize_directories() -> None:
         get_cache_dir(),
         get_backup_dir(),
     ]
-    
+
     for directory in directories:
         ensure_dir_exists(directory)
 
@@ -339,7 +339,7 @@ __all__ = [
     # Base directories
     'HOME_DIR',
     'DEFAULT_CONFIG_DIR',
-    
+
     # Getter functions
     'get_config_dir',
     'get_db_path',
@@ -351,7 +351,7 @@ __all__ = [
     'get_lock_file',
     'get_mcp_config_path',
     'get_obsidian_vault_path',
-    
+
     # Commonly used paths
     'CONFIG_DIR',
     'DB_PATH',
@@ -361,7 +361,7 @@ __all__ = [
     'BACKUP_DIR',
     'TEMP_DIR',
     'LOCK_FILE',
-    
+
     # MCP paths
     'MCP_CONFIG_CURSOR',
     'MCP_CONFIG_CLAUDE',
@@ -377,7 +377,7 @@ __all__ = [
 
     # Knowledge base paths
     'OBSIDIAN_DEFAULT_VAULT',
-    
+
     # Utilities
     'ensure_dir_exists',
     'validate_path_safety',

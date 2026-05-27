@@ -89,7 +89,8 @@ class RuleMatcher:
         """
         self.storage = storage
 
-    def match(self, scene_description: str, limit: int = 10, scopes: List[str] = None, context_conditions: List[str] = None) -> List[MatchResult]:
+    def match(self, scene_description: str, limit: int = 10,
+              scopes: List[str] = None, context_conditions: List[str] = None) -> List[MatchResult]:
         """
         Find all rules that match a given scene.
 
@@ -333,7 +334,7 @@ class RuleMatcher:
                     cls._jieba_available = False
 
             if cls._jieba_available:
-                import jieba
+                import jieba  # noqa: F811
                 tokens = list(jieba.cut(text))
                 return [t.strip() for t in tokens if t.strip() and len(t.strip()) > 0]
             else:

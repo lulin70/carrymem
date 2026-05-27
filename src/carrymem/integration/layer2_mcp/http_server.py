@@ -76,7 +76,7 @@ class MCPHTTPServer:
 
     def _get_cors_origin(self, request_origin: str) -> str:
         """Match CORS origin with strict validation.
-        
+
         Supports patterns like:
         - http://localhost:* (matches http://localhost:3000, etc.)
         - http://127.0.0.1:* (matches http://127.0.0.1:8080, etc.)
@@ -84,22 +84,22 @@ class MCPHTTPServer:
         """
         if not request_origin:
             return ""
-        
+
         # Validate origin format (must be a valid URL)
         if not re.match(r'^https?://[a-zA-Z0-9\.\-]+(:\d+)?$', request_origin):
             logger.debug(f"Invalid origin format: {request_origin}")
             return ""
-        
+
         for pattern in self._allowed_origins:
             if pattern.endswith("*"):
                 # Wildcard pattern: http://localhost:*
                 prefix = pattern[:-1]  # Remove the *
-                
+
                 # Ensure prefix ends with : for port wildcard
                 if not prefix.endswith(":"):
                     logger.warning(f"Invalid wildcard pattern (must end with :*): {pattern}")
                     continue
-                
+
                 # Check if origin starts with the prefix
                 if request_origin.startswith(prefix):
                     # Extract and validate the port part
@@ -114,7 +114,7 @@ class MCPHTTPServer:
             elif request_origin == pattern:
                 # Exact match
                 return request_origin
-        
+
         return ""
 
     async def _handle_request(self, reader, writer):
@@ -182,13 +182,11 @@ class MCPHTTPServer:
                 await self._send_response(writer, 500, {"error": error_msg}, "")
             except Exception as e2:
                 logger.debug(f"Failed to send error response: {e2}")
-                pass
         finally:
             try:
                 writer.close()
             except Exception as e:
                 logger.debug(f"Failed to close connection: {e}")
-                pass
 
     async def _handle_sse(self, writer, request_origin: str = ""):
         if len(self._clients) >= _MAX_SSE_CLIENTS:
@@ -211,7 +209,7 @@ class MCPHTTPServer:
         writer.write(headers.encode())
         await writer.drain()
 
-        endpoint_data = json.dumps({"endpoint": f"/message", "client_id": client_id})
+        endpoint_data = json.dumps({"endpoint": "/message", "client_id": client_id})
         writer.write(f"event: endpoint\ndata: {endpoint_data}\n\n".encode())
         await writer.drain()
 
@@ -254,7 +252,8 @@ class MCPHTTPServer:
                 await client.send(json.dumps(notification))
 
     async def _send_response(self, writer, status_code: int, body: Dict, request_origin: str = ""):
-        status_messages = {200: "OK", 400: "Bad Request", 401: "Unauthorized", 404: "Not Found", 413: "Payload Too Large", 500: "Internal Server Error", 503: "Service Unavailable"}
+        status_messages = {200: "OK", 400: "Bad Request", 401: "Unauthorized", 404: "Not Found",
+            413: "Payload Too Large", 500: "Internal Server Error", 503: "Service Unavailable"}
         status_msg = status_messages.get(status_code, "Unknown")
         body_bytes = json.dumps(body).encode("utf-8")
         cors_origin = self._get_cors_origin(request_origin)

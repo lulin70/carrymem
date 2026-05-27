@@ -84,7 +84,6 @@ from .merge_protocol import MergeStrategy, MergeDecision, MergeConflict, MergeRe
 
 class ImportModeError(ValueError):
     """Raised when an invalid import mode is specified."""
-    pass
 
 
 class RuleEngine:
@@ -269,7 +268,8 @@ class RuleEngine:
         """
         return self.storage.list_all(status=status, rule_type=rule_type, scope=scope, limit=limit)
 
-    def match(self, scene_description: str, limit: int = 10, increment_count: bool = True, scopes: Optional[list] = None) -> list:
+    def match(self, scene_description: str, limit: int = 10,
+              increment_count: bool = True, scopes: Optional[list] = None) -> list:
         """
         Find rules matching a given scene.
 
@@ -1002,9 +1002,11 @@ class RuleEngine:
             source_rule_id=source_rule_id, source_memory_id=source_memory_id,
         )
 
-    def answer_refinement(self, session_id: str, answer: str, selected_option: Optional[str] = None) -> dict:
+    def answer_refinement(self, session_id: str, answer: str,
+                          selected_option: Optional[str] = None) -> dict:
         """Answer a refinement question and advance the session."""
-        return self.refinement_session.answer_question(session_id, answer, selected_option=selected_option)
+        return self.refinement_session.answer_question(
+            session_id, answer, selected_option=selected_option)
 
     def confirm_refinement(self, session_id: str) -> dict:
         """Confirm a refinement session and create the refined rule."""

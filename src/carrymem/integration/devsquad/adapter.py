@@ -9,7 +9,6 @@ from .type_mapping import (
     carrymem_rule_to_devsquad_dict,
     carrymem_to_devsquad_type,
     devsquad_rule_to_carrymem_params,
-    devsquad_to_carrymem_type,
 )
 
 

@@ -32,33 +32,43 @@ SENSITIVE_PATTERNS: List[Tuple[str, re.Pattern, str]] = [
     ("aws_secret_key", re.compile(r'(?i)aws_secret_access_key\s*[=:]\s*\S+'), "AWS secret key"),
     ("google_api_key", re.compile(r'\bAIza[a-zA-Z0-9\-_]{35}\b'), "Google API key"),
     ("stripe_secret_key", re.compile(r'\bsk_live_[a-zA-Z0-9]{24,}\b'), "Stripe secret key"),
-    ("stripe_publishable_key", re.compile(r'\bpk_live_[a-zA-Z0-9]{24,}\b'), "Stripe publishable key"),
+    ("stripe_publishable_key", re.compile(
+        r'\bpk_live_[a-zA-Z0-9]{24,}\b'), "Stripe publishable key"),
     ("slack_bot_token", re.compile(r'\bxoxb-[a-zA-Z0-9\-]{10,}\b'), "Slack bot token"),
     ("slack_user_token", re.compile(r'\bxoxp-[a-zA-Z0-9\-]{10,}\b'), "Slack user token"),
-    ("sendgrid_key", re.compile(r'\bSG\.[a-zA-Z0-9\-_]{22,}\.[a-zA-Z0-9\-_]{43,}\b'), "SendGrid API key"),
-    ("generic_api_key", re.compile(r'(?i)(?:api[_-]?key|apikey)\s*[=:]\s*["\']?[a-zA-Z0-9\-_]{20,}["\']?'), "Generic API key"),
+    ("sendgrid_key", re.compile(
+        r'\bSG\.[a-zA-Z0-9\-_]{22,}\.[a-zA-Z0-9\-_]{43,}\b'), "SendGrid API key"),
+    ("generic_api_key", re.compile(
+        r'(?i)(?:api[_-]?key|apikey)\s*[=:]\s*["\']?[a-zA-Z0-9\-_]{20,}["\']?'), "Generic API key"),
 
     # Passwords
-    ("password_assignment", re.compile(r'(?i)(?:password|passwd|pwd)\s*(?:=|:)\s*["\']?[^\s"\']{4,}["\']?'), "Password assignment"),
+    ("password_assignment", re.compile(
+        r'(?i)(?:password|passwd|pwd)\s*(?:=|:)\s*["\']?[^\s"\']{4,}["\']?'), "Password assignment"),
     ("password_in_url", re.compile(r'://[^/\s:]+:[^/\s@]+@'), "Credentials in URL"),
 
     # Tokens
     ("bearer_token", re.compile(r'(?i)bearer\s+[a-zA-Z0-9\-_.~+/]+=*'), "Bearer token"),
-    ("jwt_token", re.compile(r'\beyJ[a-zA-Z0-9\-_.~+/]+=*\.eyJ[a-zA-Z0-9\-_.~+/]+=*\.[a-zA-Z0-9\-_.~+/]+=*'), "JWT token"),
-    ("generic_token", re.compile(r'(?i)(?:token|access_token|refresh_token|auth_token)\s*[=:]\s*["\']?[a-zA-Z0-9\-_.~+/]{20,}["\']?'), "Generic token"),
+    ("jwt_token", re.compile(
+        r'\beyJ[a-zA-Z0-9\-_.~+/]+=*\.eyJ[a-zA-Z0-9\-_.~+/]+=*\.[a-zA-Z0-9\-_.~+/]+=*'), "JWT token"),
+    ("generic_token", re.compile(
+        r'(?i)(?:token|access_token|refresh_token|auth_token)\s*[=:]\s*["\']?[a-zA-Z0-9\-_.~+/]{20,}["\']?'), "Generic token"),
 
     # Private keys
     ("private_key", re.compile(r'-----BEGIN\s+(?:RSA\s+)?PRIVATE\s+KEY-----'), "Private key"),
 
     # Connection strings
-    ("db_connection_string", re.compile(r'(?i)(?:mongodb|postgres(?:ql)?|mysql|redis|amqp)://[^\s]+'), "Database connection string"),
-    ("db_connection_string_with_creds", re.compile(r'(?i)(?:mongodb|postgres(?:ql)?|mysql|redis|amqp)://[^/\s:]+:[^/\s@]+@[^\s]+'), "Database connection string with credentials"),
+    ("db_connection_string", re.compile(
+        r'(?i)(?:mongodb|postgres(?:ql)?|mysql|redis|amqp)://[^\s]+'), "Database connection string"),
+    ("db_connection_string_with_creds", re.compile(
+        r'(?i)(?:mongodb|postgres(?:ql)?|mysql|redis|amqp)://[^/\s:]+:[^/\s@]+@[^\s]+'), "Database connection string with credentials"),
 
     # Secrets
-    ("generic_secret", re.compile(r'(?i)(?:secret|credential|private_key)\s*[=:]\s*["\']?[a-zA-Z0-9\-_.~+/]{20,}["\']?'), "Generic secret"),
+    ("generic_secret", re.compile(
+        r'(?i)(?:secret|credential|private_key)\s*[=:]\s*["\']?[a-zA-Z0-9\-_.~+/]{20,}["\']?'), "Generic secret"),
 
     # .env patterns
-    ("env_sensitive", re.compile(r'(?i)(?:SECRET_KEY|PRIVATE_KEY|ENCRYPTION_KEY|AUTH_SECRET)\s*=\s*["\']?[^\s"\']{8,}["\']?'), "Sensitive env variable"),
+    ("env_sensitive", re.compile(
+        r'(?i)(?:SECRET_KEY|PRIVATE_KEY|ENCRYPTION_KEY|AUTH_SECRET)\s*=\s*["\']?[^\s"\']{8,}["\']?'), "Sensitive env variable"),
 ]
 
 
@@ -98,7 +108,6 @@ def should_redact(text: str) -> Tuple[bool, Optional[str]]:
         return False, None
 
     # Build reason string
-    pattern_names = set(f[0] for f in findings)
     descriptions = set(f[2] for f in findings)
     reason = f"Sensitive content detected: {', '.join(descriptions)}"
     return True, reason

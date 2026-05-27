@@ -7,7 +7,7 @@ auto-suggest rules when new memories are stored.
 """
 
 import re
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List
 
 from carrymem.utils.logger import logger
 
@@ -40,7 +40,8 @@ class RuleCandidateGenerator:
         if not stored_memories:
             return []
 
-        rule_worthy_types = {"user_preference", "correction", "decision", "task_pattern", "sentiment_marker", "fact_declaration"}
+        rule_worthy_types = {"user_preference", "correction", "decision",
+            "task_pattern", "sentiment_marker", "fact_declaration"}
         candidates = []
 
         try:
@@ -90,14 +91,10 @@ class RuleCandidateGenerator:
                                          "general context", "偏好选择", "通用场景"):
                             continue
                         candidate_dict = {
-                            "trigger": s.trigger,
-                            "action": s.action,
-                            "rule_type": s.rule_type if hasattr(s, 'rule_type') else "prefer",
-                            "scope": "personal",
-                            "override": False,
-                            "confidence": min(s.confidence if hasattr(s, 'confidence') else 0.6, 0.85),
-                            "source": "pattern_detection",
-                        }
+    "trigger": s.trigger, "action": s.action, "rule_type": s.rule_type if hasattr(
+        s, 'rule_type') else "prefer", "scope": "personal", "override": False, "confidence": min(
+            s.confidence if hasattr(
+                s, 'confidence') else 0.6, 0.85), "source": "pattern_detection", }
                         if candidate_dict not in candidates:
                             candidates.append(candidate_dict)
                 except Exception as e:
@@ -143,12 +140,12 @@ class RuleCandidateGenerator:
                 tech_counts[tech] = tech_counts.get(tech, 0) + 1
 
         domain_groups = {
-            "language": {"python", "java", "javascript", "typescript", "go", "rust", "swift", "kotlin", "node.js"},
-            "frontend": {"react", "vue", "angular"},
-            "database": {"postgresql", "mysql", "sqlite", "mongodb", "redis"},
-            "cloud": {"aws", "gcp", "azure"},
-            "container": {"docker", "kubernetes"},
-        }
+    "language": {
+        "python", "java", "javascript", "typescript", "go", "rust", "swift", "kotlin", "node.js"}, "frontend": {
+            "react", "vue", "angular"}, "database": {
+                "postgresql", "mysql", "sqlite", "mongodb", "redis"}, "cloud": {
+                    "aws", "gcp", "azure"}, "container": {
+                        "docker", "kubernetes"}, }
 
         trigger_map = {
             "language": "programming language selection",
@@ -331,7 +328,7 @@ class RuleCandidateGenerator:
             )
             if fix_match:
                 return f"avoid {fix_match.group(1).strip()}"
-            return f"avoid repeating this mistake"
+            return "avoid repeating this mistake"
 
         if mem_type == "decision":
             dec_match = re.search(
@@ -340,18 +337,18 @@ class RuleCandidateGenerator:
             )
             if dec_match:
                 return f"follow decision: {dec_match.group(1).strip()}"
-            return f"follow established decision"
+            return "follow established decision"
 
         if mem_type == "task_pattern":
-            return f"apply this workflow pattern"
+            return "apply this workflow pattern"
 
         if mem_type == "sentiment_marker":
-            return f"consider this feedback"
+            return "consider this feedback"
 
         if mem_type == "fact_declaration":
-            return f"reference this fact"
+            return "reference this fact"
 
-        return f"apply this preference"
+        return "apply this preference"
 
     @staticmethod
     def infer_rule_type(mem_type: str, content: str = "") -> str:

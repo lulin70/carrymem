@@ -14,9 +14,9 @@ def main():
     mcp_parser.add_argument("--config", help="Path to configuration file")
     mcp_parser.add_argument("--data-path", help="Path to data directory")
 
-    version_parser = subparsers.add_parser("version", help="Show version")
+    version_parser = subparsers.add_parser("version", help="Show version")  # noqa: F841
 
-    demo_parser = subparsers.add_parser("demo", help="Run interactive demo")
+    demo_parser = subparsers.add_parser("demo", help="Run interactive demo")  # noqa: F841
 
     doctor_parser = subparsers.add_parser("doctor", help="Run diagnostics")
     doctor_parser.add_argument("--db", help="Database path")
@@ -78,7 +78,7 @@ def _run_demo():
     print()
 
     cm = CarryMem()
-    print(f"Storage: SQLite at ~/.carrymem/memories.db")
+    print("Storage: SQLite at ~/.carrymem/memories.db")
     print(f"Namespace: {cm.namespace}")
     print()
 

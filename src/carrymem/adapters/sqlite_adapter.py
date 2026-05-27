@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from .base import MemoryEntry, StorageAdapter, StoredMemory
-from ..exceptions import DatabaseError, DBConnectionError, QueryError
+from ..exceptions import DatabaseError, DBConnectionError
 from ..scoring import calculate_importance
 from ..utils.helpers import escape_like, content_hash, TIER_TTL
 from ..utils.language import has_cjk, _STOP_WORDS
@@ -329,8 +329,10 @@ class SQLiteAdapter(StorageAdapter):
         # RRF configuration (extractable to config file)
         _rc = rrf_config or {}
         self._rrf_k = int(os.environ.get('CARRYMEM_RRF_K', _rc.get('k', 60)))
-        self._rrf_fts_weight = float(os.environ.get('CARRYMEM_RRF_FTS_WEIGHT', _rc.get('fts_weight', 0.6)))
-        self._rrf_vec_weight = float(os.environ.get('CARRYMEM_RRF_VEC_WEIGHT', _rc.get('vec_weight', 0.4)))
+        self._rrf_fts_weight = float(os.environ.get(
+            'CARRYMEM_RRF_FTS_WEIGHT', _rc.get('fts_weight', 0.6)))
+        self._rrf_vec_weight = float(os.environ.get(
+            'CARRYMEM_RRF_VEC_WEIGHT', _rc.get('vec_weight', 0.4)))
         self._rrf_type_boosts = _rc.get('type_boosts', {
             "fact_declaration": 1.2,
             "decision": 1.2,
@@ -340,9 +342,9 @@ class SQLiteAdapter(StorageAdapter):
             "correction": 1.15,
             "sentiment_marker": 0.5,
         })
-        
+
         # Initialize schema with main connection
-        conn = self._get_connection()
+        self._get_connection()
         self._init_schema()
         self._migrate_namespace()
         self._migrate_v050()
@@ -431,9 +433,9 @@ class SQLiteAdapter(StorageAdapter):
     def _get_connection(self) -> sqlite3.Connection:
         if self._closed:
             raise DBConnectionError("Adapter has been closed")
-        
+
         is_memory = self._db_path == ":memory:"
-        
+
         if is_memory:
             if not hasattr(self, '_memory_conn') or self._memory_conn is None:
                 conn = sqlite3.connect(self._db_path)
@@ -443,7 +445,7 @@ class SQLiteAdapter(StorageAdapter):
                 with self._conn_lock:
                     self._all_connections[id(conn)] = conn
             return self._memory_conn
-        
+
         if not hasattr(self._local, 'conn') or self._local.conn is None:
             max_retries = 5
             for attempt in range(max_retries):
@@ -478,7 +480,7 @@ class SQLiteAdapter(StorageAdapter):
                     raise DBConnectionError(f"Failed to connect to database: {e}") from e
                 except sqlite3.Error as e:
                     raise DBConnectionError(f"Failed to connect to database: {e}") from e
-        
+
         return self._local.conn
 
     def _init_schema(self):
@@ -569,7 +571,8 @@ class SQLiteAdapter(StorageAdapter):
             updates = []
             for row in rows:
                 try:
-                    created_at = datetime.fromisoformat(row["created_at"]) if row["created_at"] else now
+                    created_at = datetime.fromisoformat(
+                        row["created_at"]) if row["created_at"] else now
                     score = calculate_importance(
                         confidence=row["confidence"],
                         memory_type=row["type"],
@@ -757,9 +760,11 @@ class SQLiteAdapter(StorageAdapter):
 
     def enable_vector_search(self, enabled: bool = True):
         """Enable or disable vector search at runtime."""
-        if enabled and not (SQLITE_VEC_AVAILABLE and PYSQLITE3_AVAILABLE and SENTENCE_TRANSFORMERS_AVAILABLE and self._embedding_model is not None):
+        if enabled and not (
+            SQLITE_VEC_AVAILABLE and PYSQLITE3_AVAILABLE and SENTENCE_TRANSFORMERS_AVAILABLE and self._embedding_model is not None):
             from carrymem.utils.logger import logger
-            logger.warning("Cannot enable vector search: dependencies not available or model not loaded")
+            logger.warning(
+                "Cannot enable vector search: dependencies not available or model not loaded")
             return
         self._enable_vector = enabled
 
@@ -964,7 +969,8 @@ class SQLiteAdapter(StorageAdapter):
 
         entry_words = set(entry.content.lower().split())
         entry_lower = entry.content.lower()
-        has_update_marker = any(f" {m} " in f" {entry_lower} " or entry_lower.startswith(f"{m} ") for m in self._UPDATE_MARKERS)
+        has_update_marker = any(f" {m} " in f" {entry_lower} " or entry_lower.startswith(
+            f"{m} ") for m in self._UPDATE_MARKERS)
 
         _PREFERENCE_KEYWORDS = {
             "prefer", "偏好", "喜欢", "选用", "recommend", "avoid",
@@ -1132,12 +1138,10 @@ class SQLiteAdapter(StorageAdapter):
         try:
             conn = self._get_connection()
             profile_rows = conn.execute(
-                "SELECT content, type FROM memories "
-                "WHERE namespace = ? AND type IN ('user_preference', 'decision', 'fact_declaration') "
-                "AND (superseded_at IS NULL OR superseded_at = '') "
-                "ORDER BY importance_score DESC LIMIT 5",
-                (self._namespace,),
-            ).fetchall()
+    "SELECT content, type FROM memories "
+    "WHERE namespace = ? AND type IN ('user_preference', 'decision', 'fact_declaration') "
+    "AND (superseded_at IS NULL OR superseded_at = '') "
+    "ORDER BY importance_score DESC LIMIT 5", (self._namespace,), ).fetchall()
         except sqlite3.Error as e:
             from carrymem.utils.logger import logger
             logger.debug(f"_rebuild_context query failed: {e}")
@@ -1183,7 +1187,8 @@ class SQLiteAdapter(StorageAdapter):
                 return [self._dict_to_stored(d) or StoredMemory() for d in cached]
 
         with self._lock:
-            results = self._recall_impl(query, filters, limit, namespaces, update_access=update_access)
+            results = self._recall_impl(query, filters, limit, namespaces,
+                                        update_access=update_access)
 
         if self._enable_cache and self._cache and results:
             self._cache.put(
@@ -1375,7 +1380,8 @@ class SQLiteAdapter(StorageAdapter):
 
         return rows, False
 
-    def _recall_update_access(self, rows, update_access=True, filters=None, limit=20, is_stored=False):
+    def _recall_update_access(self, rows, update_access=True,
+                              filters=None, limit=20, is_stored=False):
         """Batch access count update.
 
         If is_stored=True: rows are StoredMemory objects (from semantic expansion).
@@ -1547,7 +1553,8 @@ class SQLiteAdapter(StorageAdapter):
 
             if is_final:
                 # Semantic expansion succeeded — update access and return
-                return self._recall_update_access(rows, update_access, filters, limit, is_stored=True)
+                return self._recall_update_access(
+                    rows, update_access, filters, limit, is_stored=True)
         else:
             conn = self._get_connection()
             sql = f"""
@@ -1582,7 +1589,7 @@ class SQLiteAdapter(StorageAdapter):
             if not valid_expansions:
                 return []
 
-            conn = self._get_connection()
+            self._get_connection()
             try:
                 combined_query = " OR ".join(f'"{e}"' for e in valid_expansions)
                 all_expanded_rows = self._fts_search(combined_query, where_clause, params, limit)
@@ -1860,11 +1867,17 @@ class SQLiteAdapter(StorageAdapter):
         version_id = f"v_{storage_key}_{new_version}"
         now = datetime.now(timezone.utc)
         conn.execute(
-            """INSERT INTO memory_versions (version_id, memory_id, version, content, confidence, changed_at, change_reason, namespace)
+    """INSERT INTO memory_versions (version_id, memory_id, version, content, confidence, changed_at, change_reason, namespace)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (version_id, stored.id, old_version, stored.content, stored.confidence,
-             now.isoformat(), reason or f"Update to version {new_version}", self._namespace),
-        )
+    (version_id,
+    stored.id,
+    old_version,
+    stored.content,
+    stored.confidence,
+    now.isoformat(),
+    reason or f"Update to version {new_version}",
+    self._namespace),
+     )
 
         new_c_hash = content_hash(new_content, stored.type)
         new_imp_score = calculate_importance(
@@ -1963,7 +1976,8 @@ class SQLiteAdapter(StorageAdapter):
             old_content = version_row["content"]
             if self._encryption and self._encryption.is_active:
                 old_content = self._decrypt_field(old_content)
-            old_original = version_row["original_message"] if "original_message" in version_row.keys() else None
+            old_original = version_row["original_message"] if "original_message" in version_row.keys(
+            ) else None
             if old_original and self._encryption and self._encryption.is_active:
                 old_original = self._decrypt_field(old_original)
             return self._update_memory_impl(
@@ -2274,4 +2288,3 @@ class SQLiteAdapter(StorageAdapter):
             from carrymem.utils.logger import logger
             logger.debug(f"Failed to convert dict to StoredMemory: {e}")
             return None
-

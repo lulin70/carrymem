@@ -56,7 +56,8 @@ class MemoryEntry:
     domain: Optional[str] = None  # Auto-inferred professional domain
 
     # Types that represent evolving state (superseded by newer values)
-    STATE_TYPES = {"user_preference", "correction", "decision", "fact_declaration", "relationship", "sentiment_marker"}
+    STATE_TYPES = {"user_preference", "correction", "decision",
+        "fact_declaration", "relationship", "sentiment_marker"}
     # Types that represent immutable events (complete retention, no versioning)
     EVENT_TYPES = {"session_summary", "task_pattern"}
 

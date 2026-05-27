@@ -5,7 +5,7 @@ Built with Textual. Launch with: carrymem tui
 
 try:
     from textual.app import App, ComposeResult
-    from textual.widgets import Header, Footer, Static, Input, Button, ListView, ListItem, Label
+    from textual.widgets import Header, Footer, Static, Input
     from textual.containers import Container, Horizontal, Vertical
     from textual.binding import Binding
     from textual.reactive import reactive
@@ -23,7 +23,6 @@ if not HAS_TEXTUAL:
 else:
     from carrymem import CarryMem
     from carrymem.constants import DB_PATH
-    from pathlib import Path
     from typing import Optional, List, Dict, Any
 
     _DEFAULT_DB = DB_PATH
@@ -213,7 +212,8 @@ else:
                 key = m.get("storage_key", "")
 
                 lines.append(f"{i}. {icon} [{mtype}] {content}")
-                lines.append(f"   Conf: {confidence:.0%} | Importance: {importance:.2f} | Key: {key}")
+                lines.append(
+                    f"   Conf: {confidence:.0%} | Importance: {importance:.2f} | Key: {key}")
                 lines.append("")
 
             self._set_content("\n".join(lines))
@@ -230,7 +230,9 @@ else:
                 stats = self.cm.get_stats()
                 total = stats.get("total_count", 0)
                 shown = len(self.memories)
-                status = f"Total: {total} | Showing: {shown} | Filter: {self.current_filter or 'All'} | Namespace: {self.namespace}"
+                status = f"Total: {total} | Showing: {shown} | Filter: {
+    self.current_filter or 'All'} | Namespace: {
+        self.namespace}"
                 status_bar = self.query_one("#status-bar", Static)
                 status_bar.update(status)
             except Exception:
@@ -256,7 +258,7 @@ else:
             except Exception:
                 pass
 
-        def on_input_submitted(self, event: Input.Submitted) -> None:
+        def on_input_submitted(self, event: Input.Submitted) -> None:  # noqa: F811
             if event.input.id == "search-input":
                 value = event.value.strip()
                 if hasattr(self, '_add_mode') and self._add_mode:

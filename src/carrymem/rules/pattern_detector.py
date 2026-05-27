@@ -370,7 +370,8 @@ class PatternDetector:
         patterns = []
         for kw, matching in keyword_map.items():
             if len(matching) >= 2:
-                confidence = PatternConfidence.MEDIUM if len(matching) >= 3 else PatternConfidence.LOW
+                confidence = PatternConfidence.MEDIUM if len(
+                    matching) >= 3 else PatternConfidence.LOW
                 patterns.append(
                     MemoryPattern(
                         pattern_type=PatternType.AVERSION,
@@ -410,17 +411,22 @@ class PatternDetector:
                 )
                 confidence = self._calc_confidence(len(matching))
                 patterns.append(
-                    MemoryPattern(
-                        pattern_type=PatternType.AVOIDANCE if has_negation else PatternType.PREFERENCE,
-                        keywords=top_keywords,
-                        source_memory_ids=[m.get("id", "") for m in matching],
-                        source_contents=[m.get("content", "") for m in matching],
+    MemoryPattern(
+        pattern_type=PatternType.AVOIDANCE if has_negation else PatternType.PREFERENCE,
+        keywords=top_keywords,
+        source_memory_ids=[
+            m.get(
+                "id",
+                "") for m in matching],
+                source_contents=[
+                    m.get(
+                        "content",
+                        "") for m in matching],
                         memory_type="cross_type",
                         occurrence_count=len(matching),
                         confidence=confidence,
                         domain=domain,
-                    )
-                )
+                         ) )
 
         return patterns
 
@@ -454,7 +460,8 @@ class PatternDetector:
                     current = MemoryPattern(
                         pattern_type=current.pattern_type,
                         keywords=list(set(current.keywords + p2.keywords)),
-                        source_memory_ids=list(set(current.source_memory_ids + p2.source_memory_ids)),
+                        source_memory_ids=list(
+                            set(current.source_memory_ids + p2.source_memory_ids)),
                         source_contents=current.source_contents[:3],
                         memory_type=current.memory_type,
                         occurrence_count=max(current.occurrence_count, p2.occurrence_count),

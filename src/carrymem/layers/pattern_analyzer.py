@@ -3,12 +3,13 @@ import re
 from carrymem.utils.language import language_manager
 from carrymem.utils.logger import logger
 
+
 class PatternAnalyzer:
     """Pattern-based memory analyzer."""
-    
+
     def __init__(self, noise_filter_mode: str = "strict"):
         """Initialize the pattern analyzer with pre-compiled regex patterns.
-        
+
         Args:
             noise_filter_mode: "strict" (hard discard noise) or "soft" (downgrade confidence instead of discarding)
         """
@@ -35,8 +36,9 @@ class PatternAnalyzer:
             '不对', '错误', '重做', '失败', '不行', '重新',
             'wrong', 'error', 'redo', 'fail', 'no', 'again',
         }
-    
-    def analyze(self, message: str, context: Optional[Dict[str, Any]] = None, execution_context: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+
+    def analyze(self, message: str, context: Optional[Dict[str, Any]] = None,
+                execution_context: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Analyze a message for patterns.
 
         Args:
@@ -314,14 +316,15 @@ class PatternAnalyzer:
 
         return False
 
-    def _detect_execution_feedback_pattern(self, message: str, execution_context: Dict[str, Any], language: str) -> Optional[Dict[str, Any]]:
+    def _detect_execution_feedback_pattern(
+        self, message: str, execution_context: Dict[str, Any], language: str) -> Optional[Dict[str, Any]]:
         """Detect execution feedback patterns.
-        
+
         Args:
             message: The message to analyze.
             execution_context: Execution context containing feedback signals.
             language: The detected language code.
-            
+
         Returns:
             A dictionary representing the detected feedback pattern, or None if no pattern found.
         """
@@ -354,7 +357,7 @@ class PatternAnalyzer:
                 'feedback_type': 'negative',
                 'execution_context': execution_context
             }
-        
+
         if tool_error:
             return {
                 'memory_type': 'tool_error',
@@ -365,7 +368,7 @@ class PatternAnalyzer:
                 'feedback_type': 'error',
                 'execution_context': execution_context
             }
-        
+
         if retry_count > 0:
             return {
                 'memory_type': 'retry_needed',
@@ -376,7 +379,7 @@ class PatternAnalyzer:
                 'feedback_type': 'retry',
                 'execution_context': execution_context
             }
-        
+
             return {
                 'memory_type': 'performance_issue',
                 'tier': 3,
@@ -386,7 +389,7 @@ class PatternAnalyzer:
                 'feedback_type': 'performance',
                 'execution_context': execution_context
             }
-        
+
         if context_position == 'correction_followup':
             return {
                 'memory_type': 'correction_followup',
@@ -397,7 +400,7 @@ class PatternAnalyzer:
                 'feedback_type': 'context',
                 'execution_context': execution_context
             }
-        
+
         if context_position == 'confirmation_pending':
             return {
                 'memory_type': 'confirmation_pending',
@@ -408,9 +411,9 @@ class PatternAnalyzer:
                 'feedback_type': 'context',
                 'execution_context': execution_context
             }
-        
+
         return None
-    
+
     def _detect_preference_pattern(self, message: str, language: str) -> Optional[Dict[str, Any]]:
         """Detect preference patterns.
 
@@ -524,12 +527,12 @@ class PatternAnalyzer:
                 '使いたい', '使ってください', 'お願いします',
                 '避けて', '使わず',
             ])
-        
+
         message_lower = message.lower()
         for keyword in preference_keywords:
             if keyword in message_lower:
                 preference_content = message
-                
+
                 preference_hash = hash(preference_content)
                 if preference_hash in self.preference_patterns:
                     self.preference_patterns[preference_hash] += 1
@@ -552,9 +555,9 @@ class PatternAnalyzer:
                         'source': 'pattern:preference',
                         'description': 'Preference pattern'
                     }
-        
+
         return None
-    
+
     def _detect_correction_pattern(self, message: str, language: str) -> Optional[Dict[str, Any]]:
         """Detect correction patterns.
 
@@ -582,7 +585,8 @@ class PatternAnalyzer:
             r'\bnever\s+mind\b',                     # "Never mind..."
             r'\blet\s+me\s+(rephrase|redo|refine|correct|clarify)\b',
             r'\bi\s+(take\s+that\s+back|didn\'t\s+mean\s+that)\b',
-            r'\bforget\s+about\b.*\b(instead|rather|better|use|go\s+with)\b',  # "Forget about X, Y instead"
+            # "Forget about X, Y instead"
+            r'\bforget\s+about\b.*\b(instead|rather|better|use|go\s+with)\b',
         ]
 
         zh_explicit_markers = [
@@ -619,13 +623,16 @@ class PatternAnalyzer:
 
         for pat in explicit_markers:
             if re.search(pat, message_lower):
-                return self._build_correction_result(message, language, 'pattern:correction_explicit', 0.85)
+                return self._build_correction_result(
+                    message, language, 'pattern:correction_explicit', 0.85)
         for pat in zh_explicit_markers:
             if language.startswith('zh') and re.search(pat, message):
-                return self._build_correction_result(message, language, 'pattern:correction_explicit', 0.85)
+                return self._build_correction_result(
+                    message, language, 'pattern:correction_explicit', 0.85)
         for pat in ja_explicit_markers:
             if language == 'ja' and re.search(pat, message):
-                return self._build_correction_result(message, language, 'pattern:correction_explicit', 0.85)
+                return self._build_correction_result(
+                    message, language, 'pattern:correction_explicit', 0.85)
 
         # === TIER 2: Structural patterns (confidence 0.75) ===
         structural_patterns = [
@@ -654,7 +661,8 @@ class PatternAnalyzer:
         ]
         for pat in structural_patterns:
             if re.search(pat, message_lower):
-                return self._build_correction_result(message, language, 'pattern:correction_structural', 0.75)
+                return self._build_correction_result(
+                    message, language, 'pattern:correction_structural', 0.75)
 
         zh_structural_patterns = [
             r'不对[，,]?',
@@ -678,10 +686,12 @@ class PatternAnalyzer:
 
         for pat in zh_structural_patterns:
             if language.startswith('zh') and re.search(pat, message):
-                return self._build_correction_result(message, language, 'pattern:correction_structural', 0.75)
+                return self._build_correction_result(
+                    message, language, 'pattern:correction_structural', 0.75)
         for pat in ja_structural_patterns:
             if language == 'ja' and re.search(pat, message):
-                return self._build_correction_result(message, language, 'pattern:correction_structural', 0.75)
+                return self._build_correction_result(
+                    message, language, 'pattern:correction_structural', 0.75)
 
         # === TIER 3: Keyword-based detection (confidence 0.65) ===
         strong_correction_keywords = [
@@ -690,16 +700,17 @@ class PatternAnalyzer:
             'should be', 'needs to be', 'actually is', 'supposed to be',
         ]
         if any(kw in message_lower for kw in strong_correction_keywords):
-            return self._build_correction_result(message, language, 'pattern:correction_keyword', 0.65)
+            return self._build_correction_result(
+                message, language, 'pattern:correction_keyword', 0.65)
 
         return None
 
-    def _build_correction_result(self, message: str, language: str, source: str, confidence: float) -> Dict[str, Any]:
+    def _build_correction_result(self, message: str, language: str,
+                                 source: str, confidence: float) -> Dict[str, Any]:
         """Build a standardized correction result."""
         correction_content = message
 
         if len(self.message_history) >= 2:
-            previous_message = self.message_history[-2]
             correction_content = message
 
         correction_hash = hash(correction_content)
@@ -716,7 +727,7 @@ class PatternAnalyzer:
             'source': source,
             'description': 'Correction pattern'
         }
-    
+
     def _detect_fact_pattern(self, message: str, language: str) -> Optional[Dict[str, Any]]:
         """Detect fact declaration patterns.
 
@@ -737,7 +748,8 @@ class PatternAnalyzer:
             return None
 
         if language.startswith('zh'):
-            fact_patterns = [r'(.+)是(.+)', r'(.+)有(.+)', r'(.+)在做(.+)', r'(.+)属于(.+)', r'(.+)位于(.+)']
+            fact_patterns = [r'(.+)是(.+)', r'(.+)有(.+)', r'(.+)在做(.+)',
+                                r'(.+)属于(.+)', r'(.+)位于(.+)']
             for pattern in fact_patterns:
                 if re.search(pattern, message):
                     return self._build_fact_result(message)
@@ -823,20 +835,31 @@ class PatternAnalyzer:
 
         return None
 
-    def _build_fact_result(self, message: str, confidence: float = 0.7, source: str = 'pattern:fact') -> Dict[str, Any]:
+    def _build_fact_result(self, message: str, confidence: float = 0.7,
+                           source: str = 'pattern:fact') -> Dict[str, Any]:
         """Build a standardized fact result."""
         fact_content = message
         fact_hash = hash(fact_content)
         if fact_hash in self.fact_patterns:
             self.fact_patterns[fact_hash] += 1
             if self.fact_patterns[fact_hash] >= 2:
-                return {'memory_type': 'fact_declaration', 'tier': 4, 'content': fact_content,
-                        'confidence': 0.8, 'source': 'pattern:fact_repeat', 'description': 'Repeated fact pattern'}
+                return {
+    'memory_type': 'fact_declaration',
+    'tier': 4,
+    'content': fact_content,
+    'confidence': 0.8,
+    'source': 'pattern:fact_repeat',
+     'description': 'Repeated fact pattern'}
         else:
             self.fact_patterns[fact_hash] = 1
-        return {'memory_type': 'fact_declaration', 'tier': 4, 'content': fact_content,
-                'confidence': confidence, 'source': source, 'description': 'Fact declaration pattern'}
-    
+        return {
+    'memory_type': 'fact_declaration',
+    'tier': 4,
+    'content': fact_content,
+    'confidence': confidence,
+    'source': source,
+     'description': 'Fact declaration pattern'}
+
     def _detect_relationship_pattern(self, message: str, language: str) -> Optional[Dict[str, Any]]:
         """Detect relationship patterns.
 
@@ -916,13 +939,23 @@ class PatternAnalyzer:
         if rel_hash in self.relationship_patterns:
             self.relationship_patterns[rel_hash] += 1
             if self.relationship_patterns[rel_hash] >= 2:
-                return {'memory_type': 'relationship', 'tier': 4, 'content': message,
-                        'confidence': 0.8, 'source': 'pattern:relationship_repeat', 'description': 'Repeated relationship pattern'}
+                return {
+    'memory_type': 'relationship',
+    'tier': 4,
+    'content': message,
+    'confidence': 0.8,
+    'source': 'pattern:relationship_repeat',
+     'description': 'Repeated relationship pattern'}
         else:
             self.relationship_patterns[rel_hash] = 1
-        return {'memory_type': 'relationship', 'tier': 4, 'content': message,
-                'confidence': 0.75, 'source': 'pattern:relationship', 'description': 'Relationship pattern'}
-    
+        return {
+    'memory_type': 'relationship',
+    'tier': 4,
+    'content': message,
+    'confidence': 0.75,
+    'source': 'pattern:relationship',
+     'description': 'Relationship pattern'}
+
     def _detect_task_pattern(self, message: str, language: str) -> Optional[Dict[str, Any]]:
         """Detect task patterns.
 
@@ -1065,7 +1098,7 @@ class PatternAnalyzer:
         for keyword in task_keywords:
             if keyword in message_lower:
                 task_content = message
-                
+
                 task_hash = hash(task_content)
                 if task_hash in self.task_patterns:
                     self.task_patterns[task_hash] += 1
@@ -1088,9 +1121,9 @@ class PatternAnalyzer:
                         'source': 'pattern:task',
                         'description': 'Task pattern'
                     }
-        
+
         return None
-    
+
     def _detect_decision_pattern(self, message: str, language: str) -> Optional[Dict[str, Any]]:
         """Detect decision patterns.
 
@@ -1208,12 +1241,11 @@ class PatternAnalyzer:
                 '使いましょう', '行きましょう', 'に決めました',
                 '選びました', '採用', '採用しました',
             ])
-        
+
         message_lower = message.lower()
         for keyword in decision_keywords:
             if keyword in message_lower:
                 if len(self.message_history) >= 2:
-                    previous_message = self.message_history[-2]
                     if language.startswith('zh'):
                         return {
                             'memory_type': 'decision',
@@ -1251,9 +1283,9 @@ class PatternAnalyzer:
                             'source': 'pattern:decision',
                             'description': 'Decision pattern'
                         }
-        
+
         return None
-    
+
     def _detect_sentiment_pattern(self, message: str, language: str) -> Optional[Dict[str, Any]]:
         """Detect sentiment patterns.
 
@@ -1288,7 +1320,8 @@ class PatternAnalyzer:
                     return self._build_sent_result(message, 0.8)
 
             # Intensifier + adjective patterns
-            if any(intensifier in msg_lower for intensifier in ['so ', 'really ', 'very ', 'super ', 'absolutely ', 'extremely ']):
+            if any(intensifier in msg_lower for intensifier in [
+                   'so ', 'really ', 'very ', 'super ', 'absolutely ', 'extremely ']):
                 adj_indicators = [
                     r'\b(happy|sad|angry|frustrated|annoyed|excited|tired|exhausted|bored|worried|proud|glad|upset)\b',
                     r'\b(great|good|bad|terrible|awful|nice|cool|lovely|horrible|amazing|fantastic|beautiful)\b',
@@ -1389,7 +1422,7 @@ class PatternAnalyzer:
             'source': 'pattern:sentiment',
             'description': 'Sentiment pattern'
         }
-    
+
     def _detect_location_pattern(self, message: str, language: str) -> Optional[Dict[str, Any]]:
         """Detect location patterns.
 
@@ -1435,11 +1468,27 @@ class PatternAnalyzer:
         for keyword in keywords:
             if keyword in msg_lower:
                 # Check for common location names
-                common_locations = {
-                    'en': ['park', 'station', 'airport', 'hotel', 'restaurant', 'office', 'building', 'street', 'avenue', 'road'],
-                    'zh-cn': ['公园', '车站', '机场', '酒店', '餐厅', '办公室', '大楼', '街道', '大道', '路']
-                }
-                
+                common_locations = { 'en': ['park',
+    'station',
+    'airport',
+    'hotel',
+    'restaurant',
+    'office',
+    'building',
+    'street',
+    'avenue',
+    'road'],
+    'zh-cn': ['公园',
+    '车站',
+    '机场',
+    '酒店',
+    '餐厅',
+    '办公室',
+    '大楼',
+    '街道',
+    '大道',
+     '路'] }
+
                 location_terms = common_locations.get(language, common_locations.get('en', []))
                 for term in location_terms:
                     if term in msg_lower:
@@ -1449,7 +1498,7 @@ class PatternAnalyzer:
                             self.location_patterns[location_hash] += 1
                         else:
                             self.location_patterns[location_hash] = 1
-                        
+
                         return {
                             'memory_type': 'location',
                             'tier': 3,
@@ -1458,9 +1507,9 @@ class PatternAnalyzer:
                             'source': 'pattern:location',
                             'description': 'Location pattern'
                         }
-        
+
         return None
-    
+
     def clear_history(self):
         """Clear the message history."""
         self.message_history = []

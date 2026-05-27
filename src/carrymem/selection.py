@@ -248,7 +248,8 @@ def select_memories(
     mandatory_types = {"correction", "decision"}
     mandatory_scored = [(s, m) for s, m in scored if m.get("type") in mandatory_types]
     pref_scored = [(s, m) for s, m in scored if m.get("type") == "user_preference"]
-    other_scored = [(s, m) for s, m in scored if m.get("type") not in mandatory_types and m.get("type") != "user_preference"]
+    other_scored = [(s, m) for s, m in scored if m.get("type")
+                     not in mandatory_types and m.get("type") != "user_preference"]
     scored = mandatory_scored + pref_scored + other_scored
 
     selected = []

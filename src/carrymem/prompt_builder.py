@@ -6,12 +6,13 @@ from the CarryMem core class, reducing god-module bloat.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set
 
-from carrymem.context import (
+from carrymem.selection import (
     _estimate_tokens,
     _has_aggregation_signal,
+)
+from carrymem.context import (
     build_prompt,
     build_qa_prompt as _build_qa_prompt,
     context_relevance,
@@ -208,7 +209,8 @@ class PromptBuilder:
     ) -> str:
         """Inject rules into prompt section."""
         try:
-            rule_engine = getattr(self._cm, 'rule_engine', None) or getattr(self._cm, '_rule_engine', None)
+            rule_engine = getattr(self._cm, 'rule_engine', None) or getattr(
+                self._cm, '_rule_engine', None)
             if not rule_engine:
                 return ""
 
@@ -289,10 +291,12 @@ class PromptBuilder:
                 )
 
                 # Respect select_memories ordering (corrections/decisions before preferences)
-                pref_in_selected = [m for m in memories_section if m.get("storage_key") in pref_keys]
-                non_pref_selected = [m for m in memories_section if m.get("storage_key") not in pref_keys]
-                pref_in_all = [m for m in all_memories if m.get("storage_key") in pref_keys
-                               and m.get("storage_key") not in {s.get("storage_key") for s in memories_section}]
+                pref_in_selected = [m for m in memories_section if m.get(
+                    "storage_key") in pref_keys]
+                non_pref_selected = [m for m in memories_section if m.get(
+                    "storage_key") not in pref_keys]
+                pref_in_all = [m for m in all_memories if m.get("storage_key") in pref_keys and m.get(
+                    "storage_key") not in {s.get("storage_key") for s in memories_section}]
                 memories_section = non_pref_selected + pref_in_selected + pref_in_all
             except Exception as e:
                 logger.warning(f"Failed to select memories for context: {e}")
@@ -300,7 +304,8 @@ class PromptBuilder:
         # Knowledge
         if getattr(self._cm, '_knowledge_adapter', None) and context:
             try:
-                all_knowledge = self._cm.recall_from_knowledge(query=context, limit=max_knowledge * 2)
+                all_knowledge = self._cm.recall_from_knowledge(
+                    query=context, limit=max_knowledge * 2)
                 knowledge_section = select_knowledge(
                     knowledge=all_knowledge,
                     context=context,
@@ -404,12 +409,14 @@ class PromptBuilder:
         knowledge_budget = int(budget.max_tokens * 0.2)
 
         # Rules (override-only for QA)
-        rules_section = self._inject_rules(question, 3, int(budget.max_tokens * 0.1), override_only=True)
+        rules_section = self._inject_rules(question, 3, int(
+            budget.max_tokens * 0.1), override_only=True)
 
         # Memories
         if self._cm._adapter:
             try:
-                all_memories, seen_keys = self._recall_base_memories(question, budget.max_results * 3)
+                all_memories, seen_keys = self._recall_base_memories(
+                    question, budget.max_results * 3)
 
                 # Preferences
                 pref_memories, pref_keys, all_memories = self._identify_preferences(
@@ -454,23 +461,26 @@ class PromptBuilder:
                         memories_section.append(m)
                         total_tok += tok
                 else:
-                    pref_in_filtered = [m for m in budget_filtered if m.get("storage_key") in pref_keys]
-                    non_pref_filtered = [m for m in budget_filtered if m.get("storage_key") not in pref_keys]
+                    pref_in_filtered = [m for m in budget_filtered if m.get(
+                        "storage_key") in pref_keys]
+                    non_pref_filtered = [m for m in budget_filtered if m.get(
+                        "storage_key") not in pref_keys]
                     selected = select_memories(
                         memories=non_pref_filtered or all_memories,
                         context=question,
                         max_count=budget.max_results,
                         max_tokens=memories_budget,
                     )
-                    selected_keys = {m.get("storage_key") for m in selected}
-                    memories_section = pref_in_filtered + [m for m in selected if m.get("storage_key") not in pref_keys]
+                    memories_section = pref_in_filtered + \
+                        [m for m in selected if m.get("storage_key") not in pref_keys]
             except Exception as e:
                 logger.warning(f"Failed to select memories for QA prompt: {e}")
 
         # Knowledge
         if getattr(self._cm, '_knowledge_adapter', None):
             try:
-                all_knowledge = self._cm.recall_from_knowledge(query=question, limit=max_knowledge * 2)
+                all_knowledge = self._cm.recall_from_knowledge(
+                    query=question, limit=max_knowledge * 2)
                 knowledge_section = select_knowledge(
                     knowledge=all_knowledge,
                     context=question,

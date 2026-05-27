@@ -60,7 +60,6 @@ def format_memory_entry(m: Dict[str, Any], language: str = "en") -> str:
     label = labels.get(m.get("type", ""), m.get("type", "Info"))
     content = m.get("raw_text", "") or m.get("content", "")
     superseded_at = m.get("superseded_at")
-    supersedes = m.get("superseded")
     mtype = m.get("type", "")
     auto_rule = m.get("auto_rule", "")
     confidence = m.get("confidence", 0)

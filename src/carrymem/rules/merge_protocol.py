@@ -17,12 +17,10 @@ Design principle: Company override rules CANNOT be overridden by personal rules.
 This is a security boundary, not just a preference.
 """
 
-import copy
-import json
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from .models import Rule, SCOPE_PRIORITY, VALID_RULE_SCOPES
 
@@ -143,8 +141,11 @@ def detect_merge_conflicts(
                         existing_rule=ext,
                         conflict_type="scope_escalation",
                         severity="low",
-                        reason=f"Incoming [{inc.scope}] rule escalates over existing [{ext.scope}] rule on trigger '{inc.trigger}'",
-                        suggestion=f"Accept incoming rule — higher scope priority",
+                        reason=f"Incoming [{
+    inc.scope}] rule escalates over existing [{
+        ext.scope}] rule on trigger '{
+            inc.trigger}'",
+                        suggestion="Accept incoming rule — higher scope priority",
                     ))
                 continue
 
@@ -154,7 +155,10 @@ def detect_merge_conflicts(
                     existing_rule=ext,
                     conflict_type="type_contradiction",
                     severity="critical",
-                    reason=f"Contradiction: [{inc.rule_type}] vs [{ext.rule_type}] on trigger '{inc.trigger}'",
+                    reason=f"Contradiction: [{
+    inc.rule_type}] vs [{
+        ext.rule_type}] on trigger '{
+            inc.trigger}'",
                     suggestion=_suggest_contradiction_resolution(inc, ext),
                 ))
             else:
@@ -164,7 +168,7 @@ def detect_merge_conflicts(
                     conflict_type="trigger_overlap",
                     severity="medium",
                     reason=f"Same trigger '{inc.trigger}', different actions",
-                    suggestion=f"Keep higher-scope rule or merge actions",
+                    suggestion="Keep higher-scope rule or merge actions",
                 ))
 
     return conflicts
@@ -296,13 +300,17 @@ def merge_rules(
                         "replace", inc.id,
                         {"decision": "keep_incoming", "conflict": conflict.conflict_type,
                          "replaced_rule_id": conflict.existing_rule.id},
-                        reason=f"Incoming [{inc.scope}] overrides existing [{conflict.existing_rule.scope}]",
+                        reason=f"Incoming [{
+    inc.scope}] overrides existing [{
+        conflict.existing_rule.scope}]",
                     ))
                 elif decision == MergeDecision.KEEP_EXISTING:
                     audit_entries.append(_make_audit_entry(
                         "skip", inc.id,
                         {"decision": "keep_existing", "conflict": conflict.conflict_type},
-                        reason=f"Existing [{conflict.existing_rule.scope}] overrides incoming [{inc.scope}]",
+                        reason=f"Existing [{
+    conflict.existing_rule.scope}] overrides incoming [{
+        inc.scope}]",
                     ))
                 elif decision == MergeDecision.MODIFY_INCOMING:
                     modified_rule = Rule(

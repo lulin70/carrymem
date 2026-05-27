@@ -148,29 +148,27 @@ class RuleInjector:
         self.matcher = matcher
 
     INJECTION_DANGER_PATTERNS = re.compile(
-        r'(?:'
-        r'ignore\s+(?:previous|above|all|prior|earlier)\s+(?:instructions?|rules?|prompts?)|'
-        r'system\s*[:：]\s*|'
-        r'forget\s+(?:all\s+)?(?:previous\s+)?(?:rules?|instructions?)|'
-        r'override\s+(?:all\s+)?safety|'
-        r'you\s+are\s+now|'
-        r'new\s+instructions?\s*[:：]|'
-        r'disregard\s+(?:your|the|all)\s+(?:rules?|guidelines?|instructions?)|'
-        r'(?:act|pretend|roleplay|simulate|impersonate)\s+(?:as|to\s+be)|'
-        r'(?:DAN|jailbreak|developer|sudo|god|admin)\s+mode|'
-        r'bypass\s+(?:all\s+)?(?:restrictions?|filters?|safety)|'
-        r'(?:from\s+now\s+on|starting\s+now)\s*[,.]?\s*(?:you|your)|'
-        r'your\s+(?:new|real|true)\s+(?:role|purpose|instructions?)|'
-        r'(?:reveal|show|display|repeat|print)\s+(?:your|the)\s+(?:prompt|instructions?|rules?|system)|'
-        r'忽略(?:之前的|上面的|所有)(?:指令|规则|提示)|'
-        r'忘记(?:之前的|所有)?(?:规则|指令)|'
-        r'\[SYSTEM\]|<\|system\|>|<!--\s*system|'
-        r'<system>|<instruction>|<command>|'
-        r'\$\{.*?\}|\{\{.*?\}\}|<%.*?%>|'
-        r'base64.*decode|eval\(|exec\(|__import__'
-        r')',
-        re.IGNORECASE,
-    )
+    r'(?:'
+    r'ignore\s+(?:previous|above|all|prior|earlier)\s+(?:instructions?|rules?|prompts?)|'
+    r'system\s*[:：]\s*|'
+    r'forget\s+(?:all\s+)?(?:previous\s+)?(?:rules?|instructions?)|'
+    r'override\s+(?:all\s+)?safety|'
+    r'you\s+are\s+now|'
+    r'new\s+instructions?\s*[:：]|'
+    r'disregard\s+(?:your|the|all)\s+(?:rules?|guidelines?|instructions?)|'
+    r'(?:act|pretend|roleplay|simulate|impersonate)\s+(?:as|to\s+be)|'
+    r'(?:DAN|jailbreak|developer|sudo|god|admin)\s+mode|'
+    r'bypass\s+(?:all\s+)?(?:restrictions?|filters?|safety)|'
+    r'(?:from\s+now\s+on|starting\s+now)\s*[,.]?\s*(?:you|your)|'
+    r'your\s+(?:new|real|true)\s+(?:role|purpose|instructions?)|'
+    r'(?:reveal|show|display|repeat|print)\s+(?:your|the)\s+(?:prompt|instructions?|rules?|system)|'
+    r'忽略(?:之前的|上面的|所有)(?:指令|规则|提示)|'
+    r'忘记(?:之前的|所有)?(?:规则|指令)|'
+    r'\[SYSTEM\]|<\|system\|>|<!--\s*system|'
+    r'<system>|<instruction>|<command>|'
+    r'\$\{.*?\}|\{\{.*?\}\}|<%.*?%>|'
+    r'base64.*decode|eval\(|exec\(|__import__'
+    r')', re.IGNORECASE, )
 
     def _sanitize_for_injection(self, text: str) -> str:
         if not text:

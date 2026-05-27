@@ -88,7 +88,7 @@ try:
 except ImportError:
     AsyncCarryMem = _make_lazy_import("carrymem.async_carrymem", "AsyncCarryMem")
 
-from carrymem.__version__ import __version__
+from carrymem.__version__ import __version__  # noqa: F401
 from carrymem.api_types import (
     RuleDict,
     MatchResultDict,

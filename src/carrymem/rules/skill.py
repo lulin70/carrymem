@@ -76,7 +76,8 @@ def skill_pack(
         ValueError: If validation fails
     """
     if not name or not name.replace("-", "").replace("_", "").isalnum():
-        raise ValueError(f"Invalid skill name: '{name}'. Use alphanumeric + hyphens/underscores only.")
+        raise ValueError(
+            f"Invalid skill name: '{name}'. Use alphanumeric + hyphens/underscores only.")
 
     if scope not in VALID_RULE_SCOPES:
         raise ValueError(f"Invalid scope '{scope}'. Must be one of {VALID_RULE_SCOPES}")

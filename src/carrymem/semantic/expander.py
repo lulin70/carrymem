@@ -10,7 +10,6 @@ Architecture:
     query → tokenize → synonym_expand → spell_correct → cross_lang_map → expanded_queries
 """
 
-import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
@@ -146,7 +145,7 @@ class SemanticExpander:
         language: str,
     ) -> Tuple[str, ...]:
         """Cached version of expand for performance.
-        
+
         Returns tuple instead of list for hashability.
         """
         expansions: Set[str] = set()

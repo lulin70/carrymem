@@ -124,23 +124,29 @@ _SCOPE_QUESTIONS: List[Dict] = [
 _GENERALITY_QUESTIONS: List[Dict] = [
     {
         "question": "Should this rule apply to all projects or just the current one?",
-        "options": ["Current project only", "All similar projects", "All projects"],
-        "scope_map": {
-            "Current project only": "narrow",
-            "All similar projects": "medium",
-            "All projects": "broad",
-        },
-    },
-    {
-        "question": "How strict should this rule be?",
-        "options": ["Suggestion (can be overridden)", "Preference (usually followed)", "Hard rule (never override)"],
-        "override_map": {
-            "Suggestion (can be overridden)": False,
-            "Preference (usually followed)": False,
-            "Hard rule (never override)": True,
-        },
-    },
-]
+        "options": [
+            "Current project only",
+            "All similar projects",
+            "All projects"],
+            "scope_map": {
+                "Current project only": "narrow",
+                "All similar projects": "medium",
+                "All projects": "broad",
+                },
+                },
+                {
+                    "question": "How strict should this rule be?",
+                    "options": [
+                        "Suggestion (can be overridden)",
+                        "Preference (usually followed)",
+                        "Hard rule (never override)"],
+                        "override_map": {
+                            "Suggestion (can be overridden)": False,
+                            "Preference (usually followed)": False,
+                            "Hard rule (never override)": True,
+                            },
+                            },
+                             ]
 
 _EXCEPTION_QUESTIONS: List[Dict] = [
     {
@@ -404,7 +410,8 @@ class RuleRefiner:
             if tool.lower() in action.lower() and broader.lower() not in action.lower():
                 if any(kw in answer_text for kw in ["similar", "broader", "too", "all related"]):
                     action = action.replace(tool, f"{tool} and {broader}")
-                    scope_notes = f"broadened from {tool} to include {broader}; {scope_notes}".strip("; ")
+                    scope_notes = f"broadened from {tool} to include {broader}; {scope_notes}".strip(
+                        "; ")
                     break
 
         if any(kw in answer_text for kw in ["all project", "broad", "general"]):

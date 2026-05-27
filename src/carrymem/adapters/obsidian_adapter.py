@@ -13,7 +13,6 @@ Features:
 
 import hashlib
 import json
-import os
 import re
 import sqlite3
 import threading
@@ -23,7 +22,6 @@ from typing import Any, Dict, List, Optional, Set
 
 from .base import StorageAdapter
 from ..utils.helpers import escape_like, content_hash
-
 
 
 _OBSIDIAN_SCHEMA_SQL = """
@@ -128,7 +126,8 @@ class ObsidianAdapter(StorageAdapter):
         results = adapter.recall("Python")
     """
 
-    def __init__(self, vault_path: str, db_path: Optional[str] = None, content_truncate: int = 2000):
+    def __init__(self, vault_path: str,
+                 db_path: Optional[str] = None, content_truncate: int = 2000):
         self._vault_path = Path(vault_path).expanduser().resolve()
 
         if not self._vault_path.exists():

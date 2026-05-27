@@ -17,8 +17,6 @@ from .server import MCPServer
 from .tools import TOOLS
 from .handlers import Handlers
 
-from carrymem.__version__ import __version__
-
 
 import threading as _threading
 

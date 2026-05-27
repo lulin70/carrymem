@@ -13,14 +13,7 @@ compatibility. The actual implementations live in:
 
 # Re-export all public APIs for backward compatibility
 from carrymem.selection import (
-    _estimate_tokens,
-    _tokenize_text,
     context_relevance,
-    _has_temporal_signal,
-    _has_preference_signal,
-    _has_aggregation_signal,
-    _jaccard_sim,
-    _mmr_select,
     select_memories,
     select_knowledge,
 )
@@ -33,9 +26,7 @@ from carrymem.scope import (
 
 from carrymem.format import (
     TYPE_LABELS,
-    _extract_event_dates,
     format_memory_entry,
-    _build_superseded_notes,
     format_knowledge_entry,
 )
 

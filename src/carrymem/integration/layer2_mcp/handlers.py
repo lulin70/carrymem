@@ -10,7 +10,6 @@ MCP Tool handlers for CarryMem.
 """
 
 import asyncio
-import json
 import os
 import time
 from datetime import datetime, timezone
@@ -166,11 +165,12 @@ def handle_get_classification_schema(engine, arguments: Dict[str, Any]) -> Dict[
             ""
         ]
         for mt in CLASSIFICATION_SCHEMA["memory_types"]:
-            lines.append(f"### {mt['id']} ({mt['label_en']} / {mt['label_zh']})")  # type: ignore[index]
+            # type: ignore[index]
+            lines.append(f"### {mt['id']} ({mt['label_en']} / {mt['label_zh']})")
             lines.append(f"- **Description**: {mt['description']}")  # type: ignore[index]
             lines.append(f"- **Examples**: {', '.join(mt['examples'])}")  # type: ignore[index]
             lines.append(f"- **Default Tier**: T{mt['default_tier']}")  # type: ignore[index]
-            lines.append(f"- **Downstream Mapping**:")
+            lines.append("- **Downstream Mapping**:")
             for ds, cat in mt["downstream_mapping"].items():  # type: ignore[index]
                 lines.append(f"  - {ds}: `{cat}`")
             lines.append("")
@@ -623,7 +623,8 @@ def handle_suggest_rules(engine, args: Dict[str, Any]) -> Dict[str, Any]:
         if not memories:
             return {"suggestions": [], "total": 0, "message": "No memories found to analyze"}
 
-        candidates = engine.suggest_rules(memories, memory_type=memory_type, max_candidates=max_candidates)
+        candidates = engine.suggest_rules(
+            memories, memory_type=memory_type, max_candidates=max_candidates)
         return {
             "total": len(candidates),
             "suggestions": [
@@ -747,7 +748,8 @@ def handle_my_profile(carrymem, args: Dict[str, Any]) -> Dict[str, Any]:
         if include_rules:
             try:
                 from carrymem.rules import RuleEngine
-                db_path = carrymem._adapter.db_path if hasattr(carrymem._adapter, 'db_path') else None
+                db_path = carrymem._adapter.db_path if hasattr(
+                    carrymem._adapter, 'db_path') else None
                 engine = RuleEngine(db_path=db_path)
                 rules = engine.list_rules(status="active", limit=200)
                 scope_counts: Dict[str, int] = {}
@@ -884,7 +886,8 @@ class Handlers:
         self._engine = self._carrymem.engine
 
         from carrymem.rules import RuleEngine
-        rule_db_path: Optional[str] = getattr(self._carrymem._adapter, '_db_path', None) or getattr(self._carrymem._adapter, 'db_path', None)
+        rule_db_path: Optional[str] = getattr(self._carrymem._adapter, '_db_path', None) or getattr(
+            self._carrymem._adapter, 'db_path', None)
         self._rule_engine = RuleEngine(db_path=rule_db_path)
 
     async def handle_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
@@ -896,7 +899,8 @@ class Handlers:
 
         handler_func = handler_map[tool_name]
         try:
-            if tool_name in OPTIONAL_TOOL_NAMES or tool_name in KNOWLEDGE_TOOL_NAMES or tool_name in PROFILE_TOOL_NAMES or tool_name in PROMPT_TOOL_NAMES or tool_name in CONSOLIDATION_TOOL_NAMES or tool_name in ("my_profile", "onboard"):
+            if tool_name in OPTIONAL_TOOL_NAMES or tool_name in KNOWLEDGE_TOOL_NAMES or tool_name in PROFILE_TOOL_NAMES or tool_name in PROMPT_TOOL_NAMES or tool_name in CONSOLIDATION_TOOL_NAMES or tool_name in (
+                "my_profile", "onboard"):
                 target: Any = self._carrymem
             elif tool_name in RULE_TOOL_NAMES:
                 target = self._rule_engine

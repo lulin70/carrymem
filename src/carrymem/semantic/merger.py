@@ -214,7 +214,8 @@ class ResultMerger:
         all_merged: List[Dict[str, Any]] = []
 
         # Process each source in order of priority (exact first)
-        priority_order = ["exact_fts", "synonym", "spell_corrected", "cross_language", "like_fallback"]
+        priority_order = ["exact_fts", "synonym",
+            "spell_corrected", "cross_language", "like_fallback"]
 
         for source in priority_order:
             if source not in results_by_source:

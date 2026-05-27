@@ -15,62 +15,70 @@ class ClassificationPipeline:
     MIN_DEFAULT_CONFIDENCE = 0.6
     MIN_SENTIMENT_DEFAULT_CONFIDENCE = 0.7
     ASSISTANT_PREFIXES = ('[assistant said]', '[ai said]', '[bot said]')
-    
+
     def __init__(self, config: Any, noise_filter_mode: str = "strict"):
         """Initialize classification pipeline.
-        
+
         Args:
             config: Configuration manager instance.
             noise_filter_mode: "strict" or "soft" - controls how aggressively noise is filtered.
         """
         self.config = config
-        
+
         rules = config.get_rules().get('rules', [])
         self.rule_matcher = RuleMatcher(rules)
         self.pattern_analyzer = PatternAnalyzer(noise_filter_mode=noise_filter_mode)
-        
+
         self.semantic_classifier = SemanticClassifier(self.config)
-        
+
         self._filter_counts = {"noise": 0, "low_info_assistant": 0, "fail_closed": 0}
-        
+
         if noise_filter_mode == "soft":
             self.MIN_DEFAULT_CONFIDENCE = 0.5
             self.MIN_SENTIMENT_DEFAULT_CONFIDENCE = 0.4
-    
-    def classify(self, message: str, context: Optional[Dict[str, Any]] = None, execution_context: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+
+    def classify(self, message: str, context: Optional[Dict[str, Any]] = None,
+                 execution_context: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Classify a message through the pipeline.
-        
+
         Args:
             message: The message to classify.
             context: Optional context for the message.
             execution_context: Optional execution context containing feedback signals.
-            
+
         Returns:
             List of classification matches.
         """
         rule_matches = self.rule_matcher.match(message, context, execution_context)
-        
+
         if rule_matches:
             logger.debug(f"Rule matching found {len(rule_matches)} matches")
             return rule_matches
-        
+
         pattern_matches = self.pattern_analyzer.analyze(message, context, execution_context)
-        
+
         if pattern_matches:
             logger.debug(f"Pattern analysis found {len(pattern_matches)} matches")
             pattern_matches = self._resolve_type_priority(pattern_matches)
             return pattern_matches
-        
+
         semantic_matches = self.semantic_classifier.classify(message, context, execution_context)
-        
+
         if semantic_matches:
             logger.debug(f"Semantic classification found {len(semantic_matches)} matches")
             return semantic_matches
-        
+
         logger.debug("No classification matches found")
         return []
-    
-    def classify_with_defaults(self, message: str, language: str, context: Optional[Dict[str, Any]] = None, execution_context: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+
+    def classify_with_defaults(self,
+    message: str,
+    language: str,
+    context: Optional[Dict[str,
+    Any]] = None,
+    execution_context: Optional[Dict[str,
+    Any]] = None) -> List[Dict[str,
+     Any]]:
         """Classify a message with default fallback.
 
         Phase A Fix #1 (Critical): Noise filtering at pipeline level to prevent
@@ -116,7 +124,8 @@ class ClassificationPipeline:
             if self._is_low_info_assistant_reply(message):
                 self._filter_counts["low_info_assistant"] += 1
                 if self._filter_counts["low_info_assistant"] % 100 == 1:
-                    logger.info(f"Low-info assistant filter: {self._filter_counts['low_info_assistant']} messages filtered total")
+                    logger.info(
+                        f"Low-info assistant filter: {self._filter_counts['low_info_assistant']} messages filtered total")
                 return []
 
         matches = self.classify(message, context, execution_context)
@@ -130,14 +139,16 @@ class ClassificationPipeline:
                 if default_match.get('confidence', 0) < self.MIN_DEFAULT_CONFIDENCE:
                     self._filter_counts["fail_closed"] += 1
                     if self._filter_counts["fail_closed"] % 100 == 1:
-                        logger.info(f"Fail-closed filter: {self._filter_counts['fail_closed']} low-confidence defaults filtered total")
+                        logger.info(
+                            f"Fail-closed filter: {self._filter_counts['fail_closed']} low-confidence defaults filtered total")
                     if self.pattern_analyzer.noise_filter_mode == "soft":
                         default_match['confidence'] = self.MIN_DEFAULT_CONFIDENCE
                         default_match['source'] = 'default:soft_fallback'
                         matches = [default_match]
                     else:
                         return []
-                if default_match.get('memory_type') == 'sentiment_marker' and default_match.get('confidence', 0) < self.MIN_SENTIMENT_DEFAULT_CONFIDENCE:
+                if default_match.get('memory_type') == 'sentiment_marker' and default_match.get(
+                    'confidence', 0) < self.MIN_SENTIMENT_DEFAULT_CONFIDENCE:
                     self._filter_counts["fail_closed"] += 1
                     if self.pattern_analyzer.noise_filter_mode == "soft":
                         default_match['confidence'] = self.MIN_SENTIMENT_DEFAULT_CONFIDENCE
@@ -253,7 +264,7 @@ class ClassificationPipeline:
             return True
 
         return False
-    
+
     @staticmethod
     def _resolve_type_priority(matches: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Resolve type priority when multiple types match the same message.
@@ -335,7 +346,7 @@ class ClassificationPipeline:
         word_count = len(msg_stripped.split())
         if word_count <= 2 and len(msg_stripped) < 20:
             return None
-        
+
         preference_keywords = language_manager.get_keywords('user_preference', language)
         correction_keywords = language_manager.get_keywords('correction', language)
         fact_keywords = language_manager.get_keywords('fact_declaration', language)
@@ -343,7 +354,7 @@ class ClassificationPipeline:
         relationship_keywords = language_manager.get_keywords('relationship', language)
         task_keywords = language_manager.get_keywords('task_pattern', language)
         sentiment_keywords = language_manager.get_keywords('sentiment_marker', language)
-        
+
         if any(keyword in message_lower for keyword in preference_keywords):
             return {
                 'memory_type': 'user_preference',

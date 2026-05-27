@@ -13,7 +13,6 @@ from typing import Dict, List, Optional, Any
 from carrymem.utils.config import ConfigManager
 from carrymem.__version__ import __version__ as _version
 from carrymem.utils.helpers import generate_memory_id, get_current_time
-from carrymem.utils.logger import logger
 from carrymem.utils.language import language_manager
 from carrymem.coordinators.classification_pipeline import ClassificationPipeline
 
@@ -30,7 +29,8 @@ class MemoryClassificationEngine:
 
     def __init__(self, config_path: str = None, noise_filter_mode: str = "strict"):
         self.config = ConfigManager(config_path)
-        self.classification_pipeline = ClassificationPipeline(self.config, noise_filter_mode=noise_filter_mode)
+        self.classification_pipeline = ClassificationPipeline(
+            self.config, noise_filter_mode=noise_filter_mode)
         self.max_work_memory_size = self.config.get(
             'storage.max_work_memory_size', 100
         )

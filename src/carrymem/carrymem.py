@@ -24,7 +24,6 @@ Usage:
 from typing import Any, Dict, List, Optional
 import json
 import os
-import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -65,7 +64,6 @@ from carrymem.__version__ import __version__ as _version
 from carrymem.exceptions import (
     StorageNotConfiguredError as _StorageNotConfiguredError,
     KnowledgeNotConfiguredError as _KnowledgeNotConfiguredError,
-    ValidationError,
 )
 
 from carrymem.security.input_validator import InputValidator
@@ -409,7 +407,7 @@ class CarryMem:
 
         result = self._adapter.rollback_memory(storage_key, version)
         if result is None:
-            return {"rolled_back": False, "error": f"Memory or version not found"}
+            return {"rolled_back": False, "error": "Memory or version not found"}
 
         if self._adapter._cache:
             self._adapter._cache.invalidate()
@@ -1189,12 +1187,12 @@ class CarryMem:
 
         if format == "markdown":
             md_lines = [
-                f"# CarryMem Memory Export",
-                f"",
+                "# CarryMem Memory Export",
+                "",
                 f"- **Exported**: {export_data['exported_at']}",
                 f"- **Namespace**: {ns}",
                 f"- **Total memories**: {len(all_memories)}",
-                f"",
+                "",
             ]
             by_type: Dict[str, list] = {}
             for m in all_memories:
@@ -1424,7 +1422,7 @@ class CarryMem:
         return all_conflicts
 
     def check_quality(self, min_score: float = 0.3) -> List[Dict[str, Any]]:
-        from carrymem.quality_scorer import MemoryQualityScorer, QualityAnalyzer
+        from carrymem.quality_scorer import QualityAnalyzer
 
         if not self._adapter:
             raise StorageNotConfiguredError()

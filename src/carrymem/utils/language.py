@@ -1,5 +1,4 @@
-import re
-from typing import Dict, List, Optional, Tuple
+from typing import List, Tuple
 
 from carrymem.utils.logger import logger
 
@@ -43,7 +42,7 @@ def has_cjk(text: str) -> bool:
 
 class LanguageManager:
     """Language detection and management for multi-language support."""
-    
+
     SUPPORTED_LANGUAGES = {
         'en': 'English',
         'zh-cn': 'Chinese (Simplified)',
@@ -56,7 +55,7 @@ class LanguageManager:
         'ru': 'Russian',
         'ar': 'Arabic'
     }
-    
+
     MULTI_LANG_KEYWORDS = {
         'user_preference': {
             'en': ['like', 'prefer', 'love', 'hate', 'want', 'dislike'],
@@ -158,7 +157,7 @@ class LanguageManager:
             'ar': ['سعيد', 'حزين', 'غاضب', 'متحمس', 'مایوس', 'مشبع']
         }
     }
-    
+
     NEGATION_WORDS = {
         'en': ['not', 'no', 'don\'t', 'doesn\'t', 'didn\'t', 'won\'t', 'can\'t', 'never'],
         'zh-cn': ['不', '没', '没有', '不是', '不要', '不喜欢', '不想要'],
@@ -170,17 +169,16 @@ class LanguageManager:
         'ru': ['не', 'ни', 'никогда', 'нельзя'],
         'ar': ['لا', 'ليس', 'لم', 'مិន']
     }
-    
+
     def __init__(self):
         """Initialize the language manager."""
-        pass
-    
+
     def detect_language(self, text: str) -> Tuple[str, float]:
         """Detect the language of a text.
-        
+
         Args:
             text: The text to detect language for.
-            
+
         Returns:
             A tuple of (language_code, confidence).
         """
@@ -207,7 +205,6 @@ class LanguageManager:
                     return language_code, confidence
             except Exception as e:
                 logger.debug(f"Failed to process language detection with CLD2: {e}")
-                pass
 
         if _LANGDETECT_AVAILABLE:
             try:
@@ -218,13 +215,13 @@ class LanguageManager:
                 pass
 
         return 'en', 0.5
-    
+
     def _map_language_code(self, code: str) -> str:
         """Map language codes to our supported ones.
-        
+
         Args:
             code: The detected language code.
-            
+
         Returns:
             The mapped language code.
         """
@@ -234,16 +231,16 @@ class LanguageManager:
             'zh-hant': 'zh-tw',
             'zh-hk': 'zh-tw'
         }
-        
+
         return code_map.get(code, code)
-    
+
     def get_keywords(self, memory_type: str, language: str) -> List[str]:
         """Get keywords for a memory type in a specific language.
-        
+
         Args:
             memory_type: The memory type.
             language: The language code.
-            
+
         Returns:
             A list of keywords for the memory type in the specified language.
         """
@@ -253,53 +250,53 @@ class LanguageManager:
             else:
                 return self.MULTI_LANG_KEYWORDS[memory_type].get('en', [])
         return []
-    
+
     def get_negation_words(self, language: str) -> List[str]:
         """Get negation words for a specific language.
-        
+
         Args:
             language: The language code.
-            
+
         Returns:
             A list of negation words for the specified language.
         """
         return self.NEGATION_WORDS.get(language, self.NEGATION_WORDS.get('en', []))
-    
+
     def is_supported_language(self, language: str) -> bool:
         """Check if a language is supported.
-        
+
         Args:
             language: The language code.
-            
+
         Returns:
             True if the language is supported, False otherwise.
         """
         return language in self.SUPPORTED_LANGUAGES
-    
+
     def get_language_name(self, language: str) -> str:
         """Get the name of a language.
-        
+
         Args:
             language: The language code.
-            
+
         Returns:
             The name of the language.
         """
         return self.SUPPORTED_LANGUAGES.get(language, language)
-    
+
     def extract_keywords(self, text: str, language: str) -> List[str]:
         """Extract keywords from text in a specific language.
-        
+
         Args:
             text: The text to extract keywords from.
             language: The language code.
-            
+
         Returns:
             A list of extracted keywords.
         """
         keywords = []
         text_lower = text.lower()
-        
+
         for memory_type, lang_keywords in self.MULTI_LANG_KEYWORDS.items():
             if language in lang_keywords:
                 for keyword in lang_keywords[language]:
@@ -309,35 +306,36 @@ class LanguageManager:
                 for keyword in lang_keywords.get('en', []):
                     if keyword in text_lower:
                         keywords.append(keyword)
-        
+
         return list(set(keywords))
-    
+
     def detect_memory_type(self, text: str, language: str) -> List[Tuple[str, float]]:
         """Detect memory type based on keywords in a specific language.
-        
+
         Args:
             text: The text to analyze.
             language: The language code.
-            
+
         Returns:
             A list of tuples (memory_type, confidence).
         """
         results = []
         text_lower = text.lower()
-        
+
         for memory_type, lang_keywords in self.MULTI_LANG_KEYWORDS.items():
             if language in lang_keywords:
                 keywords = lang_keywords[language]
             else:
                 keywords = lang_keywords.get('en', [])
-            
+
             matched_keywords = [kw for kw in keywords if kw in text_lower]
             if matched_keywords:
                 confidence = min(0.5 + len(matched_keywords) * 0.1, 0.9)
                 results.append((memory_type, confidence))
-        
+
         results.sort(key=lambda x: x[1], reverse=True)
-        
+
         return results
+
 
 language_manager = LanguageManager()
