@@ -562,7 +562,7 @@ class TestContextModuleExtra:
 
     def test_has_temporal_signal(self):
         """Lines 51-62: _has_temporal_signal detects temporal patterns."""
-        from carrymem.context import _has_temporal_signal
+        from carrymem.selection import _has_temporal_signal
         assert _has_temporal_signal("when did I last visit Tokyo?") is True
         assert _has_temporal_signal("how many days ago?") is True
         assert _has_temporal_signal("how long has it been?") is True
@@ -571,7 +571,7 @@ class TestContextModuleExtra:
 
     def test_has_preference_signal(self):
         """Lines 65-98: _has_preference_signal detects preference patterns."""
-        from carrymem.context import _has_preference_signal
+        from carrymem.selection import _has_preference_signal
         assert _has_preference_signal("I prefer dark mode") is True
         assert _has_preference_signal("my favorite color is blue") is True
         assert _has_preference_signal("I dislike waiting") is True
@@ -600,26 +600,26 @@ class TestContextModuleExtra:
 
     def test_jaccard_sim_empty(self):
         """Line 253-254: _jaccard_sim with empty sets returns 0.0."""
-        from carrymem.context import _jaccard_sim
+        from carrymem.selection import _jaccard_sim
         assert _jaccard_sim(set(), {"a"}) == 0.0
         assert _jaccard_sim({"a"}, set()) == 0.0
         assert _jaccard_sim(set(), set()) == 0.0
 
     def test_mmr_select_empty(self):
         """Line 264-265: _mmr_select with empty scored returns empty."""
-        from carrymem.context import _mmr_select
+        from carrymem.selection import _mmr_select
         assert _mmr_select([], {"query"}, 5) == []
 
     def test_mmr_select_small_input(self):
         """Line 266-267: _mmr_select with scored <= max_count returns all."""
-        from carrymem.context import _mmr_select
+        from carrymem.selection import _mmr_select
         scored = [(0.9, {"content": "a"}), (0.8, {"content": "b"})]
         result = _mmr_select(scored, {"query"}, 5)
         assert len(result) == 2
 
     def test_mmr_select_max_score_zero(self):
         """Line 274-275: max_score <= 0 is reset to 1.0."""
-        from carrymem.context import _mmr_select
+        from carrymem.selection import _mmr_select
         scored = [(0.0, {"content": "a"}), (0.0, {"content": "b"})]
         result = _mmr_select(scored, {"query"}, 2)
         assert len(result) == 2
@@ -673,7 +673,7 @@ class TestContextModuleExtra:
 
     def test_extract_event_dates(self):
         """Lines 509-522: _extract_event_dates extracts dates from text."""
-        from carrymem.context import _extract_event_dates
+        from carrymem.format import _extract_event_dates
         assert "January 15" in _extract_event_dates("Meeting on January 15, 2025")
         assert "3/15" in _extract_event_dates("Due by 3/15/2025")
         assert _extract_event_dates("no dates here") == ""
@@ -765,7 +765,7 @@ class TestContextModuleExtra:
 
     def test_build_superseded_notes(self):
         """Lines 575-594: _build_superseded_notes generates update notes."""
-        from carrymem.context import _build_superseded_notes
+        from carrymem.format import _build_superseded_notes
         memories = [
             {"content": "I work at Google", "storage_key": "a",
              "supersedes": "b"},
@@ -777,7 +777,7 @@ class TestContextModuleExtra:
 
     def test_build_superseded_notes_chinese(self):
         """Lines 590-591: Chinese language superseded notes."""
-        from carrymem.context import _build_superseded_notes
+        from carrymem.format import _build_superseded_notes
         memories = [
             {"content": "我在Google工作", "storage_key": "a",
              "supersedes": "b"},
