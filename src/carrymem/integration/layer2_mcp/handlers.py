@@ -14,18 +14,18 @@ import json
 import os
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from carrymem.__version__ import __version__ as _version
 from .tools import CLASSIFICATION_SCHEMA, TOOL_NAMES, CORE_TOOL_NAMES, OPTIONAL_TOOL_NAMES, KNOWLEDGE_TOOL_NAMES, PROFILE_TOOL_NAMES, PROMPT_TOOL_NAMES, CONSOLIDATION_TOOL_NAMES, RULE_TOOL_NAMES
 
+_validator: Any = None
 try:
     from carrymem.security.input_validator import InputValidator
     _validator = InputValidator(strict_mode=False)
 except ImportError:
     import logging
     logging.getLogger(__name__).warning("InputValidator not available — input validation disabled")
-    _validator = None
 
 _SAFE_ERROR_TYPES = {
     "StorageNotConfiguredError": "storage_not_configured",
@@ -166,12 +166,12 @@ def handle_get_classification_schema(engine, arguments: Dict[str, Any]) -> Dict[
             ""
         ]
         for mt in CLASSIFICATION_SCHEMA["memory_types"]:
-            lines.append(f"### {mt['id']} ({mt['label_en']} / {mt['label_zh']})")
-            lines.append(f"- **Description**: {mt['description']}")
-            lines.append(f"- **Examples**: {', '.join(mt['examples'])}")
-            lines.append(f"- **Default Tier**: T{mt['default_tier']}")
+            lines.append(f"### {mt['id']} ({mt['label_en']} / {mt['label_zh']})")  # type: ignore[index]
+            lines.append(f"- **Description**: {mt['description']}")  # type: ignore[index]
+            lines.append(f"- **Examples**: {', '.join(mt['examples'])}")  # type: ignore[index]
+            lines.append(f"- **Default Tier**: T{mt['default_tier']}")  # type: ignore[index]
             lines.append(f"- **Downstream Mapping**:")
-            for ds, cat in mt["downstream_mapping"].items():
+            for ds, cat in mt["downstream_mapping"].items():  # type: ignore[index]
                 lines.append(f"  - {ds}: `{cat}`")
             lines.append("")
         return {"schema": "\n".join(lines), "format": "markdown"}
@@ -718,7 +718,7 @@ def handle_my_profile(carrymem, args: Dict[str, Any]) -> Dict[str, Any]:
         include_memories = args.get("include_memories", True)
         include_rules = args.get("include_rules", True)
 
-        profile = {
+        profile: Dict[str, Any] = {
             "identity": "CarryMem User Profile",
             "version": _version,
         }
@@ -726,7 +726,7 @@ def handle_my_profile(carrymem, args: Dict[str, Any]) -> Dict[str, Any]:
         if include_memories:
             try:
                 memories = carrymem.recall_memories(limit=100)
-                type_counts = {}
+                type_counts: Dict[str, int] = {}
                 recent = []
                 for m in memories[:20]:
                     m_type = m.get("type", "unknown")
@@ -750,17 +750,17 @@ def handle_my_profile(carrymem, args: Dict[str, Any]) -> Dict[str, Any]:
                 db_path = carrymem._adapter.db_path if hasattr(carrymem._adapter, 'db_path') else None
                 engine = RuleEngine(db_path=db_path)
                 rules = engine.list_rules(status="active", limit=200)
-                scope_counts = {}
-                type_counts = {}
+                scope_counts: Dict[str, int] = {}
+                rule_type_counts: Dict[str, int] = {}
                 rule_list = []
                 for r in rules:
                     scope_counts[r.scope] = scope_counts.get(r.scope, 0) + 1
-                    type_counts[r.rule_type] = type_counts.get(r.rule_type, 0) + 1
+                    rule_type_counts[r.rule_type] = rule_type_counts.get(r.rule_type, 0) + 1
                     rule_list.append(f"[{'!' if r.override else '~'}] {r.trigger} → {r.action}")
                 profile["rules"] = {
                     "total": len(rules),
                     "scope_distribution": scope_counts,
-                    "type_distribution": type_counts,
+                    "type_distribution": rule_type_counts,
                     "summary": "\n".join(rule_list[:20]) if rule_list else "No rules yet.",
                 }
             except Exception:
@@ -858,10 +858,10 @@ class Handlers:
 
     def __init__(
         self,
-        config_path: str = None,
-        data_path: str = None,
+        config_path: Optional[str] = None,
+        data_path: Optional[str] = None,
         storage: str = "sqlite",
-        vault_path: str = None,
+        vault_path: Optional[str] = None,
         namespace: str = "default",
     ):
         from carrymem.carrymem import CarryMem
@@ -884,8 +884,8 @@ class Handlers:
         self._engine = self._carrymem.engine
 
         from carrymem.rules import RuleEngine
-        db_path = getattr(self._carrymem._adapter, '_db_path', None) or getattr(self._carrymem._adapter, 'db_path', None)
-        self._rule_engine = RuleEngine(db_path=db_path)
+        rule_db_path: Optional[str] = getattr(self._carrymem._adapter, '_db_path', None) or getattr(self._carrymem._adapter, 'db_path', None)
+        self._rule_engine = RuleEngine(db_path=rule_db_path)
 
     async def handle_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
         if tool_name not in handler_map:
@@ -897,7 +897,7 @@ class Handlers:
         handler_func = handler_map[tool_name]
         try:
             if tool_name in OPTIONAL_TOOL_NAMES or tool_name in KNOWLEDGE_TOOL_NAMES or tool_name in PROFILE_TOOL_NAMES or tool_name in PROMPT_TOOL_NAMES or tool_name in CONSOLIDATION_TOOL_NAMES or tool_name in ("my_profile", "onboard"):
-                target = self._carrymem
+                target: Any = self._carrymem
             elif tool_name in RULE_TOOL_NAMES:
                 target = self._rule_engine
             else:

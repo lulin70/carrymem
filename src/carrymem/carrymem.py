@@ -35,7 +35,7 @@ from carrymem.adapters.obsidian_adapter import ObsidianAdapter
 from carrymem.domain import infer_domains_from_memories, get_domain_description
 
 
-def _validate_file_path(path: str, allowed_base: str = None) -> str:
+def _validate_file_path(path: str, allowed_base: Optional[str] = None) -> str:
     resolved = os.path.realpath(os.path.expanduser(path))
     if allowed_base:
         allowed = os.path.realpath(allowed_base)
@@ -43,6 +43,7 @@ def _validate_file_path(path: str, allowed_base: str = None) -> str:
             raise ValueError(f"Path escapes allowed directory: {path}")
     else:
         from carrymem.constants import DANGEROUS_SYSTEM_DIRS
+
         for d in DANGEROUS_SYSTEM_DIRS:
             if resolved == str(d) or resolved.startswith(str(d) + os.sep):
                 raise ValueError(f"Path traversal: system directory not allowed: {resolved}")
@@ -53,8 +54,12 @@ from carrymem.adapters.loader import load_adapter
 from carrymem.rules.candidate_generator import RuleCandidateGenerator
 from carrymem.utils.logger import logger
 from carrymem.utils.validators import (
-    validate_message, validate_context, validate_language,
-    validate_limit, validate_storage_key, validate_query,
+    validate_message,
+    validate_context,
+    validate_language,
+    validate_limit,
+    validate_storage_key,
+    validate_query,
 )
 from carrymem.__version__ import __version__ as _version
 from carrymem.exceptions import (
@@ -64,6 +69,7 @@ from carrymem.exceptions import (
 )
 
 from carrymem.security.input_validator import InputValidator
+
 _import_validator = InputValidator(strict_mode=True)
 
 
@@ -101,6 +107,7 @@ class CarryMem:
         namespace: str = "default",
         config: Optional[Dict] = None,
         encryption_key: Optional[str] = None,
+        auto_backup_interval: int = 20,
     ):
         self._engine = MemoryClassificationEngine()
         self._namespace = namespace
@@ -109,13 +116,18 @@ class CarryMem:
             db_path = os.environ.get("CARRYMEM_DB_PATH")
 
         if storage is None:
-            self._adapter = None
+            self._adapter: Optional[StorageAdapter] = None
         elif storage == "sqlite":
             self._adapter = SQLiteAdapter(
-                db_path=db_path, namespace=namespace,
+                db_path=db_path,
+                namespace=namespace,
                 encryption_key=encryption_key,
                 enable_vector_search=config.get("enable_vector_search", True) if config else True,
-                embedding_model=config.get("embedding_model", "all-MiniLM-L6-v2") if config else "all-MiniLM-L6-v2",
+                embedding_model=(
+                    config.get("embedding_model", "all-MiniLM-L6-v2")
+                    if config
+                    else "all-MiniLM-L6-v2"
+                ),
             )
         elif isinstance(storage, StorageAdapter):
             self._adapter = storage
@@ -141,19 +153,39 @@ class CarryMem:
             )
 
         self._knowledge_adapter = knowledge_adapter
-        self._rule_engine = None
+        self._rule_engine: Optional[Any] = None
         self._config = config
-        self._prompt_builder = None
+        self._prompt_builder: Optional[Any] = None
         self._candidate_generator = RuleCandidateGenerator(
             rule_engine_getter=lambda: self.rule_engine,
             recall_memories=self.recall_memories,
         )
 
+        # Auto-backup state
+        self._write_count = 0
+        self._auto_backup_interval = auto_backup_interval
+        self._initial_backup_done = False
+        self._backup_dir = config.get("backup_dir") if config else None
+
+        # Perform initial backup on first creation with SQLite
+        if self._adapter and isinstance(self._adapter, SQLiteAdapter):
+            db_file = self._adapter.db_path
+            if db_file and db_file != ":memory:" and os.path.exists(db_file):
+                try:
+                    self._do_initial_backup()
+                except Exception as e:
+                    logger.debug(f"Initial backup skipped: {e}")
+
     @property
     def rule_engine(self):
         if self._rule_engine is None:
             from .rules import RuleEngine
-            db_path = self._adapter.db_path if hasattr(self._adapter, 'db_path') else None
+
+            db_path = (
+                self._adapter.db_path
+                if self._adapter and hasattr(self._adapter, "db_path")
+                else None
+            )
             self._rule_engine = RuleEngine(db_path=db_path)
         return self._rule_engine
 
@@ -161,19 +193,63 @@ class CarryMem:
     def prompt_builder(self):
         if self._prompt_builder is None:
             from .prompt_builder import PromptBuilder
+
             self._prompt_builder = PromptBuilder(self)
         return self._prompt_builder
 
     def close(self):
         if self._rule_engine:
             self._rule_engine = None
-        if self._adapter and hasattr(self._adapter, 'close'):
+        if self._adapter and hasattr(self._adapter, "close"):
             self._adapter.close()
-        if self._knowledge_adapter and hasattr(self._knowledge_adapter, 'close'):
+        if self._knowledge_adapter and hasattr(self._knowledge_adapter, "close"):
             self._knowledge_adapter.close()
 
+    def _do_initial_backup(self) -> None:
+        """Create initial backup when CarryMem first opens an existing database."""
+        if self._initial_backup_done:
+            return
+        if not self._adapter or not isinstance(self._adapter, SQLiteAdapter):
+            return
+        db_path = self._adapter.db_path
+        if db_path == ":memory:":
+            return
+
+        from carrymem.backup import BackupManager
+
+        manager = BackupManager(db_path, backup_dir=self._backup_dir)
+        backups = manager.list_backups()
+        if not backups:
+            try:
+                manager.create_backup()
+                logger.info("Initial backup created")
+            except Exception as e:
+                logger.debug(f"Initial backup failed: {e}")
+        self._initial_backup_done = True
+
+    def _auto_backup(self) -> None:
+        """Check if auto-backup should run based on write count, and execute if needed."""
+        if not self._adapter or not isinstance(self._adapter, SQLiteAdapter):
+            return
+        if self._auto_backup_interval <= 0:
+            return
+
+        self._write_count += 1
+        if self._write_count >= self._auto_backup_interval:
+            self._write_count = 0
+            try:
+                db_path = self._adapter.db_path
+                if db_path and db_path != ":memory:":
+                    from carrymem.backup import BackupManager
+
+                    manager = BackupManager(db_path, backup_dir=self._backup_dir)
+                    manager.create_backup()
+                    logger.debug(f"Auto-backup triggered after {self._auto_backup_interval} writes")
+            except Exception as e:
+                logger.debug(f"Auto-backup failed: {e}")
+
     def clear_cache(self) -> None:
-        if self._adapter and hasattr(self._adapter, '_cache') and self._adapter._cache:
+        if self._adapter and hasattr(self._adapter, "_cache") and self._adapter._cache:
             self._adapter._cache.clear()
 
     def backup(self, backup_dir: Optional[str] = None) -> Dict[str, Any]:
@@ -181,6 +257,7 @@ class CarryMem:
             return {"error": "Backup only supported with SQLiteAdapter"}
 
         from carrymem.backup import BackupManager
+
         db_path = self._adapter.db_path
         if db_path == ":memory:":
             return {"error": "Cannot backup in-memory database"}
@@ -197,6 +274,7 @@ class CarryMem:
             return []
 
         from carrymem.backup import BackupManager
+
         db_path = self._adapter.db_path
         manager = BackupManager(db_path, backup_dir=backup_dir)
         return manager.list_backups()
@@ -206,6 +284,7 @@ class CarryMem:
             return {"error": "Restore only supported with SQLiteAdapter"}
 
         from carrymem.backup import BackupManager
+
         db_path = self._adapter.db_path
         if db_path == ":memory:":
             return {"error": "Cannot restore to in-memory database"}
@@ -296,6 +375,8 @@ class CarryMem:
         if self._adapter._cache:
             self._adapter._cache.invalidate()
 
+        self._auto_backup()
+
         return {
             "updated": True,
             "storage_key": result.storage_key,
@@ -332,6 +413,8 @@ class CarryMem:
 
         if self._adapter._cache:
             self._adapter._cache.invalidate()
+
+        self._auto_backup()
 
         return {
             "rolled_back": True,
@@ -387,8 +470,8 @@ class CarryMem:
 
         results = self._knowledge_adapter.recall(query, filters=filters, limit=limit)
         if isinstance(results, list) and results and isinstance(results[0], dict):
-            return results
-        return [r.to_dict() if hasattr(r, 'to_dict') else r for r in results]
+            return results  # type: ignore[return-value]
+        return [r.to_dict() if hasattr(r, "to_dict") else r for r in results]  # type: ignore[misc]
 
     def recall_all(
         self,
@@ -424,14 +507,18 @@ class CarryMem:
 
         if self._adapter:
             try:
-                memory_results = self.recall_memories(query=query, filters=filters, limit=limit, namespaces=namespaces)
+                memory_results = self.recall_memories(
+                    query=query, filters=filters, limit=limit, namespaces=namespaces
+                )
             except Exception as e:
                 logger.warning(f"Failed to recall memories for prompt: {e}")
                 memory_results = []
 
         if self._knowledge_adapter:
             try:
-                knowledge_results = self.recall_from_knowledge(query=query, filters=filters, limit=limit)
+                knowledge_results = self.recall_from_knowledge(
+                    query=query, filters=filters, limit=limit
+                )
             except Exception as e:
                 logger.warning(f"Failed to recall from knowledge base: {e}")
                 knowledge_results = []
@@ -515,6 +602,7 @@ class CarryMem:
         coreference_resolved = False
         try:
             from carrymem.coreference import resolve_coreference
+
             context_str = ""
             if context and isinstance(context, dict):
                 context_str = context.get("ai_reply", "") or context.get("previous_message", "")
@@ -524,10 +612,13 @@ class CarryMem:
             except Exception:
                 pass
             resolved_message, coreference_resolved = resolve_coreference(
-                message, context=context_str, recent_memories=recent_mems,
+                message,
+                context=context_str,
+                recent_memories=recent_mems,
             )
             if coreference_resolved:
                 from carrymem.utils.logger import logger
+
                 logger.debug(f"Coreference resolved: '{message}' → '{resolved_message}'")
         except Exception:
             pass  # Non-critical: fall back to original message
@@ -536,9 +627,11 @@ class CarryMem:
         if not force_type:  # force_type allows user to override redaction
             try:
                 from carrymem.security.redaction import should_redact
+
                 should_block, redact_reason = should_redact(resolved_message)
                 if should_block:
                     from carrymem.utils.logger import logger
+
                     logger.warning(f"Auto-redact blocked memory storage: {redact_reason}")
                     return {
                         "should_remember": False,
@@ -550,13 +643,20 @@ class CarryMem:
                         "rule_suggestions": [],
                         "auto_rules": [],
                         "updated_memories": [],
-                        "summary": {"total_entries": 0, "by_type": {}, "redacted": True, "redact_reason": redact_reason},
+                        "summary": {
+                            "total_entries": 0,
+                            "by_type": {},
+                            "redacted": True,
+                            "redact_reason": redact_reason,
+                        },
                     }
             except Exception:
                 pass  # Non-critical: if redaction fails, allow storage
 
         # Use resolved message for classification, but keep original as raw_text
-        classify_result = self.classify_message(resolved_message, context=context, language=language)
+        classify_result = self.classify_message(
+            resolved_message, context=context, language=language
+        )
 
         if not classify_result["should_remember"] and not force_type:
             return {
@@ -569,12 +669,14 @@ class CarryMem:
         if force_type and not classify_result["should_remember"]:
             classify_result["should_remember"] = True
             if not classify_result["entries"]:
-                classify_result["entries"] = [{
-                    "content": message,
-                    "type": force_type,
-                    "suggested_action": "store",
-                    "confidence": 0.8,
-                }]
+                classify_result["entries"] = [
+                    {
+                        "content": message,
+                        "type": force_type,
+                        "suggested_action": "store",
+                        "confidence": 0.8,
+                    }
+                ]
 
         stored_memories = []
         storage_keys = []
@@ -602,6 +704,7 @@ class CarryMem:
                     storage_keys.append(stored.storage_key)
                 except Exception as e:
                     from carrymem.utils.logger import logger
+
                     logger.warning(f"Failed to store memory: {e}")
                     continue
 
@@ -610,6 +713,8 @@ class CarryMem:
             auto_rules = self._auto_suggest_rules(stored_memories)
         except Exception as e:
             logger.debug(f"Auto rule suggestion skipped: {e}")
+
+        self._auto_backup()
 
         return {
             "should_remember": True,
@@ -644,7 +749,7 @@ class CarryMem:
                     overlap = sum(1 for kw in keywords if kw in mem_content and len(kw) > 1)
                     if overlap >= 2:
                         storage_key = mem.get("storage_key", "")
-                        if storage_key and hasattr(self._adapter, 'update_memory'):
+                        if storage_key and hasattr(self._adapter, "update_memory"):
                             try:
                                 reason = f"Corrected by: {content[:100]}"
                                 self._adapter.update_memory(storage_key, content, reason)
@@ -671,7 +776,10 @@ class CarryMem:
                         safe_action = self._sanitize_rule_content(content[:200])
                         engine.update_rule(rule.id, action=safe_action)
                         if updated_info is None:
-                            updated_info = {"rule_updated": rule.id, "new_action": safe_action[:100]}
+                            updated_info = {
+                                "rule_updated": rule.id,
+                                "new_action": safe_action[:100],
+                            }
                         else:
                             updated_info["rule_updated"] = rule.id
                     except Exception as e:
@@ -714,12 +822,20 @@ class CarryMem:
         if not self._adapter:
             raise StorageNotConfiguredError()
 
-        validate_query(query)
+        validate_query(query or "")
         validate_limit(limit)
         if isinstance(self._adapter, SQLiteAdapter) and namespaces:
-            results = self._adapter.recall(query or "", filters=filters, limit=limit, namespaces=namespaces, update_access=update_access)
+            results = self._adapter.recall(
+                query or "",
+                filters=filters,
+                limit=limit,
+                namespaces=namespaces,
+                update_access=update_access,
+            )
         else:
-            results = self._adapter.recall(query or "", filters=filters, limit=limit, update_access=update_access)
+            results = self._adapter.recall(
+                query or "", filters=filters, limit=limit, update_access=update_access
+            )
         return [r.to_dict() for r in results]
 
     def recall_aggregated(
@@ -730,10 +846,12 @@ class CarryMem:
         if not self._adapter:
             raise StorageNotConfiguredError()
 
-        if not hasattr(self._adapter, 'recall_aggregated'):
+        if not hasattr(self._adapter, "recall_aggregated"):
             raise NotImplementedError("Adapter does not support recall_aggregated")
 
-        result = self._adapter.recall_aggregated(memory_type=memory_type, limit_per_type=limit_per_type)
+        result = self._adapter.recall_aggregated(
+            memory_type=memory_type, limit_per_type=limit_per_type
+        )
         return {k: [r.to_dict() for r in v] for k, v in result.items()}
 
     def recall_timeline(
@@ -744,7 +862,7 @@ class CarryMem:
         if not self._adapter:
             raise StorageNotConfiguredError()
 
-        if not hasattr(self._adapter, 'recall_timeline'):
+        if not hasattr(self._adapter, "recall_timeline"):
             raise NotImplementedError("Adapter does not support recall_timeline")
 
         results = self._adapter.recall_timeline(topic=topic, limit=limit)
@@ -761,13 +879,15 @@ class CarryMem:
 
         from carrymem.layers.session_summarizer import SessionSummarizer
 
-        if not hasattr(self, '_llm_client'):
+        if not hasattr(self, "_llm_client"):
             from carrymem.llm import LLMClient
-            self._llm_client = LLMClient(config=self._config)
+
+            self._llm_client = LLMClient(config=self._config or {})
         summarizer = SessionSummarizer(llm_client=self._llm_client)
 
         session_memories = self.recall_memories(
-            query="", limit=200,
+            query="",
+            limit=200,
             filters={"session_id": session_id, "include_superseded": True},
         )
         if not session_memories:
@@ -799,20 +919,23 @@ class CarryMem:
 
         from carrymem.layers.semantic_aggregator import SemanticAggregator
 
-        if not hasattr(self, '_llm_client'):
+        if not hasattr(self, "_llm_client"):
             from carrymem.llm import LLMClient
-            self._llm_client = LLMClient(config=self._config)
+
+            self._llm_client = LLMClient(config=self._config or {})
         embedding_fn = None
-        if hasattr(self._adapter, '_embedding_model') and self._adapter._embedding_model:
+        if hasattr(self._adapter, "_embedding_model") and self._adapter._embedding_model:
             embedding_fn = lambda text: self._adapter._embedding_model.encode(text).tolist()
 
         if not embedding_fn:
-            logger.warning("aggregate_memories requires vector search to be enabled (no embedding model found)")
+            logger.warning(
+                "aggregate_memories requires vector search to be enabled (no embedding model found)"
+            )
             return []
 
         aggregator = SemanticAggregator(llm_client=self._llm_client, embedding_fn=embedding_fn)
 
-        filters = {"include_superseded": False}
+        filters: Dict[str, Any] = {"include_superseded": False}
         if memory_type:
             filters["type"] = memory_type
         memories = self.recall_memories(query="", limit=500, filters=filters)
@@ -840,7 +963,9 @@ class CarryMem:
             raise StorageNotConfiguredError()
 
         validate_storage_key(memory_id)
-        return self._adapter.forget(memory_id)
+        result = self._adapter.forget(memory_id)
+        self._auto_backup()
+        return result
 
     def get_stats(self) -> Dict[str, Any]:
         if not self._adapter:
@@ -898,6 +1023,8 @@ class CarryMem:
             stored = self._adapter.remember(entry)
             stored_memories.append(stored.to_dict())
             storage_keys.append(stored.storage_key)
+
+        self._auto_backup()
 
         return {
             "declared": True,
@@ -1158,14 +1285,17 @@ class CarryMem:
                     content = _import_validator.validate_content(content, "imported_content")
                 content_hash = mem_dict.get("content_hash", "")
                 if merge_strategy == "skip_existing" and content_hash:
-                    existing = self._adapter.recall(
-                        mem_dict.get("content", "")[:50], limit=5
-                    )
+                    existing = self._adapter.recall(mem_dict.get("content", "")[:50], limit=5)
                     if any(
-                        (getattr(e, 'content_hash', None) == content_hash
-                         or (isinstance(e, dict) and e.get("content_hash") == content_hash)
-                         or (hasattr(e, 'metadata') and isinstance(e.metadata, dict)
-                             and e.metadata.get("content_hash") == content_hash))
+                        (
+                            getattr(e, "content_hash", None) == content_hash
+                            or (isinstance(e, dict) and e.get("content_hash") == content_hash)
+                            or (
+                                hasattr(e, "metadata")
+                                and isinstance(e.metadata, dict)
+                                and e.metadata.get("content_hash") == content_hash
+                            )
+                        )
                         for e in existing
                     ):
                         skipped += 1
@@ -1192,6 +1322,8 @@ class CarryMem:
             except Exception as e:
                 logger.warning(f"Failed to import memory entry: {e}")
                 errors += 1
+
+        self._auto_backup()
 
         return {
             "imported": imported,
@@ -1264,7 +1396,7 @@ class CarryMem:
         if not self._adapter:
             raise StorageNotConfiguredError()
 
-        all_conflicts = []
+        all_conflicts: List[Dict[str, Any]] = []
 
         all_memories = self._adapter.recall("", limit=10000)
         if all_memories:
@@ -1275,14 +1407,19 @@ class CarryMem:
         if self._rule_engine:
             rule_conflicts = self._rule_engine.check_conflicts()
             for rc in rule_conflicts:
-                all_conflicts.append({
-                    "conflict_type": rc.conflict_type.value,
-                    "severity": rc.severity.value,
-                    "reason": rc.reason,
-                    "suggestion": rc.suggestion,
-                    "rules": [{"id": r.id, "trigger": r.trigger, "action": r.action, "scope": r.scope} for r in rc.rules],
-                    "source": "rule_engine",
-                })
+                all_conflicts.append(
+                    {
+                        "conflict_type": rc.conflict_type.value,
+                        "severity": rc.severity.value,
+                        "reason": rc.reason,
+                        "suggestion": rc.suggestion,
+                        "rules": [
+                            {"id": r.id, "trigger": r.trigger, "action": r.action, "scope": r.scope}
+                            for r in rc.rules
+                        ],
+                        "source": "rule_engine",
+                    }
+                )
 
         return all_conflicts
 
@@ -1300,13 +1437,15 @@ class CarryMem:
         low_quality = analyzer.identify_low_quality(all_memories, threshold=min_score)
         result = []
         for item in low_quality:
-            result.append({
-                "storage_key": item["storage_key"],
-                "score": item["score"],
-                "reasons": item["reasons"],
-                "content": item["memory"].content[:80],
-                "type": item["memory"].type,
-            })
+            result.append(
+                {
+                    "storage_key": item["storage_key"],
+                    "score": item["score"],
+                    "reasons": item["reasons"],
+                    "content": item["memory"].content[:80],
+                    "type": item["memory"].type,
+                }
+            )
         return result
 
     def list_expired(self) -> List[Dict[str, Any]]:
@@ -1317,6 +1456,7 @@ class CarryMem:
             return []
 
         from datetime import datetime, timezone
+
         conn = self._adapter._get_connection()
         now_iso = datetime.now(timezone.utc).isoformat()
         rows = conn.execute(
@@ -1330,15 +1470,19 @@ class CarryMem:
             content = row["content"]
             if self._adapter._encryption and self._adapter._encryption.is_active:
                 content = self._adapter._decrypt_field(content)
-            result.append({
-                "storage_key": row["storage_key"],
-                "content": (content or "")[:80],
-                "type": row["type"],
-                "expires_at": row["expires_at"],
-            })
+            result.append(
+                {
+                    "storage_key": row["storage_key"],
+                    "content": (content or "")[:80],
+                    "type": row["type"],
+                    "expires_at": row["expires_at"],
+                }
+            )
         return result
 
-    def consolidate(self, dry_run: bool = True, run_p1: bool = True, run_p2: bool = True) -> Dict[str, Any]:
+    def consolidate(
+        self, dry_run: bool = True, run_p1: bool = True, run_p2: bool = True
+    ) -> Dict[str, Any]:
         """Run memory consolidation: dedup, decay, and cleanup.
 
         Args:
@@ -1352,22 +1496,29 @@ class CarryMem:
         """
         from carrymem.consolidation import consolidate, consolidate_p1, consolidate_p2
 
-        all_entries = self._adapter.recall(
-            query="", limit=10000,
+        if not self._adapter:
+            raise StorageNotConfiguredError()
+        adapter = self._adapter
+
+        all_entries = adapter.recall(
+            query="",
+            limit=10000,
             filters={"include_superseded": True},
         )
         all_memories = []
         for entry in all_entries:
-            if hasattr(entry, '__dict__'):
-                all_memories.append({
-                    "storage_key": getattr(entry, "storage_key", ""),
-                    "type": getattr(entry, "memory_type", ""),
-                    "content": getattr(entry, "content", ""),
-                    "confidence": getattr(entry, "confidence", 0.5),
-                    "created_at": getattr(entry, "created_at", ""),
-                    "superseded_at": getattr(entry, "superseded_at", None),
-                    "access_count": getattr(entry, "access_count", 0),
-                })
+            if hasattr(entry, "__dict__"):
+                all_memories.append(
+                    {
+                        "storage_key": getattr(entry, "storage_key", ""),
+                        "type": getattr(entry, "memory_type", ""),
+                        "content": getattr(entry, "content", ""),
+                        "confidence": getattr(entry, "confidence", 0.5),
+                        "created_at": getattr(entry, "created_at", ""),
+                        "superseded_at": getattr(entry, "superseded_at", None),
+                        "access_count": getattr(entry, "access_count", 0),
+                    }
+                )
             elif isinstance(entry, dict):
                 all_memories.append(entry)
 
@@ -1382,8 +1533,9 @@ class CarryMem:
             older_key = item.get("older_key")
             if older_key:
                 try:
-                    self._adapter.supersede(older_key)
-                    superseded_count += 1
+                    if hasattr(adapter, "supersede"):
+                        adapter.supersede(older_key)
+                        superseded_count += 1
                 except Exception as e:
                     logger.warning(f"Failed to supersede {older_key}: {e}")
 
@@ -1392,7 +1544,7 @@ class CarryMem:
             key = item.get("storage_key")
             if key:
                 try:
-                    self._adapter.forget(key)
+                    adapter.forget(key)
                     forgotten_count += 1
                 except Exception as e:
                     logger.warning(f"Failed to forget {key}: {e}")
@@ -1404,7 +1556,7 @@ class CarryMem:
             new_conf = round(current_conf * decay, 3)
             if new_conf < 0.1:
                 try:
-                    self._adapter.forget(key)
+                    adapter.forget(key)
                     forgotten_count += 1
                 except Exception as e:
                     logger.warning(f"Failed to forget decayed {key}: {e}")
@@ -1422,6 +1574,7 @@ class CarryMem:
             rule_storage = None
             try:
                 from carrymem.rules.storage import RuleStorage
+
                 db_path = getattr(self._adapter, "db_path", None)
                 rule_storage = RuleStorage(db_path=db_path) if db_path else None
             except Exception as e:

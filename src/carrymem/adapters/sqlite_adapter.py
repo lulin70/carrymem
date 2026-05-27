@@ -26,6 +26,12 @@ from ..scoring import calculate_importance
 from ..utils.helpers import escape_like, content_hash, TIER_TTL
 from ..utils.language import has_cjk, _STOP_WORDS
 
+# Global write locks per database file — ensures all adapter instances
+# targeting the same DB file serialize writes, preventing Bus Error / corruption
+# when multiple CarryMem instances (one per AI agent) write concurrently.
+_db_write_locks: Dict[str, threading.Lock] = {}
+_db_write_locks_guard = threading.Lock()
+
 _QUERY_EXPANSIONS = {
     "theme": ["dark mode", "light mode", "theme preference"],
     "database": ["postgresql", "mysql", "database selection", "database choice", "decided to use", "sqlite"],
@@ -80,6 +86,11 @@ try:
     SENTENCE_TRANSFORMERS_AVAILABLE = True
 except ImportError:
     SENTENCE_TRANSFORMERS_AVAILABLE = False
+
+# Module-level lock to serialize database initialization (PRAGMA journal_mode=WAL
+# and schema creation) across threads. Without this, concurrent connections to the
+# same database file can cause "database is locked" errors or Bus Errors on macOS.
+_db_init_lock = threading.Lock()
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS memories (
@@ -276,6 +287,14 @@ class SQLiteAdapter(StorageAdapter):
         self._db_path = db_path or _default_db_path()
         self._lock = threading.Lock()
 
+        # Resolve the per-file write lock so all adapter instances sharing
+        # the same database file serialize their writes.
+        resolved = str(os.path.realpath(self._db_path))
+        with _db_write_locks_guard:
+            if resolved not in _db_write_locks:
+                _db_write_locks[resolved] = threading.Lock()
+            self._file_lock = _db_write_locks[resolved]
+
         self._local = threading.local()
         self._closed = False
         self._all_connections: Dict[int, sqlite3.Connection] = {}
@@ -426,29 +445,39 @@ class SQLiteAdapter(StorageAdapter):
             return self._memory_conn
         
         if not hasattr(self._local, 'conn') or self._local.conn is None:
-            try:
-                use_pysqlite3 = self._enable_vector and PYSQLITE3_AVAILABLE
-                if use_pysqlite3:
-                    conn = _pysqlite3.connect(self._db_path)
-                    conn.row_factory = _pysqlite3.Row
-                else:
-                    conn = sqlite3.connect(self._db_path)
-                    conn.row_factory = sqlite3.Row
-                conn.execute("PRAGMA journal_mode=WAL")
-                conn.execute("PRAGMA busy_timeout=5000")
-                conn.execute("PRAGMA foreign_keys=ON")
-                if use_pysqlite3 and SQLITE_VEC_AVAILABLE:
-                    try:
-                        conn.enable_load_extension(True)
-                        sqlite_vec.load(conn)
-                    except Exception as e:
-                        from carrymem.utils.logger import logger
-                        logger.debug(f"sqlite_vec extension loading failed: {e}")
-                self._local.conn = conn
-                with self._conn_lock:
-                    self._all_connections[id(conn)] = conn
-            except sqlite3.Error as e:
-                raise DBConnectionError(f"Failed to connect to database: {e}") from e
+            max_retries = 5
+            for attempt in range(max_retries):
+                try:
+                    use_pysqlite3 = self._enable_vector and PYSQLITE3_AVAILABLE
+                    if use_pysqlite3:
+                        conn = _pysqlite3.connect(self._db_path, timeout=30.0)
+                        conn.row_factory = _pysqlite3.Row
+                    else:
+                        conn = sqlite3.connect(self._db_path, timeout=30.0)
+                        conn.row_factory = sqlite3.Row
+                    # Set busy_timeout FIRST so subsequent PRAGMAs respect it
+                    conn.execute("PRAGMA busy_timeout=10000")
+                    conn.execute("PRAGMA journal_mode=WAL")
+                    conn.execute("PRAGMA foreign_keys=ON")
+                    if use_pysqlite3 and SQLITE_VEC_AVAILABLE:
+                        try:
+                            conn.enable_load_extension(True)
+                            sqlite_vec.load(conn)
+                        except Exception as e:
+                            from carrymem.utils.logger import logger
+                            logger.debug(f"sqlite_vec extension loading failed: {e}")
+                    self._local.conn = conn
+                    with self._conn_lock:
+                        self._all_connections[id(conn)] = conn
+                    break
+                except sqlite3.OperationalError as e:
+                    if "database is locked" in str(e).lower() and attempt < max_retries - 1:
+                        import time as _time
+                        _time.sleep(0.5 * (attempt + 1))
+                        continue
+                    raise DBConnectionError(f"Failed to connect to database: {e}") from e
+                except sqlite3.Error as e:
+                    raise DBConnectionError(f"Failed to connect to database: {e}") from e
         
         return self._local.conn
 
@@ -735,7 +764,7 @@ class SQLiteAdapter(StorageAdapter):
         self._enable_vector = enabled
 
     def remember(self, entry: MemoryEntry, _skip_commit: bool = False) -> StoredMemory:
-        with self._lock:
+        with self._file_lock:
             result = self._remember_impl(entry, _skip_commit)
         if self._enable_cache and self._cache:
             self._cache.invalidate(self._namespace)
@@ -878,7 +907,7 @@ class SQLiteAdapter(StorageAdapter):
         return stored
 
     def remember_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:
-        with self._lock:
+        with self._file_lock:
             conn = self._get_connection()
             results = []
             try:
@@ -1740,7 +1769,7 @@ class SQLiteAdapter(StorageAdapter):
         return conn.execute(sql, all_params).fetchall()
 
     def forget(self, storage_key: str) -> bool:
-        with self._lock:
+        with self._file_lock:
             conn = self._get_connection()
             memory_id = None
             row = conn.execute(
@@ -1775,7 +1804,7 @@ class SQLiteAdapter(StorageAdapter):
         return result
 
     def forget_expired(self) -> int:
-        with self._lock:
+        with self._file_lock:
             conn = self._get_connection()
             now = datetime.now(timezone.utc).isoformat()
             cursor = conn.execute(
@@ -1789,7 +1818,7 @@ class SQLiteAdapter(StorageAdapter):
         return count
 
     def recalculate_importance(self) -> int:
-        with self._lock:
+        with self._file_lock:
             self._recalculate_all_importance()
             conn = self._get_connection()
             total = conn.execute(
@@ -1804,7 +1833,7 @@ class SQLiteAdapter(StorageAdapter):
         new_content: str,
         reason: Optional[str] = None,
     ) -> Optional[StoredMemory]:
-        with self._lock:
+        with self._file_lock:
             return self._update_memory_impl(storage_key, new_content, reason)
 
     def _update_memory_impl(

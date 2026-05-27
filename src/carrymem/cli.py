@@ -42,15 +42,21 @@ try:
     from carrymem.__version__ import __version__
     from carrymem.adapters.sqlite_adapter import SQLiteAdapter
     from carrymem.constants import (
-        DEFAULT_CONFIG_DIR, DB_PATH, CLAUDE_GLOBAL_CONFIG,
-        MCP_CONFIG_CURSOR, TRAE_MCP_CONFIG, TRAE_CN_DIR,
-        TRAE_CN_MCP_CONFIG, DANGEROUS_SYSTEM_DIRS,
+        DEFAULT_CONFIG_DIR,
+        DB_PATH,
+        CLAUDE_GLOBAL_CONFIG,
+        MCP_CONFIG_CURSOR,
+        TRAE_MCP_CONFIG,
+        TRAE_CN_DIR,
+        TRAE_CN_MCP_CONFIG,
+        DANGEROUS_SYSTEM_DIRS,
     )
 except ImportError:
     print("Error: CarryMem not properly installed")
     print("Try: pip install -e .")
     sys.exit(1)
 
+_cli_validator: Any = None
 try:
     from carrymem.security.input_validator import InputValidator
 
@@ -59,7 +65,6 @@ except ImportError:
     import logging
 
     logging.getLogger(__name__).warning("InputValidator not available — input validation disabled")
-    _cli_validator = None
 
 
 _DEFAULT_DB = DB_PATH
@@ -778,7 +783,7 @@ def cmd_pack(args):
         all_memories = cm._adapter.recall("", limit=export_limit) if cm._adapter else []
         memories_data = []
         encrypted_count = 0
-        type_counts = {}
+        type_counts: Dict[str, int] = {}
 
         for m in all_memories:
             d = m.to_dict()
@@ -1545,9 +1550,9 @@ def cmd_doctor(args):
     if carrymem_on_path:
         _record("cli_path", "ok", "CLI command 'carrymem' is on PATH")
     else:
-        py_ver = f"{sys.version_info.major}.{sys.version_info.minor}"
+        py_ver_str = f"{sys.version_info.major}.{sys.version_info.minor}"
         if sys.platform == "darwin":
-            path_hint = f'export PATH="$HOME/Library/Python/{py_ver}/bin:$PATH"'
+            path_hint = f'export PATH="$HOME/Library/Python/{py_ver_str}/bin:$PATH"'
         elif sys.platform.startswith("linux"):
             path_hint = 'export PATH="$HOME/.local/bin:$PATH"'
         else:
@@ -1558,6 +1563,34 @@ def cmd_doctor(args):
             f"CLI command 'carrymem' NOT on PATH. Fix: {path_hint}",
             {"fix": path_hint},
         )
+
+    # Backup status check
+    if db.exists():
+        try:
+            from carrymem.backup import BackupManager
+
+            manager = BackupManager(str(db))
+            status = manager.get_status()
+            backup_dir_exists = status["backup_dir_exists"]
+            backup_count = status["backup_count"]
+            latest_backup = status["latest_backup"]
+
+            if not backup_dir_exists:
+                _record("backup", "warn", "Backup directory does not exist")
+            elif backup_count == 0:
+                _record("backup", "warn", "No backups found — data loss risk")
+            else:
+                latest_str = _format_time(latest_backup) if latest_backup else "N/A"
+                _record(
+                    "backup",
+                    "ok",
+                    f"Backups: {backup_count} file(s), latest: {latest_str}",
+                    {"count": backup_count, "latest": latest_backup},
+                )
+        except Exception as e:
+            _record("backup", "warn", f"Backup check: {e}")
+    else:
+        _record("backup", "skip", "Backup status (no database)")
 
     if parsed.json:
         print(
@@ -1727,11 +1760,20 @@ def _merge_claude_global_config(new_data: dict, force: bool = False):
 def cmd_setup_mcp(args):
     parser = _make_parser("setup-mcp")
     parser.add_argument(
-        "--tool", "-t", choices=["claude-code", "cursor", "trae", "all"], default="all", help="Target tool"
+        "--tool",
+        "-t",
+        choices=["claude-code", "cursor", "trae", "all"],
+        default="all",
+        help="Target tool",
     )
     parser.add_argument("--project", "-p", default=".", help="Project directory (default: current)")
-    parser.add_argument("--global", "-g", dest="global_config", action="store_true",
-                        help="Write to global config (all AI tools on this machine share one CarryMem)")
+    parser.add_argument(
+        "--global",
+        "-g",
+        dest="global_config",
+        action="store_true",
+        help="Write to global config (all AI tools on this machine share one CarryMem)",
+    )
     parser.add_argument("--force", action="store_true", help="Overwrite existing config")
 
     parsed = parser.parse_args(args)
@@ -1945,7 +1987,7 @@ def cmd_tui(args):
     parser.add_argument("--db", help="Database path")
 
     parsed = parser.parse_args(args)
-    run_tui(db_path=parsed.db, namespace=parsed.namespace)
+    run_tui(db_path=parsed.db, namespace=parsed.namespace)  # type: ignore[call-arg]
     return 0
 
 
@@ -2019,6 +2061,101 @@ def cmd_rules_hub(args):
         f"  {_dim('Available: list, add, delete, match, edit, pause, resume, stats, check, export, import, suggest')}"
     )
     return 1
+
+
+def cmd_backup(args):
+    """Manage CarryMem database backups."""
+    parser = _make_parser("backup")
+    parser.add_argument("--list", action="store_true", help="List all backups")
+    parser.add_argument("--restore", help="Restore from a backup file")
+    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--namespace", "-n", default="default", help="Namespace")
+
+    parsed = parser.parse_args(args)
+    cm = _get_carrymem(parsed.db, parsed.namespace)
+
+    if parsed.list:
+        backups = cm.list_backups()
+        if not backups:
+            print(f"  {_dim('No backups found')}")
+            cm.close()
+            return 0
+
+        print(f"\n  {_bold('CarryMem Backups')} ({len(backups)} found)\n")
+        for i, b in enumerate(backups, 1):
+            filename = b.get("filename", "")
+            size_kb = b.get("size_kb", 0)
+            created = b.get("created_at", "")
+            mem_count = b.get("memory_count", "N/A")
+            path = b.get("path", "")
+
+            if size_kb >= 1024:
+                size_str = f"{size_kb / 1024:.1f} MB"
+            else:
+                size_str = f"{size_kb:.1f} KB"
+
+            print(f"  {i}. {_bold(filename)}")
+            print(f"     Size: {size_str} | Memories: {mem_count} | {_format_time(created)}")
+            print(f"     {_dim(path)}")
+            print()
+
+        cm.close()
+        return 0
+
+    if parsed.restore:
+        backup_path = parsed.restore
+        if not os.path.isabs(backup_path):
+            # Try to match against known backup filenames
+            backups = cm.list_backups()
+            matched = [
+                b
+                for b in backups
+                if b.get("filename") == backup_path or b.get("path") == backup_path
+            ]
+            if matched:
+                backup_path = matched[0]["path"]
+            else:
+                print(f"  {_red('Backup not found:')} {parsed.restore}")
+                print(f"  {_dim('Use --list to see available backups')}")
+                cm.close()
+                return 1
+
+        print(f"  {_yellow('WARNING:')} This will replace your current database with the backup.")
+        print(f"  Backup: {backup_path}")
+        try:
+            answer = input("  Proceed? [y/N] ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            cm.close()
+            return 0
+
+        if answer != "y":
+            print(f"  {_dim('Cancelled')}")
+            cm.close()
+            return 0
+
+        result = cm.restore_backup(backup_path)
+        if result.get("restored"):
+            print(f"  {_green('Restored from backup:')} {backup_path}")
+        else:
+            print(f"  {_red('Restore failed:')} {result.get('error', 'unknown error')}")
+            cm.close()
+            return 1
+
+        cm.close()
+        return 0
+
+    # Default: create a backup
+    result = cm.backup()
+    if result.get("backed_up"):
+        print(f"  {_green('Backup created:')} {result['path']}")
+    else:
+        print(f"  {_red('Backup failed:')} {result.get('error', 'unknown error')}")
+        cm.close()
+        return 1
+
+    cm.close()
+    return 0
 
 
 def cmd_init(args):
@@ -3387,6 +3524,7 @@ def show_help():
     edit <key> <text>    Edit a memory
     forget <key>         Delete a memory
     clean                Remove expired/low-quality
+    backup               Create/list/restore backups
     export <path>        Export memories to file
     import <path>        Import memories from file
     pack                 Pack identity into .carry file
@@ -3499,6 +3637,7 @@ def main():
         "rm": cmd_forget,
         "clean": cmd_clean,
         "consolidate": cmd_consolidate,
+        "backup": cmd_backup,
         "export": cmd_export,
         "import": cmd_import,
         "pack": cmd_pack,

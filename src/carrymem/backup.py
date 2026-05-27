@@ -28,7 +28,7 @@ class BackupManager:
         self,
         db_path: str,
         backup_dir: Optional[str] = None,
-        max_backups: int = 10,
+        max_backups: int = 5,
     ):
         self._db_path = db_path
         self._max_backups = max_backups
@@ -36,8 +36,10 @@ class BackupManager:
         if backup_dir:
             self._backup_dir = backup_dir
         else:
-            db_dir = os.path.dirname(db_path)
-            self._backup_dir = os.path.join(db_dir, "backups") if db_dir else "backups"
+            from .constants import get_backup_dir
+
+            default_backup_dir = get_backup_dir()
+            self._backup_dir = str(default_backup_dir)
 
         self._ensure_dir(self._backup_dir)
         try:
@@ -51,8 +53,8 @@ class BackupManager:
             os.makedirs(path, mode=0o700, exist_ok=True)
 
     def create_backup(self) -> str:
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        backup_filename = f"memories_{timestamp}.db"
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
+        backup_filename = f"memories_backup_{timestamp}.db"
         backup_path = os.path.join(self._backup_dir, backup_filename)
 
         if self._db_path == ":memory:":
@@ -64,7 +66,7 @@ class BackupManager:
         try:
             conn = sqlite3.connect(self._db_path)
             try:
-                conn.execute(f"VACUUM INTO ?", (backup_path,))
+                conn.execute("VACUUM INTO ?", (backup_path,))
             except sqlite3.OperationalError:
                 conn.close()
                 shutil.copy2(self._db_path, backup_path)
@@ -124,7 +126,9 @@ class BackupManager:
 
         backups = []
         for filename in os.listdir(self._backup_dir):
-            if filename.startswith("memories_") and filename.endswith(".db"):
+            if (
+                filename.startswith("memories_") or filename.startswith("memories_backup_")
+            ) and filename.endswith(".db"):
                 filepath = os.path.join(self._backup_dir, filename)
                 try:
                     stat = os.stat(filepath)
@@ -132,22 +136,26 @@ class BackupManager:
 
                     try:
                         conn = sqlite3.connect(filepath)
-                        count = conn.execute(f"SELECT COUNT(*) FROM {self.TABLE_NAME}").fetchone()[0]
+                        count = conn.execute(f"SELECT COUNT(*) FROM {self.TABLE_NAME}").fetchone()[
+                            0
+                        ]
                         conn.close()
                         memory_count = count
                     except Exception as e:
                         logger.warning(f"Failed to get memory count from backup {filename}: {e}")
                         memory_count = None
 
-                    backups.append({
-                        "filename": filename,
-                        "path": filepath,
-                        "size_kb": round(size_kb, 1),
-                        "created_at": datetime.fromtimestamp(
-                            stat.st_mtime, tz=timezone.utc
-                        ).isoformat(),
-                        "memory_count": memory_count,
-                    })
+                    backups.append(
+                        {
+                            "filename": filename,
+                            "path": filepath,
+                            "size_kb": round(size_kb, 1),
+                            "created_at": datetime.fromtimestamp(
+                                stat.st_mtime, tz=timezone.utc
+                            ).isoformat(),
+                            "memory_count": memory_count,
+                        }
+                    )
                 except (OSError, sqlite3.Error):
                     continue
 
@@ -159,7 +167,7 @@ class BackupManager:
         if len(backups) <= self._max_backups:
             return 0
 
-        to_remove = backups[self._max_backups:]
+        to_remove = backups[self._max_backups :]
         removed = 0
         for backup in to_remove:
             try:
@@ -169,3 +177,18 @@ class BackupManager:
                 continue
 
         return removed
+
+    def get_status(self) -> Dict[str, Any]:
+        """Get backup status information for doctor/health checks."""
+        backup_dir_exists = os.path.exists(self._backup_dir)
+        backups = self.list_backups() if backup_dir_exists else []
+        latest = backups[0] if backups else None
+
+        return {
+            "backup_dir": self._backup_dir,
+            "backup_dir_exists": backup_dir_exists,
+            "backup_count": len(backups),
+            "latest_backup": latest["created_at"] if latest else None,
+            "latest_backup_path": latest["path"] if latest else None,
+            "max_backups": self._max_backups,
+        }

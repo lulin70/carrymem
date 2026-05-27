@@ -27,18 +27,20 @@ def temp_db(tmp_path):
     """Create a temporary database with test data."""
     db_path = tmp_path / "test_memories.db"
     conn = sqlite3.connect(str(db_path))
-    conn.execute("""
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS memories (
             id TEXT PRIMARY KEY,
             type TEXT NOT NULL,
             content TEXT NOT NULL,
             confidence REAL DEFAULT 0.0
         )
-    """)
+    """
+    )
     for i in range(10):
         conn.execute(
             "INSERT INTO memories (id, type, content, confidence) VALUES (?, ?, ?, ?)",
-            (f"mem_{i}", "fact", f"Memory content {i}", 0.9)
+            (f"mem_{i}", "fact", f"Memory content {i}", 0.9),
         )
     conn.commit()
     conn.close()
@@ -77,8 +79,10 @@ class TestBackupCreation:
         backup_path = backup_manager.create_backup()
         filename = os.path.basename(backup_path)
 
-        assert len(filename) == len("memories_YYYYMMDD_HHMMSS.db"), \
-            f"Filename format incorrect: {filename}"
+        assert filename.startswith(
+            "memories_backup_"
+        ), f"Filename should start with 'memories_backup_': {filename}"
+        assert filename.endswith(".db"), f"Filename should end with '.db': {filename}"
 
     def test_multiple_backups(self, backup_manager, temp_db):
         """Multiple backups create separate files."""
@@ -146,8 +150,9 @@ class TestRestore:
 
         backup_manager.restore_backup(backup_path)
 
-        assert not os.path.exists(pre_restore_path), \
-            "Pre-restore backup should be cleaned up after success"
+        assert not os.path.exists(
+            pre_restore_path
+        ), "Pre-restore backup should be cleaned up after success"
 
     def test_restore_rollback_on_failure(self, backup_manager, temp_db):
         """Failed restore rolls back to pre-restore state."""
@@ -237,8 +242,9 @@ class TestListBackups:
 
         backup = backups[0]
         required_keys = {"filename", "path", "size_kb", "created_at", "memory_count"}
-        assert required_keys.issubset(backup.keys()), \
-            f"Missing keys: {required_keys - set(backup.keys())}"
+        assert required_keys.issubset(
+            backup.keys()
+        ), f"Missing keys: {required_keys - set(backup.keys())}"
         assert backup["size_kb"] > 0, "Size should be positive"
         assert isinstance(backup["memory_count"], int), "Memory count should be integer"
 
@@ -309,10 +315,12 @@ class TestEdgeCases:
         assert os.path.isdir(custom_dir)
 
     def test_default_backup_directory(self, temp_db, tmp_path):
-        """Default backup directory is 'backups' next to DB."""
+        """Default backup directory uses ~/.carrymem/backups."""
         manager = BackupManager(temp_db)
 
-        expected_dir = os.path.join(os.path.dirname(temp_db), "backups")
+        from carrymem.constants import get_backup_dir
+
+        expected_dir = str(get_backup_dir())
         assert manager._backup_dir == expected_dir
 
     def test_copy2_fallback(self, monkeypatch, backup_manager, temp_db):
@@ -321,13 +329,14 @@ class TestEdgeCases:
 
         def failing_create(self):
             import sqlite3
+
             if self._db_path == ":memory:":
                 raise ValueError("Cannot backup in-memory database")
             if not os.path.exists(self._db_path):
                 raise FileNotFoundError(f"Database not found: {self._db_path}")
 
-            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-            backup_filename = f"memories_{timestamp}.db"
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
+            backup_filename = f"memories_backup_{timestamp}.db"
             backup_path = os.path.join(self._backup_dir, backup_filename)
 
             shutil.copy2(self._db_path, backup_path)
@@ -354,18 +363,20 @@ class TestEdgeCases:
         """Backup of larger database works correctly."""
         db_path = str(tmp_path / "large.db")
         conn = sqlite3.connect(db_path)
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE memories (
                 id TEXT PRIMARY KEY,
                 type TEXT NOT NULL,
                 content TEXT NOT NULL,
                 confidence REAL DEFAULT 0.0
             )
-        """)
+        """
+        )
         for i in range(1000):
             conn.execute(
                 "INSERT INTO memories VALUES (?, ?, ?, ?)",
-                (f"mem_{i}", "fact", f"Content {i} " * 10, 0.85)
+                (f"mem_{i}", "fact", f"Content {i} " * 10, 0.85),
             )
         conn.commit()
         conn.close()
@@ -429,6 +440,164 @@ class TestIntegration:
         final_count = final_conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
         final_conn.close()
         assert final_count == 10, "Data should remain consistent after multiple restores"
+
+
+class TestBackupStatus:
+    """Tests for get_status() method."""
+
+    def test_status_with_no_backups(self, tmp_path):
+        """Status reports no backups when directory is empty."""
+        db_path = str(tmp_path / "test.db")
+        conn = sqlite3.connect(db_path)
+        conn.execute("CREATE TABLE memories (id TEXT PRIMARY KEY)")
+        conn.commit()
+        conn.close()
+
+        manager = BackupManager(db_path, str(tmp_path / "backups"))
+        status = manager.get_status()
+
+        assert status["backup_dir_exists"] is True
+        assert status["backup_count"] == 0
+        assert status["latest_backup"] is None
+
+    def test_status_with_backups(self, backup_manager, temp_db):
+        """Status reports correct backup info."""
+        backup_manager.create_backup()
+        status = backup_manager.get_status()
+
+        assert status["backup_dir_exists"] is True
+        assert status["backup_count"] == 1
+        assert status["latest_backup"] is not None
+        assert status["max_backups"] == 5
+
+    def test_status_nonexistent_directory(self, tmp_path):
+        """Status handles nonexistent backup directory."""
+        db_path = str(tmp_path / "nonexistent" / "test.db")
+        manager = BackupManager(db_path, str(tmp_path / "no_backups_here"))
+        status = manager.get_status()
+
+        assert status["backup_dir"] == str(tmp_path / "no_backups_here")
+        assert status["backup_count"] == 0
+
+
+class TestAutoBackup:
+    """Tests for CarryMem auto-backup integration."""
+
+    def test_initial_backup_on_first_open(self, tmp_path):
+        """CarryMem creates initial backup when opening existing DB."""
+        from carrymem import CarryMem
+
+        db_path = str(tmp_path / "test_auto.db")
+        backup_dir = str(tmp_path / "backups")
+        # First create a DB with some data
+        cm1 = CarryMem(db_path=db_path, auto_backup_interval=0, config={"backup_dir": backup_dir})
+        cm1.declare("Test memory for initial backup")
+        cm1.close()
+
+        # Open again — should trigger initial backup
+        cm2 = CarryMem(db_path=db_path, auto_backup_interval=0, config={"backup_dir": backup_dir})
+        backups = cm2.list_backups(backup_dir=backup_dir)
+        cm2.close()
+
+        assert len(backups) >= 1, "Initial backup should be created on first open"
+
+    def test_auto_backup_triggers_after_writes(self, tmp_path):
+        """Auto-backup triggers after N write operations."""
+        from carrymem import CarryMem
+
+        db_path = str(tmp_path / "test_auto2.db")
+        backup_dir = str(tmp_path / "backups2")
+        cm = CarryMem(db_path=db_path, auto_backup_interval=3, config={"backup_dir": backup_dir})
+
+        # Clear any initial backup
+        initial_backups = cm.list_backups(backup_dir=backup_dir)
+
+        # Do 3 write operations (interval=3)
+        cm.declare("Memory 1")
+        cm.declare("Memory 2")
+        assert len(cm.list_backups(backup_dir=backup_dir)) == len(
+            initial_backups
+        ), "Should not backup yet"
+
+        cm.declare("Memory 3")
+        # After 3rd write, auto-backup should trigger
+        new_backups = cm.list_backups(backup_dir=backup_dir)
+        assert len(new_backups) > len(initial_backups), "Auto-backup should trigger after 3 writes"
+        cm.close()
+
+    def test_auto_backup_disabled_with_zero_interval(self, tmp_path):
+        """Auto-backup disabled when interval is 0."""
+        from carrymem import CarryMem
+
+        db_path = str(tmp_path / "test_auto3.db")
+        backup_dir = str(tmp_path / "backups3")
+        cm = CarryMem(db_path=db_path, auto_backup_interval=0, config={"backup_dir": backup_dir})
+
+        initial_backups = len(cm.list_backups(backup_dir=backup_dir))
+
+        for i in range(25):
+            cm.declare(f"Memory {i}")
+
+        assert (
+            len(cm.list_backups(backup_dir=backup_dir)) == initial_backups
+        ), "No auto-backup when interval=0"
+        cm.close()
+
+    def test_auto_backup_on_forget(self, tmp_path):
+        """Auto-backup counts forget operations."""
+        from carrymem import CarryMem
+
+        db_path = str(tmp_path / "test_auto4.db")
+        backup_dir = str(tmp_path / "backups4")
+        cm = CarryMem(db_path=db_path, auto_backup_interval=3, config={"backup_dir": backup_dir})
+
+        result = cm.declare("Memory to forget")
+        keys = result.get("storage_keys", [])
+
+        initial_backups = len(cm.list_backups(backup_dir=backup_dir))
+
+        # Do 2 more writes + 1 forget = 3 total (interval=3)
+        cm.declare("Another memory")  # write 2
+        cm.declare("Yet another")  # write 3 → triggers auto-backup
+
+        after_auto = len(cm.list_backups(backup_dir=backup_dir))
+        assert after_auto > initial_backups, "Auto-backup should trigger after 3 writes"
+
+        # Now forget should also count as a write
+        backup_before_forget = len(cm.list_backups(backup_dir=backup_dir))
+        cm.declare("Write 1 after reset")  # write 1
+        cm.declare("Write 2 after reset")  # write 2
+
+        if keys:
+            cm.forget_memory(keys[0])  # write 3 → triggers auto-backup
+
+        after_forget = len(cm.list_backups(backup_dir=backup_dir))
+        assert (
+            after_forget > backup_before_forget
+        ), "Auto-backup should trigger after forget completes the interval"
+        cm.close()
+
+    def test_max_backups_default_is_five(self, tmp_path):
+        """Default max_backups is 5."""
+        db_path = str(tmp_path / "test_max.db")
+        conn = sqlite3.connect(db_path)
+        conn.execute(
+            "CREATE TABLE memories (id TEXT PRIMARY KEY, type TEXT, content TEXT, confidence REAL)"
+        )
+        conn.commit()
+        conn.close()
+
+        manager = BackupManager(db_path, str(tmp_path / "backups"))
+        assert manager._max_backups == 5
+
+    def test_backup_filename_format(self, backup_manager, temp_db):
+        """Backup filename follows memories_backup_YYYYMMDD_HHMMSS.db format."""
+        backup_path = backup_manager.create_backup()
+        filename = os.path.basename(backup_path)
+        assert filename.startswith(
+            "memories_backup_"
+        ), f"Filename should start with 'memories_backup_': {filename}"
+        assert filename.endswith(".db"), f"Filename should end with '.db': {filename}"
 
 
 if __name__ == "__main__":
