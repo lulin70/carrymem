@@ -16,8 +16,8 @@ CarryMem fixes this. It's a lightweight, zero-dependency memory system that stor
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-2987%2B%20passing-brightgreen" alt="Tests">
-  <img src="https://img.shields.io/badge/coverage-79.51%25-green" alt="Coverage">
+  <img src="https://img.shields.io/badge/tests-3050%2B%20passing-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/coverage-79%25%2B-green" alt="Coverage">
   <img src="https://img.shields.io/badge/code%20quality-4.3%2F5%20%E2%98%85%E2%98%85%E2%98%85%E2%98%85%E2%98%86-blue" alt="Code Quality">
   <img src="https://img.shields.io/badge/security-5%2F5%20%E2%98%85%E2%98%85%E2%98%85%E2%98%85%E2%98%85-success" alt="Security">
   <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python">
@@ -37,6 +37,9 @@ CarryMem fixes this. It's a lightweight, zero-dependency memory system that stor
 
 > **"I want to take my data with me"**
 > Your AI memory is yours. One file to pack, restore on any machine, any tool.
+
+> **"USB Carry — my memories in my pocket"**
+> Pack your memories to an encrypted .carry file, copy to USB, unpack on a new machine. Your AI identity travels with you.
 
 ---
 
@@ -70,6 +73,18 @@ AI answers "PostgreSQL" — it works!
 carrymem pack                    # Creates carrymem_identity_20260526.carry
 # Copy to USB / cloud / new machine
 carrymem unpack my_identity.carry  # All memories restored
+
+# With encryption for sensitive data
+carrymem pack -o my_memories.carry --encrypt   # Password-encrypted .carry file
+carrymem unpack my_memories.carry              # Auto-detects encryption, prompts for password
+```
+
+### Auto-backup & Recovery
+
+```bash
+carrymem backup                  # Manual backup (also auto-backup every 20 writes)
+carrymem backup --list           # List all backups
+carrymem backup --restore memories_backup_20260527_120000.db  # Restore from backup
 ```
 
 ---
@@ -178,6 +193,12 @@ carrymem setup-mcp --tool cursor        # One-line MCP config
 carrymem tui                            # Terminal UI
 carrymem export backup.json             # Export all memories
 carrymem import backup.json             # Import memories
+carrymem pack -o my_memories.carry      # Pack into portable .carry file
+carrymem pack -o my_memories.carry --encrypt  # Encrypted .carry file
+carrymem unpack my_memories.carry       # Unpack .carry file
+carrymem backup                         # Manual backup
+carrymem backup --list                  # List backups
+carrymem backup --restore <file>        # Restore from backup
 carrymem version                        # Show version
 # Rule Engine commands
 carrymem add-rule "use SSL" --trigger "database" --type avoid  # Add a rule
@@ -333,7 +354,9 @@ Automatically detects and redacts API keys, passwords, tokens, and 21 other sens
 | Feature | Description |
 |---------|-------------|
 | **Encryption** | AES-128 (Fernet) or HMAC-CTR fallback, zero-dep |
-| **Backup** | Zero-downtime SQLite VACUUM INTO |
+| **Encrypted .carry files** | `pack --encrypt` for password-encrypted portable files |
+| **Auto-Backup** | Every 20 writes, VACUUM INTO backup, max 5 retained |
+| **Backup/Restore** | Manual backup, list, and restore via `carrymem backup` |
 | **Audit Log** | Append-only operation history |
 | **Version History** | Every edit tracked, rollback supported |
 | **Input Validation** | SQL injection, XSS, path traversal protection |
@@ -343,9 +366,30 @@ cm = CarryMem(encryption_key="my-secret-key")
 # All content encrypted at rest, decrypted on read
 ```
 
-#### Backup/Restore — Zero-Downtime VACUUM INTO
+#### Backup/Restore — Auto-Backup + Manual Control
 
-Zero-downtime SQLite VACUUM INTO for safe backups without stopping your workflow.
+Auto-backup triggers every 20 write operations (VACUUM INTO), retaining up to 5 backup files. Manual control via CLI:
+
+```bash
+carrymem backup                  # Create manual backup
+carrymem backup --list           # List all backups
+carrymem backup --restore <file> # Restore from a specific backup
+```
+
+#### Pack/Unpack — USB Carry with Encryption
+
+```bash
+# Pack memories into a portable .carry file
+carrymem pack -o my_memories.carry
+
+# With password encryption for sensitive data
+carrymem pack -o my_memories.carry --encrypt
+
+# Unpack on any machine (auto-detects encryption)
+carrymem unpack my_memories.carry
+```
+
+SHA-256 checksum ensures file integrity. v1.0 .carry format is backward compatible with a warning.
 
 #### Export/Import — Identity Follows You Across Devices
 
@@ -484,6 +528,8 @@ Rule management directly in your editor:
 | **Identity Portrait** | ✅ whoami | ❌ | ❌ | ❌ |
 | **Rule Engine** | ✅ Scopes + Skills | ❌ | ❌ | ❌ |
 | **Pack / Unpack** | ✅ One file | ❌ | ❌ | ❌ |
+| **Encrypted Carry** | ✅ --encrypt | ❌ | ❌ | ❌ |
+| **Auto-Backup** | ✅ Every 20 writes | ❌ | ❌ | ❌ |
 | **Cross-Language Recall** | ✅ EN/CN/JP | ❌ | ❌ | ❌ |
 | **Encryption** | ✅ Built-in | ❌ | ❌ | ❌ |
 | **Data Ownership** | ✅ Local files | ⚠️ Self-hostable | ✅ Local | ❌ Cloud |
@@ -635,15 +681,15 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 
 ## Project Status
 
-**Current Version**: v0.2.3
-**Tests**: 2987+ passing
-**Coverage**: 79.51%
+**Current Version**: v0.2.4
+**Tests**: 3050+ passing
+**Coverage**: 79%+
 
 **Changelog**:
+- **v0.2.4**: Auto-backup, encrypted .carry files, concurrent safety, E2E tests
 - **v0.2.3**: Consolidation scheduling (schedule/stop), PrefEval standardization
 - **v0.2.2**: Token budget + dead code fix + security, PrefEval 87.9%
 - **v0.2.1**: Coreference resolution, auto-redaction, QA prompt optimization, PrefEval 87.0% (first time surpassing reminder)
-- **v0.2.0**: Recall purity, scope-based preference injection, PromptBuilder extraction, PrefEval 0.940, E2E tests
 
 ---
 

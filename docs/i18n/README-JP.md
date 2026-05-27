@@ -58,8 +58,17 @@ AI が "PostgreSQL" と答えたら — 成功！
 
 ```bash
 carrymem pack                    # carrymem_identity_20260526.carry を作成
+carrymem pack --encrypt          # パスワード暗号化パック（パスワード入力プロンプト）
 # USB / クラウド / 新しいマシンにコピー
 carrymem unpack my_identity.carry  # すべてのメモリを復元
+```
+
+### バックアップが必要？
+
+```bash
+carrymem backup                  # バックアップを作成
+carrymem backup --list           # すべてのバックアップを一覧
+carrymem backup --restore <path> # バックアップから復元
 ```
 
 ---
@@ -172,6 +181,12 @@ carrymem list-rules --status active                            # アクティブ
 carrymem skill-pack rules.json --name team-conventions         # Skill としてパック
 carrymem skill-install team-conventions.json --scope company   # Skill インストール
 carrymem skill-verify team-conventions.json                    # Skill 検証
+# バックアップとポータビリティ
+carrymem pack --encrypt                                        # パスワード暗号化パック
+carrymem unpack identity.carry                                 # アイデンティティを復元
+carrymem backup                                                # バックアップを作成
+carrymem backup --list                                         # バックアップ一覧
+carrymem backup --restore <path>                               # バックアップから復元
 ```
 
 ---
@@ -270,7 +285,8 @@ report = cm.consolidate(dry_run=False, run_p1=True, run_p2=True)
 | 機能 | 説明 |
 |------|------|
 | **暗号化** | AES-128 (Fernet) または HMAC-CTR フォールバック、ゼロ依存 |
-| **バックアップ** | ゼロダウンタイム SQLite VACUUM INTO |
+| **自動バックアップ** | ゼロダウンタイム SQLite VACUUM INTO、20回書き込みごとに自動バックアップ |
+| **.carry 暗号化** | ポータブルアイデンティティファイルのパスワード暗号化 + SHA-256 チェックサム |
 | **監査ログ** | 追記専用の操作履歴 |
 | **バージョン履歴** | すべての編集を追跡、ロールバック対応 |
 | **入力検証** | SQLインジェクション、XSS、パストラバーサル対策 |
@@ -534,7 +550,7 @@ AI にはメモリが必要だと知っている。プロンプトファイル�
 
 ## プロジェクトステータス
 
-**現在のバージョン**: v0.2.3
+**現在のバージョン**: v0.2.4
 **テスト**: 3000+ passing
 **カバレッジ**: ~78%
 

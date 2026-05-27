@@ -58,8 +58,17 @@ AI 回答 "PostgreSQL" — 成功了！
 
 ```bash
 carrymem pack                    # 打包为 carrymem_identity_20260526.carry
+carrymem pack --encrypt          # 加密打包（提示输入密码）
 # 拷贝到 U盘 / 网盘 / 新机器
 carrymem unpack my_identity.carry  # 所有记忆恢复
+```
+
+### 需要备份？
+
+```bash
+carrymem backup                  # 创建备份
+carrymem backup --list           # 列出所有备份
+carrymem backup --restore <path> # 从备份恢复
 ```
 
 ---
@@ -174,6 +183,12 @@ carrymem list-rules --status active                      # 列出活跃规则
 carrymem skill-pack rules.json --name team-conventions   # 打包规则为 Skill
 carrymem skill-install team-conventions.json --scope company  # 安装 Skill
 carrymem skill-verify team-conventions.json              # 验证 Skill 完整性
+# 备份与携带
+carrymem pack --encrypt                                 # 加密打包身份文件
+carrymem unpack identity.carry                          # 恢复身份
+carrymem backup                                         # 创建备份
+carrymem backup --list                                  # 列出备份
+carrymem backup --restore <path>                        # 从备份恢复
 ```
 
 ---
@@ -272,7 +287,8 @@ report = cm.consolidate(dry_run=False, run_p1=True, run_p2=True)
 | 特性 | 说明 |
 |------|------|
 | **加密** | AES-128 (Fernet) 或 HMAC-CTR 降级，零依赖 |
-| **备份** | 零停机 SQLite VACUUM INTO |
+| **自动备份** | 零停机 SQLite VACUUM INTO，每 20 次写操作自动备份 |
+| **.carry 加密** | 便携身份文件支持密码加密 + SHA-256 校验 |
 | **审计日志** | 只追加操作历史 |
 | **版本历史** | 每次编辑追踪，支持回滚 |
 | **输入验证** | SQL注入、XSS、路径遍历防护 |
@@ -536,7 +552,7 @@ cm.import_memories(input_path="backup.json")
 
 ## 项目状态
 
-**当前版本**：v0.2.2
+**当前版本**：v0.2.4
 **测试**：2100+ passing
 **覆盖率**：~78%
 

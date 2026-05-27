@@ -186,6 +186,35 @@ with CarryMem(namespace="project-b") as cm_b:
 # 干渉なし！
 ```
 
+### シナリオ4：メモリを新しいデバイスに持ち運ぶ
+
+```bash
+# 古いデバイスでパック（暗号化可能）
+carrymem pack --encrypt
+# パスワード入力後、carrymem_identity_20260527.carry を生成
+
+# USB / クラウド / 新しいマシンにコピー
+
+# 新しいデバイスで復元
+carrymem unpack carrymem_identity_20260527.carry
+# パスワード入力 → すべてのメモリが復元
+```
+
+### シナリオ5：バックアップとリストア
+
+```bash
+# 手動バックアップの作成
+carrymem backup
+
+# すべてのバックアップを一覧
+carrymem backup --list
+
+# バックアップからリストア
+carrymem backup --restore ~/.carrymem/backups/memories_backup_20260527_103000_123456.db
+```
+
+> 💡 CarryMem は20回の書き込み操作ごとに自動バックアップも作成します。手動操作は不要です。
+
 ---
 
 ## エクスポートとインポート

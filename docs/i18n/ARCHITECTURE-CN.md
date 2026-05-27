@@ -1,7 +1,7 @@
 # CarryMem 架构设计
 
-**版本**: v0.2.2  
-**日期**: 2026-05-13  
+**版本**: v0.2.4
+**日期**: 2026-05-27  
 **状态**: 稳定
 
 ---
@@ -15,9 +15,12 @@
 5. [关键组件](#关键组件)
 6. [规则引擎](#规则引擎)
 7. [上下文工程](#上下文工程)
-8. [扩展机制](#扩展机制)
-9. [性能优化](#性能优化)
-10. [安全设计](#安全设计)
+8. [并发安全](#并发安全)
+9. [自动备份架构](#自动备份架构)
+10. [.carry 文件格式](#carry-文件格式)
+11. [扩展机制](#扩展机制)
+12. [性能优化](#性能优化)
+13. [安全设计](#安全设计)
 
 ---
 
@@ -562,6 +565,199 @@ CarryMem 概念可以用领域驱动设计术语表达，便于与企业架构�
 
 ---
 
+## 并发安全
+
+### 问题：多实例写冲突
+
+多个 CarryMem 实例（不同 AI Agent 进程）可能同时写同一个 SQLite 数据库文件。没有协调机制会导致 `database is locked` 错误或数据损坏。
+
+### 方案：Per-File Write Lock
+
+```
+┌──────────────────────────────────────────────────────────┐
+│              _db_write_locks（全局字典）                    │
+│                                                           │
+│  "/path/to/memories.db" → Lock A                         │
+│  "/other/path/db.db"     → Lock B                        │
+│  ...                                                      │
+└──────────────────────────────────────────────────────────┘
+         ↑                           ↑
+    实例 1 (Cursor)              实例 2 (Claude Code)
+    self._file_lock = A          self._file_lock = A
+    （共享同一个 Lock）           （共享同一个 Lock）
+```
+
+**实现**：
+
+```python
+# 全局注册表：realpath → Lock
+_db_write_locks: Dict[str, threading.Lock] = {}
+_db_write_locks_guard = threading.Lock()  # 保护字典本身
+
+class SQLiteAdapter:
+    def __init__(self, ...):
+        resolved = str(os.path.realpath(self._db_path))
+        with _db_write_locks_guard:
+            if resolved not in _db_write_locks:
+                _db_write_locks[resolved] = threading.Lock()
+            self._file_lock = _db_write_locks[resolved]
+```
+
+**锁层级**：
+
+| 操作 | 使用的锁 | 作用范围 | 行为 |
+|------|---------|---------|------|
+| 写操作（remember/forget/update/recalculate/remember_batch） | `self._file_lock` | 跨实例 | 序列化对同一 DB 文件的所有写操作 |
+| 读操作（recall/list） | `self._lock` | 单实例 | 不阻塞其他实例的读操作 |
+
+**二级保护**：WAL 模式 + `busy_timeout=10000ms`
+
+```python
+conn = sqlite3.connect(db_path, timeout=10.0)
+conn.execute("PRAGMA journal_mode=WAL")
+```
+
+WAL 模式允许在写操作进行时并发读取。`busy_timeout` 提供 10 秒的锁获取窗口，处理 per-file lock 不够的边缘情况（如外部进程）。
+
+---
+
+## 自动备份架构
+
+### 概览
+
+CarryMem 提供自动、零停机的数据库备份，防止数据丢失。
+
+### 触发条件
+
+- **间隔触发**：每 N 次写操作（默认 20 次，可通过 `auto_backup_interval` 配置）
+- **初始备份**：首次打开已有数据库时自动创建
+
+```
+写操作 → _write_count += 1
+     ↓
+_write_count % auto_backup_interval == 0?
+     ↓ 是
+BackupManager.create_backup()
+```
+
+### 备份方式：VACUUM INTO
+
+```python
+conn.execute("VACUUM INTO ?", (backup_path,))
+```
+
+- **零停机**：不阻塞读或写
+- **一致性快照**：SQLite 推荐的备份方法
+- **降级方案**：如果不支持 `VACUUM INTO`，降级为 `shutil.copy2`
+
+### 备份位置与命名
+
+- **目录**：`~/.carrymem/backups/`（可通过 `backup_dir` 配置）
+- **文件名格式**：`memories_backup_YYYYMMDD_HHMMSS_微秒.db`
+- **权限**：目录 `0o700`，备份文件 `0o600`
+
+### 自动清理
+
+- **最大备份数**：5（可通过 `max_backups` 配置）
+- **策略**：FIFO — 最旧的备份优先删除
+- **时机**：每次创建新备份后执行清理
+
+### 恢复
+
+```bash
+carrymem backup --list              # 列出所有备份
+carrymem backup --restore <path>    # 从备份恢复
+```
+
+恢复流程：
+1. 验证备份文件（打开并查询）
+2. 创建恢复前安全副本（`.pre_restore.bak`）
+3. 将备份覆盖当前数据库
+4. 失败时从安全副本回滚
+
+---
+
+## .carry 文件格式
+
+`.carry` 文件是 CarryMem 的便携身份格式，用于跨机器和工具传输记忆。
+
+### 版本历史
+
+#### v1.0：旧版格式
+
+- 纯 gzip 压缩 JSON
+- 无校验和，无加密支持
+- 结构：`gzip(json_data)`
+
+#### v1.1：容器格式（当前）
+
+```json
+{
+    "version": "1.1",
+    "checksum": "<SHA-256 hex，加密前的 payload 校验和>",
+    "encrypted": false,
+    "payload": "<base64(gzip(json_data)) 或加密字符串>"
+}
+```
+
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `version` | string | 格式版本（`"1.1"`） |
+| `checksum` | string | JSON payload 的 SHA-256 哈希（压缩/加密前） |
+| `encrypted` | boolean | payload 是否加密 |
+| `payload` | string | 未加密时为 `base64(gzip(json))`，加密时为加密字符串 |
+| `encryption_backend` | string | （可选）使用的加密后端（`"fernet"` 或 `"hmac_ctr"`） |
+
+### 打包流程
+
+```
+记忆数据 → JSON 序列化 → SHA-256 校验和
+     ↓
+加密？ ──是──→ MemoryEncryption.encrypt(json_string)
+     │                    ↓
+     否              加密后的 payload
+     ↓
+base64(gzip(json_bytes)) = 未加密 payload
+     ↓
+容器 {version, checksum, encrypted, payload}
+     ↓
+gzip(container_json) → .carry 文件
+```
+
+### 解包流程
+
+```
+.carry 文件 → gzip 解压 → 解析 JSON
+     ↓
+包含 "payload" 和 "checksum" 键？ ──是──→ v1.1 格式
+     │                                         ↓
+     否                                   encrypted?
+     ↓                                   ↓ 是        ↓ 否
+v1.0 格式                              解密       base64 解码
+（警告：旧版）                              ↓              ↓
+                                    验证 SHA-256 校验和
+                                         ↓
+                                    gzip 解压 → JSON 解析 → 记忆数据
+```
+
+### 向后兼容
+
+- v1.0 格式文件仍可解包
+- 显示警告：`⚠ Legacy .carry format (no checksum verification available)`
+- 不支持的版本号会被拒绝并报错
+
+### CLI 命令
+
+```bash
+carrymem pack                         # 打包身份（未加密）
+carrymem pack --encrypt               # 密码加密打包
+carrymem pack --output my_id.carry    # 自定义输出路径
+carrymem unpack identity.carry        # 解包并恢复
+carrymem unpack identity.carry --replace  # 替换已有记忆
+```
+
+---
+
 ## 扩展机制
 
 ### 1. 自定义存储适配器
@@ -656,7 +852,10 @@ def _validate_file_path(path: str) -> str:
 
 CarryMem 采用 **分层架构 + 插件设计**，实现：
 
-✅ **高性能**: FTS5 + 索引 + 缓存  
-✅ **可扩展**: 适配器模式 + 插件系统  
-✅ **易使用**: 零配置 + CLI 工具  
+✅ **高性能**: FTS5 + 索引 + 缓存
+✅ **可扩展**: 适配器模式 + 插件系统
+✅ **易使用**: 零配置 + CLI 工具
 ✅ **安全**: 输入验证 + 参数化查询 + 路径安全
+✅ **并发安全**: Per-file 写锁 + WAL 模式 + busy_timeout
+✅ **自动备份**: VACUUM INTO + 间隔触发 + FIFO 清理
+✅ **便携身份**: .carry 格式 + SHA-256 校验 + 可选加密

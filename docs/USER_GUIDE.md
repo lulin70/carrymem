@@ -9,8 +9,11 @@
 5. [Skill Format](#skill-format)
 6. [Merge Protocol](#merge-protocol)
 7. [Memory Consolidation](#memory-consolidation)
-8. [VS Code Extension](#vs-code-extension)
-9. [CLI Reference](#cli-reference)
+8. [Auto-Backup](#auto-backup)
+9. [Pack/Unpack with Encryption](#packunpack-with-encryption)
+10. [USB Carry Scenario](#usb-carry-scenario)
+11. [VS Code Extension](#vs-code-extension)
+12. [CLI Reference](#cli-reference)
 
 ---
 
@@ -269,6 +272,137 @@ Memories fade over time unless accessed. Preferences are always preserved.
 
 ---
 
+## Auto-Backup
+
+CarryMem automatically backs up your database to protect against data loss.
+
+### How Auto-Backup Works
+
+- **Trigger**: Every 20 write operations (classify_and_remember, update, forget, etc.)
+- **Mechanism**: SQLite `VACUUM INTO` — creates a consistent snapshot without stopping your workflow
+- **Retention**: Up to 5 backup files retained (oldest automatically removed)
+- **Location**: `~/.carrymem/backups/`
+
+### Manual Backup
+
+```bash
+# Create a backup immediately
+carrymem backup
+
+# List all available backups
+carrymem backup --list
+
+# Restore from a specific backup
+carrymem backup --restore memories_backup_20260527_120000.db
+```
+
+### Checking Backup Status
+
+```bash
+carrymem doctor
+```
+
+The `doctor` command now checks:
+- Backup directory exists and is accessible
+- Number of backup files
+- Last backup timestamp
+
+### Best Practices
+
+- Auto-backup is enabled by default — no configuration needed
+- Run `carrymem backup` before major operations (bulk import, consolidation)
+- Use `carrymem backup --list` to verify backups exist before relying on them
+- Restore replaces the current database — make sure you have a recent backup first
+
+---
+
+## Pack/Unpack with Encryption
+
+CarryMem's `.carry` file format lets you pack all your memories into a single portable file, optionally encrypted with a password.
+
+### Pack (Export to .carry file)
+
+```bash
+# Pack all memories into a .carry file
+carrymem pack -o my_memories.carry
+
+# Pack with password encryption
+carrymem pack -o my_memories.carry --encrypt
+```
+
+When using `--encrypt`, you will be prompted for a password (minimum 4 characters). The password is used to derive an encryption key via PBKDF2-HMAC-SHA256 (100,000 iterations), and the .carry file is encrypted using MemoryEncryption (AES-128 Fernet).
+
+### Unpack (Import from .carry file)
+
+```bash
+# Unpack a .carry file (auto-detects encryption)
+carrymem unpack my_memories.carry
+```
+
+If the .carry file is encrypted, you will be prompted for the password. Unpacking merges memories into your current database — existing memories are not overwritten.
+
+### .carry File Format
+
+| Version | Features |
+|---------|----------|
+| **v1.1** (current) | SHA-256 checksum for integrity verification + optional encryption |
+| **v1.0** (legacy) | No checksum, no encryption — still works with a warning |
+
+The SHA-256 checksum ensures the file was not corrupted during transfer. If checksum verification fails, unpacking is aborted with an error message.
+
+### Password Requirements
+
+- Minimum 4 characters
+- The password is not stored anywhere — if you forget it, the data cannot be recovered
+- Use a strong, memorable password for sensitive data
+
+---
+
+## USB Carry Scenario
+
+Carry your AI identity on a USB drive and use it on any machine.
+
+### Complete Workflow
+
+```bash
+# === On your home machine ===
+
+# 1. Pack your memories with encryption
+carrymem pack -o my_memories.carry --encrypt
+# Enter password: ********
+
+# 2. Copy to USB drive
+cp my_memories.carry /Volumes/USB_DRIVE/
+
+# === On a new machine ===
+
+# 3. Install CarryMem
+pip install carrymem
+
+# 4. Initialize
+carrymem init
+
+# 5. Unpack your memories
+carrymem unpack /Volumes/USB_DRIVE/my_memories.carry
+# Enter password: ********
+
+# 6. Verify your memories are restored
+carrymem whoami
+
+# 7. Start using AI with your identity
+# Your AI now remembers your preferences, decisions, and corrections
+```
+
+### Tips
+
+- Always use `--encrypt` when carrying data on a USB drive — USB drives can be lost or stolen
+- Run `carrymem doctor` after unpacking to verify everything is working
+- Use `carrymem backup` after unpacking to create a local backup
+- If you make changes on the new machine, pack again to take them back home
+- The .carry file is a single file — easy to copy, email, or store in the cloud
+
+---
+
 ## VS Code Extension
 
 ### Installation
@@ -315,6 +449,22 @@ carrymem whoami                   # Identity portrait
 carrymem stats                    # Statistics
 carrymem check                    # Quality check
 carrymem doctor                   # Diagnose installation
+```
+
+### Backup Commands
+
+```bash
+carrymem backup                   # Create manual backup
+carrymem backup --list            # List all backups
+carrymem backup --restore <file>  # Restore from a specific backup
+```
+
+### Pack/Unpack Commands
+
+```bash
+carrymem pack -o <file>.carry           # Pack memories into .carry file
+carrymem pack -o <file>.carry --encrypt # Pack with password encryption
+carrymem unpack <file>.carry            # Unpack .carry file (auto-detects encryption)
 ```
 
 ### Rule Commands

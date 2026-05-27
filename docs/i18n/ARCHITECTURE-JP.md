@@ -1,7 +1,7 @@
 # CarryMem アーキテクチャ
 
-**バージョン**: v0.2.2
-**日付**: 2026-05-13
+**バージョン**: v0.2.4
+**日付**: 2026-05-27
 **状態**: 安定
 
 ---
@@ -15,9 +15,12 @@
 5. [Key Components](#key-components)
 6. [Rules Engine](#rules-engine)
 7. [Context Engineering](#context-engineering)
-8. [Extension Mechanisms](#extension-mechanisms)
-9. [Performance Optimization](#performance-optimization)
-10. [Security Design](#security-design)
+8. [Concurrent Safety](#concurrent-safety)
+9. [Auto-Backup Architecture](#auto-backup-architecture)
+10. [.carry File Format](#carry-file-format)
+11. [Extension Mechanisms](#extension-mechanisms)
+12. [Performance Optimization](#performance-optimization)
+13. [Security Design](#security-design)
 
 ---
 
@@ -565,6 +568,199 @@ When rule injection approaches context window limits:
 
 ---
 
+## Concurrent Safety
+
+### Problem: Multi-Instance Write Contention
+
+複数の CarryMem インスタンス（異なる AI Agent プロセス）が同じ SQLite データベースファイルに同時に書き込む可能性があります。調整なしでは `database is locked` エラーやデータ破損が発生します。
+
+### Solution: Per-File Write Lock
+
+```
+┌──────────────────────────────────────────────────────────┐
+│              _db_write_locks（グローバル辞書）              │
+│                                                           │
+│  "/path/to/memories.db" → Lock A                         │
+│  "/other/path/db.db"     → Lock B                        │
+│  ...                                                      │
+└──────────────────────────────────────────────────────────┘
+         ↑                           ↑
+    インスタンス1 (Cursor)        インスタンス2 (Claude Code)
+    self._file_lock = A          self._file_lock = A
+    （同じ Lock を共有）          （同じ Lock を共有）
+```
+
+**実装**:
+
+```python
+# グローバルレジストリ: realpath → Lock
+_db_write_locks: Dict[str, threading.Lock] = {}
+_db_write_locks_guard = threading.Lock()  # 辞書自体を保護
+
+class SQLiteAdapter:
+    def __init__(self, ...):
+        resolved = str(os.path.realpath(self._db_path))
+        with _db_write_locks_guard:
+            if resolved not in _db_write_locks:
+                _db_write_locks[resolved] = threading.Lock()
+            self._file_lock = _db_write_locks[resolved]
+```
+
+**ロック階層**:
+
+| 操作 | 使用するロック | スコープ | 動作 |
+|------|-------------|---------|------|
+| 書き込み（remember/forget/update/recalculate/remember_batch） | `self._file_lock` | インスタンス間 | 同じ DB ファイルへの全書き込みを直列化 |
+| 読み取り（recall/list） | `self._lock` | インスタンス内 | 他のインスタンスの読み取りをブロックしない |
+
+**セカンダリ保護**: WAL モード + `busy_timeout=10000ms`
+
+```python
+conn = sqlite3.connect(db_path, timeout=10.0)
+conn.execute("PRAGMA journal_mode=WAL")
+```
+
+WAL モードは書き込み中の並行読み取りを許可します。`busy_timeout` は10秒間のロック取得ウィンドウを提供し、per-file lock だけでは不十分なエッジケース（外部プロセスなど）を処理します。
+
+---
+
+## Auto-Backup Architecture
+
+### 概要
+
+CarryMem はデータ損失を防ぐため、自動・ゼロダウンタイムのデータベースバックアップを提供します。
+
+### トリガー条件
+
+- **間隔ベース**: N回の書き込み操作ごと（デフォルト: 20、`auto_backup_interval` で設定可能）
+- **初期バックアップ**: 既存のデータベースを初めて開いたときに自動作成
+
+```
+書き込み操作 → _write_count += 1
+     ↓
+_write_count % auto_backup_interval == 0?
+     ↓ はい
+BackupManager.create_backup()
+```
+
+### バックアップ方式: VACUUM INTO
+
+```python
+conn.execute("VACUUM INTO ?", (backup_path,))
+```
+
+- **ゼロダウンタイム**: 読み取りや書き込みをブロックしない
+- **一貫性スナップショット**: SQLite 推奨のバックアップ方式
+- **フォールバック**: `VACUUM INTO` がサポートされていない場合、`shutil.copy2` にフォールバック
+
+### バックアップ場所と命名
+
+- **ディレクトリ**: `~/.carrymem/backups/`（`backup_dir` 設定で変更可能）
+- **ファイル名形式**: `memories_backup_YYYYMMDD_HHMMSS_マイクロ秒.db`
+- **パーミッション**: ディレクトリ `0o700`、バックアップファイル `0o600`
+
+### 自動クリーンアップ
+
+- **最大バックアップ数**: 5（`max_backups` で設定可能）
+- **戦略**: FIFO — 最も古いバックアップから削除
+- **タイミング**: 新しいバックアップ作成後にクリーンアップを実行
+
+### リストア
+
+```bash
+carrymem backup --list              # 全バックアップを一覧
+carrymem backup --restore <path>    # バックアップからリストア
+```
+
+リストアプロセス:
+1. バックアップファイルを検証（開いてクエリを実行）
+2. リストア前の安全コピーを作成（`.pre_restore.bak`）
+3. バックアップを現在のデータベースに上書き
+4. 失敗時は安全コピーからロールバック
+
+---
+
+## .carry File Format
+
+`.carry` ファイルは CarryMem のポータブルアイデンティティ形式で、マシンやツール間でメモリを転送するために使用します。
+
+### バージョン履歴
+
+#### v1.0: レガシーフォーマット
+
+- 純粋な gzip 圧縮 JSON
+- チェックサムなし、暗号化サポートなし
+- 構造: `gzip(json_data)`
+
+#### v1.1: コンテナフォーマット（現在）
+
+```json
+{
+    "version": "1.1",
+    "checksum": "<SHA-256 hex、暗号化前の payload チェックサム>",
+    "encrypted": false,
+    "payload": "<base64(gzip(json_data)) または暗号化文字列>"
+}
+```
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `version` | string | フォーマットバージョン（`"1.1"`） |
+| `checksum` | string | JSON payload の SHA-256 ハッシュ（圧縮/暗号化前） |
+| `encrypted` | boolean | payload が暗号化されているか |
+| `payload` | string | 暗号化なしの場合 `base64(gzip(json))`、暗号化の場合は暗号化文字列 |
+| `encryption_backend` | string | （オプション）使用された暗号化バックエンド（`"fernet"` または `"hmac_ctr"`） |
+
+### パックフロー
+
+```
+メモリデータ → JSON シリアライズ → SHA-256 チェックサム
+     ↓
+暗号化？ ──はい──→ MemoryEncryption.encrypt(json_string)
+     │                    ↓
+     いいえ           暗号化された payload
+     ↓
+base64(gzip(json_bytes)) = 暗号化なし payload
+     ↓
+コンテナ {version, checksum, encrypted, payload}
+     ↓
+gzip(container_json) → .carry ファイル
+```
+
+### アンパックフロー
+
+```
+.carry ファイル → gzip 解凍 → JSON パース
+     ↓
+"payload" と "checksum" キーがある？ ──はい──→ v1.1 フォーマット
+     │                                         ↓
+     いいえ                                encrypted?
+     ↓                                   ↓ はい      ↓ いいえ
+v1.0 フォーマット                       復号      base64 デコード
+（警告: レガシー）                         ↓            ↓
+                                    SHA-256 チェックサム検証
+                                         ↓
+                                    gzip 解凍 → JSON パース → メモリデータ
+```
+
+### 後方互換性
+
+- v1.0 フォーマットのファイルは引き続きアンパック可能
+- 警告を表示: `⚠ Legacy .carry format (no checksum verification available)`
+- サポートされていないバージョン番号はエラーで拒否
+
+### CLI コマンド
+
+```bash
+carrymem pack                         # アイデンティティをパック（暗号化なし）
+carrymem pack --encrypt               # パスワード暗号化パック
+carrymem pack --output my_id.carry    # カスタム出力パス
+carrymem unpack identity.carry        # アンパックして復元
+carrymem unpack identity.carry --replace  # 既存のメモリを置換
+```
+
+---
+
 ## 拡張メカニズム
 
 ### 1. Custom Storage Adapter
@@ -663,3 +859,6 @@ CarryMem uses a **layered architecture + plugin design**, achieving:
 ✅ **Extensible**: Adapter pattern + plugin system
 ✅ **Easy to Use**: Zero config + CLI tools
 ✅ **Secure**: Input validation + parameterized queries + path safety
+✅ **Concurrent Safety**: Per-file write lock + WAL mode + busy_timeout
+✅ **Auto-Backup**: VACUUM INTO + interval trigger + FIFO cleanup
+✅ **Portable Identity**: .carry format with SHA-256 checksum + optional encryption

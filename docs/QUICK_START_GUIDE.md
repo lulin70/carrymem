@@ -188,6 +188,37 @@ with CarryMem(namespace="project-b") as cm_b:
 # No interference!
 ```
 
+### Scenario 4: Carry Your Memories (USB Carry)
+
+Pack your memories for travel, copy to USB, and unpack on a new machine:
+
+```bash
+# Pack your memories for travel
+carrymem pack -o my_memories.carry --encrypt
+
+# On a new machine, unpack
+carrymem unpack my_memories.carry
+```
+
+The `--encrypt` flag prompts for a password (at least 4 characters). The .carry file includes a SHA-256 checksum for integrity verification. Unpacking auto-detects encryption and prompts for the password.
+
+### Scenario 5: Backup & Recovery
+
+CarryMem automatically backs up your database every 20 write operations. You can also manage backups manually:
+
+```bash
+# Manual backup
+carrymem backup
+
+# List backups
+carrymem backup --list
+
+# Restore from backup
+carrymem backup --restore memories_backup_20260527_120000.db
+```
+
+Auto-backup retains up to 5 backup files using VACUUM INTO (zero-downtime). Check backup status with `carrymem doctor`.
+
 ---
 
 ## Export and Import

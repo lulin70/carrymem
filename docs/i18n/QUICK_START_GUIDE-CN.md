@@ -186,6 +186,35 @@ with CarryMem(namespace="project-b") as cm_b:
 # 互不干扰！
 ```
 
+### 场景 4：携带记忆到新设备
+
+```bash
+# 在旧设备上打包（可加密）
+carrymem pack --encrypt
+# 输入密码后生成 carrymem_identity_20260527.carry
+
+# 拷贝到 U盘 / 网盘 / 新机器
+
+# 在新设备上恢复
+carrymem unpack carrymem_identity_20260527.carry
+# 输入密码 → 所有记忆恢复
+```
+
+### 场景 5：备份与恢复
+
+```bash
+# 手动创建备份
+carrymem backup
+
+# 查看所有备份
+carrymem backup --list
+
+# 从备份恢复
+carrymem backup --restore ~/.carrymem/backups/memories_backup_20260527_103000_123456.db
+```
+
+> 💡 CarryMem 还会每 20 次写操作自动创建备份，无需手动操作。
+
 ---
 
 ## 导出和导入

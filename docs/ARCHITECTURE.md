@@ -1,7 +1,7 @@
 # CarryMem Architecture
 
-**Version**: v0.2.2
-**Date**: 2026-05-13
+**Version**: v0.2.4
+**Date**: 2026-05-27
 **Status**: Stable
 
 ---
@@ -15,9 +15,12 @@
 5. [Key Components](#key-components)
 6. [Rules Engine](#rules-engine)
 7. [Context Engineering](#context-engineering)
-8. [Extension Mechanisms](#extension-mechanisms)
-9. [Performance Optimization](#performance-optimization)
-10. [Security Design](#security-design)
+8. [Concurrent Safety](#concurrent-safety)
+9. [Auto-Backup Architecture](#auto-backup-architecture)
+10. [.carry File Format](#carry-file-format)
+11. [Extension Mechanisms](#extension-mechanisms)
+12. [Performance Optimization](#performance-optimization)
+13. [Security Design](#security-design)
 
 ---
 
@@ -635,6 +638,199 @@ When rule injection approaches context window limits:
 
 ---
 
+## Concurrent Safety
+
+### Problem: Multi-Instance Write Contention
+
+Multiple CarryMem instances (different AI Agent processes) may write to the same SQLite database file simultaneously. Without coordination, this leads to `database is locked` errors or data corruption.
+
+### Solution: Per-File Write Lock
+
+```
+┌──────────────────────────────────────────────────────────┐
+│              _db_write_locks (global dict)                │
+│                                                           │
+│  "/path/to/memories.db" → Lock A                         │
+│  "/other/path/db.db"     → Lock B                        │
+│  ...                                                      │
+└──────────────────────────────────────────────────────────┘
+         ↑                           ↑
+    Instance 1 (Cursor)        Instance 2 (Claude Code)
+    self._file_lock = A        self._file_lock = A
+    (shares same Lock)         (shares same Lock)
+```
+
+**Implementation**:
+
+```python
+# Global registry: maps realpath → Lock
+_db_write_locks: Dict[str, threading.Lock] = {}
+_db_write_locks_guard = threading.Lock()  # guards dict itself
+
+class SQLiteAdapter:
+    def __init__(self, ...):
+        resolved = str(os.path.realpath(self._db_path))
+        with _db_write_locks_guard:
+            if resolved not in _db_write_locks:
+                _db_write_locks[resolved] = threading.Lock()
+            self._file_lock = _db_write_locks[resolved]
+```
+
+**Lock Hierarchy**:
+
+| Operation | Lock Used | Scope | Behavior |
+|-----------|-----------|-------|----------|
+| Write (remember/forget/update/recalculate/remember_batch) | `self._file_lock` | Cross-instance | Serializes all writes to the same DB file |
+| Read (recall/list) | `self._lock` | Per-instance | Does not block reads from other instances |
+
+**Secondary Protection**: WAL mode + `busy_timeout=10000ms`
+
+```python
+conn = sqlite3.connect(db_path, timeout=10.0)
+conn.execute("PRAGMA journal_mode=WAL")
+```
+
+WAL mode allows concurrent reads while a write is in progress. The `busy_timeout` provides a 10-second window for lock acquisition before raising an error, handling edge cases where the per-file lock is insufficient (e.g., external processes).
+
+---
+
+## Auto-Backup Architecture
+
+### Overview
+
+CarryMem provides automatic, zero-downtime database backup to protect against data loss.
+
+### Trigger Conditions
+
+- **Interval-based**: Every N write operations (default: 20, configurable via `auto_backup_interval`)
+- **Initial backup**: Automatically created when opening an existing database for the first time
+
+```
+Write Operation → _write_count += 1
+     ↓
+_write_count % auto_backup_interval == 0?
+     ↓ Yes
+BackupManager.create_backup()
+```
+
+### Backup Method: VACUUM INTO
+
+```python
+conn.execute("VACUUM INTO ?", (backup_path,))
+```
+
+- **Zero downtime**: Does not block reads or writes
+- **Consistent snapshot**: SQLite-recommended backup method
+- **Fallback**: If `VACUUM INTO` is not supported, falls back to `shutil.copy2`
+
+### Backup Location and Naming
+
+- **Directory**: `~/.carrymem/backups/` (configurable via `backup_dir` config)
+- **File name format**: `memories_backup_YYYYMMDD_HHMMSS_微秒.db`
+- **Permissions**: Directory `0o700`, backup files `0o600`
+
+### Automatic Cleanup
+
+- **Max backups**: 5 (configurable via `max_backups`)
+- **Strategy**: FIFO — oldest backups are removed first
+- **Timing**: Cleanup runs after each new backup is created
+
+### Restore
+
+```bash
+carrymem backup --list              # List all backups
+carrymem backup --restore <path>    # Restore from a backup
+```
+
+Restore process:
+1. Validates the backup file (opens and queries it)
+2. Creates a pre-restore safety copy (`.pre_restore.bak`)
+3. Copies backup over the current database
+4. On failure, rolls back from the safety copy
+
+---
+
+## .carry File Format
+
+The `.carry` file is CarryMem's portable identity format for transferring memories across machines and tools.
+
+### Version History
+
+#### v1.0: Legacy Format
+
+- Pure gzip-compressed JSON
+- No checksum, no encryption support
+- Structure: `gzip(json_data)`
+
+#### v1.1: Container Format (Current)
+
+```json
+{
+    "version": "1.1",
+    "checksum": "<SHA-256 hex of payload before encryption>",
+    "encrypted": false,
+    "payload": "<base64(gzip(json_data)) or encrypted_string>"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `version` | string | Format version (`"1.1"`) |
+| `checksum` | string | SHA-256 hash of the JSON payload (before compression/encryption) |
+| `encrypted` | boolean | Whether the payload is encrypted |
+| `payload` | string | `base64(gzip(json))` if unencrypted, or encrypted string if encrypted |
+| `encryption_backend` | string | (optional) Encryption backend used (`"fernet"` or `"hmac_ctr"`) |
+
+### Pack Flow
+
+```
+Memory Data → JSON serialize → SHA-256 checksum
+     ↓
+Encrypted? ──Yes──→ MemoryEncryption.encrypt(json_string)
+     │                    ↓
+     No              encrypted payload
+     ↓
+base64(gzip(json_bytes)) = unencrypted payload
+     ↓
+Container {version, checksum, encrypted, payload}
+     ↓
+gzip(container_json) → .carry file
+```
+
+### Unpack Flow
+
+```
+.carry file → gzip decompress → parse JSON
+     ↓
+Has "payload" and "checksum" keys? ──Yes──→ v1.1 format
+     │                                         ↓
+     No                                   encrypted?
+     ↓                                   ↓ Yes        ↓ No
+v1.0 format                          Decrypt       base64 decode
+(warn: legacy)                           ↓              ↓
+                                    Verify SHA-256 checksum
+                                         ↓
+                                    gzip decompress → JSON parse → Memory Data
+```
+
+### Backward Compatibility
+
+- v1.0 format files can still be unpacked
+- A warning is displayed: `⚠ Legacy .carry format (no checksum verification available)`
+- Unsupported version numbers are rejected with an error
+
+### CLI Commands
+
+```bash
+carrymem pack                         # Pack identity (unencrypted)
+carrymem pack --encrypt               # Pack with password-protected encryption
+carrymem pack --output my_id.carry    # Custom output path
+carrymem unpack identity.carry        # Unpack and restore
+carrymem unpack identity.carry --replace  # Replace existing memories
+```
+
+---
+
 ## Extension Mechanisms
 
 ### 1. Custom Storage Adapter
@@ -735,3 +931,6 @@ CarryMem uses a **layered architecture + plugin design**, achieving:
 ✅ **Secure**: Input validation + parameterized queries + path safety
 ✅ **Knowledge Lifecycle**: Auto-supersession + session-aware + time reasoning
 ✅ **Structured Injection**: MANDATORY/IMPORTANT/OUTDATED priority labels
+✅ **Concurrent Safety**: Per-file write lock + WAL mode + busy_timeout
+✅ **Auto-Backup**: VACUUM INTO + interval trigger + FIFO cleanup
+✅ **Portable Identity**: .carry format with SHA-256 checksum + optional encryption

@@ -5,6 +5,36 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2026-05-27 (Auto-Backup + Encrypted Carry + Concurrent Safety + E2E Tests)
+
+### Added
+- **Auto-backup mechanism**: every 20 writes, VACUUM INTO backup, max 5 backups retained
+- `carrymem backup` CLI command: manual backup, `--list`, `--restore <file>`
+- `carrymem doctor` now checks backup status (directory, file count, last backup time)
+- `carrymem pack --encrypt`: password-encrypted .carry files using MemoryEncryption
+- SHA-256 checksum in .carry files (v1.1 format) for corruption detection
+- Backward compatible: v1.0 .carry format still works with warning
+- Per-file write lock (_file_lock) for SQLite concurrent safety across multiple CarryMem instances
+- 7 concurrent access tests (multi-thread, multi-process, mixed read/write, shared DB)
+- 12 E2E user journey tests (first-time user, multi-agent, pack/unpack, rules, recovery)
+- 22 CLI pack/unpack tests (checksum, encryption, conflicts, legacy compatibility)
+
+### Changed
+- Unified path management: constants.py replaces hardcoded Path.home()/.carrymem in 7 files
+- Empty except:pass → debug/warning logging in 35+ locations (storage/sqlite/cli/audit)
+- pyproject.toml fail_under 55→75 (actual coverage 79.36%)
+- mypy errors: 311→247 (core files carrymem.py/handlers.py/cli.py -45 runtime type errors)
+- flake8 issues: 993→596 (F401/F541/F841/F811 all fixed)
+- .gitignore: added *.carry pattern
+
+### Fixed
+- **Critical**: SQLite Bus Error when multiple CarryMem instances write same DB concurrently
+- **Critical**: .carry files had no integrity check (SHA-256 checksum now required)
+- **Critical**: .carry files were plaintext (optional --encrypt now available)
+- Optional type mismatches in carrymem.py (allowed_base, _adapter, _rule_engine)
+- Potential AttributeError in handlers.py (supersede method guard)
+- README data conflict (tests/coverage numbers inconsistent)
+
 ## [0.2.3] - 2026-05-25 (Consolidation Scheduling + PrefEval Standardization + Context Modularization)
 
 ### Added
