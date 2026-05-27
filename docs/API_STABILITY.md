@@ -198,7 +198,7 @@ CarryMem follows Semantic Versioning (SemVer) with the following convention:
 
 ### Historical Note
 
-Early development used various version numbering schemes. The current v0.2.2 is a version reset that consolidates all features with security hardening and quality improvements.
+Early development used various version numbering schemes. The current v0.2.4 is a version reset that consolidates all features with security hardening and quality improvements.
 
 ## 7. Conditional Imports
 

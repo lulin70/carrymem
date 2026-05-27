@@ -8,8 +8,8 @@
 
 <p align="center">
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI 版本"></a>
-  <img src="https://img.shields.io/badge/tests-3000%2B%20passing-green" alt="测试">
-  <img src="https://img.shields.io/badge/coverage-78%25-green" alt="覆盖率">
+  <img src="https://img.shields.io/badge/tests-3050%2B%20passing-brightgreen" alt="测试">
+  <img src="https://img.shields.io/badge/coverage-79%25%2B-green" alt="覆盖率">
   <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python">
 </p>
 

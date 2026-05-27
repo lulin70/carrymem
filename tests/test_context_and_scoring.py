@@ -27,10 +27,10 @@ from carrymem.cache import RecallCache
 from carrymem.context import (
     select_memories,
     context_relevance,
-    _estimate_tokens,
     build_prompt,
     format_memory_entry,
 )
+from carrymem.selection import _estimate_tokens
 from carrymem.merge import (
     detect_conflicts,
     merge_memories,

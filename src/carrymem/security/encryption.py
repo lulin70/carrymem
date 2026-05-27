@@ -46,6 +46,7 @@ class MemoryEncryption:
         self._fernet = None
 
         try:
+            from cryptography.fernet import Fernet  # noqa: F401
             self._fernet_available = True
         except ImportError:
             self._fernet_available = False

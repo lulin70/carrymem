@@ -31,7 +31,7 @@ v0.3.0 ─── Design Baseline (Memory Foundation + Rules Design Docs)
 - Second digit changes for GA milestones (API stability guarantee)
 - No "v1.0.0 jump" — earn it through proven production usage
 
-> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. Current version is v0.2.3, including PrefEval 87.9%, state/event version chain, security hardening, preference injection optimization, context.py modularization, and consolidation scheduling. Next milestones: v0.2.4 (auto-maintenance + evaluation standardization) → v0.3.0 (GA).
+> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. Current version is v0.2.4, including auto-backup, encrypted .carry files, concurrent safety, E2E tests, PrefEval 87.9%, state/event version chain, security hardening, preference injection optimization, context.py modularization, and consolidation scheduling. Next milestones: v0.3.0 (GA).
 
 ---
 

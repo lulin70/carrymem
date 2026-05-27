@@ -13,9 +13,8 @@ from carrymem.context import (
     select_knowledge,
     build_qa_prompt,
     build_prompt,
-    _estimate_tokens,
-    _tokenize_text,
 )
+from carrymem.selection import _estimate_tokens, _tokenize_text
 
 
 # ── TYPE_SELECTION_BOOST tests ──────────────────────────────────────
