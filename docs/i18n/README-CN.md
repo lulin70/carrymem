@@ -379,6 +379,15 @@ carrymem setup-mcp --tool all
 
 27 个 MCP 工具：Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11)
 
+**客户端兼容性：**
+
+| 状态 | 客户端 | 配置方式 |
+|------|--------|---------|
+| ✅ 直接支持 | Cursor、Claude Code、TRAE、Windsurf、Cline | `setup-mcp --global` |
+| ✅ 自动检测 | OpenClaw、Kimi Code CLI、CodeX | `setup-mcp --global`（自动回退到 Claude Code 格式） |
+| 📋 应用商店 | WorkBuddy、CodeBuddy | 需提交至 MCP Marketplace（待完成） |
+| ❌ 不支持 | Kimi 桌面版、DeepSeek 桌面版、通义千问、豆包、天工、智谱清言 | 封闭平台，无 MCP 接口 |
+
 ### 规则引擎
 
 行为规则支持三个作用域级别，实现团队/组织对齐：

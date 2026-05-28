@@ -472,6 +472,15 @@ carrymem setup-mcp --tool all
 
 27 MCP tools available: Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11)
 
+**Client Compatibility:**
+
+| Status | Clients | Setup |
+|--------|---------|-------|
+| ✅ Direct | Cursor, Claude Code, TRAE, Windsurf, Cline | `setup-mcp --global` |
+| ✅ Auto-detect | OpenClaw, Kimi Code CLI, CodeX | `setup-mcp --global` (falls back to Claude Code format) |
+| 📋 Marketplace | WorkBuddy, CodeBuddy | Submit to MCP Marketplace (pending) |
+| ❌ Not supported | Kimi Desktop, DeepSeek Desktop, Qianwen, Doubao, TiGong, ChatGLM | Closed platforms, no MCP interface |
+
 ### Rule Engine with Scopes
 
 Behavioral rules with three scope levels for team/organization alignment:

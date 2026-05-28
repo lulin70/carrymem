@@ -379,6 +379,15 @@ carrymem setup-mcp --tool all
 
 27のMCPツール：Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11)
 
+**クライアント互換性：**
+
+| ステータス | クライアント | 設定方法 |
+|-----------|-------------|---------|
+| ✅ 直接対応 | Cursor、Claude Code、TRAE、Windsurf、Cline | `setup-mcp --global` |
+| ✅ 自動検出 | OpenClaw、Kimi Code CLI、CodeX | `setup-mcp --global`（Claude Code形式にフォールバック） |
+| 📋 マーケットプレイス | WorkBuddy、CodeBuddy | MCP Marketplaceへ提出（保留中） |
+| ❌ 非対応 | Kimiデスクトップ、DeepSeekデスクトップ、通義千問、豆包、天工、智譜清言 | クローズドプラットフォーム、MCPインターフェースなし |
+
 ### ルールエンジン
 
 行動ルールは3つのスコープレベルをサポートし、チーム/組織のアラインメントを実現：
