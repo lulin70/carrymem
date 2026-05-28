@@ -566,9 +566,10 @@ See CHANGELOG.md for detailed history.
 | **Rule merge protocol** | **High** | **High** | **P2** | **v0.4.0** |
 | **VS Code extension** | **Medium** | **High** | **P3** | **v0.4.0** |
 | **Ontology trigger matching** | **Medium** | **High** | **P3** | **v0.5.0** |
-| **Community directory: mcp.directory + Glama** | **High** | **Low** | **P1** | **v0.3.0** |
-| **WorkBuddy/CodeBuddy MCP Marketplace** | **High** | **Medium** | **P1** | **v0.3.0** |
+| **Community directory: mcp.directory ✅ + Glama ✅** | **High** | **Low** | **P1** | **v0.3.0** |
+| **mcp-marketplace.io** | — | — | **Dropped** | Scanner rejects custom MCP impl (no SDK import) |
 | **Smithery (requires .mcpb bundle or HTTP transport)** | **Medium** | **High** | **P2** | **v0.4.0** |
+| **WorkBuddy/CodeBuddy internal MCP Market (requires Plugin format)** | **Medium** | **Medium** | **P2** | **v0.4.0** |
 | **SSE/HTTP transport for MCP server** | **Critical** | **High** | **P2** | **v0.4.0** |
 | **Cloud MCP Server** | **High** | **Very High** | **P2** | **v0.5.0** |
 
