@@ -470,7 +470,7 @@ carrymem setup-mcp --tool claude-code
 carrymem setup-mcp --tool all
 ```
 
-25 MCP tools available: Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (1) · Rules (11)
+27 MCP tools available: Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11)
 
 ### Rule Engine with Scopes
 
@@ -721,12 +721,12 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 
 ## Project Status
 
-**Current Version**: v0.2.4
+**Current Version**: v0.2.0
 **Tests**: 3050+ passing
 **Coverage**: 79%+
 
 **Changelog**:
-- **v0.2.4**: USB carry encryption, auto-backup, concurrent safety, PrefEval 83.0% (200 items)
+- **v0.2.0**: USB carry encryption, auto-backup, concurrent safety, PrefEval 83.0% (200 items)
 - **v0.2.3**: Consolidation scheduling (schedule/stop), PrefEval standardization
 - **v0.2.2**: Token budget + dead code fix + security, PrefEval 87.9%
 - **v0.2.1**: Coreference resolution, auto-redaction, QA prompt optimization, PrefEval 87.0% (first time surpassing reminder)

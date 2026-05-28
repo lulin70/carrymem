@@ -14,7 +14,7 @@ v0.3.0 ─── Design Baseline (Memory Foundation + Rules Design Docs)
   ├── v0.2.1  Rules Engine Alpha   (Manual CRUD + FTS5 Match + Security) ✅
   ├── v0.2.2  Rules Engine Alpha+  (Performance + Conflict Detection)    ✅
   ├── v0.2.3  Rules Engine Alpha+  (Export/Import + Interactive CLI)     ✅
-  ├── v0.2.4  Scene Detection      (Pattern Recognition from Memories)   ✅
+  ├── v0.2.0  Scene Detection      (Pattern Recognition from Memories)   ✅
   ├── v0.2.5  Auto-Promotion       (Memory → Rule Candidate Generation)  ✅
   ├── v0.2.6  Experience Learning   (Failure → Avoidance Rules)          ✅
   ├── v0.2.7  Q&A Refinement       (Multi-turn Rule Abstraction)         ✅
@@ -31,7 +31,7 @@ v0.3.0 ─── Design Baseline (Memory Foundation + Rules Design Docs)
 - Second digit changes for GA milestones (API stability guarantee)
 - No "v1.0.0 jump" — earn it through proven production usage
 
-> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. Current version is v0.2.4, including auto-backup, encrypted .carry files, concurrent safety, E2E tests, PrefEval 87.9%, state/event version chain, security hardening, preference injection optimization, context.py modularization, and consolidation scheduling. Next milestones: v0.3.0 (GA).
+> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. Current version is v0.2.0, including auto-backup, encrypted .carry files, concurrent safety, E2E tests, PrefEval 87.9%, state/event version chain, security hardening, preference injection optimization, context.py modularization, and consolidation scheduling. Next milestones: v0.3.0 (GA).
 
 ---
 
@@ -140,7 +140,7 @@ Implementation: `style="ddd"` parameter in `format_rules_as_prompt()`, display-o
 
 ## Milestone Plan
 
-### ✅ v0.2.1 — v0.2.4 (DONE)
+### ✅ v0.2.0 (DONE)
 
 See CHANGELOG.md for detailed history.
 
@@ -362,8 +362,8 @@ See CHANGELOG.md for detailed history.
 - [x] Conditional preference support — `condition` field for if-then rules
 - [x] Implicit preference inference — `_detect_implicit_preferences()` from memory patterns
 
-**MCP Tools** (16 → 23):
-- Core: classify_message, get_classification_schema, batch_classify, mce_status
+**MCP Tools** (27 tools):
+- Core: classify_message, get_classification_schema, batch_classify
 - Storage: classify_and_remember, recall_memories, forget_memory
 - Knowledge: index_knowledge, recall_from_knowledge, recall_all
 - Profile: declare_preference, get_memory_profile
@@ -405,7 +405,9 @@ See CHANGELOG.md for detailed history.
 ### v0.5.0 — Intelligence Enhancement
 - [x] Consolidation Engine (P0: dedup+decay, P1: pattern→rules, P2: semantic merge)
 - [x] PrefEval 96.0% preference adherence (50 items, ICLR 2025 Oral)
-- [x] 25 MCP tools (added consolidate_memories)
+- [x] 27 MCP tools (added consolidate_memories)
+
+> **Note on PrefEval numbers**: Different sample sizes and seeds produce different results. The canonical result is **83.0%** (200 items, 3-condition comparison: CarryMem 83.0% > reminder 80.5% > zero-shot 69.5%), as documented in the v0.2.0 milestone. Other figures (85.0%, 87.9%, 96.0%) reflect different evaluation configurations and should not be compared directly.
 - [ ] Consolidation scheduled trigger (auto dedup+decay)
 - [ ] Motive memory type (pending→activated→completed lifecycle)
 - [ ] PrefEval evaluation standardization (reproducible scripts + report template)
@@ -438,7 +440,7 @@ See CHANGELOG.md for detailed history.
 - [x] Split context.py (910 lines) into: selection.py, scope.py, format.py, prompt.py
 - [x] Each module < 250 lines, original API preserved via re-export
 
-### v0.2.4 — Auto-Maintenance + Evaluation Standardization ✅
+### v0.2.0 — Auto-Maintenance + Evaluation Standardization ✅
 
 **Theme**: Consolidation scheduling + reproducible PrefEval + non-technical user reach
 **Principle**: #1 Lightweight — auto-maintenance reduces manual burden
@@ -485,7 +487,7 @@ See CHANGELOG.md for detailed history.
 |---------|-------------|----------|--------------|
 | v0.3.0 | 490 | 57.6% | Memory layer |
 | v0.2.1 | 600+ | ~63% | +110 rules tests |
-| v0.2.4 | 718 | ~76% | +pattern detection |
+| v0.2.0 | 718 | ~76% | +pattern detection |
 | v0.2.5 | 746 | ~77% | +auto-promotion |
 | v0.2.6 | 793 | ~59% | +experience learning (new modules lower %) |
 | v0.2.7 | 884 | ~68% | +Q&A refinement + cleanup |
@@ -564,10 +566,14 @@ See CHANGELOG.md for detailed history.
 | **Rule merge protocol** | **High** | **High** | **P2** | **v0.4.0** |
 | **VS Code extension** | **Medium** | **High** | **P3** | **v0.4.0** |
 | **Ontology trigger matching** | **Medium** | **High** | **P3** | **v0.5.0** |
+| **Community directory submissions (Glama/Smithery/MCP Registry)** | **High** | **Low** | **P1** | **v0.3.0** |
+| **WorkBuddy/CodeBuddy MCP Marketplace** | **High** | **Medium** | **P1** | **v0.3.0** |
+| **SSE/HTTP transport for MCP server** | **Critical** | **High** | **P2** | **v0.3.0** |
+| **Cloud MCP Server** | **High** | **Very High** | **P2** | **v0.4.0** |
 
 ---
 
 **Last Updated**: 2026-05-24
 **Maintainer**: CarryMem Team
-**Next Milestone**: v0.1.8 Session Summary + Semantic Aggregation (Phase 4)
-**Status**: ✅ **v0.1.7 complete (2023+ tests, Phase 1-3 memory layer enhancement)**
+**Next Milestone**: v0.3.0 GA (General Availability)
+**Status**: ✅ **v0.4.1 complete (2761+ tests, Memory + Rules + Knowledge + Enterprise)**

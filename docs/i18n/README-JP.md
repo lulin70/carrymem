@@ -7,9 +7,12 @@
 [English](../../README.md) | [中文](README-CN.md) | **日本語**
 
 <p align="center">
+  <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI バージョン"></a>
+  <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
   <img src="https://img.shields.io/badge/tests-3050%2B%20passing-brightgreen" alt="テスト">
   <img src="https://img.shields.io/badge/coverage-79%25%2B-green" alt="カバレッジ">
+  <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval 学術ベンチマーク"></a>
   <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python">
 </p>
 
@@ -219,7 +222,7 @@ print(cm.build_system_prompt())                              # 任意の AI に�
 cm.close()
 ```
 
-### CLI（22+ コマンド）
+### CLI（40+ コマンド）
 
 ```bash
 carrymem init                           # 初期化
@@ -374,7 +377,7 @@ carrymem setup-mcp --tool claude-code
 carrymem setup-mcp --tool all
 ```
 
-25のMCPツール：Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (1) · Rules (11)
+27のMCPツール：Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11)
 
 ### ルールエンジン
 
@@ -461,7 +464,7 @@ carrymem tui
 | **Skill フォーマット** | ✅ SHA-256 署名 | ❌ | ❌ | ❌ |
 | **マージプロトコル** | ✅ 3戦略 | ❌ | ❌ | ❌ |
 | **VS Code 拡張** | ✅ | ❌ | ❌ | ❌ |
-| **CLI** | ✅ 22+ コマンド | ❌ | ❌ | ❌ |
+| **CLI** | ✅ 40+ コマンド | ❌ | ❌ | ❌ |
 | **ターミナル UI** | ✅ textual | ❌ | ❌ | ✅ App |
 | **暗号化** | ✅ 内蔵 | ❌ | ❌ | ❌ |
 | **バージョン履歴** | ✅ ロールバック | ❌ | ❌ | ❌ |
@@ -604,23 +607,15 @@ AI にはメモリが必要だと知っている。プロンプトファイル�
 
 ## プロジェクトステータス
 
-**現在のバージョン**: v0.2.4
-**テスト**: 3000+ passing
-**カバレッジ**: ~78%
+**現在のバージョン**: v0.2.0
+**テスト**: 3050+ passing
+**カバレッジ**: 79%+
 
 **チェンジログ**:
-- **v0.3.0**: 記憶統合エンジン（P0/P1/P2）、PrefEval 96.0%、嗜好注入修正、25のMCPツール
-- **v0.3.0**: バージョンリセット — セキュリティ強化（FTS5サニタイズ、パス検証、ルールコンテンツフィルタリング）、スレッドセーフ、ドキュメント整理、テストクリーンアップ
-- **v0.4.1**: コアループ修正 — 自動ルール提案、MCP ルールツール、プロンプト注入防御、コネクションプーリング
-- **v0.4.0**: エンタープライズ機能 — ルールスコープ、Skill フォーマット（SHA-256）、マージプロトコル、VS Code 拡張
-- **v0.3.0**: GA リリース — ナレッジアダプター、有効性レポート、コンテキストエンジニアリング
-- **v0.2.6**: 経験学習 — 失敗→回避ルール、learn-experience/review-lessons CLI
-- **v0.2.5**: 自動プロモーションパイプライン — メモリパターン→ルール候補、promotion-log CLI
-- **v0.2.4**: メモリからのパターン検出、suggest-rules CLI、候補ルールジェネレーター
-- **v0.2.3**: 定期統合（schedule_consolidation/stop_consolidation）、ルールエクスポート/インポート、インタラクティブ CLI、ルールテンプレート、edit-rule、12 CLI コマンド
-- **v0.2.2**: パフォーマンスベンチマーク + 競合検出（check-rules コマンド）
-- **v0.2.1**: ルールエンジン Alpha — 手動 CRUD、FTS5 マッチング、セキュリティ、8 CLI コマンド
-- **v0.3.0**: PyPI リリース、アイデンティティレイヤー（whoami、profile エクスポート）、490 テスト
+- **v0.2.0**: USB 携帯暗号化、自動バックアップ、並行安全性、PrefEval 83.0%（200項目）
+- **v0.2.3**: 定期統合（schedule/stop）、PrefEval 標準化
+- **v0.2.2**: トークン予算 + デッドコード修正 + セキュリティ、PrefEval 87.9%
+- **v0.2.1**: 共参照解決、自動リダクション、QA プロンプト最適化、PrefEval 87.0%（リマインダー初超越）
 
 ---
 

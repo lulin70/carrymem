@@ -1882,7 +1882,7 @@ def cmd_setup_mcp(args):
     parser.add_argument(
         "--tool",
         "-t",
-        choices=["claude-code", "cursor", "trae", "all"],
+        choices=["claude-code", "cursor", "trae", "windsurf", "cline", "openclaw", "kimi-code", "codex", "all"],
         default="all",
         help="Target tool",
     )
@@ -1895,8 +1895,17 @@ def cmd_setup_mcp(args):
         help="Write to global config (all AI tools on this machine share one CarryMem)",
     )
     parser.add_argument("--force", action="store_true", help="Overwrite existing config")
+    parser.add_argument("--uninstall", action="store_true", help="Remove CarryMem MCP config from specified tool(s)")
 
     parsed = parser.parse_args(args)
+
+    if parsed.uninstall:
+        return _uninstall_mcp_global(parsed)
+
+    if not _DEFAULT_DB.parent.exists():
+        print(f"  {_dim('Initializing CarryMem for first use...')}")
+        from carrymem.constants import initialize_directories
+        initialize_directories()
 
     if parsed.global_config:
         return _setup_mcp_global(parsed)
@@ -2039,6 +2048,76 @@ def _setup_mcp_global(parsed):
                 print(f"  {_red('TRAE-CN:')} {msg}")
                 failed.append("trae-cn")
 
+    # --- Windsurf: ~/.windsurf/mcp.json ---
+    if parsed.tool in ("windsurf", "all"):
+        windsurf_file = Path.home() / ".windsurf" / "mcp.json"
+        success, updated, msg = _merge_json_file(windsurf_file, mcp_config, force=parsed.force)
+        if success:
+            print(f"  {_green('Windsurf:')} {msg} ({windsurf_file})")
+            configured.append("windsurf")
+        else:
+            print(f"  {_red('Windsurf:')} {msg}")
+            failed.append("windsurf")
+
+    # --- Cline: ~/.cline/mcp.json ---
+    if parsed.tool in ("cline", "all"):
+        cline_file = Path.home() / ".cline" / "mcp.json"
+        success, updated, msg = _merge_json_file(cline_file, mcp_config, force=parsed.force)
+        if success:
+            print(f"  {_green('Cline:')} {msg} ({cline_file})")
+            configured.append("cline")
+        else:
+            print(f"  {_red('Cline:')} {msg}")
+            failed.append("cline")
+
+    # --- OpenClaw: same config as Claude Code ---
+    if parsed.tool in ("openclaw", "all"):
+        openclaw_file = Path.home() / ".openclaw" / "mcp.json"
+        if not openclaw_file.parent.exists():
+            openclaw_file = Path.home() / ".claude.json"
+        if openclaw_file.name == ".claude.json":
+            success, updated, msg = _merge_claude_global_config(mcp_config, force=parsed.force)
+        else:
+            success, updated, msg = _merge_json_file(openclaw_file, mcp_config, force=parsed.force)
+        if success:
+            print(f"  {_green('OpenClaw:')} {msg} ({openclaw_file})")
+            configured.append("openclaw")
+        else:
+            print(f"  {_red('OpenClaw:')} {msg}")
+            failed.append("openclaw")
+
+    # --- Kimi Code CLI: same config as Claude Code ---
+    if parsed.tool in ("kimi-code", "all"):
+        kimi_file = Path.home() / ".kimi" / "mcp.json"
+        if not kimi_file.parent.exists():
+            kimi_file = Path.home() / ".claude.json"
+        if kimi_file.name == ".claude.json":
+            success, updated, msg = _merge_claude_global_config(mcp_config, force=parsed.force)
+        else:
+            success, updated, msg = _merge_json_file(kimi_file, mcp_config, force=parsed.force)
+        if success:
+            print(f"  {_green('Kimi Code:')} {msg} ({kimi_file})")
+            configured.append("kimi-code")
+        else:
+            print(f"  {_red('Kimi Code:')} {msg}")
+            failed.append("kimi-code")
+
+    # --- CodeX: ~/.codex/mcp.json ---
+    if parsed.tool in ("codex", "all"):
+        codex_file = Path.home() / ".codex" / "mcp.json"
+        if not codex_file.parent.exists():
+            codex_file = Path.home() / ".claude.json"
+        if codex_file.name == ".claude.json":
+            success, updated, msg = _merge_claude_global_config(mcp_config, force=parsed.force)
+        else:
+            success, updated, msg = _merge_json_file(codex_file, mcp_config, force=parsed.force)
+        if success:
+            print(f"  {_green('CodeX:')} {msg} ({codex_file})")
+            configured.append("codex")
+        else:
+            print(f"  {_red('CodeX:')} {msg}")
+            failed.append("codex")
+
     # --- Summary ---
     print()
     print(f"  {_green('Database:')} {db_path} (shared)")
@@ -2059,7 +2138,105 @@ def _setup_mcp_global(parsed):
 
     print(f"\n  {_bold('Restart all AI tools to activate CarryMem.')}")
 
+    if configured:
+        print(f"\n  {_dim('Verifying MCP server...')}")
+        try:
+            import subprocess
+            cmd_info = _resolve_mcp_command()
+            result = subprocess.run(
+                [cmd_info["command"]] + cmd_info["args"] + ["--help"],
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0 or "carrymem" in (result.stdout + result.stderr).lower():
+                print(f"  {_green('MCP server:')} ready")
+            else:
+                print(f"  {_yellow('MCP server:')} could not verify (non-critical)")
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            print(f"  {_yellow('MCP server:')} could not verify (non-critical)")
+
     return 0 if not failed else 1
+
+
+def _uninstall_mcp_global(parsed):
+    """Remove CarryMem MCP configuration from AI tool config files."""
+    print(f"\n  {_bold('Removing CarryMem MCP configuration...')}\n")
+
+    removed = []
+    not_found = []
+
+    client_files = {
+        "claude-code": ("_merge_claude_global_config", None),
+        "cursor": (Path.home() / ".cursor" / "mcp.json", None),
+        "trae": (Path.home() / ".trae" / "mcp.json", None),
+        "windsurf": (Path.home() / ".windsurf" / "mcp.json", None),
+        "cline": (Path.home() / ".cline" / "mcp.json", None),
+        "openclaw": (Path.home() / ".openclaw" / "mcp.json", None),
+        "kimi-code": (Path.home() / ".kimi" / "mcp.json", None),
+        "codex": (Path.home() / ".codex" / "mcp.json", None),
+    }
+
+    tools_to_remove = [parsed.tool] if parsed.tool != "all" else list(client_files.keys())
+
+    for tool in tools_to_remove:
+        if tool not in client_files:
+            continue
+
+        entry = client_files[tool]
+
+        if tool == "claude-code":
+            claude_file = Path.home() / ".claude.json"
+            if claude_file.exists():
+                try:
+                    with open(claude_file, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    if "mcpServers" in data and "carrymem" in data.get("mcpServers", {}):
+                        del data["mcpServers"]["carrymem"]
+                        with open(claude_file, "w", encoding="utf-8") as f:
+                            json.dump(data, f, indent=2, ensure_ascii=False)
+                        print(f"  {_green('Claude Code:')} removed ({claude_file})")
+                        removed.append("claude-code")
+                    else:
+                        print(f"  {_dim('Claude Code: not configured')} ({claude_file})")
+                        not_found.append("claude-code")
+                except (json.JSONDecodeError, OSError) as e:
+                    print(f"  {_red('Claude Code:')} failed - {e}")
+                    not_found.append("claude-code")
+            else:
+                print(f"  {_dim('Claude Code: config not found')}")
+                not_found.append("claude-code")
+        else:
+            config_file = entry[0] if isinstance(entry[0], Path) else entry
+            if isinstance(config_file, Path) and config_file.exists():
+                try:
+                    with open(config_file, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    if "mcpServers" in data and "carrymem" in data.get("mcpServers", {}):
+                        del data["mcpServers"]["carrymem"]
+                        with open(config_file, "w", encoding="utf-8") as f:
+                            json.dump(data, f, indent=2, ensure_ascii=False)
+                        tool_display = tool.replace("-", " ").title()
+                        print(f"  {_green(f'{tool_display}:')} removed ({config_file})")
+                        removed.append(tool)
+                    else:
+                        tool_display = tool.replace("-", " ").title()
+                        print(f"  {_dim(f'{tool_display}: not configured')} ({config_file})")
+                        not_found.append(tool)
+                except (json.JSONDecodeError, OSError) as e:
+                    tool_display = tool.replace("-", " ").title()
+                    print(f"  {_red(f'{tool_display}:')} failed - {e}")
+                    not_found.append(tool)
+            else:
+                tool_display = tool.replace("-", " ").title()
+                print(f"  {_dim(f'{tool_display}: config not found')}")
+                not_found.append(tool)
+
+    if removed:
+        print(f"\n  {_green(f'Removed from: {', '.join(removed)}')}")
+    if not_found:
+        print(f"  {_dim(f'Not configured: {', '.join(not_found)}')}")
+    print(f"\n  {_bold('Restart AI tools to apply changes.')}")
+
+    return 0
 
 
 def cmd_mcp(args):

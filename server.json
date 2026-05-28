@@ -1,0 +1,62 @@
+{
+  "$schema": "https://glama.ai/mcp/schemas/server.json",
+  "name": "carrymem",
+  "display_name": "CarryMem",
+  "description": "Your portable AI memory layer. Classify, store, and recall what matters across models, tools, and devices. Zero-dependency setup, 7-type intelligent classification, rule engine, and cross-client memory sharing via MCP.",
+  "url": "https://github.com/lulin70/carrymem",
+  "type": "mcp-server",
+  "category": "memory",
+  "tags": ["memory", "ai-identity", "classification", "recall", "mcp", "preference", "context-engineering", "sqlite"],
+  "runtime": "python",
+  "installation": {
+    "type": "pip",
+    "command": "pip install carrymem"
+  },
+  "mcp": {
+    "type": "stdio",
+    "command": "carrymem",
+    "args": ["mcp"],
+    "env": {
+      "CARRYMEM_DATA_PATH": "$HOME/.carrymem/memories.db"
+    }
+  },
+  "tools": [
+    {"name": "classify_message", "description": "Analyze a message and determine if it contains memorable information"},
+    {"name": "get_classification_schema", "description": "Return CarryMem's complete classification schema definition"},
+    {"name": "batch_classify", "description": "Batch classify multiple messages"},
+    {"name": "classify_and_remember", "description": "Classify a message and store it if worth remembering"},
+    {"name": "recall_memories", "description": "Recall memories matching a query"},
+    {"name": "forget_memory", "description": "Remove a specific memory"},
+    {"name": "index_knowledge", "description": "Index knowledge base files (Obsidian vault)"},
+    {"name": "recall_from_knowledge", "description": "Search the knowledge base with FTS5"},
+    {"name": "recall_all", "description": "Unified search across memories and knowledge base"},
+    {"name": "declare_preference", "description": "Declare a user preference explicitly"},
+    {"name": "get_memory_profile", "description": "Get the user's memory profile (whoami)"},
+    {"name": "get_system_prompt", "description": "Build a system prompt with relevant memories injected"},
+    {"name": "summarize_and_store", "description": "Summarize and store a conversation or text"},
+    {"name": "consolidate_memories", "description": "Deduplicate and consolidate memories"},
+    {"name": "schedule_consolidation", "description": "Schedule automatic memory consolidation"},
+    {"name": "stop_consolidation", "description": "Stop a running consolidation schedule"},
+    {"name": "add_rule", "description": "Add a behavioral rule"},
+    {"name": "list_rules", "description": "List all rules or rules matching a filter"},
+    {"name": "match_rules", "description": "Find rules matching a context"},
+    {"name": "inject_rules", "description": "Inject matched rules into a prompt"},
+    {"name": "my_rules", "description": "Show user's active rules"},
+    {"name": "delete_rule", "description": "Delete a rule"},
+    {"name": "suggest_rules", "description": "Suggest rules based on memory patterns"},
+    {"name": "promote_rules", "description": "Promote candidate rules to active"},
+    {"name": "update_rule", "description": "Update an existing rule"},
+    {"name": "my_profile", "description": "Get comprehensive user profile"},
+    {"name": "onboard", "description": "Start onboarding flow for new users"}
+  ],
+  "author": {
+    "name": "lulin70",
+    "email": "lulin70@gmail.com"
+  },
+  "license": "MIT",
+  "version": "0.2.0",
+  "repository": {
+    "url": "https://github.com/lulin70/carrymem",
+    "source": "github"
+  }
+}

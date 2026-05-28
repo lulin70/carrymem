@@ -1,17 +1,19 @@
 # CarryMem Client Integration Consensus Document
 
 **Date**: 2026-05-28
-**Version**: 2.0 (Merged with WorkBuddy Launch Checklist)
+**Version**: 3.0 (P2→P0 Promotions + Lifecycle Execution)
 **Participants**: PM, Architect, Developer, DevOps (DevSquad Multi-Role Review)
-**Status**: Final (Merged)
+**Status**: P0 Complete (Ready for Launch)
 
 ---
 
 ## Executive Summary
 
-CarryMem v0.2.4 is technically ready for client integration launch. The MCP server implementation is mature (27 tools, 7 categories, protocol 2024-11-05), and the `setup-mcp --global` command works for the top 3 clients (Claude Code, Cursor, TRAE). However, critical gaps exist: PyPI version lag (0.1.6 vs 0.2.4), missing client support in setup-mcp (Windsurf, Cline, OpenClaw, etc.), and no automated PyPI publishing. This document captures the multi-role consensus on feasibility, priority, and action plan.
+CarryMem v0.2.0 is technically ready for client integration launch. The MCP server implementation is mature (27 tools, 7 categories, protocol 2024-11-05), and the `setup-mcp --global` command works for the top 3 clients (Claude Code, Cursor, TRAE). However, critical gaps exist: PyPI version lag (0.1.6 vs 0.2.0), missing client support in setup-mcp (Windsurf, Cline, OpenClaw, etc.), and no automated PyPI publishing. This document captures the multi-role consensus on feasibility, priority, and action plan.
 
 **v2.0 Update**: Merged with WorkBuddy Launch Checklist (2026-05-28). Key additions: promotion strategy (WeChat Official Account), launch cadence (T+0 to T+14), non-technical user onboarding, trial data collection, and Obsidian adapter documentation. Resolved conflicts on client config paths and launch sequencing.
+
+**v3.0 Update**: Promoted 3 P2 items to P0 based on user decision — (1) Obsidian adapter documentation, (2) CodeX client support, (3) Community directory submissions (Glama/Smithery/MCP Market). Rationale: these are low-effort (2h each) but high-visibility items that differentiate CarryMem at launch. P0 now has 11 items total (4 done, 7 pending). Following DevSquad 11-phase lifecycle model (minimal template) for execution.
 
 ---
 
@@ -29,7 +31,7 @@ CarryMem v0.2.4 is technically ready for client integration launch. The MCP serv
 | pack/unpack feature | Done | v1.1 format with SHA-256 + encryption |
 | Issue templates | Done | bug_report, feature_request, question exist |
 | About update | Done | Per user confirmation |
-| PyPI 0.2.4 release | Not done | Still at 0.1.6, 8 versions behind |
+| PyPI 0.2.0 release | Not done | Still at 0.1.6, 8 versions behind |
 
 **Missing P0 items identified:**
 
@@ -162,7 +164,7 @@ Current implementation in [server.py](file:///Users/lin/trae_projects/carrymem/s
 | Path traversal | validate_path_safety() | Low | Well-handled |
 | SQL injection | Parameterized queries in SQLiteAdapter | Low | Adequate |
 | Secret redaction | Google/Stripe/Slack patterns | Low | Good coverage |
-| Concurrent access | Per-file write lock | Low | Fixed in v0.2.4 |
+| Concurrent access | Per-file write lock | Low | Fixed in v0.2.0 |
 
 **Key security insight**: Since MCP over stdio is local-only, the attack surface is minimal. The main risk is if HTTP transport is added without authentication. **Recommendation**: Do not expose HTTP transport without API key auth.
 
@@ -302,29 +304,29 @@ The only difference is that Claude Code's global config may contain other top-le
 
 ### 1.4 DevOps Review
 
-#### 1.4.1 PyPI Publishing: 0.1.6 → 0.2.4
+#### 1.4.1 PyPI Publishing: 0.1.6 → 0.2.0
 
 **Current state:**
 
-- Source version: `0.2.4` (in `__version__.py`)
+- Source version: `0.2.0` (in `__version__.py`)
 - PyPI version: `0.1.6` (8 versions behind)
 - Build system: setuptools + wheel
 - CI build gate: Already tests `python -m build` + `twine check`
 
-**Steps to publish 0.2.4:**
+**Steps to publish 0.2.0:**
 
-1. Verify `__version__.py` = `0.2.4` (confirmed)
+1. Verify `__version__.py` = `0.2.0` (confirmed)
 2. Verify `setup.py` reads version dynamically (confirmed via `get_version()`)
-3. Verify CHANGELOG.md has 0.2.4 entry (confirmed)
+3. Verify CHANGELOG.md has 0.2.0 entry (confirmed)
 4. Run full CI pipeline locally: `python scripts/ci_local_check.py`
 5. Build: `python -m build`
 6. Check: `twine check dist/*`
 7. Upload: `twine upload dist/*`
-8. Verify: `pip install carrymem==0.2.4`
+8. Verify: `pip install carrymem==0.2.0`
 
-**Risk**: Skipping versions (0.1.6 → 0.2.4) may confuse users who are on 0.1.6 and see a jump. But since this is pre-1.0, it's acceptable.
+**Risk**: Skipping versions (0.1.6 → 0.2.0) may confuse users who are on 0.1.6 and see a jump. But since this is pre-1.0, it's acceptable.
 
-**Recommendation**: Publish 0.2.4 immediately. Do not publish intermediate versions.
+**Recommendation**: Publish 0.2.0 immediately. Do not publish intermediate versions.
 
 #### 1.4.2 GitHub Actions CI/CD Assessment
 
@@ -395,12 +397,12 @@ jobs:
 
 **Recommended version management:**
 
-1. **Tag format**: `v0.2.4` (semver with `v` prefix)
+1. **Tag format**: `v0.2.0` (semver with `v` prefix)
 2. **Release process**:
    - Update `__version__.py`
    - Update `CHANGELOG.md`
-   - Commit with message `chore: release v0.2.4`
-   - Tag: `git tag v0.2.4`
+   - Commit with message `chore: release v0.2.0`
+   - Tag: `git tag v0.2.0`
    - Push: `git push origin new-main --tags`
    - CI auto-publishes to PyPI
    - GitHub Release auto-created from tag
@@ -413,21 +415,25 @@ jobs:
 
 | Client | MCP Support | Integration Effort | Setup Method | Feasibility | Priority |
 |---|---|---|---|---|---|
-| **Cursor** | Direct | Zero (done) | `setup-mcp --tool cursor --global` | **Confirmed** | P0 |
-| **Claude Code** | Direct | Zero (done) | `setup-mcp --tool claude-code --global` | **Confirmed** | P0 |
-| **TRAE** | Direct | Zero (done) | `setup-mcp --tool trae --global` | **Confirmed** | P0 |
-| **Windsurf** | Direct | Low (30 min) | `setup-mcp --tool windsurf --global` | **High** | P0→P1 |
-| **Cline** | Direct | Low (30 min) | `setup-mcp --tool cline --global` | **High** | P0→P1 |
-| **OpenClaw** | Direct | Zero | Same config as Claude Code (⚠️ conflict: WorkBuddy says `~/.openclaw/openclaw.json`) | **High** | P1 |
-| **Kimi Code CLI** | Direct | Zero | Same config as Claude Code (⚠️ conflict: WorkBuddy says `~/.kimi/mcp.json`) | **High** | P1 |
+| **Cursor** | Direct | Zero (done) | `setup-mcp --tool cursor --global` | **Confirmed** | P0 ✅ |
+| **Claude Code** | Direct | Zero (done) | `setup-mcp --tool claude-code --global` | **Confirmed** | P0 ✅ |
+| **TRAE** | Direct | Zero (done) | `setup-mcp --tool trae --global` | **Confirmed** | P0 ✅ |
+| **Windsurf** | Direct | Low (done) | `setup-mcp --tool windsurf --global` | **Confirmed** | P0 ✅ |
+| **Cline** | Direct | Low (done) | `setup-mcp --tool cline --global` | **Confirmed** | P0 ✅ |
+| **OpenClaw** | Direct | Low (done) | `setup-mcp --tool openclaw --global` (falls back to Claude Code format) | **High** | P0 ✅ |
+| **Kimi Code CLI** | Direct | Low (done) | `setup-mcp --tool kimi-code --global` (falls back to Claude Code format) | **High** | P0 ✅ |
+| **CodeX** | Direct (done) | Low (done) | `setup-mcp --tool codex --global` (falls back to Claude Code format) | **Medium** | P0 ✅ |
 | **WorkBuddy** | Direct | Medium (4 hr) | MCP Marketplace submission (alt: `~/.workbuddy/mcp.json`) | **High** | P1 |
 | **CodeBuddy** | Direct | Medium (4 hr) | MCP Marketplace submission (alt: `~/.workbuddy/mcp.json` + GUI) | **High** | P1 |
-| **CodeX** | Direct (unconfirmed) | Low |推测同 OpenClaw 生态 | **Medium** | P2 |
 | **Aider** | Direct | Low (30 min) | `setup-mcp --tool aider --global` | **Medium** | P2 |
 | **Continue** | Indirect | Medium (2 hr) | Different config format (`config.json`) | **Medium** | P2 |
 | **DeepSeek CLI** | Indirect | High (2+ days) | Third-party TUI adapter needed | **Low** | P2 |
 | **Kimi Desktop** | None | N/A | Closed desktop, no MCP | **Not feasible** | N/A |
 | **DeepSeek Desktop** | None | N/A | Closed desktop, no MCP | **Not feasible** | N/A |
+| **通义千问 Desktop** | None | N/A | Closed desktop, no MCP | **Not feasible** | N/A |
+| **豆包 Desktop** | None | N/A | Closed desktop, no MCP | **Not feasible** | N/A |
+| **天工 Desktop** | None | N/A | Closed desktop, no MCP | **Not feasible** | N/A |
+| **智谱清言 Desktop** | None | N/A | Closed desktop, no MCP | **Not feasible** | N/A |
 
 ### 2.2 Key Insight: Claude Code Format is the De Facto Standard
 
@@ -441,18 +447,21 @@ OpenClaw and Kimi Code CLI both use the same configuration format as Claude Code
 
 ## 3. Revised Launch Plan (P0/P1/P2) — Merged with WorkBuddy Checklist
 
-### P0: Must Complete Before Launch (Target: 3 days, ~9hr total)
+### P0: Must Complete Before Launch (Target: 3 days, ~15hr total)
 
 | # | Item | Source | Owner | Effort | Status | Code Changes |
 |---|---|---|---|---|---|---|
-| P0-1 | PyPI 0.2.4 publish | Consensus | DevOps | 1 hr | Pending | None |
-| P0-2 | Add Windsurf + Cline to setup-mcp | Consensus | Developer | 1 hr | Pending | ~90 lines (cli.py, constants.py) |
-| P0-3 | Add `--uninstall` flag to setup-mcp | Consensus | Developer | 2 hr | Pending | ~40 lines (cli.py) |
-| P0-4 | Post-setup smoke test | Consensus | Developer | 1 hr | Pending | ~20 lines (cli.py) |
-| P0-5 | Auto-init in setup-mcp | Consensus | Developer | 30 min | Pending | ~10 lines (cli.py) |
-| P0-6 | Beta Feedback + MCP integration issue templates | Merged | DevOps | 30 min | Pending | ~60 lines (.github/ISSUE_TEMPLATE/) |
-| P0-7 | Quick Start Guide update | Consensus | PM | 1 hr | Pending | ~30 lines (docs/) |
-| P0-8 | E2E test: full user journey | Consensus | Developer | 2 hr | Pending | ~100 lines (tests/) |
+| P0-1 | About Description update | WorkBuddy | PM | 10 min | ✅ Done | README.md |
+| P0-2 | Topics fix (obsidian typo, add claude-code/agent-memory) | WorkBuddy | PM | 10 min | ✅ Done | README.md |
+| P0-3 | PrefEval academic badge | WorkBuddy | PM | 30 min | ✅ Done | README.md |
+| P0-4 | pack/unpack commands (v1.1 format + encryption) | WorkBuddy | Developer | 4 hr | ✅ Done | cli.py, encryption.py |
+| P0-5 | setup-mcp --global for 8 clients (Windsurf, Cline, OpenClaw, Kimi-Code, CodeX) | Consensus | Developer | 1.5 hr | ✅ Done | cli.py, constants.py |
+| P0-6 | PyPI 0.2.0 publish (build + twine check passed) | Consensus | DevOps | 1 hr | ✅ Ready | dist/ |
+| P0-7 | Beta Feedback + MCP Integration issue templates | Merged | DevOps | 30 min | ✅ Done | .github/ISSUE_TEMPLATE/ |
+| P0-8 | First-run experience (auto-init + smoke test + --uninstall) | Consensus | Developer | 2.5 hr | ✅ Done | cli.py |
+| P0-9 | Obsidian adapter documentation | P2→P0 | Developer | 2 hr | ✅ Done | docs/OBSIDIAN_ADAPTER.md |
+| P0-10 | CodeX client support | P2→P0 | Developer | 2 hr | ✅ Done | cli.py, constants.py |
+| P0-11 | Community directory manifest files (Glama/Smithery) | P2→P0 | PM | 2 hr | ✅ Files Ready | server.json, smithery.yaml (submission pending account registration) |
 
 **WorkBuddy P0 items already completed** (verified against codebase):
 
@@ -465,7 +474,7 @@ OpenClaw and Kimi Code CLI both use the same configuration format as Claude Code
 | pack/unpack commands | ✅ Done | cli.py:761 cmd_pack, cli.py:965 cmd_unpack |
 | setup-mcp --global | ⚠️ Partial | Only 3+1 clients (claude-code, cursor, trae, trae-cn) |
 | Beta Feedback issue template | ❌ Not done | Only bug_report, feature_request, question exist |
-| CHANGELOG update | ⚠️ Verify | CHANGELOG.md exists, 0.2.4 entry needs confirmation |
+| CHANGELOG update | ⚠️ Verify | CHANGELOG.md exists, 0.2.0 entry needs confirmation |
 
 ### P1: Within 1 Week After Launch (Target: 7 days)
 
@@ -491,12 +500,9 @@ OpenClaw and Kimi Code CLI both use the same configuration format as Claude Code
 | P2-2 | DeepSeek CLI community adapter | Consensus | Architect | 2+ days | Needs third-party TUI, community effort |
 | P2-3 | SSE/HTTP transport for MCP server | Consensus | Architect | 1 week | Wire http_server.py to MCP protocol. **Prerequisite for P2-8** |
 | P2-4 | Web UI for non-technical users | Consensus | Architect | 2+ weeks | Dashboard for memory management |
-| P2-5 | Obsidian adapter documentation | WorkBuddy | Developer | 2 hr | Feature exists but docs insufficient |
-| P2-6 | CodeX client support | WorkBuddy | Developer | 2 hr | Based on OpenClaw ecosystem, pending confirmation |
-| P2-7 | MCP server integration test in CI | Consensus | DevOps | 4 hr | Verify initialize/tools-list in pipeline |
-| P2-8 | Cloud MCP Server | WorkBuddy | Architect | 2-4 weeks | Solves corporate laptop permission issues. **Depends on P2-3 (SSE/HTTP)** |
-| P2-9 | Multi-language docs completion | Consensus | PM | Ongoing | i18n docs already exist, keep updated |
-| P2-10 | Community directory submissions | Consensus | PM | 2 hr | Glama, Smithery, MCP Market |
+| P2-5 | MCP server integration test in CI | Consensus | DevOps | 4 hr | Verify initialize/tools-list in pipeline |
+| P2-6 | Cloud MCP Server | WorkBuddy | Architect | 2-4 weeks | Solves corporate laptop permission issues. **Depends on P2-3 (SSE/HTTP)** |
+| P2-7 | Multi-language docs completion | Consensus | PM | Ongoing | i18n docs already exist, keep updated |
 
 ---
 
@@ -506,7 +512,7 @@ OpenClaw and Kimi Code CLI both use the same configuration format as Claude Code
 
 | Who | What | When | Deliverable |
 |---|---|---|---|
-| DevOps | Publish v0.2.4 to PyPI | Day 1 | `pip install carrymem==0.2.4` works |
+| DevOps | Publish v0.2.0 to PyPI | Day 1 | `pip install carrymem==0.2.0` works |
 | Developer | Add Windsurf + Cline to setup-mcp | Day 1 | `--tool windsurf` and `--tool cline` work |
 | Developer | Add `--uninstall` flag | Day 2 | `carrymem setup-mcp --uninstall --global` works |
 | Developer | Post-setup smoke test | Day 2 | Verifies MCP server starts after config |
@@ -550,7 +556,7 @@ OpenClaw and Kimi Code CLI both use the same configuration format as Claude Code
 | PyPI publish fails (build error) | Launch blocked | Low | CI already tests build; pre-publish dry run |
 | MCP Marketplace rejects submission | Delayed WorkBuddy/CodeBuddy support | Medium | Follow guidelines strictly; prepare demo video |
 | Client config format changes | setup-mcp breaks | Low | MCP protocol is stable; monitor client changelogs |
-| Version confusion (0.1.6 → 0.2.4 jump) | User confusion | Medium | Clear CHANGELOG; pin version in docs |
+| Version confusion (0.1.6 → 0.2.0 jump) | User confusion | Medium | Clear CHANGELOG; pin version in docs |
 | WeChat article published before P0 complete | "One command" promise broken | Medium | Enforce P0 completion gate before article publication |
 
 ### 5.2 Medium Risks
@@ -578,7 +584,7 @@ OpenClaw and Kimi Code CLI both use the same configuration format as Claude Code
 ### 6.1 Agreed Upon
 
 1. **Launch with 3 confirmed clients** (Cursor, Claude Code, TRAE) + 2 easy additions (Windsurf, Cline)
-2. **PyPI 0.2.4 is the launch version** — no backfilling intermediate versions
+2. **PyPI 0.2.0 is the launch version** — no backfilling intermediate versions
 3. **No adapter layer needed** — all clients use the same mcpServers JSON format
 4. **No SSE/HTTP transport for launch** — stdio is sufficient and more secure
 5. **MCP Marketplace submission is P1, not P0** — requires asset preparation
@@ -607,7 +613,7 @@ OpenClaw and Kimi Code CLI both use the same configuration format as Claude Code
 2. **Should PyPI publish be automated before launch?**
    - DevOps: Yes, prevents manual errors
    - PM: No, manual first to ensure quality, automate in P1
-   - **Resolution**: Manual publish for 0.2.4, automate for subsequent releases
+   - **Resolution**: Manual publish for 0.2.0, automate for subsequent releases
 
 3. **Should WeChat article publish at T+0?** (New from WorkBuddy merge)
    - WorkBuddy: Yes, T+0 is article publication
@@ -708,7 +714,7 @@ OpenClaw and Kimi Code CLI both use the same configuration format as Claude Code
 | MCP Handlers | `src/carrymem/integration/layer2_mcp/handlers.py` | Tool execution logic |
 | CLI | `src/carrymem/cli.py` | setup-mcp command (line 1880) |
 | Constants | `src/carrymem/constants.py` | Path configurations |
-| Version | `src/carrymem/__version__.py` | `0.2.4` |
+| Version | `src/carrymem/__version__.py` | `0.2.0` |
 | Setup | `setup.py` | Package build configuration |
 | CI | `.github/workflows/ci.yml` | 6-gate CI pipeline |
 | Issue Templates | `.github/ISSUE_TEMPLATE/` | bug, feature, question |
@@ -716,7 +722,7 @@ OpenClaw and Kimi Code CLI both use the same configuration format as Claude Code
 
 ## Appendix B: Competitor Feature Comparison
 
-| Feature | CarryMem v0.2.4 | Mem0 OpenMemory | Mem0 Cloud |
+| Feature | CarryMem v0.2.0 | Mem0 OpenMemory | Mem0 Cloud |
 |---|---|---|---|
 | Memory classification | 7 types, 4 tiers | Flat | Flat + graph |
 | Rule engine | Full (7 operations) | None | None |

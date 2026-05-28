@@ -5,7 +5,7 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.4] - 2026-05-27 (Auto-Backup + Encrypted Carry + Concurrent Safety + E2E Tests)
+## [0.2.0] - 2026-05-28 (Auto-Backup + Encrypted Carry + Concurrent Safety + Client Integration + E2E Tests)
 
 ### Added
 - **Auto-backup mechanism**: every 20 writes, VACUUM INTO backup, max 5 backups retained
@@ -18,6 +18,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 7 concurrent access tests (multi-thread, multi-process, mixed read/write, shared DB)
 - 12 E2E user journey tests (first-time user, multi-agent, pack/unpack, rules, recovery)
 - 22 CLI pack/unpack tests (checksum, encryption, conflicts, legacy compatibility)
+- **setup-mcp --global** now supports 8 clients: claude-code, cursor, trae, windsurf, cline, openclaw, kimi-code, codex
+- **setup-mcp --uninstall**: remove CarryMem MCP config from AI tool config files
+- **Auto-init**: setup-mcp auto-initializes CarryMem data directory on first use
+- **Smoke test**: verifies MCP server is ready after setup-mcp configuration
+- **Beta Feedback issue template**: structured feedback form for beta users
+- **MCP Integration issue template**: diagnostic form for MCP setup problems
+- **Obsidian Adapter documentation**: comprehensive guide (docs/OBSIDIAN_ADAPTER.md)
+- **Community directory manifests**: server.json (Glama/MCP Registry) + smithery.yaml (Smithery)
+- OpenClaw/Kimi Code/CodeX MCP config paths in constants.py
 
 ### Changed
 - Unified path management: constants.py replaces hardcoded Path.home()/.carrymem in 7 files
@@ -26,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - mypy errors: 311→247 (core files carrymem.py/handlers.py/cli.py -45 runtime type errors)
 - flake8 issues: 993→596 (F401/F541/F841/F811 all fixed)
 - .gitignore: added *.carry pattern
+- Consensus document updated to v3.0 (3 P2→P0 promotions, 11 P0 items total)
+- README: PrefEval badge, user scenarios, academic citation, competitive positioning
 
 ### Fixed
 - **Critical**: SQLite Bus Error when multiple CarryMem instances write same DB concurrently
@@ -34,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optional type mismatches in carrymem.py (allowed_base, _adapter, _rule_engine)
 - Potential AttributeError in handlers.py (supersede method guard)
 - README data conflict (tests/coverage numbers inconsistent)
+- _enable_vector init order bug causing AuditLogger warning
+- _fernet_available always True bug in encryption.py
 
 ## [0.2.3] - 2026-05-25 (Consolidation Scheduling + PrefEval Standardization + Context Modularization)
 

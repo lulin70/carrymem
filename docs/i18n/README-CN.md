@@ -7,9 +7,12 @@
 [English](../../README.md) | **中文** | [日本語](README-JP.md)
 
 <p align="center">
+  <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI 版本"></a>
+  <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
   <img src="https://img.shields.io/badge/tests-3050%2B%20passing-brightgreen" alt="测试">
   <img src="https://img.shields.io/badge/coverage-79%25%2B-green" alt="覆盖率">
+  <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval 学术基准"></a>
   <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python">
 </p>
 
@@ -219,7 +222,7 @@ print(cm.build_system_prompt())                          # 注入任何 AI
 cm.close()
 ```
 
-### 命令行（22+ 命令）
+### 命令行（40+ 命令）
 
 ```bash
 carrymem init                           # 初始化
@@ -374,7 +377,7 @@ carrymem setup-mcp --tool claude-code
 carrymem setup-mcp --tool all
 ```
 
-25 个 MCP 工具：Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (1) · Rules (11)
+27 个 MCP 工具：Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11)
 
 ### 规则引擎
 
@@ -461,7 +464,7 @@ carrymem tui
 | **Skill 格式** | ✅ SHA-256 签名 | ❌ | ❌ | ❌ |
 | **合并协议** | ✅ 3 种策略 | ❌ | ❌ | ❌ |
 | **VS Code 扩展** | ✅ | ❌ | ❌ | ❌ |
-| **命令行** | ✅ 22+ 命令 | ❌ | ❌ | ❌ |
+| **命令行** | ✅ 40+ 命令 | ❌ | ❌ | ❌ |
 | **终端界面** | ✅ textual | ❌ | ❌ | ✅ App |
 | **加密** | ✅ 内置 | ❌ | ❌ | ❌ |
 | **版本历史** | ✅ 回滚 | ❌ | ❌ | ❌ |
@@ -604,23 +607,15 @@ cm.import_memories(input_path="backup.json")
 
 ## 项目状态
 
-**当前版本**：v0.2.4
-**测试**：2100+ passing
-**覆盖率**：~78%
+**当前版本**：v0.2.0
+**测试**：3050+ passing
+**覆盖率**：79%+
 
 **更新日志**：
-- **v0.3.0**：记忆整合引擎（P0/P1/P2），PrefEval 96.0%，偏好注入修复，25 个 MCP 工具
-- **v0.3.0**：版本重置 — 安全加固（FTS5查询净化、路径验证、规则内容过滤）、线程安全、文档整理、测试清理
-- **v0.4.1**：核心循环修复 — 自动规则建议、MCP 规则工具、提示注入防护、连接池
-- **v0.4.0**：企业功能 — 规则作用域、Skill 格式（SHA-256）、合并协议、VS Code 扩展
-- **v0.3.0**：GA 发布 — 知识适配器、有效性报告、上下文工程
-- **v0.2.6**：经验学习 — 失败→规避规则、learn-experience/review-lessons CLI
-- **v0.2.5**：自动提升管道 — 记忆模式→规则候选、promotion-log CLI
-- **v0.2.4**：从记忆中检测模式、suggest-rules CLI、候选规则生成器
-- **v0.2.3**：定时整合（schedule_consolidation/stop_consolidation）、规则导出/导入、交互式 CLI、规则模板、edit-rule、12 个 CLI 命令
-- **v0.2.2**：性能基准 + 冲突检测（check-rules 命令）
-- **v0.2.1**：规则引擎 Alpha — 手动 CRUD、FTS5 匹配、安全、8 个 CLI 命令
-- **v0.3.0**：PyPI 发布、身份层（whoami、profile 导出）、490 测试
+- **v0.2.0**：USB 携带加密、自动备份、并发安全、PrefEval 83.0%（200 条）
+- **v0.2.3**：定时整合（schedule/stop）、PrefEval 标准化
+- **v0.2.2**：Token 预算 + 死代码修复 + 安全加固、PrefEval 87.9%
+- **v0.2.1**：共指消解、自动脱敏、QA 提示优化、PrefEval 87.0%（首次超越简单提醒）
 
 ---
 

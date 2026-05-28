@@ -6,3 +6,9 @@ contact_links:
   - name: Roadmap
     url: https://github.com/lulin70/carrymem/blob/main/docs/ROADMAP.md
     about: See planned features and version timeline
+  - name: Beta Feedback
+    url: https://github.com/lulin70/carrymem/issues/new?template=beta_feedback.md
+    about: Share your CarryMem beta experience
+  - name: MCP Integration Help
+    url: https://github.com/lulin70/carrymem/issues/new?template=mcp_integration.md
+    about: Get help integrating CarryMem with your AI tool

@@ -121,6 +121,9 @@ def get_mcp_config_path(tool: str) -> Optional[Path]:
         'cline': HOME_DIR / ".cline" / "mcp.json",
         'continue': HOME_DIR / ".continue" / "config.json",
         'aider': HOME_DIR / ".aider" / "mcp.json",
+        'openclaw': HOME_DIR / ".openclaw" / "mcp.json",
+        'kimi-code': HOME_DIR / ".kimi" / "mcp.json",
+        'codex': HOME_DIR / ".codex" / "mcp.json",
     }
 
     # Check for environment variable override
@@ -155,6 +158,15 @@ TRAE_CN_MCP_CONFIG = TRAE_CN_DIR / "mcp.json"
 
 CLAUDE_GLOBAL_CONFIG = HOME_DIR / ".claude.json"
 """Claude Code global configuration file path"""
+
+OPENCLAW_MCP_CONFIG = HOME_DIR / ".openclaw" / "mcp.json"
+"""OpenClaw MCP configuration file path"""
+
+KIMI_CODE_MCP_CONFIG = HOME_DIR / ".kimi" / "mcp.json"
+"""Kimi Code MCP configuration file path"""
+
+CODEX_MCP_CONFIG = HOME_DIR / ".codex" / "mcp.json"
+"""CodeX MCP configuration file path"""
 
 
 # ============================================================================
@@ -371,6 +383,9 @@ __all__ = [
     'TRAE_CN_DIR',
     'TRAE_CN_MCP_CONFIG',
     'CLAUDE_GLOBAL_CONFIG',
+    'OPENCLAW_MCP_CONFIG',
+    'KIMI_CODE_MCP_CONFIG',
+    'CODEX_MCP_CONFIG',
 
     # Security
     'DANGEROUS_SYSTEM_DIRS',

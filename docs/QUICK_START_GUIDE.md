@@ -42,7 +42,25 @@ This creates:
 - Config file: `~/.carrymem/config.json`
 - Database: `~/.carrymem/memories.db`
 
-### 2. Store Your First Memory (1 minute)
+### 2. Connect Your AI Tools (1 minute)
+
+```bash
+carrymem setup-mcp --global
+```
+
+This configures CarryMem for all installed AI tools:
+- **Cursor**: `~/.cursor/mcp.json`
+- **Claude Code**: `~/.claude.json`
+- **TRAE**: `~/.trae/mcp.json`
+- **Windsurf**: `~/.windsurf/mcp.json`
+- **Cline**: `~/.cline/mcp.json`
+- **OpenClaw / Kimi Code CLI / CodeX**: Auto-detected
+
+For a specific tool: `carrymem setup-mcp --tool cursor --global`
+
+**Restart your AI tool to activate CarryMem.**
+
+### 3. Store Your First Memory (1 minute)
 
 ```python
 from carrymem import CarryMem
@@ -55,7 +73,7 @@ with CarryMem() as cm:
     cm.classify_and_remember("I work at a startup in Tokyo")
 ```
 
-### 3. View Memories (30 seconds)
+### 4. View Memories (30 seconds)
 
 ```bash
 carrymem list
@@ -69,7 +87,7 @@ with CarryMem() as cm:
         print(f"{mem['type']}: {mem['content']}")
 ```
 
-### 4. Check Statistics (30 seconds)
+### 5. Check Statistics (30 seconds)
 
 ```bash
 carrymem stats
@@ -144,6 +162,23 @@ report = cm.consolidate(dry_run=True)  # Preview changes
 print(f"Found {report['stats']['duplicates_found']} duplicates")
 report = cm.consolidate(dry_run=False)  # Execute
 ```
+
+---
+
+## Knowledge Base (Obsidian)
+
+CarryMem can index your Obsidian vault as a read-only knowledge base, enabling full-text search across your notes alongside your memories.
+
+```python
+from carrymem import CarryMem
+from carrymem.adapters import ObsidianAdapter
+
+cm = CarryMem(knowledge_adapter=ObsidianAdapter("/path/to/vault"))
+cm.index_knowledge()
+results = cm.recall_from_knowledge("project architecture")
+```
+
+For detailed configuration, features (FTS5 search, frontmatter parsing, wiki-links, incremental indexing), MCP integration, and troubleshooting, see the [Obsidian Adapter Documentation](OBSIDIAN_ADAPTER.md).
 
 ---
 
@@ -299,6 +334,7 @@ A: Yes! Supports SQLite (default), Obsidian, and custom adapters.
 - 📖 Read [Full Documentation](../README.md)
 - 🎯 Check [User Guide](USER_GUIDE.md)
 - 🏗️ Learn [Architecture Design](ARCHITECTURE.md)
+- 📓 Connect your vault with [Obsidian Adapter](OBSIDIAN_ADAPTER.md)
 - 🤝 Contribute [Contributing Guide](../CONTRIBUTING.md)
 
 ---
