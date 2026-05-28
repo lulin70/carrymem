@@ -102,6 +102,11 @@ mce_bench_*.json
 # Benchmark archive (old scripts with sensitive info)
 benchmarks/archive/
 
+# Third-party benchmark datasets (large, clone from original repos)
+benchmarks/LongMemEval/
+benchmarks/MemEval/
+benchmarks/PrefEval_official/
+
 # Benchmark temp scripts
 benchmarks/_devsquad_review.py
 
