@@ -566,14 +566,15 @@ See CHANGELOG.md for detailed history.
 | **Rule merge protocol** | **High** | **High** | **P2** | **v0.4.0** |
 | **VS Code extension** | **Medium** | **High** | **P3** | **v0.4.0** |
 | **Ontology trigger matching** | **Medium** | **High** | **P3** | **v0.5.0** |
-| **Community directory submissions (Glama/Smithery/MCP Registry)** | **High** | **Low** | **P1** | **v0.3.0** |
+| **Community directory: mcp.directory + Glama** | **High** | **Low** | **P1** | **v0.3.0** |
 | **WorkBuddy/CodeBuddy MCP Marketplace** | **High** | **Medium** | **P1** | **v0.3.0** |
-| **SSE/HTTP transport for MCP server** | **Critical** | **High** | **P2** | **v0.3.0** |
-| **Cloud MCP Server** | **High** | **Very High** | **P2** | **v0.4.0** |
+| **Smithery (requires .mcpb bundle or HTTP transport)** | **Medium** | **High** | **P2** | **v0.4.0** |
+| **SSE/HTTP transport for MCP server** | **Critical** | **High** | **P2** | **v0.4.0** |
+| **Cloud MCP Server** | **High** | **Very High** | **P2** | **v0.5.0** |
 
 ---
 
-**Last Updated**: 2026-05-24
+**Last Updated**: 2026-05-28
 **Maintainer**: CarryMem Team
 **Next Milestone**: v0.3.0 GA (General Availability)
 **Status**: ✅ **v0.4.1 complete (2761+ tests, Memory + Rules + Knowledge + Enterprise)**

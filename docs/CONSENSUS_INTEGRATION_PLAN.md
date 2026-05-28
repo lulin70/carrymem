@@ -13,7 +13,7 @@ CarryMem v0.2.0 is technically ready for client integration launch. The MCP serv
 
 **v2.0 Update**: Merged with WorkBuddy Launch Checklist (2026-05-28). Key additions: promotion strategy (WeChat Official Account), launch cadence (T+0 to T+14), non-technical user onboarding, trial data collection, and Obsidian adapter documentation. Resolved conflicts on client config paths and launch sequencing.
 
-**v3.0 Update**: Promoted 3 P2 items to P0 based on user decision — (1) Obsidian adapter documentation, (2) CodeX client support, (3) Community directory submissions (Glama/Smithery/MCP Market). Rationale: these are low-effort (2h each) but high-visibility items that differentiate CarryMem at launch. P0 now has 11 items total (4 done, 7 pending). Following DevSquad 11-phase lifecycle model (minimal template) for execution.
+**v3.0 Update**: Promoted 3 P2 items to P0 based on user decision — (1) Obsidian adapter documentation, (2) CodeX client support, (3) Community directory manifest files. Rationale: these are low-effort but high-visibility items. P0 now has 11 items total (all done). **v3.1 Update**: Smithery demoted to P2 — requires running HTTP server or .mcpb bundle format, not compatible with stdio-only servers. Community directory split: mcp.directory + Glama = P1 (easy, GitHub URL only), Smithery = P2 (needs HTTP transport or MCPB).
 
 ---
 
@@ -461,7 +461,7 @@ OpenClaw and Kimi Code CLI both use the same configuration format as Claude Code
 | P0-8 | First-run experience (auto-init + smoke test + --uninstall) | Consensus | Developer | 2.5 hr | ✅ Done | cli.py |
 | P0-9 | Obsidian adapter documentation | P2→P0 | Developer | 2 hr | ✅ Done | docs/OBSIDIAN_ADAPTER.md |
 | P0-10 | CodeX client support | P2→P0 | Developer | 2 hr | ✅ Done | cli.py, constants.py |
-| P0-11 | Community directory manifest files (Glama/Smithery) | P2→P0 | PM | 2 hr | ✅ Files Ready | server.json, smithery.yaml (submission pending account registration) |
+| P0-11 | Community directory manifest files (Glama/mcp.directory ready; Smithery demoted to P2) | P2→P0 | PM | 2 hr | ✅ Files Ready | server.json (Glama), smithery.yaml (kept for future P2 use) |
 
 **WorkBuddy P0 items already completed** (verified against codebase):
 
