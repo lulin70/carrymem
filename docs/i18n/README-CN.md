@@ -388,6 +388,8 @@ carrymem setup-mcp --tool all
 | 📋 应用商店 | WorkBuddy、CodeBuddy | 需提交至 MCP Marketplace（待完成） |
 | ❌ 不支持 | Kimi 桌面版、DeepSeek 桌面版、通义千问、豆包、天工、智谱清言 | 封闭平台，无 MCP 接口 |
 
+> **🔒 你的记忆只存在你自己的机器上。** CarryMem 所有数据本地存储在 `~/.carrymem/`（SQLite）。每个用户拥有独立的数据库——就像 Git，大家用同一个工具，但各自的仓库完全独立。无云端同步、无共享状态、无跨用户冲突。
+
 ### 规则引擎
 
 行为规则支持三个作用域级别，实现团队/组织对齐：

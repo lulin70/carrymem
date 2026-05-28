@@ -481,6 +481,8 @@ carrymem setup-mcp --tool all
 | 📋 Marketplace | WorkBuddy, CodeBuddy | Submit to MCP Marketplace (pending) |
 | ❌ Not supported | Kimi Desktop, DeepSeek Desktop, Qianwen, Doubao, TiGong, ChatGLM | Closed platforms, no MCP interface |
 
+> **🔒 Your memories stay on your machine.** CarryMem stores all data locally in `~/.carrymem/` (SQLite). Each user gets an independent database — just like Git, everyone uses the same tool but keeps their own repos. No cloud sync, no shared state, no cross-user conflicts.
+
 ### Rule Engine with Scopes
 
 Behavioral rules with three scope levels for team/organization alignment:
