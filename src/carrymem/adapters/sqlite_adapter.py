@@ -300,7 +300,11 @@ class SQLiteAdapter(StorageAdapter):
         self._all_connections: Dict[int, sqlite3.Connection] = {}
         self._conn_lock = threading.Lock()
 
-        # Initialize encryption
+        self._enable_vector = False
+        self._embedding_model = None
+        self._embedding_dim = 384
+        self._embedding_model_name = embedding_model
+
         self._encryption = None
         if encryption_key is not None:
             try:
@@ -311,7 +315,6 @@ class SQLiteAdapter(StorageAdapter):
                 logger.warning(f"Encryption initialization failed, using plaintext: {e}")
                 self._encryption = None
 
-        # Initialize audit logger
         self._audit = None
         try:
             from ..security.audit import AuditLogger
@@ -319,12 +322,6 @@ class SQLiteAdapter(StorageAdapter):
         except Exception as e:
             from carrymem.utils.logger import logger
             logger.warning(f"Audit logger initialization failed: {e}")
-
-        # Pre-set vector search flag
-        self._enable_vector = False
-        self._embedding_model = None
-        self._embedding_dim = 384
-        self._embedding_model_name = embedding_model
 
         # RRF configuration (extractable to config file)
         _rc = rrf_config or {}
