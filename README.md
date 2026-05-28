@@ -1,6 +1,6 @@
 # CarryMem — Your AI Finally Remembers Who You Are
 
-**Stop teaching AI who you are. Every. Single. Time.**
+**Stop teaching AI who you are every single conversation.**
 
 > Your portable AI memory — preferences, decisions, and corrections that follow you across models, tools, and devices.
 
@@ -18,10 +18,11 @@ CarryMem fixes this. It's a lightweight, zero-dependency memory system that stor
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
   <img src="https://img.shields.io/badge/tests-3050%2B%20passing-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-79%25%2B-green" alt="Coverage">
-  <img src="https://img.shields.io/badge/code%20quality-4.3%2F5%20%E2%98%85%E2%98%85%E2%98%85%E2%98%85%E2%98%86-blue" alt="Code Quality">
-  <img src="https://img.shields.io/badge/security-5%2F5%20%E2%98%85%E2%98%85%E2%98%85%E2%98%85%E2%98%85-success" alt="Security">
+  <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval Academic Benchmark"></a>
   <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python">
 </p>
+
+**Topics**: `ai-memory` `mcp` `claude-code` `agent-memory` `cursor` `obsidian` `preference-injection` `sqlite` `llm-tools` `portable-memory`
 
 ---
 
