@@ -1,15 +1,17 @@
 # CarryMem Client Integration Consensus Document
 
 **Date**: 2026-05-28
-**Version**: 1.0
+**Version**: 2.0 (Merged with WorkBuddy Launch Checklist)
 **Participants**: PM, Architect, Developer, DevOps (DevSquad Multi-Role Review)
-**Status**: Final
+**Status**: Final (Merged)
 
 ---
 
 ## Executive Summary
 
 CarryMem v0.2.4 is technically ready for client integration launch. The MCP server implementation is mature (27 tools, 7 categories, protocol 2024-11-05), and the `setup-mcp --global` command works for the top 3 clients (Claude Code, Cursor, TRAE). However, critical gaps exist: PyPI version lag (0.1.6 vs 0.2.4), missing client support in setup-mcp (Windsurf, Cline, OpenClaw, etc.), and no automated PyPI publishing. This document captures the multi-role consensus on feasibility, priority, and action plan.
+
+**v2.0 Update**: Merged with WorkBuddy Launch Checklist (2026-05-28). Key additions: promotion strategy (WeChat Official Account), launch cadence (T+0 to T+14), non-technical user onboarding, trial data collection, and Obsidian adapter documentation. Resolved conflicts on client config paths and launch sequencing.
 
 ---
 
@@ -125,12 +127,12 @@ CarryMem v0.2.4 is technically ready for client integration launch. The MCP serv
 | **Cursor** | `~/.cursor/mcp.json` | Global | Also supports project-level `.cursor/mcp.json` |
 | **Claude Code** | `~/.claude.json` | Global (user scope) | Top-level `mcpServers` key |
 | **Claude Code** | `.claude/mcp.json` | Project | Standard format |
-| **TRAE** | `~/.trae/mcp.json` | Global | Same format as Cursor |
+| **TRAE** | `~/.trae/mcp.json` | Global | Same format as Cursor. **Note**: WorkBuddy claims "GUI only, no CLI" — this is incorrect; CLI config is implemented and tested |
 | **TRAE-CN** | `~/.trae-cn/mcp.json` | Global | Same format, detected if dir exists |
 | **Windsurf** | `~/.windsurf/mcp.json` | Global | Same format as Cursor |
 | **Cline** | `~/.cline/mcp.json` | Global | Same format |
-| **OpenClaw** | Same as Claude Code | Global | Uses `~/.claude.json` or `.claude/mcp.json` |
-| **Kimi Code CLI** | Same as Claude Code | Global | Uses `~/.claude.json` format |
+| **OpenClaw** | Same as Claude Code | Global | Uses `~/.claude.json` or `.claude/mcp.json`. **Conflict**: WorkBuddy says `~/.openclaw/openclaw.json` — needs verification |
+| **Kimi Code CLI** | Same as Claude Code | Global | Uses `~/.claude.json` format. **Conflict**: WorkBuddy says `~/.kimi/mcp.json` — needs verification |
 
 **Verdict: No adapter layer needed.** All clients use the same `mcpServers` JSON format. The only differences are file paths, which are already handled in `constants.py`.
 
@@ -407,21 +409,22 @@ jobs:
 
 ## 2. Client Integration Feasibility Final Assessment
 
-### 2.1 Feasibility Matrix (Revised)
+### 2.1 Feasibility Matrix (Revised — Merged with WorkBuddy)
 
 | Client | MCP Support | Integration Effort | Setup Method | Feasibility | Priority |
 |---|---|---|---|---|---|
 | **Cursor** | Direct | Zero (done) | `setup-mcp --tool cursor --global` | **Confirmed** | P0 |
 | **Claude Code** | Direct | Zero (done) | `setup-mcp --tool claude-code --global` | **Confirmed** | P0 |
 | **TRAE** | Direct | Zero (done) | `setup-mcp --tool trae --global` | **Confirmed** | P0 |
-| **Windsurf** | Direct | Low (30 min) | `setup-mcp --tool windsurf --global` | **High** | P1 |
-| **Cline** | Direct | Low (30 min) | `setup-mcp --tool cline --global` | **High** | P1 |
-| **OpenClaw** | Direct | Zero | Same config as Claude Code | **High** | P1 |
-| **Kimi Code CLI** | Direct | Zero | Same config as Claude Code | **High** | P1 |
+| **Windsurf** | Direct | Low (30 min) | `setup-mcp --tool windsurf --global` | **High** | P0→P1 |
+| **Cline** | Direct | Low (30 min) | `setup-mcp --tool cline --global` | **High** | P0→P1 |
+| **OpenClaw** | Direct | Zero | Same config as Claude Code (⚠️ conflict: WorkBuddy says `~/.openclaw/openclaw.json`) | **High** | P1 |
+| **Kimi Code CLI** | Direct | Zero | Same config as Claude Code (⚠️ conflict: WorkBuddy says `~/.kimi/mcp.json`) | **High** | P1 |
+| **WorkBuddy** | Direct | Medium (4 hr) | MCP Marketplace submission (alt: `~/.workbuddy/mcp.json`) | **High** | P1 |
+| **CodeBuddy** | Direct | Medium (4 hr) | MCP Marketplace submission (alt: `~/.workbuddy/mcp.json` + GUI) | **High** | P1 |
+| **CodeX** | Direct (unconfirmed) | Low |推测同 OpenClaw 生态 | **Medium** | P2 |
 | **Aider** | Direct | Low (30 min) | `setup-mcp --tool aider --global` | **Medium** | P2 |
 | **Continue** | Indirect | Medium (2 hr) | Different config format (`config.json`) | **Medium** | P2 |
-| **WorkBuddy** | Direct | Medium (4 hr) | MCP Marketplace submission | **High** | P1 |
-| **CodeBuddy** | Direct | Medium (4 hr) | MCP Marketplace submission | **High** | P1 |
 | **DeepSeek CLI** | Indirect | High (2+ days) | Third-party TUI adapter needed | **Low** | P2 |
 | **Kimi Desktop** | None | N/A | Closed desktop, no MCP | **Not feasible** | N/A |
 | **DeepSeek Desktop** | None | N/A | Closed desktop, no MCP | **Not feasible** | N/A |
@@ -436,51 +439,70 @@ OpenClaw and Kimi Code CLI both use the same configuration format as Claude Code
 
 ---
 
-## 3. Revised Launch Plan (P0/P1/P2)
+## 3. Revised Launch Plan (P0/P1/P2) — Merged with WorkBuddy Checklist
 
-### P0: Must Complete Before Launch (Target: 3 days)
+### P0: Must Complete Before Launch (Target: 3 days, ~9hr total)
 
-| # | Item | Owner | Effort | Status | Notes |
-|---|---|---|---|---|---|
-| P0-1 | PyPI 0.2.4 publish | DevOps | 1 hr | Pending | Manual publish first, automate later |
-| P0-2 | Add Windsurf + Cline to setup-mcp | Developer | 1 hr | Pending | Copy-paste pattern from existing |
-| P0-3 | Add `--uninstall` flag to setup-mcp | Developer | 2 hr | Pending | Remove carrymem from client configs |
-| P0-4 | Post-setup smoke test | Developer | 1 hr | Pending | Verify MCP server starts after config |
-| P0-5 | Auto-init in setup-mcp | Developer | 30 min | Pending | Run init if ~/.carrymem/ doesn't exist |
-| P0-6 | MCP integration issue template | DevOps | 30 min | Pending | New template for client-specific issues |
-| P0-7 | Quick Start Guide update | PM | 1 hr | Pending | Add setup-mcp --global to guide |
-| P0-8 | E2E test: full user journey | Developer | 2 hr | Pending | Install → setup-mcp → add → recall → pack |
+| # | Item | Source | Owner | Effort | Status | Code Changes |
+|---|---|---|---|---|---|---|
+| P0-1 | PyPI 0.2.4 publish | Consensus | DevOps | 1 hr | Pending | None |
+| P0-2 | Add Windsurf + Cline to setup-mcp | Consensus | Developer | 1 hr | Pending | ~90 lines (cli.py, constants.py) |
+| P0-3 | Add `--uninstall` flag to setup-mcp | Consensus | Developer | 2 hr | Pending | ~40 lines (cli.py) |
+| P0-4 | Post-setup smoke test | Consensus | Developer | 1 hr | Pending | ~20 lines (cli.py) |
+| P0-5 | Auto-init in setup-mcp | Consensus | Developer | 30 min | Pending | ~10 lines (cli.py) |
+| P0-6 | Beta Feedback + MCP integration issue templates | Merged | DevOps | 30 min | Pending | ~60 lines (.github/ISSUE_TEMPLATE/) |
+| P0-7 | Quick Start Guide update | Consensus | PM | 1 hr | Pending | ~30 lines (docs/) |
+| P0-8 | E2E test: full user journey | Consensus | Developer | 2 hr | Pending | ~100 lines (tests/) |
+
+**WorkBuddy P0 items already completed** (verified against codebase):
+
+| Item | Status | Evidence |
+|---|---|---|
+| README scenario entry | ✅ Done | README line 60, 101: `setup-mcp --all --global` |
+| About Description update | ✅ Done | README line 1-5: "Stop teaching AI who you are..." |
+| Topics fix and supplement | ✅ Done | README line 25: `claude-code`, `agent-memory`, `obsidian` |
+| PrefEval badge | ✅ Done | README line 21: academic badge with ICLR 2025 Oral |
+| pack/unpack commands | ✅ Done | cli.py:761 cmd_pack, cli.py:965 cmd_unpack |
+| setup-mcp --global | ⚠️ Partial | Only 3+1 clients (claude-code, cursor, trae, trae-cn) |
+| Beta Feedback issue template | ❌ Not done | Only bug_report, feature_request, question exist |
+| CHANGELOG update | ⚠️ Verify | CHANGELOG.md exists, 0.2.4 entry needs confirmation |
 
 ### P1: Within 1 Week After Launch (Target: 7 days)
 
-| # | Item | Owner | Effort | Notes |
-|---|---|---|---|---|
-| P1-1 | WorkBuddy MCP Marketplace submission | Architect | 4 hr | Prepare assets, submit, iterate on review |
-| P1-2 | CodeBuddy MCP Marketplace submission | Architect | 2 hr | Reuse WorkBuddy assets |
-| P1-3 | OpenClaw config verification | Developer | 2 hr | Install OpenClaw, test setup-mcp, document |
-| P1-4 | Kimi Code CLI config verification | Developer | 2 hr | Install Kimi Code, test setup-mcp, document |
-| P1-5 | GitHub Actions: auto-publish on tag | DevOps | 2 hr | publish.yml workflow |
-| P1-6 | GitHub Actions: auto-release on tag | DevOps | 1 hr | release.yml with changelog extraction |
-| P1-7 | MCP Registry submission | Architect | 3 hr | server.json + mcp-publisher CLI |
-| P1-8 | Add Aider to setup-mcp | Developer | 30 min | Low priority but easy |
+| # | Item | Source | Owner | Effort | Notes |
+|---|---|---|---|---|---|
+| P1-1 | WeChat Official Account promotion article | WorkBuddy | PM | 2 hr | Draft exists at `drafts/carrymem-beta-招募-2026-05-28.md` |
+| P1-2 | WorkBuddy MCP Marketplace submission | Consensus | Architect | 4 hr | Prepare assets, submit, iterate on review |
+| P1-3 | CodeBuddy MCP Marketplace submission | Consensus | Architect | 2 hr | Reuse WorkBuddy assets |
+| P1-4 | OpenClaw config path verification | Merged | Developer | 2 hr | **Conflict**: WorkBuddy says `~/.openclaw/openclaw.json`, consensus says same as Claude Code. Must verify by installing OpenClaw |
+| P1-5 | Kimi Code CLI config path verification | Merged | Developer | 2 hr | **Conflict**: WorkBuddy says `~/.kimi/mcp.json`, consensus says same as Claude Code. Must verify |
+| P1-6 | GitHub Actions: auto-publish on tag | Consensus | DevOps | 2 hr | publish.yml workflow |
+| P1-7 | GitHub Actions: auto-release on tag | Consensus | DevOps | 1 hr | release.yml with changelog extraction |
+| P1-8 | MCP Registry submission | Consensus | Architect | 3 hr | server.json + mcp-publisher CLI |
+| P1-9 | Non-technical user installation guide (illustrated) | WorkBuddy | PM | 3 hr | Screenshot walkthrough for CLI-averse users |
+| P1-10 | Trial period data collection mechanism | WorkBuddy | PM+DevOps | 2 hr | Track installs, active usage, feedback patterns |
+| P1-11 | Add Aider to setup-mcp | Consensus | Developer | 30 min | Low priority but easy |
 
 ### P2: Ongoing (Target: 30 days)
 
-| # | Item | Owner | Effort | Notes |
-|---|---|---|---|---|
-| P2-1 | Continue adapter (config.json format) | Developer | 2 hr | Different JSON structure |
-| P2-2 | DeepSeek CLI community adapter | Architect | 2+ days | Needs third-party TUI, community effort |
-| P2-3 | Web UI for non-technical users | Architect | 2+ weeks | Dashboard for memory management |
-| P2-4 | SSE/HTTP transport for MCP server | Architect | 1 week | Wire http_server.py to MCP protocol |
-| P2-5 | Multi-language docs completion | PM | Ongoing | i18n docs already exist, keep updated |
-| P2-6 | MCP server integration test in CI | DevOps | 4 hr | Verify initialize/tools-list in pipeline |
-| P2-7 | Community directory submissions | PM | 2 hr | Glama, Smithery, MCP Market |
+| # | Item | Source | Owner | Effort | Notes |
+|---|---|---|---|---|---|
+| P2-1 | Continue adapter (config.json format) | Consensus | Developer | 2 hr | Different JSON structure |
+| P2-2 | DeepSeek CLI community adapter | Consensus | Architect | 2+ days | Needs third-party TUI, community effort |
+| P2-3 | SSE/HTTP transport for MCP server | Consensus | Architect | 1 week | Wire http_server.py to MCP protocol. **Prerequisite for P2-8** |
+| P2-4 | Web UI for non-technical users | Consensus | Architect | 2+ weeks | Dashboard for memory management |
+| P2-5 | Obsidian adapter documentation | WorkBuddy | Developer | 2 hr | Feature exists but docs insufficient |
+| P2-6 | CodeX client support | WorkBuddy | Developer | 2 hr | Based on OpenClaw ecosystem, pending confirmation |
+| P2-7 | MCP server integration test in CI | Consensus | DevOps | 4 hr | Verify initialize/tools-list in pipeline |
+| P2-8 | Cloud MCP Server | WorkBuddy | Architect | 2-4 weeks | Solves corporate laptop permission issues. **Depends on P2-3 (SSE/HTTP)** |
+| P2-9 | Multi-language docs completion | Consensus | PM | Ongoing | i18n docs already exist, keep updated |
+| P2-10 | Community directory submissions | Consensus | PM | 2 hr | Glama, Smithery, MCP Market |
 
 ---
 
-## 4. Action Item Checklist
+## 4. Action Item Checklist — Merged with WorkBuddy Cadence
 
-### Immediate (This Week)
+### Phase 1: Technical Preparation (Day 1-3)
 
 | Who | What | When | Deliverable |
 |---|---|---|---|
@@ -489,20 +511,33 @@ OpenClaw and Kimi Code CLI both use the same configuration format as Claude Code
 | Developer | Add `--uninstall` flag | Day 2 | `carrymem setup-mcp --uninstall --global` works |
 | Developer | Post-setup smoke test | Day 2 | Verifies MCP server starts after config |
 | Developer | Auto-init in setup-mcp | Day 2 | No separate `carrymem init` needed |
-| DevOps | Add MCP integration issue template | Day 2 | `.github/ISSUE_TEMPLATE/mcp_integration.md` |
+| DevOps | Add Beta Feedback + MCP integration issue templates | Day 2 | `.github/ISSUE_TEMPLATE/` updated |
 | PM | Update Quick Start Guide | Day 3 | setup-mcp --global prominently featured |
 | Developer | E2E user journey test | Day 3 | Automated test covering full flow |
 
-### Week 2
+### Phase 2: Launch + Promotion (Day 4-7)
 
 | Who | What | When | Deliverable |
 |---|---|---|---|
+| PM | Publish WeChat Official Account article | Day 4 (T+0) | Article live, "one command" promise deliverable |
+| PM | Update GitHub README/About/Topics | Day 4 (T+1) | Already done, verify consistency |
+| PM | Community forwarding + first feedback | Day 5 (T+2) | Collect first 10 user feedbacks |
 | Architect | Prepare MCP Marketplace assets | Day 4-5 | Logo, description, docs, demo video |
 | Architect | Submit to WorkBuddy/CodeBuddy Marketplace | Day 5 | Submission live, pending review |
-| Developer | Verify OpenClaw + Kimi Code CLI | Day 5-6 | Documented working config |
+| Developer | Verify OpenClaw + Kimi Code CLI config paths | Day 5-6 | Documented working config, resolve path conflicts |
 | DevOps | Create publish.yml workflow | Day 6 | Auto-publish on tag push |
 | DevOps | Create release.yml workflow | Day 7 | Auto-release with changelog |
 | Architect | Submit to MCP Registry | Day 7 | server.json published |
+
+### Phase 3: Stabilization (Day 8-14)
+
+| Who | What | When | Deliverable |
+|---|---|---|---|
+| PM | Fix most urgent install/usage issues from feedback | Day 8-10 (T+7) | Hotfix release if needed |
+| PM | Non-technical user installation guide | Day 8-10 | Illustrated walkthrough |
+| PM+DevOps | Trial period data collection setup | Day 8-10 | Install/usage/feedback tracking |
+| Developer | Add Aider to setup-mcp | Day 10 | `--tool aider` works |
+| PM | Second WeChat article (user stories / data update) | Day 14 (T+14) | Article with real usage data |
 
 ---
 
@@ -516,6 +551,7 @@ OpenClaw and Kimi Code CLI both use the same configuration format as Claude Code
 | MCP Marketplace rejects submission | Delayed WorkBuddy/CodeBuddy support | Medium | Follow guidelines strictly; prepare demo video |
 | Client config format changes | setup-mcp breaks | Low | MCP protocol is stable; monitor client changelogs |
 | Version confusion (0.1.6 → 0.2.4 jump) | User confusion | Medium | Clear CHANGELOG; pin version in docs |
+| WeChat article published before P0 complete | "One command" promise broken | Medium | Enforce P0 completion gate before article publication |
 
 ### 5.2 Medium Risks
 
@@ -525,6 +561,7 @@ OpenClaw and Kimi Code CLI both use the same configuration format as Claude Code
 | Continue config.json incompatible | Cannot support Continue | Medium | Defer to P2; document limitation |
 | MCP server crash on specific client | Bad first impression | Low | Smoke test after setup; error recovery |
 | PyPI API token not configured | Cannot auto-publish | Medium | Set up token before first tag push |
+| Non-technical users cannot use CLI | Low activation from WeChat readers | Medium | Illustrated guide in P1; Web UI in P2 |
 
 ### 5.3 Low Risks
 
@@ -545,9 +582,12 @@ OpenClaw and Kimi Code CLI both use the same configuration format as Claude Code
 3. **No adapter layer needed** — all clients use the same mcpServers JSON format
 4. **No SSE/HTTP transport for launch** — stdio is sufficient and more secure
 5. **MCP Marketplace submission is P1, not P0** — requires asset preparation
-6. **OpenClaw and Kimi Code CLI use Claude Code config** — no code changes, documentation only
+6. **OpenClaw and Kimi Code CLI use Claude Code config** — no code changes, documentation only (pending verification)
 7. **Desktop clients (Kimi/DeepSeek) are not supported** — closed platforms, CLI versions work
 8. **`setup-mcp --global` is the primary onboarding path** — must be rock-solid
+9. **Technical preparation before promotion** — P0 must complete before WeChat article publication (WorkBuddy had T+0 as article, adjusted to T+1 after P0)
+10. **Promotion cadence adopted from WorkBuddy** — T+0 (PyPI+P0) → T+1 (WeChat article) → T+2 (community) → T+7 (fixes) → T+14 (second article)
+11. **Trial quality over quantity** — "10 people install, 8 use it" beats "100 install, 20 use it"
 
 ### 6.2 Deferred Decisions
 
@@ -555,6 +595,7 @@ OpenClaw and Kimi Code CLI both use the same configuration format as Claude Code
 2. **Cloud sync pricing model**: Defer to post-launch, observe user demand
 3. **MCP Registry vs Marketplace priority**: Start with Marketplace (direct user base), then Registry
 4. **Continue support**: Defer until config format is verified
+5. **Cloud MCP Server**: Defer to P2 (after SSE/HTTP transport is ready)
 
 ### 6.3 Disagreements Resolved
 
@@ -568,6 +609,16 @@ OpenClaw and Kimi Code CLI both use the same configuration format as Claude Code
    - PM: No, manual first to ensure quality, automate in P1
    - **Resolution**: Manual publish for 0.2.4, automate for subsequent releases
 
+3. **Should WeChat article publish at T+0?** (New from WorkBuddy merge)
+   - WorkBuddy: Yes, T+0 is article publication
+   - Consensus: No, P0 technical items must complete first
+   - **Resolution**: T+0 = P0 completion + PyPI publish. WeChat article at T+1. "One command" promise must be deliverable before promotion.
+
+4. **OpenClaw/Kimi Code CLI config paths** (New conflict from merge)
+   - WorkBuddy: `~/.openclaw/openclaw.json`, `~/.kimi/mcp.json`
+   - Consensus: Same as Claude Code format
+   - **Resolution**: Verify by actual installation in P1. Consensus inference (Claude Code format) is more likely correct based on ecosystem analysis, but WorkBuddy may have firsthand knowledge. Mark as conflict requiring verification.
+
 ---
 
 ## 7. Success Metrics
@@ -580,6 +631,71 @@ OpenClaw and Kimi Code CLI both use the same configuration format as Claude Code
 | Client coverage | 5+ clients | setup-mcp --tool choices |
 | MCP Marketplace approval | Both WorkBuddy + CodeBuddy | Listing live |
 | Issue response time | <24h for P0 bugs | GitHub metrics |
+| Trial activation rate | >80% | Active users / total installs (WorkBuddy: "10 install, 8 use") |
+| WeChat article engagement | 500+ reads | Official Account analytics |
+| First-week feedback count | 20+ issues/comments | GitHub + WeChat |
+
+---
+
+## 8. WorkBuddy Checklist Merge Analysis
+
+### 8.1 Difference Matrix
+
+| Dimension | WorkBuddy Checklist | Consensus Document | Difference Type |
+|---|---|---|---|
+| P0 item count | 8 | 8 | Same count, different content |
+| Completed items | 4 (About/Topics/badge/pack) | 0 (all Pending) | WorkBuddy more realistic |
+| PyPI publish | Not mentioned | P0-1 | Consensus-only |
+| --uninstall | Not mentioned | P0-3 | Consensus-only |
+| Smoke test | Not mentioned | P0-4 | Consensus-only |
+| Auto-init | Not mentioned | P0-5 | Consensus-only |
+| E2E test | Not mentioned | P0-8 | Consensus-only |
+| WeChat promotion | Core strategy | Not mentioned | WorkBuddy-only |
+| Launch cadence | T+0 to T+14 | Not mentioned | WorkBuddy-only |
+| Non-technical user guide | P1 | Not mentioned | WorkBuddy-only |
+| Trial data collection | P1 | Not mentioned | WorkBuddy-only |
+| Cloud MCP Server | P2 | Not mentioned (has SSE/HTTP P2) | Related but different |
+| Obsidian adapter docs | P2 | Not mentioned | WorkBuddy-only |
+| Competitive analysis | None | Mem0/OpenMemory | Consensus-only |
+| CI/CD automation | None | publish.yml/release.yml | Consensus-only |
+| Security assessment | None | Full matrix | Consensus-only |
+| Client matrix | 10 (incl. CodeX/DeepSeek/Kimi Desktop) | 14 (incl. Windsurf/Cline/Aider/Continue) | Complementary |
+
+### 8.2 Conflicts
+
+| # | Conflict | WorkBuddy | Consensus | Code Verification | Resolution |
+|---|---|---|---|---|---|
+| C1 | TRAE config method | "GUI only, no CLI" | "CLI implemented via ~/.trae/mcp.json" | ✅ Code implemented + tests pass | **Consensus correct**, WorkBuddy info outdated |
+| C2 | OpenClaw config path | `~/.openclaw/openclaw.json` | Same as Claude Code | No code verification | **Needs testing**. Consensus inference more likely |
+| C3 | Kimi Code CLI path | `~/.kimi/mcp.json` | Same as Claude Code | No code verification | **Needs testing**. Both possibilities exist |
+| C4 | Launch vs promotion order | Promotion first (T+0 article) | Technical prep first | — | **Technical first**. Article after P0 complete |
+
+### 8.3 Complementary Items
+
+| # | Content | Source | Value |
+|---|---|---|---|
+| S1 | WeChat promotion strategy | WorkBuddy | Reach Chinese developer community |
+| S2 | Launch cadence T+0~T+14 | WorkBuddy | Time anchors for each phase |
+| S3 | Non-technical user guide | WorkBuddy P1 | Lower trial barrier, pairs with WeChat |
+| S4 | Trial data collection | WorkBuddy P1 | Quantify launch effectiveness |
+| S5 | Obsidian adapter docs | WorkBuddy P2 | Existing feature, differentiation point |
+| S6 | CodeX client | WorkBuddy | OpenClaw ecosystem, not in consensus |
+| S7 | Competitive analysis | Consensus | Mem0/OpenMemory detailed comparison |
+| S8 | CI/CD automation | Consensus | publish.yml/release.yml |
+| S9 | Security assessment | Consensus | Full security matrix |
+| S10 | --uninstall/smoke test/auto-init | Consensus | User experience completeness |
+
+### 8.4 Impact Assessment
+
+| Impact Dimension | Score (1-5) | Description |
+|---|---|---|
+| P0 list impact | ⭐⭐⭐ (3/5) | 4/8 WorkBuddy P0 items already done; new items mainly from consensus |
+| P1 list impact | ⭐⭐⭐⭐⭐ (5/5) | WeChat promotion, non-technical guide, data collection are entirely new |
+| Technical architecture impact | ⭐⭐ (2/5) | Client path conflicts need verification; Cloud MCP Server is long-term |
+| Launch cadence impact | ⭐⭐⭐⭐ (4/5) | T+0~T+14 fills consensus document's time planning gap |
+| Product positioning impact | ⭐⭐⭐ (3/5) | "Pain points not tech" positioning complements "lightweight, intelligent" |
+
+**Overall**: WorkBuddy checklist has **highest impact on P1** (promotion + user operations), **limited P0 impact** (most done or consensus more comprehensive), and **provides new P2 directions** (Cloud MCP/Obsidian docs/CodeX).
 
 ---
 
