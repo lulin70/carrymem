@@ -121,9 +121,7 @@ def format_memory(memory: Dict[str, Any]) -> str:
     memory_type = MEMORY_TYPES.get(memory.get('type', 'unknown'), 'unknown')
     tier = MEMORY_TIERS.get(memory.get('tier', 1), 'unknown')
 
-    return f"[{tier}] {memory_type}: {memory.get('content',
-    '')} (confidence: {memory.get('confidence',
-     0.0):.2f})"
+    return f"[{tier}] {memory_type}: {memory.get('content', '')} (confidence: {memory.get('confidence', 0.0):.2f})"
 
 
 def load_json_file(file_path: str) -> Dict[str, Any]:

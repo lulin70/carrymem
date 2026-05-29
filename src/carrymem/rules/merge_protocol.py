@@ -141,10 +141,7 @@ def detect_merge_conflicts(
                         existing_rule=ext,
                         conflict_type="scope_escalation",
                         severity="low",
-                        reason=f"Incoming [{
-    inc.scope}] rule escalates over existing [{
-        ext.scope}] rule on trigger '{
-            inc.trigger}'",
+                        reason=f"Incoming [{inc.scope}] rule escalates over existing [{ext.scope}] rule on trigger '{inc.trigger}'",
                         suggestion="Accept incoming rule — higher scope priority",
                     ))
                 continue

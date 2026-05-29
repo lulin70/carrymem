@@ -399,14 +399,8 @@ def consolidate_p2(
                 continue
 
             content_parts = [
-                f"[{older_mem.get('type',
-    'unknown')}] ({older_mem.get('created_at',
-    '')[:10]}) {older_mem.get('content',
-     '')}",
-                f"[{newer_mem.get('type',
-    'unknown')}] ({newer_mem.get('created_at',
-    '')[:10]}) {newer_mem.get('content',
-     '')}",
+                f"[{older_mem.get('type', 'unknown')}] ({older_mem.get('created_at', '')[:10]}) {older_mem.get('content', '')}",
+                f"[{newer_mem.get('type', 'unknown')}] ({newer_mem.get('created_at', '')[:10]}) {newer_mem.get('content', '')}",
             ]
 
             request = {

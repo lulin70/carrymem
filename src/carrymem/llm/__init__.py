@@ -117,9 +117,7 @@ class LLMClient:
     def __repr__(self):
         key = self._api_key
         masked = key[:4] + "..." + key[-4:] if key and len(key) > 8 else "***"
-        return f"LLMClient(backend={_BACKEND}, model={
-    self._model}, api_key={masked}, available={
-        self.is_available()})"
+        return f"LLMClient(backend={_BACKEND}, model={self._model}, api_key={masked}, available={self.is_available()})"
 
     def chat(self, prompt: str, system: str = None) -> Optional[str]:
         if not self.is_available():

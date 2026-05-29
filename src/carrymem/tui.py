@@ -230,9 +230,7 @@ else:
                 stats = self.cm.get_stats()
                 total = stats.get("total_count", 0)
                 shown = len(self.memories)
-                status = f"Total: {total} | Showing: {shown} | Filter: {
-    self.current_filter or 'All'} | Namespace: {
-        self.namespace}"
+                status = f"Total: {total} | Showing: {shown} | Filter: {self.current_filter or 'All'} | Namespace: {self.namespace}"
                 status_bar = self.query_one("#status-bar", Static)
                 status_bar.update(status)
             except Exception:

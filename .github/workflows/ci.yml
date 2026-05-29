@@ -106,6 +106,8 @@ jobs:
               'storage.py',         # Chinese docstring examples
               'coreference.py',     # Chinese pronouns/demonstratives for NLP resolution
               'domain.py',          # Chinese domain keywords for classification
+              'scope.py',           # Chinese scope keyword mappings (i18n data)
+              'prompt.py',          # Chinese prompt templates for zh locale
           ]
 
           for root, dirs, files in os.walk('src'):

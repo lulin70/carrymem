@@ -175,11 +175,7 @@ def _print_memory_card(m: Dict[str, Any], index: Optional[int] = None):
     prefix = f"  {index}." if index else "  "
     print(f"{prefix} {icon} {_bold(_truncate(content, 65))}")
     print(
-        f"     {
-    _dim(
-        f'Type: {mtype} | Conf: {
-            confidence:.0%} | Importance: {
-                importance:.2f} | {tier_label}')}"
+        f"     {_dim(f'Type: {mtype} | Conf: {confidence:.0%} | Importance: {importance:.2f} | {tier_label}')}"
     )
     print(f"     {_dim(f'Key: {key} | {_format_time(created)}')}")
 
