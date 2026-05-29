@@ -618,7 +618,7 @@ cm.import_memories(input_path="backup.json")
 
 ## 项目状态
 
-**当前版本**：v0.2.0
+**当前版本**：v0.2.4
 **测试**：3050+ passing
 **覆盖率**：79%+
 

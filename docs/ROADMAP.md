@@ -30,7 +30,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 - Second digit changes for GA milestones (API stability guarantee)
 - No "v1.0.0 jump" — earn it through proven production usage
 
-> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. Current version is v0.2.0, including auto-backup, encrypted .carry files, concurrent safety, E2E tests, PrefEval 87.9%, state/event version chain, security hardening, preference injection optimization, context.py modularization, and consolidation scheduling. Next milestones: v0.3.0 (GA).
+> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. Current version is v0.2.4, including auto-backup, encrypted .carry files, concurrent safety, E2E tests, PrefEval 87.9%, state/event version chain, security hardening, preference injection optimization, context.py modularization, and consolidation scheduling. Next milestones: v0.3.0 (GA).
 
 ---
 
@@ -494,7 +494,7 @@ See CHANGELOG.md for detailed history.
 | v0.3.0 (pre-reset) | 1900+ | ~85% | +Knowledge CJK +relevance scoring |
 | v0.4.0 (pre-reset) | 1814 | ~77% | +Rule Scopes +Skill Format +VS Code Extension |
 | v0.4.1 (pre-reset) | 2056 | 79% | +Core Loop Fix +Auto Rule Suggestion +Security |
-| **v0.2.0 (current)** | **3050+** | **79%+** | **+Recall Purity +Scope Injection +PrefEval 0.940 +8-client MCP** |
+| **v0.2.4 (current)** | **3050+** | **79%+** | **+Recall Purity +Scope Injection +PrefEval 0.940 +8-client MCP** |
 
 ---
 
@@ -573,4 +573,4 @@ See CHANGELOG.md for detailed history.
 ---
 
 **Next Milestone**: v0.3.0 GA (General Availability)
-**Status**: ✅ **v0.2.0 complete (3050+ tests, 79%+ coverage, Memory + Rules + Knowledge + Enterprise)**
+**Status**: ✅ **v0.2.4 complete (3050+ tests, 79%+ coverage, Memory + Rules + Knowledge + Enterprise)**

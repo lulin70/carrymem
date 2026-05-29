@@ -732,11 +732,12 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 
 ## Project Status
 
-**Current Version**: v0.2.0
+**Current Version**: v0.2.4 (Beta)
 **Tests**: 3050+ passing
 **Coverage**: 79%+
 
 **Changelog**:
+- **v0.2.4**: Beta release — CI root fix, 24 security fixes, Glama TDQS boost, 6-gate CI pipeline
 - **v0.2.0**: USB carry encryption, auto-backup, concurrent safety, PrefEval 83.0% (200 items), 8-client MCP setup
 - **v0.2.3** (pre-reset): Consolidation scheduling (schedule/stop), PrefEval standardization
 - **v0.2.2** (pre-reset): Token budget + dead code fix + security, PrefEval 87.9%

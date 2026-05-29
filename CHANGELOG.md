@@ -10,6 +10,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > historical records from the pre-reset development cycle and should not be confused with
 > the current v0.2.x series.
 
+## [0.2.4] - 2026-05-29 (Beta Release)
+
+### Fixed
+- **CI flake8 E999 root fix**: Eliminated all multi-line f-strings that triggered "unterminated string literal" on Python 3.9-3.11 (Black↔flake8 circular conflict)
+- **Security**: Removed `html.escape()` from sanitizer (S-4), tightened XSS/SQL injection patterns (S-5/S-7), encryption now raises errors instead of returning None (S-2)
+- **Redaction**: Span-based overlap merge replacing sequential pattern.sub() (E-4), auto-truncation of matched sensitive text (E-5)
+- **Audit**: ISO 8601 timestamp format (E-9), query failures now raise exceptions (E-7), log write failures logged as error (E-6)
+- **Backup**: `create_backup()` returns realpath for cross-platform consistency (P0-5), `restore_backup()` auto-derives backup_dir
+
+### Changed
+- Black/isort line-length: 100 → 120 (reduces unnecessary line splitting)
+- All 14 long f-strings in cli.py refactored with intermediate variables (no # fmt: skip needed)
+- i18n whitelist expanded from 17 → 22 files (CJK data files properly categorized)
+- CHANGELOG reduced from 1053 → 115 lines (removed pre-reset bloat)
+- Glama TDQS boost: all 27 tool descriptions rewritten with full behavioral transparency
+- Added glama.json ownership claim file
+- SECURITY.md created with vulnerability reporting and architecture docs
+- 6-gate CI pipeline: Quality → i18n → Test (matrix) → Build → Security → Docs
+
+### Security
+- 24 security/code quality issues resolved across P0/P1/P2 tiers
+- InputValidator: strict_mode now respected, no HTML escaping, whitespace preserved via strip()
+- EncryptionError raised on key load failure (not silent None return)
+
 ## [0.2.0] - 2026-05-28
 
 ### Added
