@@ -111,6 +111,9 @@ jobs:
               'format.py',         # Chinese formatting helpers
               'candidate_generator.py',  # Chinese candidate generation patterns
               'handlers.py',        # Chinese onboard welcome messages (i18n content)
+              'sqlite_adapter.py',  # Chinese error messages (i18n content)
+              'semantic_aggregator.py',  # Chinese aggregation labels
+              'session_summarizer.py',    # Chinese session summary templates
           ]
 
           for root, dirs, files in os.walk('src'):

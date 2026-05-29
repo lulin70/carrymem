@@ -343,13 +343,11 @@ def cmd_search(args):
         print(json.dumps(memories, ensure_ascii=False, indent=2))
     elif parsed.format == "plain":
         for m in memories:
-            print(
-                f"{m.get('storage_key',
-    '')}\t{m.get('type',
-    '')}\t{m.get('content',
-    '')}\t{m.get('confidence',
-     0):.2f}"
-            )
+            sk = m.get("storage_key", "")
+            mt = m.get("type", "")
+            mc = m.get("content", "")
+            mf = m.get("confidence", 0)
+            print(f"{sk}\t{mt}\t{mc}\t{mf:.2f}")
     else:
         print(f"\n  {_bold('Search:')} {_cyan(parsed.query)} ({len(memories)} results)\n")
         for i, m in enumerate(memories, 1):
