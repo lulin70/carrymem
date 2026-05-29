@@ -252,10 +252,7 @@ def cmd_add(args):
             print(f"  {icon} [{mtype}] {_bold(_truncate(content, 70))}")
             key_display = keys[i] if i < len(keys) else "N/A"
             print(
-                f"     {
-    _dim(
-        f'Confidence: {
-            confidence:.0%} | Tier: {tier_label} | Key: {key_display}')}"
+                f"     {_dim(f'Confidence: {confidence:.0%} | Tier: {tier_label} | Key: {key_display}')}"
             )
 
         print(f"\n  {_green(f'Remembered {len(entries)} item(s)')}")

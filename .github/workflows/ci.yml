@@ -108,6 +108,8 @@ jobs:
               'domain.py',          # Chinese domain keywords for classification
               'scope.py',           # Chinese scope keyword mappings (i18n data)
               'prompt.py',          # Chinese prompt templates for zh locale
+              'format.py',         # Chinese formatting helpers
+              'candidate_generator.py',  # Chinese candidate generation patterns
           ]
 
           for root, dirs, files in os.walk('src'):

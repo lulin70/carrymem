@@ -152,10 +152,7 @@ def detect_merge_conflicts(
                     existing_rule=ext,
                     conflict_type="type_contradiction",
                     severity="critical",
-                    reason=f"Contradiction: [{
-    inc.rule_type}] vs [{
-        ext.rule_type}] on trigger '{
-            inc.trigger}'",
+                    reason=f"Contradiction: [{inc.rule_type}] vs [{ext.rule_type}] on trigger '{inc.trigger}'",
                     suggestion=_suggest_contradiction_resolution(inc, ext),
                 ))
             else:
