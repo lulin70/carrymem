@@ -40,8 +40,14 @@ class RuleCandidateGenerator:
         if not stored_memories:
             return []
 
-        rule_worthy_types = {"user_preference", "correction", "decision",
-            "task_pattern", "sentiment_marker", "fact_declaration"}
+        rule_worthy_types = {
+            "user_preference",
+            "correction",
+            "decision",
+            "task_pattern",
+            "sentiment_marker",
+            "fact_declaration",
+        }
         candidates = []
 
         try:
@@ -85,16 +91,25 @@ class RuleCandidateGenerator:
                             continue
                         if s.action == s.trigger:
                             continue
-                        if len(s.action.split()) <= 2 and any(c in s.action for c in (',', '，')):
+                        if len(s.action.split()) <= 2 and any(c in s.action for c in (",", "，")):
                             continue
-                        if s.trigger in ("related scenarios", "tech selection or solution design",
-                                         "general context", "偏好选择", "通用场景"):
+                        if s.trigger in (
+                            "related scenarios",
+                            "tech selection or solution design",
+                            "general context",
+                            "偏好选择",
+                            "通用场景",
+                        ):
                             continue
                         candidate_dict = {
-    "trigger": s.trigger, "action": s.action, "rule_type": s.rule_type if hasattr(
-        s, 'rule_type') else "prefer", "scope": "personal", "override": False, "confidence": min(
-            s.confidence if hasattr(
-                s, 'confidence') else 0.6, 0.85), "source": "pattern_detection", }
+                            "trigger": s.trigger,
+                            "action": s.action,
+                            "rule_type": s.rule_type if hasattr(s, "rule_type") else "prefer",
+                            "scope": "personal",
+                            "override": False,
+                            "confidence": min(s.confidence if hasattr(s, "confidence") else 0.6, 0.85),
+                            "source": "pattern_detection",
+                        }
                         if candidate_dict not in candidates:
                             candidates.append(candidate_dict)
                 except Exception as e:
@@ -127,8 +142,8 @@ class RuleCandidateGenerator:
             return []
 
         tech_pattern = re.compile(
-            r'\b(?:javascript|typescript|python|java|react|vue|angular|postgresql|mysql|sqlite|'
-            r'mongodb|redis|docker|kubernetes|aws|gcp|azure|node\.js|go|rust|swift|kotlin)\b',
+            r"\b(?:javascript|typescript|python|java|react|vue|angular|postgresql|mysql|sqlite|"
+            r"mongodb|redis|docker|kubernetes|aws|gcp|azure|node\.js|go|rust|swift|kotlin)\b",
             re.IGNORECASE,
         )
 
@@ -140,12 +155,22 @@ class RuleCandidateGenerator:
                 tech_counts[tech] = tech_counts.get(tech, 0) + 1
 
         domain_groups = {
-    "language": {
-        "python", "java", "javascript", "typescript", "go", "rust", "swift", "kotlin", "node.js"}, "frontend": {
-            "react", "vue", "angular"}, "database": {
-                "postgresql", "mysql", "sqlite", "mongodb", "redis"}, "cloud": {
-                    "aws", "gcp", "azure"}, "container": {
-                        "docker", "kubernetes"}, }
+            "language": {
+                "python",
+                "java",
+                "javascript",
+                "typescript",
+                "go",
+                "rust",
+                "swift",
+                "kotlin",
+                "node.js",
+            },
+            "frontend": {"react", "vue", "angular"},
+            "database": {"postgresql", "mysql", "sqlite", "mongodb", "redis"},
+            "cloud": {"aws", "gcp", "azure"},
+            "container": {"docker", "kubernetes"},
+        }
 
         trigger_map = {
             "language": "programming language selection",
@@ -167,18 +192,20 @@ class RuleCandidateGenerator:
             if top_count >= 3:
                 ratio = top_count / domain_total
                 if ratio >= 0.5:
-                    implicit.append({
-                        "trigger": trigger_map.get(domain, domain),
-                        "action": f"prefer {top_tech}",
-                        "rule_type": "prefer",
-                        "scope": "personal",
-                        "override": False,
-                        "confidence": min(0.5 + ratio * 0.3, 0.9),
-                        "source": "implicit_preference",
-                        "domain": domain,
-                        "top_tech": top_tech,
-                        "ratio": round(ratio, 2),
-                    })
+                    implicit.append(
+                        {
+                            "trigger": trigger_map.get(domain, domain),
+                            "action": f"prefer {top_tech}",
+                            "rule_type": "prefer",
+                            "scope": "personal",
+                            "override": False,
+                            "confidence": min(0.5 + ratio * 0.3, 0.9),
+                            "source": "implicit_preference",
+                            "domain": domain,
+                            "top_tech": top_tech,
+                            "ratio": round(ratio, 2),
+                        }
+                    )
 
         return implicit
 
@@ -189,14 +216,14 @@ class RuleCandidateGenerator:
     @staticmethod
     def sanitize_rule_content(text: str) -> str:
         danger_pattern = re.compile(
-            r'(?:ignore\s+(?:previous|above|all)\s+(?:instructions?|rules?)|'
-            r'system\s*[:：]\s*|'
-            r'forget\s+(?:all\s+)?(?:rules?|instructions?)|'
-            r'you\s+are\s+now|'
-            r'(?:DAN|jailbreak|developer)\s+mode|'
-            r'bypass\s+(?:all\s+)?(?:restrictions?|filters?|safety)|'
-            r'\$\{.*?\}|\{\{.*?\}\}|'
-            r'eval\(|exec\(|__import__)',
+            r"(?:ignore\s+(?:previous|above|all)\s+(?:instructions?|rules?)|"
+            r"system\s*[:：]\s*|"
+            r"forget\s+(?:all\s+)?(?:rules?|instructions?)|"
+            r"you\s+are\s+now|"
+            r"(?:DAN|jailbreak|developer)\s+mode|"
+            r"bypass\s+(?:all\s+)?(?:restrictions?|filters?|safety)|"
+            r"\$\{.*?\}|\{\{.*?\}\}|"
+            r"eval\(|exec\(|__import__)",
             re.IGNORECASE,
         )
         if danger_pattern.search(text):
@@ -208,34 +235,53 @@ class RuleCandidateGenerator:
         content_lower = content.lower()
 
         trigger_map = [
-            (r'\b(?:javascript|typescript|python|java|go|rust|swift|kotlin|c\+\+|ruby|php)\b',
-             lambda m: "programming language selection"),
-            (r'\b(?:react|vue|angular|svelte|next\.js|nuxt)\b',
-             lambda m: "frontend framework selection"),
-            (r'\b(?:postgresql|mysql|sqlite|mongodb|redis|dynamodb|cassandra|elasticsearch)\b',
-             lambda m: "database selection"),
-            (r'\b(?:docker|kubernetes|terraform|ansible|puppet|chef)\b',
-             lambda m: "infrastructure and deployment"),
-            (r'\b(?:aws|gcp|azure|digitalocean|heroku)\b',
-             lambda m: "cloud platform selection"),
-            (r'(?:dark\s*mode|light\s*mode|theme|ui\s*theme)',
-             lambda m: "UI theme and appearance"),
-            (r'\b(?:vim|emacs|vscode|intellij|pycharm|sublime|neovim)\b',
-             lambda m: "editor and IDE selection"),
-            (r'\b(?:terminal|gui|cli|command\s*line|tui)\b',
-             lambda m: "interface preference"),
-            (r'\b(?:ssl|tls|https|oauth|jwt|encryption|authentication|security)\b',
-             lambda m: "security and authentication"),
-            (r'\b(?:rest|graphql|grpc|websocket|api\s*design)\b',
-             lambda m: "API design and protocol"),
-            (r'\b(?:microservice|monolith|serverless|soa)\b',
-             lambda m: "architecture pattern selection"),
-            (r'\b(?:test|testing|unit\s*test|integration\s*test|tdd|bdd)\b',
-             lambda m: "testing strategy"),
-            (r'\b(?:git|github|gitlab|bitbucket|version\s*control)\b',
-             lambda m: "version control workflow"),
-            (r'\b(?:ci|cd|pipeline|continuous\s*integration|continuous\s*deployment)\b',
-             lambda m: "CI/CD pipeline configuration"),
+            (
+                r"\b(?:javascript|typescript|python|java|go|rust|swift|kotlin|c\+\+|ruby|php)\b",
+                lambda m: "programming language selection",
+            ),
+            (
+                r"\b(?:react|vue|angular|svelte|next\.js|nuxt)\b",
+                lambda m: "frontend framework selection",
+            ),
+            (
+                r"\b(?:postgresql|mysql|sqlite|mongodb|redis|dynamodb|cassandra|elasticsearch)\b",
+                lambda m: "database selection",
+            ),
+            (
+                r"\b(?:docker|kubernetes|terraform|ansible|puppet|chef)\b",
+                lambda m: "infrastructure and deployment",
+            ),
+            (r"\b(?:aws|gcp|azure|digitalocean|heroku)\b", lambda m: "cloud platform selection"),
+            (r"(?:dark\s*mode|light\s*mode|theme|ui\s*theme)", lambda m: "UI theme and appearance"),
+            (
+                r"\b(?:vim|emacs|vscode|intellij|pycharm|sublime|neovim)\b",
+                lambda m: "editor and IDE selection",
+            ),
+            (r"\b(?:terminal|gui|cli|command\s*line|tui)\b", lambda m: "interface preference"),
+            (
+                r"\b(?:ssl|tls|https|oauth|jwt|encryption|authentication|security)\b",
+                lambda m: "security and authentication",
+            ),
+            (
+                r"\b(?:rest|graphql|grpc|websocket|api\s*design)\b",
+                lambda m: "API design and protocol",
+            ),
+            (
+                r"\b(?:microservice|monolith|serverless|soa)\b",
+                lambda m: "architecture pattern selection",
+            ),
+            (
+                r"\b(?:test|testing|unit\s*test|integration\s*test|tdd|bdd)\b",
+                lambda m: "testing strategy",
+            ),
+            (
+                r"\b(?:git|github|gitlab|bitbucket|version\s*control)\b",
+                lambda m: "version control workflow",
+            ),
+            (
+                r"\b(?:ci|cd|pipeline|continuous\s*integration|continuous\s*deployment)\b",
+                lambda m: "CI/CD pipeline configuration",
+            ),
         ]
 
         for pattern, resolver in trigger_map:
@@ -258,12 +304,12 @@ class RuleCandidateGenerator:
     @staticmethod
     def extract_condition(content: str) -> str:
         condition_patterns = [
-            (r'如果.{0,5}?([^.，！？\n]+?)(?:的话|就|则|时|的时候)', 1),
-            (r'当.{0,5}?([^.，！？\n]+?)(?:的时候|时|则)', 1),
-            (r'(?:要是|假如|若).{0,5}?([^.，！？\n]+?)(?:的话|就|则)', 1),
-            (r'if\s+(.+?)(?:\s+then|\s*,|\s*$)', 1),
-            (r'when\s+(.+?)(?:\s+then|\s*,|\s*$)', 1),
-            (r'(?:小项目|大项目|小团队|大团队|小规模|大规模)', 0),
+            (r"如果.{0,5}?([^.，！？\n]+?)(?:的话|就|则|时|的时候)", 1),
+            (r"当.{0,5}?([^.，！？\n]+?)(?:的时候|时|则)", 1),
+            (r"(?:要是|假如|若).{0,5}?([^.，！？\n]+?)(?:的话|就|则)", 1),
+            (r"if\s+(.+?)(?:\s+then|\s*,|\s*$)", 1),
+            (r"when\s+(.+?)(?:\s+then|\s*,|\s*$)", 1),
+            (r"(?:小项目|大项目|小团队|大团队|小规模|大规模)", 0),
         ]
 
         for pattern, group in condition_patterns:
@@ -280,7 +326,7 @@ class RuleCandidateGenerator:
         content_lower = content.lower()
 
         prefer_match = re.search(
-            r'(?:prefer|like|love|favor|favour|want|choose|use|prefer\s+to\s+use)\s+(.+?)(?:\.|,|;|$)',
+            r"(?:prefer|like|love|favor|favour|want|choose|use|prefer\s+to\s+use)\s+(.+?)(?:\.|,|;|$)",
             content_lower,
         )
         if prefer_match and mem_type == "user_preference":
@@ -289,7 +335,7 @@ class RuleCandidateGenerator:
                 return f"use {action_text}"
 
         avoid_match = re.search(
-            r'(?:avoid|don\'t|do not|never|hate|dislike|stop)\s+(.+?)(?:\.|,|;|$)',
+            r"(?:avoid|don\'t|do not|never|hate|dislike|stop)\s+(.+?)(?:\.|,|;|$)",
             content_lower,
         )
         if avoid_match:
@@ -298,7 +344,7 @@ class RuleCandidateGenerator:
                 return f"avoid {action_text}"
 
         always_match = re.search(
-            r'(?:always|must|should|need\s+to|make\s+sure)\s+(.+?)(?:\.|,|;|$)',
+            r"(?:always|must|should|need\s+to|make\s+sure)\s+(.+?)(?:\.|,|;|$)",
             content_lower,
         )
         if always_match:
@@ -307,14 +353,14 @@ class RuleCandidateGenerator:
                 return f"always {action_text}"
 
         tech_preference = re.search(
-            r'\b(?:javascript|typescript|python|java|react|vue|angular|postgresql|mysql|'
-            r'sqlite|mongodb|redis|docker|kubernetes|aws|gcp|azure|go|rust|swift|kotlin)\b',
+            r"\b(?:javascript|typescript|python|java|react|vue|angular|postgresql|mysql|"
+            r"sqlite|mongodb|redis|docker|kubernetes|aws|gcp|azure|go|rust|swift|kotlin)\b",
             content_lower,
         )
         if tech_preference and mem_type == "user_preference":
             tech = tech_preference.group(0)
             over_match = re.search(
-                r'(?:over|instead\s+of|rather\s+than|vs\.?|compared\s+to)\s+(\w+)',
+                r"(?:over|instead\s+of|rather\s+than|vs\.?|compared\s+to)\s+(\w+)",
                 content_lower,
             )
             if over_match:
@@ -323,7 +369,7 @@ class RuleCandidateGenerator:
 
         if mem_type == "correction":
             fix_match = re.search(
-                r'(?:should\s+(?:be|use)|fix|correct|change|replace)\s+(.+?)(?:\.|,|;|$)',
+                r"(?:should\s+(?:be|use)|fix|correct|change|replace)\s+(.+?)(?:\.|,|;|$)",
                 content_lower,
             )
             if fix_match:
@@ -332,7 +378,7 @@ class RuleCandidateGenerator:
 
         if mem_type == "decision":
             dec_match = re.search(
-                r'(?:decided|decision|chose|chosen|will\s+use|going\s+with)\s+(.+?)(?:\.|,|;|$)',
+                r"(?:decided|decision|chose|chosen|will\s+use|going\s+with)\s+(.+?)(?:\.|,|;|$)",
                 content_lower,
             )
             if dec_match:
@@ -354,9 +400,19 @@ class RuleCandidateGenerator:
     def infer_rule_type(mem_type: str, content: str = "") -> str:
         if mem_type == "user_preference" and content:
             negation_patterns = [
-                r'别用', r'不要用', r'下次别', r'不喜欢', r'讨厌',
-                r"don't", r'do not', r'never', r'hate', r'dislike',
-                r'avoid', r'stop', r'no more',
+                r"别用",
+                r"不要用",
+                r"下次别",
+                r"不喜欢",
+                r"讨厌",
+                r"don't",
+                r"do not",
+                r"never",
+                r"hate",
+                r"dislike",
+                r"avoid",
+                r"stop",
+                r"no more",
             ]
             if any(re.search(p, content.lower()) for p in negation_patterns):
                 return "avoid"

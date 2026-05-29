@@ -24,7 +24,7 @@ MEMORY_TIERS = {
     1: "Working Memory",
     2: "Procedural Memory",
     3: "Episodic Memory",
-    4: "Semantic Memory"
+    4: "Semantic Memory",
 }
 
 
@@ -62,7 +62,7 @@ def extract_content(text: str, pattern: str, action: str) -> Optional[str]:
     if action == "extract_following_content":
         start = match.end()
         content = text[start:].strip()
-        content = re.sub(r'[.!?]+$', '', content)
+        content = re.sub(r"[.!?]+$", "", content)
         return content
 
     elif action == "extract_surrounding_context":
@@ -78,7 +78,7 @@ def extract_content(text: str, pattern: str, action: str) -> Optional[str]:
     elif action == "extract_preceding_proposal":
         end = match.start()
         content = text[:end].strip()
-        content = re.sub(r'[.!?]+$', '', content)
+        content = re.sub(r"[.!?]+$", "", content)
         return content
 
     elif action == "extract":
@@ -88,8 +88,7 @@ def extract_content(text: str, pattern: str, action: str) -> Optional[str]:
     return None
 
 
-def calculate_memory_weight(confidence: float, days_since_last_access: int,
-                            access_count: int) -> float:
+def calculate_memory_weight(confidence: float, days_since_last_access: int, access_count: int) -> float:
     """Calculate memory weight based on confidence, recency, and frequency.
 
     Args:
@@ -102,7 +101,7 @@ def calculate_memory_weight(confidence: float, days_since_last_access: int,
     """
     recency_score = 2 ** (-0.1 * days_since_last_access)
 
-    frequency_score = 1 + 0.5 * (access_count ** 0.5)
+    frequency_score = 1 + 0.5 * (access_count**0.5)
 
     weight = confidence * recency_score * frequency_score
 
@@ -118,8 +117,8 @@ def format_memory(memory: Dict[str, Any]) -> str:
     Returns:
         The formatted memory string.
     """
-    memory_type = MEMORY_TYPES.get(memory.get('type', 'unknown'), 'unknown')
-    tier = MEMORY_TIERS.get(memory.get('tier', 1), 'unknown')
+    memory_type = MEMORY_TYPES.get(memory.get("type", "unknown"), "unknown")
+    tier = MEMORY_TIERS.get(memory.get("tier", 1), "unknown")
 
     return f"[{tier}] {memory_type}: {memory.get('content', '')} (confidence: {memory.get('confidence', 0.0):.2f})"
 
@@ -134,7 +133,7 @@ def load_json_file(file_path: str) -> Dict[str, Any]:
         The loaded JSON data as a dictionary.
     """
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
         return data
     except Exception as e:
@@ -150,7 +149,7 @@ def save_json_file(file_path: str, data: Dict[str, Any]):
         data: The data to save.
     """
     try:
-        with open(file_path, 'w', encoding='utf-8') as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception as e:
         logger.warning("Error saving JSON file %s: %s", file_path, e)
@@ -158,7 +157,7 @@ def save_json_file(file_path: str, data: Dict[str, Any]):
 
 def escape_like(value: str) -> str:
     """Escape special characters in LIKE pattern for SQL queries."""
-    return value.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 def content_hash(content: str, prefix: str = "") -> str:

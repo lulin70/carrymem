@@ -91,10 +91,7 @@ class RecallCache:
             if namespace is None:
                 self._cache.clear()
                 return
-            keys_to_remove = [
-                k for k, entry in self._cache.items()
-                if entry.namespace == namespace
-            ]
+            keys_to_remove = [k for k, entry in self._cache.items() if entry.namespace == namespace]
             for k in keys_to_remove:
                 del self._cache[k]
 

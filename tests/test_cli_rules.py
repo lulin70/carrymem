@@ -49,7 +49,17 @@ def temp_db(tmp_path):
 
 @pytest.fixture
 def db_with_rule(temp_db):
-    cmd_add_rule(["prefer PostgreSQL", "--trigger", "database selection", "--type", "prefer", "--db", temp_db])
+    cmd_add_rule(
+        [
+            "prefer PostgreSQL",
+            "--trigger",
+            "database selection",
+            "--type",
+            "prefer",
+            "--db",
+            temp_db,
+        ]
+    )
     return temp_db
 
 
@@ -299,46 +309,82 @@ class TestCmdMatchRulesFormats:
         assert "DDD" in captured.out or "Context" in captured.out
 
     def test_match_rules_with_context_budget(self, db_with_rule, capsys):
-        result = cmd_match_rules([
-            "database selection", "--format", "anchored",
-            "--context-budget", "500", "--db", db_with_rule,
-        ])
+        result = cmd_match_rules(
+            [
+                "database selection",
+                "--format",
+                "anchored",
+                "--context-budget",
+                "500",
+                "--db",
+                db_with_rule,
+            ]
+        )
         assert result == 0
 
 
 class TestCmdRefineRule:
     def test_refine_rule_start(self, temp_db, capsys):
-        result = cmd_refine_rule([
-            "--trigger", "database selection", "--action", "avoid MongoDB",
-            "--db", temp_db,
-        ])
+        result = cmd_refine_rule(
+            [
+                "--trigger",
+                "database selection",
+                "--action",
+                "avoid MongoDB",
+                "--db",
+                temp_db,
+            ]
+        )
         assert result == 0
 
     def test_refine_rule_start_invalid(self, temp_db, capsys):
-        result = cmd_refine_rule([
-            "--trigger", "", "--action", "", "--db", temp_db,
-        ])
+        result = cmd_refine_rule(
+            [
+                "--trigger",
+                "",
+                "--action",
+                "",
+                "--db",
+                temp_db,
+            ]
+        )
         assert result != 0
 
     def test_refine_rule_answer_no_session(self, temp_db, capsys):
-        result = cmd_refine_rule([
-            "--session", "nonexistent_session",
-            "--answer", "yes", "--db", temp_db,
-        ])
+        result = cmd_refine_rule(
+            [
+                "--session",
+                "nonexistent_session",
+                "--answer",
+                "yes",
+                "--db",
+                temp_db,
+            ]
+        )
         assert result == 0 or result == 1
 
     def test_refine_rule_confirm_no_session(self, temp_db, capsys):
-        result = cmd_refine_rule([
-            "--session", "nonexistent_session",
-            "--confirm", "--db", temp_db,
-        ])
+        result = cmd_refine_rule(
+            [
+                "--session",
+                "nonexistent_session",
+                "--confirm",
+                "--db",
+                temp_db,
+            ]
+        )
         assert result == 0
 
     def test_refine_rule_cancel_no_session(self, temp_db, capsys):
-        result = cmd_refine_rule([
-            "--session", "nonexistent_session",
-            "--cancel", "--db", temp_db,
-        ])
+        result = cmd_refine_rule(
+            [
+                "--session",
+                "nonexistent_session",
+                "--cancel",
+                "--db",
+                temp_db,
+            ]
+        )
         assert result == 0
 
 
@@ -348,10 +394,16 @@ class TestCmdRefinementSessions:
         assert result == 0
 
     def test_refinement_sessions_with_session(self, temp_db, capsys):
-        cmd_refine_rule([
-            "--trigger", "database selection", "--action", "avoid MongoDB",
-            "--db", temp_db,
-        ])
+        cmd_refine_rule(
+            [
+                "--trigger",
+                "database selection",
+                "--action",
+                "avoid MongoDB",
+                "--db",
+                temp_db,
+            ]
+        )
         capsys.readouterr()
         result = cmd_refinement_sessions(["--db", temp_db])
         assert result == 0
@@ -359,24 +411,45 @@ class TestCmdRefinementSessions:
 
 class TestCmdAddRuleExtended:
     def test_add_rule_with_template(self, temp_db, capsys):
-        result = cmd_add_rule([
-            "always use SSL", "--trigger", "security design",
-            "--type", "always", "--db", temp_db,
-        ])
+        result = cmd_add_rule(
+            [
+                "always use SSL",
+                "--trigger",
+                "security design",
+                "--type",
+                "always",
+                "--db",
+                temp_db,
+            ]
+        )
         assert result == 0
 
     def test_add_rule_forbid_type(self, temp_db, capsys):
-        result = cmd_add_rule([
-            "never leak secrets", "--trigger", "security",
-            "--type", "forbid", "--db", temp_db,
-        ])
+        result = cmd_add_rule(
+            [
+                "never leak secrets",
+                "--trigger",
+                "security",
+                "--type",
+                "forbid",
+                "--db",
+                temp_db,
+            ]
+        )
         assert result == 0
 
     def test_add_rule_override(self, temp_db, capsys):
-        result = cmd_add_rule([
-            "always check SQL injection", "--trigger", "code review",
-            "--type", "always", "--db", temp_db,
-        ])
+        result = cmd_add_rule(
+            [
+                "always check SQL injection",
+                "--trigger",
+                "code review",
+                "--type",
+                "always",
+                "--db",
+                temp_db,
+            ]
+        )
         assert result == 0
 
 

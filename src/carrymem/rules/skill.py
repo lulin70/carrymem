@@ -76,8 +76,7 @@ def skill_pack(
         ValueError: If validation fails
     """
     if not name or not name.replace("-", "").replace("_", "").isalnum():
-        raise ValueError(
-            f"Invalid skill name: '{name}'. Use alphanumeric + hyphens/underscores only.")
+        raise ValueError(f"Invalid skill name: '{name}'. Use alphanumeric + hyphens/underscores only.")
 
     if scope not in VALID_RULE_SCOPES:
         raise ValueError(f"Invalid scope '{scope}'. Must be one of {VALID_RULE_SCOPES}")
@@ -97,8 +96,7 @@ def skill_pack(
 
     if len(rules) > SKILL_MAX_RULES:
         raise ValueError(
-            f"Skill contains {len(rules)} rules, maximum is {SKILL_MAX_RULES}. "
-            f"Split into smaller Skills."
+            f"Skill contains {len(rules)} rules, maximum is {SKILL_MAX_RULES}. " f"Split into smaller Skills."
         )
 
     rule_dicts = [r.to_dict() for r in rules]
@@ -253,6 +251,7 @@ def skill_install(
         return {"installed": 0, "errors": ["Cannot install empty Skill bundle"]}
 
     from .limiter import RuleLimiter
+
     current_count = storage.count()
     try:
         RuleLimiter.check_total_limit(current_count + len(imported_rules))
@@ -271,12 +270,8 @@ def skill_install(
     from .sanitizer import RuleSanitizer
 
     existing_rules = storage.list_all(limit=10000)
-    existing_keys = {
-        (r.trigger, r.action, r.rule_type, r.scope): r for r in existing_rules
-    }
-    existing_keys_no_scope = {
-        (r.trigger, r.action, r.rule_type): r for r in existing_rules
-    }
+    existing_keys = {(r.trigger, r.action, r.rule_type, r.scope): r for r in existing_rules}
+    existing_keys_no_scope = {(r.trigger, r.action, r.rule_type): r for r in existing_rules}
 
     for rule_data in imported_rules:
         try:

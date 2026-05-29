@@ -5,21 +5,21 @@ from typing import Dict, Any
 
 try:
     import yaml
+
     YAML_AVAILABLE = True
 except ImportError:
     YAML_AVAILABLE = False
 
-_logger = logging.getLogger('carrymem')
+_logger = logging.getLogger("carrymem")
 
 from carrymem.constants import CONFIG_FILE
+
 _DEFAULT_CONFIG_PATH = str(CONFIG_FILE)
 
 
 class ConfigManager:
     def __init__(self, config_path: str = None):
-        self.config_path = config_path or os.environ.get(
-            'CARRYMEM_CONFIG_PATH', _DEFAULT_CONFIG_PATH
-        )
+        self.config_path = config_path or os.environ.get("CARRYMEM_CONFIG_PATH", _DEFAULT_CONFIG_PATH)
         self.config = self.load_config()
 
     def get(self, key: str, default: Any = None) -> Any:
@@ -32,11 +32,11 @@ class ConfigManager:
         Returns:
             The configuration value or the default.
         """
-        env_key = key.upper().replace('.', '_')
-        if f'CARRYMEM_{env_key}' in os.environ:
-            return os.environ[f'CARRYMEM_{env_key}']
+        env_key = key.upper().replace(".", "_")
+        if f"CARRYMEM_{env_key}" in os.environ:
+            return os.environ[f"CARRYMEM_{env_key}"]
 
-        keys = key.split('.')
+        keys = key.split(".")
         value = self.config
 
         for k in keys:
@@ -49,8 +49,8 @@ class ConfigManager:
 
     def load_config(self) -> Dict[str, Any]:
         try:
-            with open(self.config_path, 'r', encoding='utf-8') as f:
-                if self.config_path.endswith('.json'):
+            with open(self.config_path, "r", encoding="utf-8") as f:
+                if self.config_path.endswith(".json"):
                     return json.load(f) or {}
                 if YAML_AVAILABLE:
                     return yaml.safe_load(f) or {}
@@ -73,12 +73,12 @@ class ConfigManager:
         self.config = self.load_config()
 
     def get_rules(self, rules_path: str = None) -> Dict[str, Any]:
-        rules_path = rules_path or self.get('rules.config_path', './config/advanced_rules.json')
+        rules_path = rules_path or self.get("rules.config_path", "./config/advanced_rules.json")
         try:
-            with open(rules_path, 'r', encoding='utf-8') as f:
-                if rules_path.endswith('.json'):
+            with open(rules_path, "r", encoding="utf-8") as f:
+                if rules_path.endswith(".json"):
                     return json.load(f) or {}
-                if YAML_AVAILABLE and (rules_path.endswith('.yaml') or rules_path.endswith('.yml')):
+                if YAML_AVAILABLE and (rules_path.endswith(".yaml") or rules_path.endswith(".yml")):
                     return yaml.safe_load(f) or {}
                 if YAML_AVAILABLE:
                     return yaml.safe_load(f) or {}
@@ -94,7 +94,7 @@ class ConfigManager:
             key: The configuration key, using dot notation (e.g., "storage.data_path").
             value: The value to set.
         """
-        keys = key.split('.')
+        keys = key.split(".")
         config = self.config
 
         # Navigate to the parent level

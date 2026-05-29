@@ -44,8 +44,16 @@ def populated_storage(temp_db):
 def large_storage(temp_db):
     storage = RuleStorage(temp_db)
     triggers = [
-        "写报告", "做竞品分析", "代码评审", "技术选型", "写文档",
-        "做演示", "项目规划", "需求分析", "架构设计", "部署上线",
+        "写报告",
+        "做竞品分析",
+        "代码评审",
+        "技术选型",
+        "写文档",
+        "做演示",
+        "项目规划",
+        "需求分析",
+        "架构设计",
+        "部署上线",
     ]
     for i in range(1000):
         storage.create(

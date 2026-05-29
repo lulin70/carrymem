@@ -22,15 +22,15 @@ CORE_TOOLS: List[Dict[str, Any]] = [
             "properties": {
                 "message": {
                     "type": "string",
-                    "description": "The message content to analyze for memorable information"
+                    "description": "The message content to analyze for memorable information",
                 },
                 "context": {
                     "type": "string",
-                    "description": "Conversation context (optional). When user confirms/accepts AI suggestion, pass the previous AI reply to improve decision/correction classification quality."
-                }
+                    "description": "Conversation context (optional). When user confirms/accepts AI suggestion, pass the previous AI reply to improve decision/correction classification quality.",
+                },
             },
-            "required": ["message"]
-        }
+            "required": ["message"],
+        },
     },
     {
         "name": "get_classification_schema",
@@ -42,10 +42,10 @@ CORE_TOOLS: List[Dict[str, Any]] = [
                     "type": "string",
                     "enum": ["json", "markdown"],
                     "default": "json",
-                    "description": "Output format"
+                    "description": "Output format",
                 }
-            }
-        }
+            },
+        },
     },
     {
         "name": "batch_classify",
@@ -58,22 +58,19 @@ CORE_TOOLS: List[Dict[str, Any]] = [
                     "items": {
                         "type": "object",
                         "properties": {
-                            "message": {
-                                "type": "string",
-                                "description": "Message content"
-                            },
+                            "message": {"type": "string", "description": "Message content"},
                             "context": {
                                 "type": "string",
-                                "description": "Message context (optional)"
-                            }
+                                "description": "Message context (optional)",
+                            },
                         },
-                        "required": ["message"]
+                        "required": ["message"],
                     },
-                    "description": "List of messages to batch classify"
+                    "description": "List of messages to batch classify",
                 }
             },
-            "required": ["messages"]
-        }
+            "required": ["messages"],
+        },
     },
 ]
 
@@ -86,15 +83,12 @@ OPTIONAL_TOOLS: List[Dict[str, Any]] = [
             "properties": {
                 "message": {
                     "type": "string",
-                    "description": "The message content to classify and store"
+                    "description": "The message content to classify and store",
                 },
-                "context": {
-                    "type": "string",
-                    "description": "Conversation context (optional)"
-                }
+                "context": {"type": "string", "description": "Conversation context (optional)"},
             },
-            "required": ["message"]
-        }
+            "required": ["message"],
+        },
     },
     {
         "name": "recall_memories",
@@ -104,52 +98,47 @@ OPTIONAL_TOOLS: List[Dict[str, Any]] = [
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "Search query for full-text search (optional)"
+                    "description": "Search query for full-text search (optional)",
                 },
                 "filters": {
                     "type": "object",
                     "properties": {
                         "type": {
                             "type": "string",
-                            "description": "Memory type filter (user_preference, correction, fact_declaration, decision, relationship, task_pattern, sentiment_marker)"
+                            "description": "Memory type filter (user_preference, correction, fact_declaration, decision, relationship, task_pattern, sentiment_marker)",
                         },
                         "tier": {
                             "type": "integer",
                             "description": "Tier filter (1-4)",
                             "minimum": 1,
-                            "maximum": 4
+                            "maximum": 4,
                         },
                         "confidence_min": {
                             "type": "number",
                             "description": "Minimum confidence threshold (0.0-1.0)",
                             "minimum": 0.0,
-                            "maximum": 1.0
-                        }
-                    }
+                            "maximum": 1.0,
+                        },
+                    },
                 },
                 "limit": {
                     "type": "integer",
                     "description": "Maximum number of results (default 20)",
                     "default": 20,
                     "minimum": 1,
-                    "maximum": 100
-                }
-            }
-        }
+                    "maximum": 100,
+                },
+            },
+        },
     },
     {
         "name": "forget_memory",
         "description": "Delete a stored memory by ID. Requires storage adapter.",
         "inputSchema": {
             "type": "object",
-            "properties": {
-                "memory_id": {
-                    "type": "string",
-                    "description": "Memory ID (storage_key) to delete"
-                }
-            },
-            "required": ["memory_id"]
-        }
+            "properties": {"memory_id": {"type": "string", "description": "Memory ID (storage_key) to delete"}},
+            "required": ["memory_id"],
+        },
     },
 ]
 
@@ -157,11 +146,7 @@ KNOWLEDGE_TOOLS: List[Dict[str, Any]] = [
     {
         "name": "index_knowledge",
         "description": "Index an Obsidian vault or knowledge base for full-text search. Scans Markdown files, extracts YAML frontmatter tags and wiki-links, builds FTS5 index. Requires knowledge adapter (ObsidianAdapter).",
-        "inputSchema": {
-            "type": "object",
-            "properties": {},
-            "required": []
-        }
+        "inputSchema": {"type": "object", "properties": {}, "required": []},
     },
     {
         "name": "recall_from_knowledge",
@@ -169,36 +154,33 @@ KNOWLEDGE_TOOLS: List[Dict[str, Any]] = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "Search query for full-text search"
-                },
+                "query": {"type": "string", "description": "Search query for full-text search"},
                 "filters": {
                     "type": "object",
                     "properties": {
                         "tags": {
                             "oneOf": [
                                 {"type": "string"},
-                                {"type": "array", "items": {"type": "string"}}
+                                {"type": "array", "items": {"type": "string"}},
                             ],
-                            "description": "Filter by tag(s)"
+                            "description": "Filter by tag(s)",
                         },
                         "title": {
                             "type": "string",
-                            "description": "Filter by title (partial match)"
-                        }
-                    }
+                            "description": "Filter by title (partial match)",
+                        },
+                    },
                 },
                 "limit": {
                     "type": "integer",
                     "description": "Maximum number of results (default 20)",
                     "default": 20,
                     "minimum": 1,
-                    "maximum": 100
-                }
+                    "maximum": 100,
+                },
             },
-            "required": ["query"]
-        }
+            "required": ["query"],
+        },
     },
     {
         "name": "recall_all",
@@ -206,36 +188,33 @@ KNOWLEDGE_TOOLS: List[Dict[str, Any]] = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "Search query"
-                },
+                "query": {"type": "string", "description": "Search query"},
                 "filters": {
                     "type": "object",
                     "properties": {
                         "type": {
                             "type": "string",
-                            "description": "Memory type filter (for memories only)"
+                            "description": "Memory type filter (for memories only)",
                         },
                         "tags": {
                             "oneOf": [
                                 {"type": "string"},
-                                {"type": "array", "items": {"type": "string"}}
+                                {"type": "array", "items": {"type": "string"}},
                             ],
-                            "description": "Tag filter (for knowledge base)"
-                        }
-                    }
+                            "description": "Tag filter (for knowledge base)",
+                        },
+                    },
                 },
                 "limit": {
                     "type": "integer",
                     "description": "Maximum results per source (default 20)",
                     "default": 20,
                     "minimum": 1,
-                    "maximum": 100
-                }
+                    "maximum": 100,
+                },
             },
-            "required": ["query"]
-        }
+            "required": ["query"],
+        },
     },
 ]
 
@@ -248,19 +227,16 @@ PROFILE_TOOLS: List[Dict[str, Any]] = [
             "properties": {
                 "message": {
                     "type": "string",
-                    "description": "What the user wants to declare (e.g., 'I prefer dark mode', 'We use PostgreSQL', 'My timezone is UTC+8')"
+                    "description": "What the user wants to declare (e.g., 'I prefer dark mode', 'We use PostgreSQL', 'My timezone is UTC+8')",
                 }
             },
-            "required": ["message"]
-        }
+            "required": ["message"],
+        },
     },
     {
         "name": "get_memory_profile",
         "description": "Get a structured summary of what the AI remembers about the user. Returns highlights (top preferences, decisions, corrections), statistics (by type, by tier, avg confidence), and a human-readable summary. Lets users see and audit what AI remembers.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {}
-        }
+        "inputSchema": {"type": "object", "properties": {}},
     },
 ]
 
@@ -273,30 +249,30 @@ PROMPT_TOOLS: List[Dict[str, Any]] = [
             "properties": {
                 "context": {
                     "type": "string",
-                    "description": "Optional context/topic to filter relevant memories (e.g., 'database setup', 'coding style'). If empty, returns all memories."
+                    "description": "Optional context/topic to filter relevant memories (e.g., 'database setup', 'coding style'). If empty, returns all memories.",
                 },
                 "max_memories": {
                     "type": "integer",
                     "description": "Maximum number of memories to include (default 10)",
                     "default": 10,
                     "minimum": 1,
-                    "maximum": 50
+                    "maximum": 50,
                 },
                 "max_knowledge": {
                     "type": "integer",
                     "description": "Maximum number of knowledge base entries to include (default 5)",
                     "default": 5,
                     "minimum": 1,
-                    "maximum": 20
+                    "maximum": 20,
                 },
                 "language": {
                     "type": "string",
                     "description": "Language for the prompt template: en, zh, or ja (default en)",
                     "default": "en",
-                    "enum": ["en", "zh", "ja"]
-                }
-            }
-        }
+                    "enum": ["en", "zh", "ja"],
+                },
+            },
+        },
     },
     {
         "name": "summarize_and_store",
@@ -304,25 +280,22 @@ PROMPT_TOOLS: List[Dict[str, Any]] = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "session_id": {
-                    "type": "string",
-                    "description": "The session ID to summarize"
-                },
+                "session_id": {"type": "string", "description": "The session ID to summarize"},
                 "max_tokens": {
                     "type": "integer",
                     "description": "Maximum tokens of content to return for summarization (default 2000)",
                     "default": 2000,
                     "minimum": 100,
-                    "maximum": 8000
+                    "maximum": 8000,
                 },
                 "namespace": {
                     "type": "string",
                     "description": "Namespace for the stored summary (default 'default')",
-                    "default": "default"
-                }
+                    "default": "default",
+                },
             },
-            "required": ["session_id"]
-        }
+            "required": ["session_id"],
+        },
     },
 ]
 
@@ -336,20 +309,20 @@ CONSOLIDATION_TOOLS: List[Dict[str, Any]] = [
                 "dry_run": {
                     "type": "boolean",
                     "description": "If true, only report what would be done without making changes (default true)",
-                    "default": True
+                    "default": True,
                 },
                 "run_p1": {
                     "type": "boolean",
                     "description": "If true, also run P1 pattern recognition and rule candidate generation (default true)",
-                    "default": True
+                    "default": True,
                 },
                 "run_p2": {
                     "type": "boolean",
                     "description": "If true, also run P2 semantic consolidation via host LLM (default true)",
-                    "default": True
-                }
-            }
-        }
+                    "default": True,
+                },
+            },
+        },
     },
     {
         "name": "schedule_consolidation",
@@ -401,32 +374,32 @@ RULE_TOOLS: List[Dict[str, Any]] = [
             "properties": {
                 "trigger": {
                     "type": "string",
-                    "description": "Topic/scene that activates this rule (e.g., 'database', 'code review', 'security')"
+                    "description": "Topic/scene that activates this rule (e.g., 'database', 'code review', 'security')",
                 },
                 "action": {
                     "type": "string",
-                    "description": "What to do when triggered (e.g., 'Always use SSL', 'Never commit secrets')"
+                    "description": "What to do when triggered (e.g., 'Always use SSL', 'Never commit secrets')",
                 },
                 "scope": {
                     "type": "string",
                     "enum": ["personal", "company", "negotiated"],
                     "default": "personal",
-                    "description": "Rule scope: company (org-mandated, cannot be overridden), negotiated (team-adapted), personal (individual preference)"
+                    "description": "Rule scope: company (org-mandated, cannot be overridden), negotiated (team-adapted), personal (individual preference)",
                 },
                 "rule_type": {
                     "type": "string",
                     "enum": ["always", "avoid", "forbid", "prefer", "recommend"],
                     "default": "always",
-                    "description": "Rule type: always (mandatory), avoid (discouraged), forbid (prohibited), prefer (recommended), recommend (suggested)"
+                    "description": "Rule type: always (mandatory), avoid (discouraged), forbid (prohibited), prefer (recommended), recommend (suggested)",
                 },
                 "override": {
                     "type": "boolean",
                     "default": False,
-                    "description": "Whether this rule overrides conflicting lower-scope rules"
-                }
+                    "description": "Whether this rule overrides conflicting lower-scope rules",
+                },
             },
-            "required": ["trigger", "action"]
-        }
+            "required": ["trigger", "action"],
+        },
     },
     {
         "name": "list_rules",
@@ -437,22 +410,17 @@ RULE_TOOLS: List[Dict[str, Any]] = [
                 "scope": {
                     "type": "string",
                     "enum": ["personal", "company", "negotiated"],
-                    "description": "Filter by scope (optional)"
+                    "description": "Filter by scope (optional)",
                 },
                 "status": {
                     "type": "string",
                     "enum": ["active", "paused", "deprecated"],
                     "default": "active",
-                    "description": "Filter by status"
+                    "description": "Filter by status",
                 },
-                "limit": {
-                    "type": "integer",
-                    "default": 50,
-                    "minimum": 1,
-                    "maximum": 500
-                }
-            }
-        }
+                "limit": {"type": "integer", "default": 50, "minimum": 1, "maximum": 500},
+            },
+        },
     },
     {
         "name": "match_rules",
@@ -462,16 +430,16 @@ RULE_TOOLS: List[Dict[str, Any]] = [
             "properties": {
                 "scene": {
                     "type": "string",
-                    "description": "The scene/topic to match rules against (e.g., 'database design', 'code review process')"
+                    "description": "The scene/topic to match rules against (e.g., 'database design', 'code review process')",
                 },
                 "scopes": {
                     "type": "array",
                     "items": {"type": "string", "enum": ["personal", "company", "negotiated"]},
-                    "description": "Filter by scopes (optional, defaults to all)"
-                }
+                    "description": "Filter by scopes (optional, defaults to all)",
+                },
             },
-            "required": ["scene"]
-        }
+            "required": ["scene"],
+        },
     },
     {
         "name": "inject_rules",
@@ -481,23 +449,18 @@ RULE_TOOLS: List[Dict[str, Any]] = [
             "properties": {
                 "context": {
                     "type": "string",
-                    "description": "Context/topic to filter relevant rules"
+                    "description": "Context/topic to filter relevant rules",
                 },
                 "format": {
                     "type": "string",
                     "enum": ["structured", "compact", "json", "anchored"],
                     "default": "structured",
-                    "description": "Output format: structured (markdown), compact (single line), json, anchored (by type)"
+                    "description": "Output format: structured (markdown), compact (single line), json, anchored (by type)",
                 },
-                "max_rules": {
-                    "type": "integer",
-                    "default": 10,
-                    "minimum": 1,
-                    "maximum": 50
-                }
+                "max_rules": {"type": "integer", "default": 10, "minimum": 1, "maximum": 50},
             },
-            "required": ["context"]
-        }
+            "required": ["context"],
+        },
     },
     {
         "name": "my_rules",
@@ -508,16 +471,16 @@ RULE_TOOLS: List[Dict[str, Any]] = [
                 "scope": {
                     "type": "string",
                     "enum": ["personal", "company", "negotiated"],
-                    "description": "Filter by scope (optional)"
+                    "description": "Filter by scope (optional)",
                 },
                 "status": {
                     "type": "string",
                     "enum": ["active", "paused", "deprecated"],
                     "default": "active",
-                    "description": "Filter by status"
-                }
-            }
-        }
+                    "description": "Filter by status",
+                },
+            },
+        },
     },
     {
         "name": "delete_rule",
@@ -527,11 +490,11 @@ RULE_TOOLS: List[Dict[str, Any]] = [
             "properties": {
                 "rule_id": {
                     "type": "string",
-                    "description": "The ID of the rule to delete (find it using my_rules)"
+                    "description": "The ID of the rule to delete (find it using my_rules)",
                 }
             },
-            "required": ["rule_id"]
-        }
+            "required": ["rule_id"],
+        },
     },
     {
         "name": "suggest_rules",
@@ -541,17 +504,18 @@ RULE_TOOLS: List[Dict[str, Any]] = [
             "properties": {
                 "memory_type": {
                     "type": "string",
-                    "enum": ["user_preference", "correction", "decision", "task_pattern", "sentiment_marker"],
-                    "description": "Filter analysis to a specific memory type (optional)"
+                    "enum": [
+                        "user_preference",
+                        "correction",
+                        "decision",
+                        "task_pattern",
+                        "sentiment_marker",
+                    ],
+                    "description": "Filter analysis to a specific memory type (optional)",
                 },
-                "max_candidates": {
-                    "type": "integer",
-                    "default": 5,
-                    "minimum": 1,
-                    "maximum": 10
-                }
-            }
-        }
+                "max_candidates": {"type": "integer", "default": 5, "minimum": 1, "maximum": 10},
+            },
+        },
     },
     {
         "name": "promote_rules",
@@ -561,16 +525,22 @@ RULE_TOOLS: List[Dict[str, Any]] = [
             "properties": {
                 "memory_type": {
                     "type": "string",
-                    "enum": ["user_preference", "correction", "decision", "task_pattern", "sentiment_marker"],
-                    "description": "Filter to a specific memory type (optional)"
+                    "enum": [
+                        "user_preference",
+                        "correction",
+                        "decision",
+                        "task_pattern",
+                        "sentiment_marker",
+                    ],
+                    "description": "Filter to a specific memory type (optional)",
                 },
                 "auto_accept": {
                     "type": "boolean",
                     "default": False,
-                    "description": "If true, automatically accept all suggested rules. If false, rules are queued for your review."
-                }
-            }
-        }
+                    "description": "If true, automatically accept all suggested rules. If false, rules are queued for your review.",
+                },
+            },
+        },
     },
     {
         "name": "update_rule",
@@ -578,35 +548,23 @@ RULE_TOOLS: List[Dict[str, Any]] = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "rule_id": {
-                    "type": "string",
-                    "description": "The ID of the rule to update"
-                },
-                "trigger": {
-                    "type": "string",
-                    "description": "New trigger (topic/scene), optional"
-                },
-                "action": {
-                    "type": "string",
-                    "description": "New action (what to do), optional"
-                },
+                "rule_id": {"type": "string", "description": "The ID of the rule to update"},
+                "trigger": {"type": "string", "description": "New trigger (topic/scene), optional"},
+                "action": {"type": "string", "description": "New action (what to do), optional"},
                 "scope": {
                     "type": "string",
                     "enum": ["personal", "company", "negotiated"],
-                    "description": "New scope, optional"
+                    "description": "New scope, optional",
                 },
                 "rule_type": {
                     "type": "string",
                     "enum": ["always", "avoid", "forbid", "prefer", "recommend"],
-                    "description": "New rule type, optional"
+                    "description": "New rule type, optional",
                 },
-                "override": {
-                    "type": "boolean",
-                    "description": "New override flag, optional"
-                }
+                "override": {"type": "boolean", "description": "New override flag, optional"},
             },
-            "required": ["rule_id"]
-        }
+            "required": ["rule_id"],
+        },
     },
     {
         "name": "my_profile",
@@ -617,15 +575,15 @@ RULE_TOOLS: List[Dict[str, Any]] = [
                 "include_memories": {
                     "type": "boolean",
                     "default": True,
-                    "description": "Include memory statistics and recent memories"
+                    "description": "Include memory statistics and recent memories",
                 },
                 "include_rules": {
                     "type": "boolean",
                     "default": True,
-                    "description": "Include rule summary and distribution"
-                }
-            }
-        }
+                    "description": "Include rule summary and distribution",
+                },
+            },
+        },
     },
     {
         "name": "onboard",
@@ -637,15 +595,14 @@ RULE_TOOLS: List[Dict[str, Any]] = [
                     "type": "string",
                     "enum": ["en", "zh", "ja"],
                     "default": "en",
-                    "description": "Language for the onboarding message"
+                    "description": "Language for the onboarding message",
                 }
-            }
-        }
+            },
+        },
     },
 ]
 
-TOOLS = CORE_TOOLS + OPTIONAL_TOOLS + KNOWLEDGE_TOOLS + \
-    PROFILE_TOOLS + PROMPT_TOOLS + CONSOLIDATION_TOOLS + RULE_TOOLS
+TOOLS = CORE_TOOLS + OPTIONAL_TOOLS + KNOWLEDGE_TOOLS + PROFILE_TOOLS + PROMPT_TOOLS + CONSOLIDATION_TOOLS + RULE_TOOLS
 TOOL_NAMES = {tool["name"] for tool in TOOLS}
 CORE_TOOL_NAMES = {tool["name"] for tool in CORE_TOOLS}
 OPTIONAL_TOOL_NAMES = {tool["name"] for tool in OPTIONAL_TOOLS}
@@ -655,140 +612,166 @@ PROMPT_TOOL_NAMES = {tool["name"] for tool in PROMPT_TOOLS}
 CONSOLIDATION_TOOL_NAMES = {tool["name"] for tool in CONSOLIDATION_TOOLS}
 RULE_TOOL_NAMES = {tool["name"] for tool in RULE_TOOLS}
 
-CLASSIFICATION_SCHEMA = { "schema_version": "1.0.0",
+CLASSIFICATION_SCHEMA = {
+    "schema_version": "1.0.0",
     "engine_version": _version,
     "mode": "classification_only",
-    "memory_types": [ { "id": "user_preference",
-    "label_en": "User Preference",
-    "label_zh": "用户偏好",
-    "description": "User habits, preferences, style choices that affect future behavior",
-    "examples": ["I prefer double quotes",
-    "Use camelCase naming",
-    "Dark mode please"],
-    "default_tier": 2,
-    "persistence_hint": "short_term_to_long_term",
-    "downstream_mapping": { "supermemory": "preference",
-    "mem0": "user_profile",
-    "obsidian": "# Preferences",
-    "custom_field": "category" } },
-    { "id": "correction",
-    "label_en": "Correction",
-    "label_zh": "纠正信号",
-    "description": "Corrections, clarifications, or negations of previous information",
-    "examples": ["No, that's wrong",
-    "Actually use X not Y",
-    "Let me correct that"],
-    "default_tier": 2,
-    "persistence_hint": "immediate",
-    "downstream_mapping": { "supermemory": "correction",
-    "mem0": "correction",
-    "obsidian": "# Corrections",
-    "custom_field": "category" } },
-    { "id": "fact_declaration",
-    "label_en": "Fact Declaration",
-    "label_zh": "事实声明",
-    "description": "Factual statements, verifiable truths about the world or project",
-    "examples": ["We have 100 employees",
-    "Python 3.9 required",
-    "Deployed on AWS"],
-    "default_tier": 3,
-    "persistence_hint": "long_term",
-    "downstream_mapping": { "supermemory": "fact",
-    "mem0": "fact",
-    "obsidian": "# Facts",
-    "custom_field": "category" } },
-    { "id": "decision",
-    "label_en": "Decision Record",
-    "label_zh": "决策记录",
-    "description": "Decisions made, choices selected, with reasoning context",
-    "examples": ["We chose Redis for caching",
-    "Go with PostgreSQL",
-    "Use REST not GraphQL"],
-    "default_tier": 3,
-    "persistence_hint": "long_term",
-    "downstream_mapping": { "supermemory": "decision",
-    "mem0": "decision",
-    "obsidian": "# Decisions",
-    "custom_field": "category" } },
-    { "id": "relationship",
-    "label_en": "Relationship Mapping",
-    "label_zh": "关系映射",
-    "description": "Relationships between entities, roles, ownerships, or connections",
-    "examples": ["Alice owns backend",
-    "Bob reports to Carol",
-    "Module X depends on Y"],
-    "default_tier": 4,
-    "persistence_hint": "archive",
-    "downstream_mapping": { "supermemory": "relation",
-    "mem0": "relationship",
-    "obsidian": "# Relationships",
-    "custom_field": "category" } },
-    { "id": "task_pattern",
-    "label_en": "Task Pattern",
-    "label_zh": "任务模式",
-    "description": "Recurring workflows, automation rules, procedural patterns",
-    "examples": ["Always test before deploy",
-    "Run lint on every PR",
-    "Review on Fridays"],
-    "default_tier": 2,
-    "persistence_hint": "short_term_to_long_term",
-    "downstream_mapping": { "supermemory": "pattern",
-    "mem0": "workflow",
-    "obsidian": "# Patterns",
-    "custom_field": "category" } },
-    { "id": "sentiment_marker",
-    "label_en": "Sentiment Marker",
-    "label_zh": "情感标记",
-    "description": "Emotional signals, pain points, satisfaction indicators",
-    "examples": ["This workflow is frustrating",
-    "Love this approach",
-    "Too many meetings"],
-    "default_tier": 3,
-    "persistence_hint": "medium_term",
-    "downstream_mapping": { "supermemory": "sentiment",
-    "mem0": "emotion",
-    "obsidian": "# Sentiments",
-    "custom_field": "category" } } ],
-    "storage_tiers": [ {"id": 1,
-    "name": "Sensory",
-    "zh_name": "感觉记忆",
-    "duration": "<1s",
-    "action": "ignore"},
-    {"id": 2,
-    "name": "Procedural/Working",
-    "zh_name": "程序性记忆",
-    "duration": "hours-days",
-    "action": "cache"},
-    {"id": 3,
-    "name": "Episodic",
-    "zh_name": "情节记忆",
-    "duration": "days-months",
-    "action": "persist"},
-    {"id": 4,
-    "name": "Semantic",
-    "zh_name": "语义记忆",
-    "duration": "months-years",
-    "action": "archive"} ],
-    "confidence_thresholds": { "high": 0.85,
-    "medium": 0.60,
-    "low": 0.30 },
-    "suggested_actions": { "store": "High-confidence memory, should be persisted to downstream storage",
-    "defer": "Medium-confidence, may be worth storing after more context accumulates",
-    "ignore": "Low-confidence or no memorable content, safe to discard" },
-    "output_format": { "root_keys": ["schema_version",
-    "should_remember",
-    "entries",
-    "summary",
-    "engine_info"],
-    "entry_keys": ["id",
-    "type",
-    "content",
-    "confidence",
-    "tier",
-    "source_layer",
-    "reasoning",
-    "suggested_action",
-     "metadata"] } }
+    "memory_types": [
+        {
+            "id": "user_preference",
+            "label_en": "User Preference",
+            "label_zh": "用户偏好",
+            "description": "User habits, preferences, style choices that affect future behavior",
+            "examples": ["I prefer double quotes", "Use camelCase naming", "Dark mode please"],
+            "default_tier": 2,
+            "persistence_hint": "short_term_to_long_term",
+            "downstream_mapping": {
+                "supermemory": "preference",
+                "mem0": "user_profile",
+                "obsidian": "# Preferences",
+                "custom_field": "category",
+            },
+        },
+        {
+            "id": "correction",
+            "label_en": "Correction",
+            "label_zh": "纠正信号",
+            "description": "Corrections, clarifications, or negations of previous information",
+            "examples": ["No, that's wrong", "Actually use X not Y", "Let me correct that"],
+            "default_tier": 2,
+            "persistence_hint": "immediate",
+            "downstream_mapping": {
+                "supermemory": "correction",
+                "mem0": "correction",
+                "obsidian": "# Corrections",
+                "custom_field": "category",
+            },
+        },
+        {
+            "id": "fact_declaration",
+            "label_en": "Fact Declaration",
+            "label_zh": "事实声明",
+            "description": "Factual statements, verifiable truths about the world or project",
+            "examples": ["We have 100 employees", "Python 3.9 required", "Deployed on AWS"],
+            "default_tier": 3,
+            "persistence_hint": "long_term",
+            "downstream_mapping": {
+                "supermemory": "fact",
+                "mem0": "fact",
+                "obsidian": "# Facts",
+                "custom_field": "category",
+            },
+        },
+        {
+            "id": "decision",
+            "label_en": "Decision Record",
+            "label_zh": "决策记录",
+            "description": "Decisions made, choices selected, with reasoning context",
+            "examples": [
+                "We chose Redis for caching",
+                "Go with PostgreSQL",
+                "Use REST not GraphQL",
+            ],
+            "default_tier": 3,
+            "persistence_hint": "long_term",
+            "downstream_mapping": {
+                "supermemory": "decision",
+                "mem0": "decision",
+                "obsidian": "# Decisions",
+                "custom_field": "category",
+            },
+        },
+        {
+            "id": "relationship",
+            "label_en": "Relationship Mapping",
+            "label_zh": "关系映射",
+            "description": "Relationships between entities, roles, ownerships, or connections",
+            "examples": ["Alice owns backend", "Bob reports to Carol", "Module X depends on Y"],
+            "default_tier": 4,
+            "persistence_hint": "archive",
+            "downstream_mapping": {
+                "supermemory": "relation",
+                "mem0": "relationship",
+                "obsidian": "# Relationships",
+                "custom_field": "category",
+            },
+        },
+        {
+            "id": "task_pattern",
+            "label_en": "Task Pattern",
+            "label_zh": "任务模式",
+            "description": "Recurring workflows, automation rules, procedural patterns",
+            "examples": ["Always test before deploy", "Run lint on every PR", "Review on Fridays"],
+            "default_tier": 2,
+            "persistence_hint": "short_term_to_long_term",
+            "downstream_mapping": {
+                "supermemory": "pattern",
+                "mem0": "workflow",
+                "obsidian": "# Patterns",
+                "custom_field": "category",
+            },
+        },
+        {
+            "id": "sentiment_marker",
+            "label_en": "Sentiment Marker",
+            "label_zh": "情感标记",
+            "description": "Emotional signals, pain points, satisfaction indicators",
+            "examples": ["This workflow is frustrating", "Love this approach", "Too many meetings"],
+            "default_tier": 3,
+            "persistence_hint": "medium_term",
+            "downstream_mapping": {
+                "supermemory": "sentiment",
+                "mem0": "emotion",
+                "obsidian": "# Sentiments",
+                "custom_field": "category",
+            },
+        },
+    ],
+    "storage_tiers": [
+        {"id": 1, "name": "Sensory", "zh_name": "感觉记忆", "duration": "<1s", "action": "ignore"},
+        {
+            "id": 2,
+            "name": "Procedural/Working",
+            "zh_name": "程序性记忆",
+            "duration": "hours-days",
+            "action": "cache",
+        },
+        {
+            "id": 3,
+            "name": "Episodic",
+            "zh_name": "情节记忆",
+            "duration": "days-months",
+            "action": "persist",
+        },
+        {
+            "id": 4,
+            "name": "Semantic",
+            "zh_name": "语义记忆",
+            "duration": "months-years",
+            "action": "archive",
+        },
+    ],
+    "confidence_thresholds": {"high": 0.85, "medium": 0.60, "low": 0.30},
+    "suggested_actions": {
+        "store": "High-confidence memory, should be persisted to downstream storage",
+        "defer": "Medium-confidence, may be worth storing after more context accumulates",
+        "ignore": "Low-confidence or no memorable content, safe to discard",
+    },
+    "output_format": {
+        "root_keys": ["schema_version", "should_remember", "entries", "summary", "engine_info"],
+        "entry_keys": [
+            "id",
+            "type",
+            "content",
+            "confidence",
+            "tier",
+            "source_layer",
+            "reasoning",
+            "suggested_action",
+            "metadata",
+        ],
+    },
+}
 
 
 def get_tool_schema(tool_name: str) -> Dict[str, Any]:

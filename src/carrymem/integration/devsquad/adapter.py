@@ -52,9 +52,7 @@ class DevSquadAdapter:
             logger.warning(f"Health check failed: {e}")
             return False
 
-    def get_rules(
-        self, user_id: str, context: Optional[Dict[str, Any]] = None
-    ) -> List[str]:
+    def get_rules(self, user_id: str, context: Optional[Dict[str, Any]] = None) -> List[str]:
         if not self.is_available():
             return []
         try:
@@ -64,28 +62,20 @@ class DevSquadAdapter:
                 role = context.get("role", "")
                 if role:
                     scene = f"{scene} {role}".strip()
-            matched = self._rule_engine.match(
-                scene_description=scene or "all", limit=50
-            )
+            matched = self._rule_engine.match(scene_description=scene or "all", limit=50)
             result = []
             for m in matched:
                 rule = m.rule if hasattr(m, "rule") else m
-                rule_type = carrymem_to_devsquad_type(
-                    getattr(rule, "rule_type", "avoid")
-                )
+                rule_type = carrymem_to_devsquad_type(getattr(rule, "rule_type", "avoid"))
                 override = " (override)" if getattr(rule, "override", False) else ""
-                result.append(
-                    f"[{rule_type.upper()}] {getattr(rule, 'action', str(rule))}{override}"
-                )
+                result.append(f"[{rule_type.upper()}] {getattr(rule, 'action', str(rule))}{override}")
             self._log("get_rules", user_id, success=True)
             return result
         except Exception as e:
             self._log("get_rules", user_id, success=False, details={"error": str(e)})
             return []
 
-    def add_rule(
-        self, user_id: str, rule: str, metadata: Optional[Dict[str, Any]] = None
-    ) -> None:
+    def add_rule(self, user_id: str, rule: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         if not self.is_available():
             return
         try:
@@ -123,9 +113,7 @@ class DevSquadAdapter:
             return
         try:
             self._rule_engine.delete_rule(rule_id)
-            self._log(
-                "delete_rule", user_id, storage_key=rule_id, success=True
-            )
+            self._log("delete_rule", user_id, storage_key=rule_id, success=True)
         except Exception as e:
             self._log(
                 "delete_rule",
@@ -169,9 +157,7 @@ class DevSquadAdapter:
             scene = task_description or ""
             if role:
                 scene = f"{scene} {role}".strip()
-            matched = self._rule_engine.match(
-                scene_description=scene, limit=max_rules
-            )
+            matched = self._rule_engine.match(scene_description=scene, limit=max_rules)
             result = []
             for m in matched:
                 rule = m.rule if hasattr(m, "rule") else m

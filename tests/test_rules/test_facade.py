@@ -100,7 +100,15 @@ class TestRuleEngineMergeFacade:
 
     def test_accept_rules_negotiate(self):
         self.engine.add_rule("db", "use PostgreSQL", scope="personal", override=True)
-        incoming = [Rule(trigger="db", action="always use MySQL", scope="negotiated", rule_type="always", override=True)]
+        incoming = [
+            Rule(
+                trigger="db",
+                action="always use MySQL",
+                scope="negotiated",
+                rule_type="always",
+                override=True,
+            )
+        ]
 
         result = self.engine.accept_rules(incoming, strategy="negotiate")
         assert "accepted_count" in result

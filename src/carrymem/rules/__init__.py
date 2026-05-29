@@ -31,7 +31,15 @@ from datetime import datetime, timezone
 _logger = logging.getLogger(__name__)
 
 from ..__version__ import __version__
-from .models import Rule, RuleScope, VALID_RULE_TYPES, VALID_RULE_STATUSES, VALID_DERIVATION_SOURCES, VALID_RULE_SCOPES, SCOPE_PRIORITY
+from .models import (
+    Rule,
+    RuleScope,
+    VALID_RULE_TYPES,
+    VALID_RULE_STATUSES,
+    VALID_DERIVATION_SOURCES,
+    VALID_RULE_SCOPES,
+    SCOPE_PRIORITY,
+)
 from .sanitizer import RuleSanitizer
 from .limiter import RuleLimiter
 from .storage import RuleStorage
@@ -125,6 +133,7 @@ class RuleEngine:
         """
         if db_path is None:
             from ..constants import DEFAULT_CONFIG_DIR, DB_PATH
+
             DEFAULT_CONFIG_DIR.mkdir(exist_ok=True)
             db_path = str(DB_PATH)
         self.storage = RuleStorage(db_path)
@@ -181,6 +190,7 @@ class RuleEngine:
             >>> engine.add_rule("security", "Use SSL", scope="company")
         """
         from .models import VALID_RULE_SCOPES
+
         if scope not in VALID_RULE_SCOPES:
             raise ValueError(f"Invalid scope '{scope}'. Must be one of {VALID_RULE_SCOPES}")
 
@@ -207,14 +217,16 @@ class RuleEngine:
             for er in existing_rules:
                 if er.trigger == trigger and er.scope == scope:
                     if er.rule_type != rule_type or er.action != action:
-                        conflict_warnings.append({
-                            "conflicting_rule_id": er.id,
-                            "conflicting_trigger": er.trigger,
-                            "conflicting_action": er.action,
-                            "conflicting_type": er.rule_type,
-                            "conflict_type": "same_trigger_different_action",
-                            "suggestion": "Consider updating the existing rule instead of creating a new one",
-                        })
+                        conflict_warnings.append(
+                            {
+                                "conflicting_rule_id": er.id,
+                                "conflicting_trigger": er.trigger,
+                                "conflicting_action": er.action,
+                                "conflicting_type": er.rule_type,
+                                "conflict_type": "same_trigger_different_action",
+                                "suggestion": "Consider updating the existing rule instead of creating a new one",
+                            }
+                        )
         except Exception:
             pass
 
@@ -268,8 +280,13 @@ class RuleEngine:
         """
         return self.storage.list_all(status=status, rule_type=rule_type, scope=scope, limit=limit)
 
-    def match(self, scene_description: str, limit: int = 10,
-              increment_count: bool = True, scopes: Optional[list] = None) -> list:
+    def match(
+        self,
+        scene_description: str,
+        limit: int = 10,
+        increment_count: bool = True,
+        scopes: Optional[list] = None,
+    ) -> list:
         """
         Find rules matching a given scene.
 
@@ -313,7 +330,9 @@ class RuleEngine:
             Formatted string ready for injection into AI prompts
         """
         return self.injector.inject(
-            scene_description, format=format, max_rules=max_rules,
+            scene_description,
+            format=format,
+            max_rules=max_rules,
             context_budget_tokens=context_budget_tokens,
         )
 
@@ -559,6 +578,7 @@ class RuleEngine:
             Skill bundle dictionary (carrymem-skill-v1 format)
         """
         from .skill import skill_pack
+
         rules = self.storage.list_all(status=status, limit=10000)
         return skill_pack(
             rules=rules,
@@ -584,6 +604,7 @@ class RuleEngine:
             Verification result
         """
         from .skill import skill_verify
+
         return skill_verify(data)
 
     def skill_install(
@@ -604,6 +625,7 @@ class RuleEngine:
             Installation result with statistics
         """
         from .skill import skill_install
+
         return skill_install(
             data=data,
             storage=self.storage,
@@ -630,6 +652,7 @@ class RuleEngine:
             Preview dictionary with conflicts, severity, strategy previews
         """
         from .merge_protocol import review_incoming_rules
+
         existing = self.storage.list_all(limit=10000)
         return review_incoming_rules(incoming, existing, target_scope=target_scope)
 
@@ -789,10 +812,7 @@ class RuleEngine:
             Dictionary with import statistics
         """
         if data.get("format") != "carrymem-rules-v1":
-            raise ValueError(
-                f"Unsupported format: {data.get('format')}. "
-                f"Expected 'carrymem-rules-v1'"
-            )
+            raise ValueError(f"Unsupported format: {data.get('format')}. " f"Expected 'carrymem-rules-v1'")
 
         imported_rules = data.get("rules", [])
         if len(imported_rules) > 500:
@@ -804,9 +824,7 @@ class RuleEngine:
         stats = {"imported": 0, "skipped": 0, "overwritten": 0, "errors": []}
 
         existing_rules = self.storage.list_all(limit=10000)
-        existing_keys = {
-            (r.trigger, r.action, r.rule_type, r.scope): r for r in existing_rules
-        }
+        existing_keys = {(r.trigger, r.action, r.rule_type, r.scope): r for r in existing_rules}
 
         for rule_data in imported_rules:
             try:
@@ -877,12 +895,8 @@ class RuleEngine:
         Returns:
             List of RuleCandidate objects
         """
-        patterns = self.pattern_detector.detect_patterns(
-            memories, memory_type=memory_type
-        )
-        candidates = self.candidate_generator.generate(
-            patterns, max_candidates=max_candidates
-        )
+        patterns = self.pattern_detector.detect_patterns(memories, memory_type=memory_type)
+        candidates = self.candidate_generator.generate(patterns, max_candidates=max_candidates)
         return candidates
 
     def run_promotion(
@@ -946,9 +960,7 @@ class RuleEngine:
         Returns:
             Dictionary with extraction results
         """
-        return self.experience_bridge.extract_lessons(
-            memories, memory_type=memory_type
-        )
+        return self.experience_bridge.extract_lessons(memories, memory_type=memory_type)
 
     def list_pending_lessons(self, limit: int = 20) -> list:
         """List all pending failure lessons awaiting review."""
@@ -993,20 +1005,25 @@ class RuleEngine:
         return self.experience_bridge.get_stats()
 
     def start_refinement(
-        self, trigger: str, action: str, rule_type: str = "avoid",
-        source_rule_id: Optional[str] = None, source_memory_id: Optional[str] = None,
+        self,
+        trigger: str,
+        action: str,
+        rule_type: str = "avoid",
+        source_rule_id: Optional[str] = None,
+        source_memory_id: Optional[str] = None,
     ) -> dict:
         """Start a multi-turn rule refinement session."""
         return self.refinement_session.start_session(
-            trigger, action, rule_type=rule_type,
-            source_rule_id=source_rule_id, source_memory_id=source_memory_id,
+            trigger,
+            action,
+            rule_type=rule_type,
+            source_rule_id=source_rule_id,
+            source_memory_id=source_memory_id,
         )
 
-    def answer_refinement(self, session_id: str, answer: str,
-                          selected_option: Optional[str] = None) -> dict:
+    def answer_refinement(self, session_id: str, answer: str, selected_option: Optional[str] = None) -> dict:
         """Answer a refinement question and advance the session."""
-        return self.refinement_session.answer_question(
-            session_id, answer, selected_option=selected_option)
+        return self.refinement_session.answer_question(session_id, answer, selected_option=selected_option)
 
     def confirm_refinement(self, session_id: str) -> dict:
         """Confirm a refinement session and create the refined rule."""

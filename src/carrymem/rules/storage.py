@@ -50,7 +50,7 @@ class RuleStorage:
         self._ensure_schema()
 
     def _get_connection(self) -> sqlite3.Connection:
-        if not hasattr(self._local, 'conn') or self._local.conn is None:
+        if not hasattr(self._local, "conn") or self._local.conn is None:
             conn = sqlite3.connect(self.db_path, timeout=30.0)
             conn.row_factory = sqlite3.Row
             # Set busy_timeout FIRST so subsequent PRAGMAs respect it
@@ -73,7 +73,7 @@ class RuleStorage:
         return self._local.conn
 
     def close(self):
-        if hasattr(self._local, 'conn') and self._local.conn is not None:
+        if hasattr(self._local, "conn") and self._local.conn is not None:
             try:
                 self._local.conn.close()
             except Exception as e:
@@ -114,19 +114,21 @@ class RuleStorage:
                     -- Extension
                 metadata TEXT DEFAULT '{}'
             );
-            """)
+            """
+            )
 
             try:
                 pragma_cursor = conn.execute("PRAGMA table_info(rules)")
                 columns = [row[1] for row in pragma_cursor.fetchall()]
-                if 'expires_at' not in columns:
+                if "expires_at" not in columns:
                     conn.execute("ALTER TABLE rules ADD COLUMN expires_at TEXT DEFAULT ''")
-                if 'condition' not in columns:
+                if "condition" not in columns:
                     conn.execute("ALTER TABLE rules ADD COLUMN condition TEXT DEFAULT ''")
             except Exception as e:
                 _logger.debug(f"[RuleStorage] Schema migration (add columns) skipped: {e}")
 
-            conn.executescript("""
+            conn.executescript(
+                """
                 CREATE INDEX IF NOT EXISTS idx_rules_status ON rules(status);
                 CREATE INDEX IF NOT EXISTS idx_rules_trigger ON rules(trigger);
                 CREATE INDEX IF NOT EXISTS idx_rules_type ON rules(rule_type);
@@ -170,10 +172,8 @@ class RuleStorage:
         """Migrate rules_fts from unicode61 to trigram tokenizer if needed."""
         conn = self._get_connection()
         try:
-            row = conn.execute(
-                "SELECT sql FROM sqlite_master WHERE type='table' AND name='rules_fts'"
-            ).fetchone()
-            if row and 'unicode61' in (row[0] or ''):
+            row = conn.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='rules_fts'").fetchone()
+            if row and "unicode61" in (row[0] or ""):
                 conn.execute("INSERT INTO rules_fts(rules_fts) VALUES('rebuild')")
                 conn.commit()
                 _logger.info("Migrated rules_fts from unicode61 to trigram tokenizer")
@@ -423,14 +423,14 @@ class RuleStorage:
     @staticmethod
     def _sanitize_field(value: str, field_name: str) -> str:
         danger_pattern = re.compile(
-            r'(?:ignore\s+(?:previous|above|all)\s+(?:instructions?|rules?)|'
-            r'system\s*[:：]\s*|'
-            r'forget\s+(?:all\s+)?(?:rules?|instructions?)|'
-            r'you\s+are\s+now|'
-            r'(?:DAN|jailbreak|developer)\s+mode|'
-            r'bypass\s+(?:all\s+)?(?:restrictions?|filters?|safety)|'
-            r'\$\{.*?\}|\{\{.*?\}\}|'
-            r'eval\(|exec\(|__import__)',
+            r"(?:ignore\s+(?:previous|above|all)\s+(?:instructions?|rules?)|"
+            r"system\s*[:：]\s*|"
+            r"forget\s+(?:all\s+)?(?:rules?|instructions?)|"
+            r"you\s+are\s+now|"
+            r"(?:DAN|jailbreak|developer)\s+mode|"
+            r"bypass\s+(?:all\s+)?(?:restrictions?|filters?|safety)|"
+            r"\$\{.*?\}|\{\{.*?\}\}|"
+            r"eval\(|exec\(|__import__)",
             re.IGNORECASE,
         )
         if danger_pattern.search(value):
@@ -439,14 +439,14 @@ class RuleStorage:
 
     @staticmethod
     def _sanitize_fts_query(query_text: str) -> str:
-        cleaned = re.sub(r'[{}():^!|*]', ' ', query_text)
-        cleaned = re.sub(r'\b(NEAR|NOT|OR|AND|COLUMN)\b', ' ', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"[{}():^!|*]", " ", query_text)
+        cleaned = re.sub(r"\b(NEAR|NOT|OR|AND|COLUMN)\b", " ", cleaned, flags=re.IGNORECASE)
         terms = [t for t in cleaned.split()[:20] if t.strip()]
         if not terms:
-            return ''
+            return ""
         if len(terms) == 1:
             return terms[0]
-        return ' '.join(f'"{t}"' for t in terms)
+        return " ".join(f'"{t}"' for t in terms)
 
     def search(self, query_text: str, limit: int = 20) -> List[Rule]:
         safe_query = self._sanitize_fts_query(query_text)
@@ -592,9 +592,7 @@ class RuleStorage:
 
         conn = self._get_connection()
         try:
-            conn.execute(
-                f"UPDATE rules SET {', '.join(set_clauses)} WHERE id = ?", params
-            )
+            conn.execute(f"UPDATE rules SET {', '.join(set_clauses)} WHERE id = ?", params)
             conn.commit()
         except sqlite3.Error as e:
             _logger.debug(f"[RuleStorage] update failed: {e}")
@@ -633,9 +631,7 @@ class RuleStorage:
         conn = self._get_connection()
         try:
             if status:
-                cursor = conn.execute(
-                    "SELECT COUNT(*) FROM rules WHERE status = ?", (status,)
-                )
+                cursor = conn.execute("SELECT COUNT(*) FROM rules WHERE status = ?", (status,))
             else:
                 cursor = conn.execute("SELECT COUNT(*) FROM rules")
             return cursor.fetchone()[0]

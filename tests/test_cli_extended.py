@@ -143,10 +143,17 @@ class TestCmdRulesExtended:
             assert result == 0
 
     def test_add_rule_avoid_type(self, temp_db, capsys):
-        result = cmd_add_rule([
-            "avoid MongoDB", "--trigger", "database selection",
-            "--type", "avoid", "--db", temp_db,
-        ])
+        result = cmd_add_rule(
+            [
+                "avoid MongoDB",
+                "--trigger",
+                "database selection",
+                "--type",
+                "avoid",
+                "--db",
+                temp_db,
+            ]
+        )
         assert result == 0
 
     def test_list_rules_with_data(self, temp_db, capsys):

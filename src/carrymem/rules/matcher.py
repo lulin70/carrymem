@@ -89,8 +89,13 @@ class RuleMatcher:
         """
         self.storage = storage
 
-    def match(self, scene_description: str, limit: int = 10,
-              scopes: List[str] = None, context_conditions: List[str] = None) -> List[MatchResult]:
+    def match(
+        self,
+        scene_description: str,
+        limit: int = 10,
+        scopes: List[str] = None,
+        context_conditions: List[str] = None,
+    ) -> List[MatchResult]:
         """
         Find all rules that match a given scene.
 
@@ -147,9 +152,7 @@ class RuleMatcher:
             results.extend(fts_matches)
 
         if len(results) < limit:
-            partial_matches = self._match_partial(
-                scene_description, limit - len(results), all_active
-            )
+            partial_matches = self._match_partial(scene_description, limit - len(results), all_active)
             results.extend(partial_matches)
 
         results = self._deduplicate(results)
@@ -307,9 +310,7 @@ class RuleMatcher:
             score += self.HARD_RULE_BONUS
 
         # Frequency bonus (rules used more often get slight boost)
-        frequency_bonus = min(
-            (rule.trigger_count / 10) * self.FREQUENCY_BONUS_FACTOR, 0.1
-        )
+        frequency_bonus = min((rule.trigger_count / 10) * self.FREQUENCY_BONUS_FACTOR, 0.1)
         score += frequency_bonus
 
         # Confidence bonus (auto-classified rules with high confidence)
@@ -329,12 +330,14 @@ class RuleMatcher:
             if cls._jieba_available is None:
                 try:
                     import jieba
+
                     cls._jieba_available = True
                 except ImportError:
                     cls._jieba_available = False
 
             if cls._jieba_available:
                 import jieba  # noqa: F811
+
                 tokens = list(jieba.cut(text))
                 return [t.strip() for t in tokens if t.strip() and len(t.strip()) > 0]
             else:
@@ -342,19 +345,19 @@ class RuleMatcher:
                 i = 0
                 while i < len(text):
                     ch = text[i]
-                    if '\u4e00' <= ch <= '\u9fff':
+                    if "\u4e00" <= ch <= "\u9fff":
                         tokens.append(ch)
-                        if i + 1 < len(text) and '\u4e00' <= text[i+1] <= '\u9fff':
-                            tokens.append(text[i:i+2])
-                        if i + 2 < len(text) and '\u4e00' <= text[i+2] <= '\u9fff':
-                            tokens.append(text[i:i+3])
+                        if i + 1 < len(text) and "\u4e00" <= text[i + 1] <= "\u9fff":
+                            tokens.append(text[i : i + 2])
+                        if i + 2 < len(text) and "\u4e00" <= text[i + 2] <= "\u9fff":
+                            tokens.append(text[i : i + 3])
                         i += 1
                     elif ch.isalnum():
                         word = []
-                        while i < len(text) and (text[i].isalnum() or text[i] == '_'):
+                        while i < len(text) and (text[i].isalnum() or text[i] == "_"):
                             word.append(text[i])
                             i += 1
-                        tokens.append(''.join(word).lower())
+                        tokens.append("".join(word).lower())
                     else:
                         i += 1
                 return tokens
@@ -368,9 +371,7 @@ class RuleMatcher:
         overlap = words1 & words2
         return len(overlap) >= min_overlap
 
-    def _deduplicate(
-        self, results: List[MatchResult]
-    ) -> List[MatchResult]:
+    def _deduplicate(self, results: List[MatchResult]) -> List[MatchResult]:
         """
         Remove duplicate rules, keeping the one with highest score.
         """
@@ -381,9 +382,7 @@ class RuleMatcher:
 
         return list(seen.values())
 
-    def get_matching_actions(
-        self, scene_description: str, limit: int = 10
-    ) -> List[Tuple[str, str]]:
+    def get_matching_actions(self, scene_description: str, limit: int = 10) -> List[Tuple[str, str]]:
         """
         Get simplified list of (action, type) tuples for a scene.
 

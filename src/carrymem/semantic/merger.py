@@ -29,11 +29,11 @@ class ResultMerger:
 
     # Weight configuration for different match sources
     WEIGHTS = {
-        "exact_fts": 1.0,       # FTS5 exact match (original query)
-        "synonym": 0.85,         # Synonym expansion match
-        "spell_corrected": 0.75, # Spell-corrected query match
-        "cross_language": 0.8,   # Cross-language translation match
-        "like_fallback": 0.6,    # LIKE fallback (CJK)
+        "exact_fts": 1.0,  # FTS5 exact match (original query)
+        "synonym": 0.85,  # Synonym expansion match
+        "spell_corrected": 0.75,  # Spell-corrected query match
+        "cross_language": 0.8,  # Cross-language translation match
+        "like_fallback": 0.6,  # LIKE fallback (CJK)
     }
 
     # Minimum relevance threshold to include in results
@@ -131,9 +131,9 @@ class ResultMerger:
             return result.get("storage_key") or result.get("id")
 
         # Handle StoredMemory objects or any object with storage_key/id attributes
-        if hasattr(result, 'storage_key'):
+        if hasattr(result, "storage_key"):
             return result.storage_key
-        if hasattr(result, 'id'):
+        if hasattr(result, "id"):
             return result.id
 
         return None
@@ -157,11 +157,11 @@ class ResultMerger:
         if isinstance(result, dict):
             content = str(result.get("content", "")) + " " + str(result.get("original_message", ""))
             confidence = result.get("confidence", 0.5)
-        elif hasattr(result, 'content'):
+        elif hasattr(result, "content"):
             content = str(result.content) or ""
-            if hasattr(result, 'metadata') and result.metadata:
+            if hasattr(result, "metadata") and result.metadata:
                 content += " " + str(result.metadata.get("original_message", ""))
-            if hasattr(result, 'confidence'):
+            if hasattr(result, "confidence"):
                 confidence = result.confidence
 
         content_lower = content.lower()
@@ -214,8 +214,13 @@ class ResultMerger:
         all_merged: List[Dict[str, Any]] = []
 
         # Process each source in order of priority (exact first)
-        priority_order = ["exact_fts", "synonym",
-            "spell_corrected", "cross_language", "like_fallback"]
+        priority_order = [
+            "exact_fts",
+            "synonym",
+            "spell_corrected",
+            "cross_language",
+            "like_fallback",
+        ]
 
         for source in priority_order:
             if source not in results_by_source:

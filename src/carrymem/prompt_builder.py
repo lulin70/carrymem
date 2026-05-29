@@ -3,6 +3,7 @@
 Separates the "what memories to retrieve and how to assemble them" concern
 from the CarryMem core class, reducing god-module bloat.
 """
+
 from __future__ import annotations
 
 import logging
@@ -55,13 +56,16 @@ class PromptBuilder:
         Returns (all_memories, seen_keys, pref_keys).
         """
         all_memories = self._cm.recall_memories(
-            query=query, limit=limit, update_access=False,
+            query=query,
+            limit=limit,
+            update_access=False,
         )
         seen_keys: Set[str] = {m.get("storage_key") for m in all_memories}
 
         # Superseded memories
         superseded = self._cm.recall_memories(
-            query=query, limit=5,
+            query=query,
+            limit=5,
             filters={"include_superseded": True},
             update_access=False,
         )
@@ -72,7 +76,8 @@ class PromptBuilder:
 
         # Session summaries (excluded from main recall by default)
         summaries = self._cm.recall_memories(
-            query=query, limit=10,
+            query=query,
+            limit=10,
             filters={"type": "session_summary"},
             update_access=False,
         )
@@ -85,7 +90,8 @@ class PromptBuilder:
         # Aggregation signal: include all session summaries
         if _has_aggregation_signal(query):
             session_memories = self._cm.recall_memories(
-                query="", limit=50,
+                query="",
+                limit=50,
                 filters={"include_session_summary": True},
                 update_access=False,
             )
@@ -108,13 +114,13 @@ class PromptBuilder:
         Returns (pref_memories, pref_keys, all_memories_updated).
         """
         # Core prefs: high-confidence preferences
-        core_prefs = [m for m in all_memories
-                      if m.get("type") == "user_preference" and m.get("confidence", 0) >= 0.9]
+        core_prefs = [m for m in all_memories if m.get("type") == "user_preference" and m.get("confidence", 0) >= 0.9]
 
         # If core prefs not in main recall, fetch them
         if ensure_core and len(core_prefs) < 5:
             core_prefs_extra = self._cm.recall_memories(
-                query="", limit=5 - len(core_prefs),
+                query="",
+                limit=5 - len(core_prefs),
                 filters={"type": "user_preference", "confidence_min": 0.9},
                 update_access=False,
             )
@@ -125,10 +131,13 @@ class PromptBuilder:
                     all_memories.append(m)
 
         # Contextual prefs: scope-filtered
-        context_prefs = [m for m in all_memories
-                         if m.get("type") == "user_preference"
-                         and m.get("confidence", 0) < 0.9
-                         and preference_matches_scope(m, context)]
+        context_prefs = [
+            m
+            for m in all_memories
+            if m.get("type") == "user_preference"
+            and m.get("confidence", 0) < 0.9
+            and preference_matches_scope(m, context)
+        ]
 
         # Merge: core first, then contextual (dedup)
         pref_memories = list(core_prefs)
@@ -141,7 +150,8 @@ class PromptBuilder:
         return pref_memories, pref_keys, all_memories
 
     def _compute_recalc_scores(
-        self, all_memories: List[Dict[str, Any]],
+        self,
+        all_memories: List[Dict[str, Any]],
     ) -> Dict[str, tuple]:
         """Compute recalculated confidence/importance without mutating dicts."""
         _recalc_scores: Dict[str, tuple] = {}
@@ -188,9 +198,7 @@ class PromptBuilder:
                     pref_token_total += tok
                 continue
             _key = m.get("storage_key", "")
-            _conf, _imp = _recalc_scores.get(
-                _key, (m.get("confidence", 0.0), m.get("importance_score", 0.0))
-            )
+            _conf, _imp = _recalc_scores.get(_key, (m.get("confidence", 0.0), m.get("importance_score", 0.0)))
             if not budget.allows(mtype, _conf, _imp):
                 continue
             quota = budget.quota_for(mtype)
@@ -209,24 +217,25 @@ class PromptBuilder:
     ) -> str:
         """Inject rules into prompt section."""
         try:
-            rule_engine = getattr(self._cm, 'rule_engine', None) or getattr(
-                self._cm, '_rule_engine', None)
+            rule_engine = getattr(self._cm, "rule_engine", None) or getattr(self._cm, "_rule_engine", None)
             if not rule_engine:
                 return ""
 
             if not override_only and context:
                 return rule_engine.inject(
-                    context, format="anchored", max_rules=max_rules,
+                    context,
+                    format="anchored",
+                    max_rules=max_rules,
                     context_budget_tokens=rules_budget,
                 )
 
             # Override-only mode (for QA prompts)
             all_rules = rule_engine.list_rules(status="active", limit=max_rules)
             if override_only:
-                override_rules = [r for r in all_rules if getattr(r, 'override', False)]
+                override_rules = [r for r in all_rules if getattr(r, "override", False)]
                 rules_to_inject = override_rules[:3]
             else:
-                override_rules = [r for r in all_rules if getattr(r, 'override', False)]
+                override_rules = [r for r in all_rules if getattr(r, "override", False)]
                 rules_to_inject = override_rules[:max_rules]
 
             if not rules_to_inject:
@@ -234,10 +243,10 @@ class PromptBuilder:
 
             from carrymem.rules.injector import RuleInjector
             from carrymem.rules.matcher import MatchResult
+
             injector = RuleInjector(rule_engine.matcher)
             matches = [
-                MatchResult(rule=r, score=0.8, match_type="override", matched_text=r.trigger)
-                for r in rules_to_inject
+                MatchResult(rule=r, score=0.8, match_type="override", matched_text=r.trigger) for r in rules_to_inject
             ]
             return injector._format_structured(matches, include_metadata=False)
         except Exception as e:
@@ -275,7 +284,9 @@ class PromptBuilder:
 
                 # Preferences (tiered injection)
                 pref_memories, pref_keys, all_memories = self._identify_preferences(
-                    all_memories, seen_keys, context or "",
+                    all_memories,
+                    seen_keys,
+                    context or "",
                 )
                 # Add pref memories not already in all_memories
                 for m in pref_memories:
@@ -291,21 +302,22 @@ class PromptBuilder:
                 )
 
                 # Respect select_memories ordering (corrections/decisions before preferences)
-                pref_in_selected = [m for m in memories_section if m.get(
-                    "storage_key") in pref_keys]
-                non_pref_selected = [m for m in memories_section if m.get(
-                    "storage_key") not in pref_keys]
-                pref_in_all = [m for m in all_memories if m.get("storage_key") in pref_keys and m.get(
-                    "storage_key") not in {s.get("storage_key") for s in memories_section}]
+                pref_in_selected = [m for m in memories_section if m.get("storage_key") in pref_keys]
+                non_pref_selected = [m for m in memories_section if m.get("storage_key") not in pref_keys]
+                pref_in_all = [
+                    m
+                    for m in all_memories
+                    if m.get("storage_key") in pref_keys
+                    and m.get("storage_key") not in {s.get("storage_key") for s in memories_section}
+                ]
                 memories_section = non_pref_selected + pref_in_selected + pref_in_all
             except Exception as e:
                 logger.warning(f"Failed to select memories for context: {e}")
 
         # Knowledge
-        if getattr(self._cm, '_knowledge_adapter', None) and context:
+        if getattr(self._cm, "_knowledge_adapter", None) and context:
             try:
-                all_knowledge = self._cm.recall_from_knowledge(
-                    query=context, limit=max_knowledge * 2)
+                all_knowledge = self._cm.recall_from_knowledge(query=context, limit=max_knowledge * 2)
                 knowledge_section = select_knowledge(
                     knowledge=all_knowledge,
                     context=context,
@@ -327,17 +339,19 @@ class PromptBuilder:
         # Applied rules info
         applied_rules_info = []
         try:
-            _re = getattr(self._cm, 'rule_engine', None) or getattr(self._cm, '_rule_engine', None)
+            _re = getattr(self._cm, "rule_engine", None) or getattr(self._cm, "_rule_engine", None)
             if _re:
                 _matched = _re.matcher.match(context if context else "*", limit=max_rules)
                 for m in _matched:
-                    applied_rules_info.append({
-                        "trigger": m.rule.trigger,
-                        "action": m.rule.action,
-                        "rule_type": m.rule.rule_type,
-                        "scope": m.rule.scope,
-                        "override": m.rule.override,
-                    })
+                    applied_rules_info.append(
+                        {
+                            "trigger": m.rule.trigger,
+                            "action": m.rule.action,
+                            "rule_type": m.rule.rule_type,
+                            "scope": m.rule.scope,
+                            "override": m.rule.override,
+                        }
+                    )
         except Exception as e:
             logger.warning(f"Rule matching in system prompt failed: {e}")
 
@@ -409,35 +423,37 @@ class PromptBuilder:
         knowledge_budget = int(budget.max_tokens * 0.2)
 
         # Rules (override-only for QA)
-        rules_section = self._inject_rules(question, 3, int(
-            budget.max_tokens * 0.1), override_only=True)
+        rules_section = self._inject_rules(question, 3, int(budget.max_tokens * 0.1), override_only=True)
 
         # Memories
         if self._cm._adapter:
             try:
-                all_memories, seen_keys = self._recall_base_memories(
-                    question, budget.max_results * 3)
+                all_memories, seen_keys = self._recall_base_memories(question, budget.max_results * 3)
 
                 # Preferences
                 pref_memories, pref_keys, all_memories = self._identify_preferences(
-                    all_memories, seen_keys, question,
+                    all_memories,
+                    seen_keys,
+                    question,
                 )
 
                 # Remove scope-mismatched preferences from all_memories
                 # so they don't get selected as non-preference memories
-                all_prefs_in_all = {m.get("storage_key") for m in all_memories
-                                    if m.get("type") == "user_preference"}
+                all_prefs_in_all = {m.get("storage_key") for m in all_memories if m.get("type") == "user_preference"}
                 mismatched_pref_keys = all_prefs_in_all - pref_keys
                 if mismatched_pref_keys:
-                    all_memories = [m for m in all_memories
-                                    if m.get("storage_key") not in mismatched_pref_keys]
+                    all_memories = [m for m in all_memories if m.get("storage_key") not in mismatched_pref_keys]
 
                 # Recalculate confidence for sorting (no mutation)
                 _recalc_scores = self._compute_recalc_scores(all_memories)
 
                 # Budget filtering
                 budget_filtered = self._budget_filter(
-                    all_memories, pref_keys, budget, memories_budget, _recalc_scores,
+                    all_memories,
+                    pref_keys,
+                    budget,
+                    memories_budget,
+                    _recalc_scores,
                 )
 
                 # Select memories
@@ -461,26 +477,22 @@ class PromptBuilder:
                         memories_section.append(m)
                         total_tok += tok
                 else:
-                    pref_in_filtered = [m for m in budget_filtered if m.get(
-                        "storage_key") in pref_keys]
-                    non_pref_filtered = [m for m in budget_filtered if m.get(
-                        "storage_key") not in pref_keys]
+                    pref_in_filtered = [m for m in budget_filtered if m.get("storage_key") in pref_keys]
+                    non_pref_filtered = [m for m in budget_filtered if m.get("storage_key") not in pref_keys]
                     selected = select_memories(
                         memories=non_pref_filtered or all_memories,
                         context=question,
                         max_count=budget.max_results,
                         max_tokens=memories_budget,
                     )
-                    memories_section = pref_in_filtered + \
-                        [m for m in selected if m.get("storage_key") not in pref_keys]
+                    memories_section = pref_in_filtered + [m for m in selected if m.get("storage_key") not in pref_keys]
             except Exception as e:
                 logger.warning(f"Failed to select memories for QA prompt: {e}")
 
         # Knowledge
-        if getattr(self._cm, '_knowledge_adapter', None):
+        if getattr(self._cm, "_knowledge_adapter", None):
             try:
-                all_knowledge = self._cm.recall_from_knowledge(
-                    query=question, limit=max_knowledge * 2)
+                all_knowledge = self._cm.recall_from_knowledge(query=question, limit=max_knowledge * 2)
                 knowledge_section = select_knowledge(
                     knowledge=all_knowledge,
                     context=question,

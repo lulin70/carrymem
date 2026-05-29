@@ -1,4 +1,5 @@
 """Tests for automatic domain sensing."""
+
 import pytest
 from carrymem.domain import infer_domain, infer_domains_from_memories, get_domain_description
 
@@ -36,7 +37,10 @@ class TestInferDomain:
 class TestInferDomainsFromMemories:
     def test_multiple_domains(self):
         memories = [
-            {"content": "I use Python and django for backend development with docker", "raw_text": ""},
+            {
+                "content": "I use Python and django for backend development with docker",
+                "raw_text": "",
+            },
             {"content": "We follow agile scrum and use jira for sprint planning", "raw_text": ""},
             {"content": "I like dark mode", "raw_text": ""},
         ]

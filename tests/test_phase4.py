@@ -4,7 +4,7 @@ import tempfile
 import pytest
 from unittest.mock import MagicMock, patch
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from carrymem import CarryMem
 from carrymem.llm import LLMClient
@@ -25,7 +25,12 @@ def db_path():
 
 @pytest.fixture
 def adapter(db_path):
-    a = SQLiteAdapter(db_path=db_path, enable_vector_search=False, enable_semantic_recall=False, enable_cache=False)
+    a = SQLiteAdapter(
+        db_path=db_path,
+        enable_vector_search=False,
+        enable_semantic_recall=False,
+        enable_cache=False,
+    )
     yield a
     a.close()
 
@@ -61,6 +66,7 @@ class TestLLMClient:
 
     def test_llm_client_with_config(self):
         import carrymem.llm as llm_mod
+
         original_backend = llm_mod._BACKEND
         original_openai = llm_mod._OPENAI_CLIENT
         try:
@@ -94,6 +100,7 @@ class TestLLMClient:
 
     def test_llm_client_repr_masks_key(self):
         import carrymem.llm as llm_mod
+
         original_backend = llm_mod._BACKEND
         original_openai = llm_mod._OPENAI_CLIENT
         try:
@@ -137,7 +144,11 @@ class TestSessionSummarizer:
         summarizer = SessionSummarizer()
         memories = [
             _make_memory(type="user_preference", content="I prefer dark mode"),
-            _make_memory(type="user_preference", content="I prefer light mode", superseded_at="2026-01-01T00:00:00"),
+            _make_memory(
+                type="user_preference",
+                content="I prefer light mode",
+                superseded_at="2026-01-01T00:00:00",
+            ),
         ]
         result = summarizer.summarize_session(memories, session_id="sess-1")
         assert result is not None
@@ -199,6 +210,7 @@ class TestSemanticAggregator:
         emb_a = [1.0, 0.0, 0.0]
         emb_b = [0.95, 0.05, 0.0]
         call_count = [0]
+
         def mock_embedding_fn(text):
             call_count[0] += 1
             return emb_a if "dark mode" in text else emb_b
@@ -215,6 +227,7 @@ class TestSemanticAggregator:
     def test_aggregate_no_cluster_below_threshold(self):
         emb_a = [1.0, 0.0, 0.0]
         emb_b = [0.0, 0.0, 1.0]
+
         def mock_embedding_fn(text):
             return emb_a if "dark" in text else emb_b
 
@@ -243,6 +256,7 @@ class TestSemanticAggregator:
             "memory B": emb_b,
             "memory C": emb_c,
         }
+
         def mock_embedding_fn(text):
             for key, emb in call_map.items():
                 if key in text:
@@ -262,7 +276,11 @@ class TestSemanticAggregator:
     def test_aggregate_excludes_superseded(self):
         agg = SemanticAggregator(embedding_fn=lambda x: [0.5, 0.5])
         memories = [
-            _make_memory(content="I prefer dark mode", raw_text="I prefer dark mode", superseded_at="2026-01-01T00:00:00"),
+            _make_memory(
+                content="I prefer dark mode",
+                raw_text="I prefer dark mode",
+                superseded_at="2026-01-01T00:00:00",
+            ),
             _make_memory(content="I prefer light mode", raw_text="I prefer light mode"),
         ]
         results = agg.aggregate(memories)
@@ -270,6 +288,7 @@ class TestSemanticAggregator:
 
     def test_aggregate_rule_based_content(self):
         emb = [1.0, 0.0, 0.0]
+
         def mock_embedding_fn(text):
             return emb
 

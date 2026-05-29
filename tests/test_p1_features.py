@@ -15,7 +15,7 @@ import sys
 import tempfile
 import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from carrymem.carrymem import CarryMem
 from carrymem.rules import RuleEngine
@@ -182,17 +182,17 @@ class TestRuleManagement(unittest.TestCase):
 
         rules = self.engine.list_rules(status="active")
         for r in rules:
-            self.assertTrue(hasattr(r, 'trigger'))
-            self.assertTrue(hasattr(r, 'action'))
-            self.assertTrue(hasattr(r, 'override'))
-            self.assertTrue(hasattr(r, 'scope'))
+            self.assertTrue(hasattr(r, "trigger"))
+            self.assertTrue(hasattr(r, "action"))
+            self.assertTrue(hasattr(r, "override"))
+            self.assertTrue(hasattr(r, "scope"))
 
     def test_rule_conflict_detection(self):
         """Verify: Adding conflicting rule generates warning."""
         self.engine.add_rule(trigger="数据库", action="用MySQL", rule_type="prefer")
         rule2 = self.engine.add_rule(trigger="数据库", action="用PostgreSQL", rule_type="always")
 
-        warnings = getattr(rule2, '_conflict_warnings', [])
+        warnings = getattr(rule2, "_conflict_warnings", [])
         self.assertGreater(len(warnings), 0, "Should detect conflict with existing rule")
 
     def test_my_profile(self):
@@ -245,6 +245,7 @@ class TestOnboarding(unittest.TestCase):
     def test_onboard_returns_welcome_message(self):
         """Verify: Onboard returns welcome message in English."""
         from carrymem.integration.layer2_mcp.handlers import handle_onboard
+
         result = handle_onboard(self.cm, {"language": "en"})
         self.assertIn("welcome", result)
         self.assertIn("CarryMem", result["welcome"])
@@ -252,6 +253,7 @@ class TestOnboarding(unittest.TestCase):
     def test_onboard_chinese(self):
         """Verify: Onboard returns Chinese welcome message."""
         from carrymem.integration.layer2_mcp.handlers import handle_onboard
+
         result = handle_onboard(self.cm, {"language": "zh"})
         self.assertIn("welcome", result)
         self.assertIn("欢迎使用", result["welcome"])
@@ -259,6 +261,7 @@ class TestOnboarding(unittest.TestCase):
     def test_onboard_japanese(self):
         """Verify: Onboard returns Japanese welcome message."""
         from carrymem.integration.layer2_mcp.handlers import handle_onboard
+
         result = handle_onboard(self.cm, {"language": "ja"})
         self.assertIn("welcome", result)
         self.assertIn("ようこそ", result["welcome"])
@@ -266,6 +269,7 @@ class TestOnboarding(unittest.TestCase):
     def test_onboard_has_next_steps(self):
         """Verify: Onboard returns next steps."""
         from carrymem.integration.layer2_mcp.handlers import handle_onboard
+
         result = handle_onboard(self.cm, {"language": "en"})
         self.assertIn("next_steps", result)
         self.assertGreater(len(result["next_steps"]), 0)

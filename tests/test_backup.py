@@ -79,9 +79,7 @@ class TestBackupCreation:
         backup_path = backup_manager.create_backup()
         filename = os.path.basename(backup_path)
 
-        assert filename.startswith(
-            "memories_backup_"
-        ), f"Filename should start with 'memories_backup_': {filename}"
+        assert filename.startswith("memories_backup_"), f"Filename should start with 'memories_backup_': {filename}"
         assert filename.endswith(".db"), f"Filename should end with '.db': {filename}"
 
     def test_multiple_backups(self, backup_manager, temp_db):
@@ -150,9 +148,7 @@ class TestRestore:
 
         backup_manager.restore_backup(backup_path)
 
-        assert not os.path.exists(
-            pre_restore_path
-        ), "Pre-restore backup should be cleaned up after success"
+        assert not os.path.exists(pre_restore_path), "Pre-restore backup should be cleaned up after success"
 
     def test_restore_rollback_on_failure(self, backup_manager, temp_db):
         """Failed restore rolls back to pre-restore state."""
@@ -242,9 +238,7 @@ class TestListBackups:
 
         backup = backups[0]
         required_keys = {"filename", "path", "size_kb", "created_at", "memory_count"}
-        assert required_keys.issubset(
-            backup.keys()
-        ), f"Missing keys: {required_keys - set(backup.keys())}"
+        assert required_keys.issubset(backup.keys()), f"Missing keys: {required_keys - set(backup.keys())}"
         assert backup["size_kb"] > 0, "Size should be positive"
         assert isinstance(backup["memory_count"], int), "Memory count should be integer"
 
@@ -515,9 +509,7 @@ class TestAutoBackup:
         # Do 3 write operations (interval=3)
         cm.declare("Memory 1")
         cm.declare("Memory 2")
-        assert len(cm.list_backups(backup_dir=backup_dir)) == len(
-            initial_backups
-        ), "Should not backup yet"
+        assert len(cm.list_backups(backup_dir=backup_dir)) == len(initial_backups), "Should not backup yet"
 
         cm.declare("Memory 3")
         # After 3rd write, auto-backup should trigger
@@ -538,9 +530,7 @@ class TestAutoBackup:
         for i in range(25):
             cm.declare(f"Memory {i}")
 
-        assert (
-            len(cm.list_backups(backup_dir=backup_dir)) == initial_backups
-        ), "No auto-backup when interval=0"
+        assert len(cm.list_backups(backup_dir=backup_dir)) == initial_backups, "No auto-backup when interval=0"
         cm.close()
 
     def test_auto_backup_on_forget(self, tmp_path):
@@ -572,18 +562,14 @@ class TestAutoBackup:
             cm.forget_memory(keys[0])  # write 3 → triggers auto-backup
 
         after_forget = len(cm.list_backups(backup_dir=backup_dir))
-        assert (
-            after_forget > backup_before_forget
-        ), "Auto-backup should trigger after forget completes the interval"
+        assert after_forget > backup_before_forget, "Auto-backup should trigger after forget completes the interval"
         cm.close()
 
     def test_max_backups_default_is_five(self, tmp_path):
         """Default max_backups is 5."""
         db_path = str(tmp_path / "test_max.db")
         conn = sqlite3.connect(db_path)
-        conn.execute(
-            "CREATE TABLE memories (id TEXT PRIMARY KEY, type TEXT, content TEXT, confidence REAL)"
-        )
+        conn.execute("CREATE TABLE memories (id TEXT PRIMARY KEY, type TEXT, content TEXT, confidence REAL)")
         conn.commit()
         conn.close()
 
@@ -594,9 +580,7 @@ class TestAutoBackup:
         """Backup filename follows memories_backup_YYYYMMDD_HHMMSS.db format."""
         backup_path = backup_manager.create_backup()
         filename = os.path.basename(backup_path)
-        assert filename.startswith(
-            "memories_backup_"
-        ), f"Filename should start with 'memories_backup_': {filename}"
+        assert filename.startswith("memories_backup_"), f"Filename should start with 'memories_backup_': {filename}"
         assert filename.endswith(".db"), f"Filename should end with '.db': {filename}"
 
 

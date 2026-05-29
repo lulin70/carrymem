@@ -87,9 +87,7 @@ class RuleSanitizer:
 
         # Check length limits
         if len(trigger) > cls.MAX_TRIGGER_LENGTH:
-            raise ValueError(
-                f"Trigger too long ({len(trigger)} > {cls.MAX_TRIGGER_LENGTH} characters)"
-            )
+            raise ValueError(f"Trigger too long ({len(trigger)} > {cls.MAX_TRIGGER_LENGTH} characters)")
 
         # Check for blocked patterns (prompt injection prevention)
         for pattern in cls.BLOCKED_PATTERNS:
@@ -104,8 +102,7 @@ class RuleSanitizer:
         for char in dangerous_sql:
             if char in trigger:
                 raise ValueError(
-                    f"Trigger contains invalid character: '{char}'. "
-                    f"These characters are not allowed in triggers."
+                    f"Trigger contains invalid character: '{char}'. " f"These characters are not allowed in triggers."
                 )
 
         # Return stripped version
@@ -141,9 +138,7 @@ class RuleSanitizer:
 
         # Check length limits
         if len(action) > cls.MAX_ACTION_LENGTH:
-            raise ValueError(
-                f"Action too long ({len(action)} > {cls.MAX_ACTION_LENGTH} characters)"
-            )
+            raise ValueError(f"Action too long ({len(action)} > {cls.MAX_ACTION_LENGTH} characters)")
 
         # Check for blocked patterns (prompt injection prevention)
         for pattern in cls.BLOCKED_PATTERNS:
@@ -180,8 +175,7 @@ class RuleSanitizer:
 
         if rule_type not in VALID_RULE_TYPES:
             raise ValueError(
-                f"Invalid rule_type '{rule_type}'. "
-                f"Must be one of: {', '.join(sorted(VALID_RULE_TYPES))}"
+                f"Invalid rule_type '{rule_type}'. " f"Must be one of: {', '.join(sorted(VALID_RULE_TYPES))}"
             )
         return rule_type
 
@@ -270,9 +264,7 @@ class SecurityEvent:
             "severity": self.severity,
             "details": self.details,
             "input_data": (
-                self.input_data[:100] + "..."
-                if self.input_data and len(self.input_data) > 100
-                else self.input_data
+                self.input_data[:100] + "..." if self.input_data and len(self.input_data) > 100 else self.input_data
             ),
             "timestamp": self.timestamp,
         }

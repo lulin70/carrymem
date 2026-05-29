@@ -155,6 +155,7 @@ class TestBackupManager(unittest.TestCase):
         manager = BackupManager(self.db_path, backup_dir=self.backup_dir, max_backups=2)
         for _ in range(5):
             import time
+
             manager.create_backup()
             time.sleep(0.1)
         backups = manager.list_backups()

@@ -19,8 +19,8 @@ from .tools import TOOLS
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    stream=sys.stderr
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stderr,
 )
 logger = logging.getLogger(__name__)
 
@@ -38,8 +38,12 @@ class MCPServer:
     VERSION = "1.0.0"
     PROTOCOL_VERSION = "2024-11-05"
 
-    def __init__(self, config_path: Optional[str] = None,
-                 data_path: Optional[str] = None, namespace: Optional[str] = None):
+    def __init__(
+        self,
+        config_path: Optional[str] = None,
+        data_path: Optional[str] = None,
+        namespace: Optional[str] = None,
+    ):
         """
         Initialize the MCP Server.
 
@@ -68,9 +72,7 @@ class MCPServer:
 
         try:
             while True:
-                line = await asyncio.get_event_loop().run_in_executor(
-                    None, sys.stdin.readline
-                )
+                line = await asyncio.get_event_loop().run_in_executor(None, sys.stdin.readline)
 
                 if not line:
                     logger.info("EOF received, shutting down...")
@@ -147,8 +149,7 @@ class MCPServer:
         protocol_version = params.get("protocolVersion", "2024-11-05")
         client_info = params.get("clientInfo", {})
 
-        logger.info(f"Client: {client_info.get('name', 'unknown')} "
-                   f"v{client_info.get('version', 'unknown')}")
+        logger.info(f"Client: {client_info.get('name', 'unknown')} " f"v{client_info.get('version', 'unknown')}")
         logger.info(f"Protocol version: {protocol_version}")
 
         return {
@@ -156,16 +157,9 @@ class MCPServer:
             "id": request_id,
             "result": {
                 "protocolVersion": "2024-11-05",
-                "serverInfo": {
-                    "name": "carrymem-mcp",
-                    "version": _version
-                },
-                "capabilities": {
-                    "tools": {
-                        "listChanged": False
-                    }
-                }
-            }
+                "serverInfo": {"name": "carrymem-mcp", "version": _version},
+                "capabilities": {"tools": {"listChanged": False}},
+            },
         }
 
     async def handle_tools_list(self, request_id: Any) -> Dict[str, Any]:
@@ -180,13 +174,7 @@ class MCPServer:
         """
         logger.info("Handling tools/list request")
 
-        return {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "result": {
-                "tools": TOOLS
-            }
-        }
+        return {"jsonrpc": "2.0", "id": request_id, "result": {"tools": TOOLS}}
 
     async def handle_tools_call(self, request_id: Any, params: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -211,14 +199,7 @@ class MCPServer:
             return {
                 "jsonrpc": "2.0",
                 "id": request_id,
-                "result": {
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": json.dumps(result, indent=2, ensure_ascii=False)
-                        }
-                    ]
-                }
+                "result": {"content": [{"type": "text", "text": json.dumps(result, indent=2, ensure_ascii=False)}]},
             }
         except Exception as e:
             logger.error(f"Error calling tool {tool_name}: {e}")
@@ -236,11 +217,7 @@ class MCPServer:
         """
         logger.info("Handling shutdown request")
 
-        return {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "result": None
-        }
+        return {"jsonrpc": "2.0", "id": request_id, "result": None}
 
     async def send_response(self, response: Dict[str, Any]):
         """
@@ -253,8 +230,7 @@ class MCPServer:
         print(response_json, flush=True)
         logger.debug(f"Sent response: {response_json[:200]}...")
 
-    async def send_error(self, request_id: Any, code: int, message: str,
-                        data: Optional[Any] = None) -> Dict[str, Any]:
+    async def send_error(self, request_id: Any, code: int, message: str, data: Optional[Any] = None) -> Dict[str, Any]:
         """
         Send an error response.
 
@@ -270,10 +246,7 @@ class MCPServer:
         error_response = {
             "jsonrpc": "2.0",
             "id": request_id,
-            "error": {
-                "code": code,
-                "message": message
-            }
+            "error": {"code": code, "message": message},
         }
 
         if data:

@@ -27,121 +27,153 @@ class TestPackageImports:
 
     def test_import_carrymem(self):
         from carrymem import CarryMem
+
         assert CarryMem is not None
 
     def test_import_rule_engine(self):
         from carrymem.rules import RuleEngine
+
         assert RuleEngine is not None
 
     def test_import_scope_types(self):
         from carrymem.rules import (
-            RuleScope, VALID_RULE_SCOPES, SCOPE_PRIORITY,
+            RuleScope,
+            VALID_RULE_SCOPES,
+            SCOPE_PRIORITY,
         )
+
         assert VALID_RULE_SCOPES == {"personal", "company", "negotiated"}
         assert SCOPE_PRIORITY["company"] == 3
 
     def test_import_skill_functions(self):
         from carrymem.rules import skill_pack, skill_verify, skill_install
+
         assert callable(skill_pack)
         assert callable(skill_verify)
         assert callable(skill_install)
 
     def test_import_merge_types(self):
         from carrymem.rules import (
-            MergeStrategy, MergeDecision, MergeConflict, MergeResult,
+            MergeStrategy,
+            MergeDecision,
+            MergeConflict,
+            MergeResult,
         )
+
         assert MergeStrategy.COMPANY_OVERRIDES is not None
         assert MergeDecision.KEEP_INCOMING is not None
 
     def test_import_models(self):
         from carrymem.rules import Rule
+
         rule = Rule(trigger="test", action="a", scope="company")
         assert rule.scope == "company"
 
     def test_import_injector(self):
         from carrymem.rules.injector import RuleInjector
+
         assert RuleInjector is not None
 
     def test_import_matcher(self):
         from carrymem.rules.matcher import RuleMatcher, MatchResult
+
         assert RuleMatcher is not None
         assert MatchResult is not None
 
     def test_import_storage(self):
         from carrymem.rules.storage import RuleStorage
+
         assert RuleStorage is not None
 
     def test_import_sanitizer(self):
         from carrymem.rules.sanitizer import RuleSanitizer
+
         assert RuleSanitizer is not None
 
     def test_import_limiter(self):
         from carrymem.rules.limiter import RuleLimiter
+
         assert RuleLimiter is not None
 
     def test_import_conflict_detector(self):
         from carrymem.rules.conflict_detector import RuleConflictDetector
+
         assert RuleConflictDetector is not None
 
     def test_import_pattern_detector(self):
         from carrymem.rules.pattern_detector import PatternDetector
+
         assert PatternDetector is not None
 
     def test_import_promotion_pipeline(self):
         from carrymem.rules.promotion_pipeline import PromotionPipeline
+
         assert PromotionPipeline is not None
 
     def test_import_experience_bridge(self):
         from carrymem.rules.experience_bridge import ExperienceRuleBridge
+
         assert ExperienceRuleBridge is not None
 
     def test_import_rule_refiner(self):
         from carrymem.rules.rule_refiner import RuleRefiner
+
         assert RuleRefiner is not None
 
     def test_import_refinement_session(self):
         from carrymem.rules.refinement_session import RefinementSessionManager
+
         assert RefinementSessionManager is not None
 
     def test_import_encryption(self):
         from carrymem.security.encryption import MemoryEncryption, NoEncryption
+
         assert MemoryEncryption is not None
         assert NoEncryption is not None
 
     def test_import_audit(self):
         from carrymem.security.audit import AuditLogger
+
         assert AuditLogger is not None
 
     def test_import_input_validator(self):
         from carrymem.security.input_validator import InputValidator
+
         assert InputValidator is not None
 
     def test_import_config(self):
         from carrymem.utils.config import ConfigManager
+
         assert ConfigManager is not None
 
     def test_import_language(self):
         from carrymem.utils.language import LanguageManager
+
         assert LanguageManager is not None
 
     def test_import_helpers(self):
         from carrymem.utils.helpers import generate_memory_id
+
         assert callable(generate_memory_id)
 
     def test_import_validators(self):
         from carrymem.utils.validators import validate_namespace
+
         assert callable(validate_namespace)
 
     def test_import_async_carrymem(self):
         from carrymem.async_carrymem import AsyncCarryMem
+
         assert AsyncCarryMem is not None
 
     def test_import_cache(self):
         from carrymem.cache import RecallCache
+
         assert RecallCache is not None
 
     def test_import_backup(self):
         from carrymem.backup import BackupManager
+
         assert BackupManager is not None
 
 
@@ -150,6 +182,7 @@ class TestVersionConsistency:
 
     def test_version_format(self):
         from carrymem import __version__
+
         parts = __version__.split(".")
         assert len(parts) >= 2, f"Version {__version__} should have at least major.minor"
         assert parts[0].isdigit() and parts[1].isdigit(), f"Version {__version__} should be numeric"
@@ -157,12 +190,15 @@ class TestVersionConsistency:
     def test_version_accessible_via_cli(self):
         result = subprocess.run(
             [sys.executable, "-m", "carrymem", "version"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         assert __version__ in result.stdout or __version__ in result.stderr
 
     def test_version_module_exists(self):
         from carrymem.__version__ import __version__
+
         assert isinstance(__version__, str)
         assert len(__version__) > 0
 
@@ -209,7 +245,8 @@ class TestDatabaseInitialization:
         try:
             storage = RuleStorage(db_path)
             rule = storage.create(
-                trigger="test", action="a",
+                trigger="test",
+                action="a",
                 metadata={"_skill_name": "test-skill"},
             )
             assert rule.metadata == {"_skill_name": "test-skill"}
@@ -223,12 +260,14 @@ class TestCLIEntryPoints:
 
     def test_skill_commands_in_cli_module(self):
         from carrymem import cli
+
         assert hasattr(cli, "cmd_skill_pack"), "cmd_skill_pack not found in CLI module"
         assert hasattr(cli, "cmd_skill_install"), "cmd_skill_install not found in CLI module"
         assert hasattr(cli, "cmd_skill_verify"), "cmd_skill_verify not found in CLI module"
 
     def test_skill_commands_in_dispatch_table(self):
         from carrymem.cli import cmd_skill_pack, cmd_skill_install, cmd_skill_verify
+
         assert callable(cmd_skill_pack)
         assert callable(cmd_skill_install)
         assert callable(cmd_skill_verify)
@@ -236,14 +275,18 @@ class TestCLIEntryPoints:
     def test_carrymem_help_runs(self):
         result = subprocess.run(
             [sys.executable, "-m", "carrymem", "--help"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         assert result.returncode == 0
 
     def test_carrymem_version_runs(self):
         result = subprocess.run(
             [sys.executable, "-m", "carrymem", "version"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         assert result.returncode == 0
 
@@ -252,12 +295,15 @@ class TestCLIEntryPoints:
         db_path = os.path.join(tmpdir, "doctor_test.db")
         try:
             from carrymem.rules import RuleEngine
+
             engine = RuleEngine(db_path)
             del engine
 
             result = subprocess.run(
                 [sys.executable, "-m", "carrymem", "doctor", "--db", db_path],
-                capture_output=True, text=True, timeout=15,
+                capture_output=True,
+                text=True,
+                timeout=15,
             )
             assert result.returncode == 0
         finally:
@@ -266,9 +312,13 @@ class TestCLIEntryPoints:
 
     def test_rule_commands_in_cli(self):
         from carrymem import cli
+
         rule_commands = [
-            "cmd_add_rule", "cmd_list_rules", "cmd_edit_rule",
-            "cmd_delete_rule", "cmd_match_rules",
+            "cmd_add_rule",
+            "cmd_list_rules",
+            "cmd_edit_rule",
+            "cmd_delete_rule",
+            "cmd_match_rules",
         ]
         for cmd_name in rule_commands:
             assert hasattr(cli, cmd_name), f"{cmd_name} not found in CLI module"
@@ -281,18 +331,27 @@ class TestCLIEntryPoints:
         output_path = os.path.join(tmpdir, "output.skill.json")
         try:
             from carrymem.rules import RuleEngine
+
             engine = RuleEngine(db_path)
             engine.add_rule("database", "Use SSL", scope="company")
             del engine
 
-            result = cmd_skill_pack([
-                output_path, "--name", "cli-test",
-                "--scope", "company", "--db", db_path,
-            ])
+            result = cmd_skill_pack(
+                [
+                    output_path,
+                    "--name",
+                    "cli-test",
+                    "--scope",
+                    "company",
+                    "--db",
+                    db_path,
+                ]
+            )
             assert result == 0
             assert os.path.exists(output_path)
 
             import json
+
             with open(output_path, "r") as f:
                 data = json.load(f)
             assert data["format"] == "carrymem-skill-v1"
@@ -310,16 +369,25 @@ class TestCLIEntryPoints:
         output_path = os.path.join(tmpdir, "verify.skill.json")
         try:
             from carrymem.rules import RuleEngine
+
             engine = RuleEngine(db_path)
             engine.add_rule("test", "action", scope="personal")
             del engine
 
-            cmd_skill_pack([
-                output_path, "--name", "verify-test",
-                "--scope", "personal", "--db", db_path,
-            ])
+            cmd_skill_pack(
+                [
+                    output_path,
+                    "--name",
+                    "verify-test",
+                    "--scope",
+                    "personal",
+                    "--db",
+                    db_path,
+                ]
+            )
 
             from carrymem.rules import RuleEngine as RE
+
             with open(output_path, "r") as f:
                 bundle = json_mod.load(f)
             verify_result = RE.skill_verify(bundle)
@@ -358,6 +426,7 @@ class TestVSCodeExtensionStructure:
 
     def test_extension_package_json_has_contributes(self):
         import json
+
         pkg_path = os.path.join(self.EXT_DIR, "package.json")
         with open(pkg_path, "r") as f:
             data = json.load(f)
@@ -422,20 +491,25 @@ class TestPipInstallVerification:
     def test_package_installed(self):
         result = subprocess.run(
             [sys.executable, "-c", "import carrymem; print('OK')"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         assert "OK" in result.stdout
 
     def test_entry_point_available(self):
         result = subprocess.run(
             [sys.executable, "-m", "carrymem", "--help"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         assert result.returncode == 0
 
     def test_package_metadata_accessible(self):
         try:
             from importlib.metadata import metadata
+
             meta = metadata("carrymem")
             assert meta is not None
         except Exception:
@@ -443,5 +517,6 @@ class TestPipInstallVerification:
 
     def test_py_typed_marker_exists(self):
         import carrymem
+
         pkg_dir = os.path.dirname(carrymem.__file__)
         assert os.path.exists(os.path.join(pkg_dir, "py.typed"))

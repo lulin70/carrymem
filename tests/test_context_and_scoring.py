@@ -172,8 +172,18 @@ class TestContextSelection(unittest.TestCase):
 
     def test_select_memories_basic(self):
         memories = [
-            {"content": "I prefer dark mode", "importance_score": 0.8, "type": "user_preference", "confidence": 0.9},
-            {"content": "I use Python", "importance_score": 0.5, "type": "fact_declaration", "confidence": 0.7},
+            {
+                "content": "I prefer dark mode",
+                "importance_score": 0.8,
+                "type": "user_preference",
+                "confidence": 0.9,
+            },
+            {
+                "content": "I use Python",
+                "importance_score": 0.5,
+                "type": "fact_declaration",
+                "confidence": 0.7,
+            },
         ]
         selected = select_memories(memories, context="dark mode", max_count=5, max_tokens=1000)
         self.assertEqual(len(selected), 2)
@@ -181,7 +191,12 @@ class TestContextSelection(unittest.TestCase):
 
     def test_select_memories_token_budget(self):
         memories = [
-            {"content": f"Memory {i} " * 50, "importance_score": 0.9 - i * 0.1, "type": "fact_declaration", "confidence": 0.8}
+            {
+                "content": f"Memory {i} " * 50,
+                "importance_score": 0.9 - i * 0.1,
+                "type": "fact_declaration",
+                "confidence": 0.8,
+            }
             for i in range(10)
         ]
         selected = select_memories(memories, max_count=10, max_tokens=100)
@@ -192,7 +207,14 @@ class TestContextSelection(unittest.TestCase):
 
     def test_build_prompt_en(self):
         prompt = build_prompt(
-            memories=[{"content": "I prefer dark mode", "type": "user_preference", "confidence": 0.9, "source_layer": "rule"}],
+            memories=[
+                {
+                    "content": "I prefer dark mode",
+                    "type": "user_preference",
+                    "confidence": 0.9,
+                    "source_layer": "rule",
+                }
+            ],
             knowledge=[],
             language="en",
         )
@@ -201,7 +223,14 @@ class TestContextSelection(unittest.TestCase):
 
     def test_build_prompt_zh(self):
         prompt = build_prompt(
-            memories=[{"content": "我喜欢深色模式", "type": "user_preference", "confidence": 0.9, "source_layer": "rule"}],
+            memories=[
+                {
+                    "content": "我喜欢深色模式",
+                    "type": "user_preference",
+                    "confidence": 0.9,
+                    "source_layer": "rule",
+                }
+            ],
             knowledge=[],
             language="zh",
         )
@@ -209,7 +238,14 @@ class TestContextSelection(unittest.TestCase):
 
     def test_build_prompt_ja(self):
         prompt = build_prompt(
-            memories=[{"content": "ダークモードが好き", "type": "user_preference", "confidence": 0.9, "source_layer": "rule"}],
+            memories=[
+                {
+                    "content": "ダークモードが好き",
+                    "type": "user_preference",
+                    "confidence": 0.9,
+                    "source_layer": "rule",
+                }
+            ],
             knowledge=[],
             language="ja",
         )
@@ -217,7 +253,12 @@ class TestContextSelection(unittest.TestCase):
 
     def test_format_memory_entry(self):
         entry = format_memory_entry(
-            {"type": "correction", "content": "Use PostgreSQL not MySQL", "confidence": 0.95, "source_layer": "rule"},
+            {
+                "type": "correction",
+                "content": "Use PostgreSQL not MySQL",
+                "confidence": 0.95,
+                "source_layer": "rule",
+            },
             language="en",
         )
         self.assertIn("NOT repeat", entry)
@@ -225,35 +266,63 @@ class TestContextSelection(unittest.TestCase):
 
     def test_format_memory_entry_preference_avoid(self):
         entry = format_memory_entry(
-            {"type": "user_preference", "content": "MySQL", "confidence": 0.9, "auto_rule": "avoid", "source_layer": "rule"},
+            {
+                "type": "user_preference",
+                "content": "MySQL",
+                "confidence": 0.9,
+                "auto_rule": "avoid",
+                "source_layer": "rule",
+            },
             language="en",
         )
         self.assertIn("NOT want", entry)
 
     def test_format_memory_entry_preference_prefer(self):
         entry = format_memory_entry(
-            {"type": "user_preference", "content": "PostgreSQL", "confidence": 0.9, "auto_rule": "prefer", "source_layer": "rule"},
+            {
+                "type": "user_preference",
+                "content": "PostgreSQL",
+                "confidence": 0.9,
+                "auto_rule": "prefer",
+                "source_layer": "rule",
+            },
             language="en",
         )
         self.assertIn("prefers", entry)
 
     def test_format_memory_entry_decision(self):
         entry = format_memory_entry(
-            {"type": "decision", "content": "Use React for frontend", "confidence": 0.9, "source_layer": "rule"},
+            {
+                "type": "decision",
+                "content": "Use React for frontend",
+                "confidence": 0.9,
+                "source_layer": "rule",
+            },
             language="en",
         )
         self.assertIn("Always follow", entry)
 
     def test_format_memory_entry_superseded(self):
         entry = format_memory_entry(
-            {"type": "fact_declaration", "content": "User lives in Beijing", "confidence": 0.9, "superseded_at": "2026-01-01", "source_layer": "rule"},
+            {
+                "type": "fact_declaration",
+                "content": "User lives in Beijing",
+                "confidence": 0.9,
+                "superseded_at": "2026-01-01",
+                "source_layer": "rule",
+            },
             language="en",
         )
         self.assertIn("outdated", entry)
 
     def test_format_memory_entry_session_summary(self):
         entry = format_memory_entry(
-            {"type": "session_summary", "content": "User discussed database preferences", "confidence": 0.9, "source_layer": "rule"},
+            {
+                "type": "session_summary",
+                "content": "User discussed database preferences",
+                "confidence": 0.9,
+                "source_layer": "rule",
+            },
             language="en",
         )
         self.assertIn("Based on previous conversations", entry)
@@ -268,8 +337,20 @@ class TestMerge(unittest.TestCase):
 
     def test_detect_hash_conflicts(self):
         memories = [
-            {"content": "I prefer dark mode", "content_hash": "abc123", "storage_key": "k1", "type": "user_preference", "namespace": "ns1"},
-            {"content": "I prefer dark mode", "content_hash": "abc123", "storage_key": "k2", "type": "user_preference", "namespace": "ns2"},
+            {
+                "content": "I prefer dark mode",
+                "content_hash": "abc123",
+                "storage_key": "k1",
+                "type": "user_preference",
+                "namespace": "ns1",
+            },
+            {
+                "content": "I prefer dark mode",
+                "content_hash": "abc123",
+                "storage_key": "k2",
+                "type": "user_preference",
+                "namespace": "ns2",
+            },
         ]
         conflicts = detect_conflicts(memories)
         self.assertEqual(len(conflicts), 1)
@@ -277,8 +358,22 @@ class TestMerge(unittest.TestCase):
 
     def test_merge_latest_wins(self):
         memories = [
-            {"content": "old", "content_hash": "abc", "storage_key": "k1", "type": "fact_declaration", "confidence": 0.9, "updated_at": "2026-01-01"},
-            {"content": "new", "content_hash": "abc", "storage_key": "k2", "type": "fact_declaration", "confidence": 0.8, "updated_at": "2026-04-01"},
+            {
+                "content": "old",
+                "content_hash": "abc",
+                "storage_key": "k1",
+                "type": "fact_declaration",
+                "confidence": 0.9,
+                "updated_at": "2026-01-01",
+            },
+            {
+                "content": "new",
+                "content_hash": "abc",
+                "storage_key": "k2",
+                "type": "fact_declaration",
+                "confidence": 0.8,
+                "updated_at": "2026-04-01",
+            },
         ]
         merged = merge_memories(memories, strategy="latest_wins")
         self.assertEqual(len(merged), 1)
@@ -286,8 +381,22 @@ class TestMerge(unittest.TestCase):
 
     def test_merge_highest_confidence(self):
         memories = [
-            {"content": "low conf", "content_hash": "abc", "storage_key": "k1", "type": "fact_declaration", "confidence": 0.5, "updated_at": "2026-04-01"},
-            {"content": "high conf", "content_hash": "abc", "storage_key": "k2", "type": "fact_declaration", "confidence": 0.95, "updated_at": "2026-01-01"},
+            {
+                "content": "low conf",
+                "content_hash": "abc",
+                "storage_key": "k1",
+                "type": "fact_declaration",
+                "confidence": 0.5,
+                "updated_at": "2026-04-01",
+            },
+            {
+                "content": "high conf",
+                "content_hash": "abc",
+                "storage_key": "k2",
+                "type": "fact_declaration",
+                "confidence": 0.95,
+                "updated_at": "2026-01-01",
+            },
         ]
         merged = merge_memories(memories, strategy="highest_confidence")
         self.assertEqual(len(merged), 1)
@@ -295,8 +404,20 @@ class TestMerge(unittest.TestCase):
 
     def test_merge_all_keeps_duplicates(self):
         memories = [
-            {"content": "v1", "content_hash": "abc", "storage_key": "k1", "type": "fact_declaration", "confidence": 0.9},
-            {"content": "v2", "content_hash": "abc", "storage_key": "k2", "type": "fact_declaration", "confidence": 0.8},
+            {
+                "content": "v1",
+                "content_hash": "abc",
+                "storage_key": "k1",
+                "type": "fact_declaration",
+                "confidence": 0.9,
+            },
+            {
+                "content": "v2",
+                "content_hash": "abc",
+                "storage_key": "k2",
+                "type": "fact_declaration",
+                "confidence": 0.8,
+            },
         ]
         merged = merge_memories(memories, strategy="merge_all")
         self.assertEqual(len(merged), 2)
@@ -304,8 +425,20 @@ class TestMerge(unittest.TestCase):
 
     def test_merge_no_conflicts(self):
         memories = [
-            {"content": "A", "content_hash": "h1", "storage_key": "k1", "type": "user_preference", "confidence": 0.9},
-            {"content": "B", "content_hash": "h2", "storage_key": "k2", "type": "fact_declaration", "confidence": 0.8},
+            {
+                "content": "A",
+                "content_hash": "h1",
+                "storage_key": "k1",
+                "type": "user_preference",
+                "confidence": 0.9,
+            },
+            {
+                "content": "B",
+                "content_hash": "h2",
+                "storage_key": "k2",
+                "type": "fact_declaration",
+                "confidence": 0.8,
+            },
         ]
         merged = merge_memories(memories, strategy="latest_wins")
         self.assertEqual(len(merged), 2)
@@ -313,8 +446,20 @@ class TestMerge(unittest.TestCase):
     def test_conflict_callback(self):
         callback_called = []
         memories = [
-            {"content": "A", "content_hash": "abc", "storage_key": "k1", "type": "user_preference", "confidence": 0.9},
-            {"content": "B", "content_hash": "abc", "storage_key": "k2", "type": "user_preference", "confidence": 0.8},
+            {
+                "content": "A",
+                "content_hash": "abc",
+                "storage_key": "k1",
+                "type": "user_preference",
+                "confidence": 0.9,
+            },
+            {
+                "content": "B",
+                "content_hash": "abc",
+                "storage_key": "k2",
+                "type": "user_preference",
+                "confidence": 0.8,
+            },
         ]
         merge_memories(memories, conflict_callback=lambda g: callback_called.append(len(g)))
         self.assertEqual(len(callback_called), 1)
@@ -442,7 +587,7 @@ class TestCarryMemV050(unittest.TestCase):
             if "Python" in p.get("content", ""):
                 self.cm._adapter._get_connection().execute(
                     "UPDATE memories SET confidence = 0.95 WHERE storage_key = ?",
-                    (p.get("storage_key"),)
+                    (p.get("storage_key"),),
                 )
         self.cm._adapter._get_connection().commit()
         self.cm.classify_and_remember("I work at Google")
@@ -459,7 +604,7 @@ class TestCarryMemV050(unittest.TestCase):
             if "Python" in p.get("content", ""):
                 self.cm._adapter._get_connection().execute(
                     "UPDATE memories SET confidence = 0.95 WHERE storage_key = ?",
-                    (p.get("storage_key"),)
+                    (p.get("storage_key"),),
                 )
         self.cm._adapter._get_connection().commit()
         self.cm.classify_and_remember("I work at Google")
@@ -484,7 +629,12 @@ class TestFastPath(unittest.TestCase):
         from carrymem.context import build_qa_prompt
 
         memories = [
-            {"type": "user_preference", "content": "I prefer Python", "auto_rule": "prefer", "superseded_at": None},
+            {
+                "type": "user_preference",
+                "content": "I prefer Python",
+                "auto_rule": "prefer",
+                "superseded_at": None,
+            },
         ]
         prompt = build_qa_prompt(memories=memories, knowledge=[], question="What language?", include_question=False)
         self.assertIn("Preference: I prefer Python", prompt)
@@ -495,7 +645,12 @@ class TestFastPath(unittest.TestCase):
         from carrymem.context import build_qa_prompt
 
         memories = [
-            {"type": "user_preference", "content": "I dislike Java", "auto_rule": "avoid", "superseded_at": None},
+            {
+                "type": "user_preference",
+                "content": "I dislike Java",
+                "auto_rule": "avoid",
+                "superseded_at": None,
+            },
         ]
         prompt = build_qa_prompt(memories=memories, knowledge=[], question="What language?", include_question=False)
         self.assertIn("Avoid: I dislike Java", prompt)
@@ -504,7 +659,12 @@ class TestFastPath(unittest.TestCase):
         from carrymem.context import build_qa_prompt
 
         memories = [
-            {"type": "user_preference", "content": "I prefer Python", "auto_rule": "prefer", "superseded_at": None},
+            {
+                "type": "user_preference",
+                "content": "I prefer Python",
+                "auto_rule": "prefer",
+                "superseded_at": None,
+            },
             {"type": "personal_fact", "content": "I work at Google", "superseded_at": None},
         ]
         prompt = build_qa_prompt(memories=memories, knowledge=[], question="What language?", include_question=False)
@@ -516,10 +676,20 @@ class TestFastPath(unittest.TestCase):
         from carrymem.context import build_qa_prompt
 
         memories = [
-            {"type": "user_preference", "content": "I prefer Python", "auto_rule": "prefer", "superseded_at": None},
+            {
+                "type": "user_preference",
+                "content": "I prefer Python",
+                "auto_rule": "prefer",
+                "superseded_at": None,
+            },
         ]
         knowledge = [{"title": "Python Guide", "content": "Python is great"}]
-        prompt = build_qa_prompt(memories=memories, knowledge=knowledge, question="What language?", include_question=False)
+        prompt = build_qa_prompt(
+            memories=memories,
+            knowledge=knowledge,
+            question="What language?",
+            include_question=False,
+        )
         self.assertIn("Preference: I prefer Python", prompt)
         self.assertIn("Knowledge Base", prompt)
 
@@ -527,8 +697,18 @@ class TestFastPath(unittest.TestCase):
         from carrymem.context import build_qa_prompt
 
         memories = [
-            {"type": "user_preference", "content": "I prefer Python", "auto_rule": "prefer", "superseded_at": None},
-            {"type": "user_preference", "content": "I prefer Java", "auto_rule": "prefer", "superseded_at": "2026-01-01"},
+            {
+                "type": "user_preference",
+                "content": "I prefer Python",
+                "auto_rule": "prefer",
+                "superseded_at": None,
+            },
+            {
+                "type": "user_preference",
+                "content": "I prefer Java",
+                "auto_rule": "prefer",
+                "superseded_at": "2026-01-01",
+            },
         ]
         prompt = build_qa_prompt(memories=memories, knowledge=[], question="What language?", include_question=False)
         self.assertIn("Preference: I prefer Python", prompt)
@@ -539,7 +719,12 @@ class TestFastPath(unittest.TestCase):
         from carrymem.context import build_qa_prompt
 
         memories = [
-            {"type": "user_preference", "content": "I prefer Python", "auto_rule": "prefer", "superseded_at": None},
+            {
+                "type": "user_preference",
+                "content": "I prefer Python",
+                "auto_rule": "prefer",
+                "superseded_at": None,
+            },
         ]
         prompt = build_qa_prompt(memories=memories, knowledge=[], question="What language?", include_question=True)
         self.assertIn("Question: What language?", prompt)
@@ -549,7 +734,12 @@ class TestFastPath(unittest.TestCase):
         from carrymem.context import build_qa_prompt
 
         memories = [
-            {"type": "user_preference", "content": "I prefer Python", "auto_rule": "prefer", "superseded_at": None},
+            {
+                "type": "user_preference",
+                "content": "I prefer Python",
+                "auto_rule": "prefer",
+                "superseded_at": None,
+            },
             {"type": "personal_fact", "content": "I work at Google", "superseded_at": None},
         ]
         prompt = build_qa_prompt(memories=memories, knowledge=[], question="What language?", include_question=False)

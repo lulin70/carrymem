@@ -43,16 +43,18 @@ class RecallBudget:
     min_confidence: float = 0.0
     min_importance: float = 0.0
     max_tokens: int = 4000
-    type_quotas: Dict[str, int] = field(default_factory=lambda: {
-        "correction": 5,
-        "decision": 5,
-        "user_preference": 10,
-        "fact_declaration": 15,
-        "relationship": 5,
-        "task_pattern": 3,
-        "sentiment_marker": 2,
-        "session_summary": 3,
-    })
+    type_quotas: Dict[str, int] = field(
+        default_factory=lambda: {
+            "correction": 5,
+            "decision": 5,
+            "user_preference": 10,
+            "fact_declaration": 15,
+            "relationship": 5,
+            "task_pattern": 3,
+            "sentiment_marker": 2,
+            "session_summary": 3,
+        }
+    )
 
     def allows(self, memory_type: str, confidence: float, importance: float) -> bool:
         if confidence < self.min_confidence:
@@ -76,6 +78,7 @@ def recency_factor(created_at, now: datetime = None) -> float:
     if isinstance(created_at, str):
         try:
             from datetime import datetime as _dt
+
             created_at = _dt.fromisoformat(created_at)
         except (ValueError, TypeError):
             return 1.0
@@ -127,6 +130,7 @@ def recalculate_confidence(
         if isinstance(created_at, str):
             try:
                 from datetime import datetime as _dt
+
                 created_at = _dt.fromisoformat(created_at)
             except (ValueError, TypeError):
                 created_at = None
@@ -136,12 +140,7 @@ def recalculate_confidence(
             age_days = max(0, (now - created_at).total_seconds() / 86400)
             recency_signal = max(0.0, 1.0 - age_days / 365.0)
 
-    confidence = (
-        base_confidence * 0.5
-        + rank_signal * 0.3
-        + access_signal * 0.1
-        + recency_signal * 0.1
-    )
+    confidence = base_confidence * 0.5 + rank_signal * 0.3 + access_signal * 0.1 + recency_signal * 0.1
     return round(max(0.0, min(1.0, confidence)), 6)
 
 

@@ -197,72 +197,126 @@ class TestFailureExperienceExtractor:
         assert not extractor.is_failure_memory("The team has 5 members")
 
     def test_confidence_high_for_lesson_learned(self, extractor):
-        lessons = extractor.extract([
-            {"id": "m1", "content": "Learned the hard way that competitor data is unreliable. Got caught by client.", "type": "correction"},
-        ])
+        lessons = extractor.extract(
+            [
+                {
+                    "id": "m1",
+                    "content": "Learned the hard way that competitor data is unreliable. Got caught by client.",
+                    "type": "correction",
+                },
+            ]
+        )
         assert len(lessons) == 1
         assert lessons[0].confidence == FailureConfidence.HIGH
 
     def test_confidence_medium_for_mistake(self, extractor):
-        lessons = extractor.extract([
-            {"id": "m1", "content": "I made a mistake", "type": "correction"},
-        ])
+        lessons = extractor.extract(
+            [
+                {"id": "m1", "content": "I made a mistake", "type": "correction"},
+            ]
+        )
         assert len(lessons) == 1
         assert lessons[0].confidence == FailureConfidence.MEDIUM
 
     def test_confidence_upgraded_for_rich_content(self, extractor):
-        lessons = extractor.extract([
-            {"id": "m1", "content": "The deployment failed because we didn't run integration tests first.", "type": "correction"},
-        ])
+        lessons = extractor.extract(
+            [
+                {
+                    "id": "m1",
+                    "content": "The deployment failed because we didn't run integration tests first.",
+                    "type": "correction",
+                },
+            ]
+        )
         assert len(lessons) == 1
         assert lessons[0].confidence in (FailureConfidence.MEDIUM, FailureConfidence.HIGH)
 
     def test_domain_inference_tech(self, extractor):
-        lessons = extractor.extract([
-            {"id": "m1", "content": "Should not have used MongoDB for this tech selection. The framework doesn't fit.", "type": "correction"},
-        ])
+        lessons = extractor.extract(
+            [
+                {
+                    "id": "m1",
+                    "content": "Should not have used MongoDB for this tech selection. The framework doesn't fit.",
+                    "type": "correction",
+                },
+            ]
+        )
         assert len(lessons) == 1
         assert lessons[0].domain == "tech_selection"
 
     def test_domain_inference_competitive(self, extractor):
-        lessons = extractor.extract([
-            {"id": "m1", "content": "Learned the hard way that competitor's website data is unreliable.", "type": "correction"},
-        ])
+        lessons = extractor.extract(
+            [
+                {
+                    "id": "m1",
+                    "content": "Learned the hard way that competitor's website data is unreliable.",
+                    "type": "correction",
+                },
+            ]
+        )
         assert len(lessons) == 1
         assert lessons[0].domain == "competitive_analysis"
 
     def test_domain_inference_vendor(self, extractor):
-        lessons = extractor.extract([
-            {"id": "m1", "content": "I made a mistake by trusting the vendor's timeline estimate.", "type": "correction"},
-        ])
+        lessons = extractor.extract(
+            [
+                {
+                    "id": "m1",
+                    "content": "I made a mistake by trusting the vendor's timeline estimate.",
+                    "type": "correction",
+                },
+            ]
+        )
         assert len(lessons) == 1
         assert lessons[0].domain == "vendor_management"
 
     def test_domain_inference_code(self, extractor):
-        lessons = extractor.extract([
-            {"id": "m1", "content": "Never again will I skip code review. It caused a production bug.", "type": "correction"},
-        ])
+        lessons = extractor.extract(
+            [
+                {
+                    "id": "m1",
+                    "content": "Never again will I skip code review. It caused a production bug.",
+                    "type": "correction",
+                },
+            ]
+        )
         assert len(lessons) == 1
         assert lessons[0].domain == "code_quality"
 
     def test_trigger_hint_from_domain(self, extractor):
-        lessons = extractor.extract([
-            {"id": "m1", "content": "Should not have used MongoDB for this tech selection.", "type": "correction"},
-        ])
+        lessons = extractor.extract(
+            [
+                {
+                    "id": "m1",
+                    "content": "Should not have used MongoDB for this tech selection.",
+                    "type": "correction",
+                },
+            ]
+        )
         assert len(lessons) == 1
         assert "tech" in lessons[0].trigger_hint.lower() or "selection" in lessons[0].trigger_hint.lower()
 
     def test_action_hint_avoidance(self, extractor):
-        lessons = extractor.extract([
-            {"id": "m1", "content": "Don't trust the API documentation without testing.", "type": "correction"},
-        ])
+        lessons = extractor.extract(
+            [
+                {
+                    "id": "m1",
+                    "content": "Don't trust the API documentation without testing.",
+                    "type": "correction",
+                },
+            ]
+        )
         assert len(lessons) == 1
         assert lessons[0].action_hint
 
     def test_lessons_sorted_by_confidence(self, extractor):
         memories = [
             {"id": "m1", "content": "The deployment failed.", "type": "correction"},
-            {"id": "m2", "content": "Learned the hard way that competitor data is unreliable.", "type": "correction"},
+            {
+                "id": "m2",
+                "content": "Learned the hard way that competitor data is unreliable.",
+                "type": "correction",
+            },
         ]
         lessons = extractor.extract(memories)
         if len(lessons) >= 2:
@@ -270,15 +324,23 @@ class TestFailureExperienceExtractor:
             assert high_first
 
     def test_short_content_skipped(self, extractor):
-        lessons = extractor.extract([
-            {"id": "m1", "content": "bad", "type": "correction"},
-        ])
+        lessons = extractor.extract(
+            [
+                {"id": "m1", "content": "bad", "type": "correction"},
+            ]
+        )
         assert len(lessons) == 0
 
     def test_extracted_lesson_to_dict(self, extractor):
-        lessons = extractor.extract([
-            {"id": "m1", "content": "I made a mistake by trusting the vendor.", "type": "correction"},
-        ])
+        lessons = extractor.extract(
+            [
+                {
+                    "id": "m1",
+                    "content": "I made a mistake by trusting the vendor.",
+                    "type": "correction",
+                },
+            ]
+        )
         assert len(lessons) == 1
         d = lessons[0].to_dict()
         assert "source_memory_id" in d
@@ -449,11 +511,13 @@ class TestExperienceRuleBridge:
     def test_queue_size_limit(self, bridge):
         many_memories = []
         for i in range(50):
-            many_memories.append({
-                "id": f"mem_many_{i}",
-                "content": f"I made a mistake number {i} by not testing properly",
-                "type": "correction",
-            })
+            many_memories.append(
+                {
+                    "id": f"mem_many_{i}",
+                    "content": f"I made a mistake number {i} by not testing properly",
+                    "type": "correction",
+                }
+            )
         result = bridge.extract_lessons(many_memories)
         pending_count = bridge._count_pending()
         assert pending_count <= 30

@@ -51,12 +51,14 @@ def cm(temp_db):
 @pytest.fixture
 def engine():
     from carrymem.engine import MemoryClassificationEngine
+
     return MemoryClassificationEngine()
 
 
 class TestSafeError:
     def test_storage_error(self):
         from carrymem.exceptions import StorageNotConfiguredError
+
         e = StorageNotConfiguredError()
         assert _safe_error(e) == "storage_not_configured"
 
@@ -150,10 +152,13 @@ class TestHandleClassifyMessage:
         assert "error" in result
 
     def test_with_context(self, engine):
-        result = handle_classify_message(engine, {
-            "message": "I prefer dark mode",
-            "context": "User is configuring editor",
-        })
+        result = handle_classify_message(
+            engine,
+            {
+                "message": "I prefer dark mode",
+                "context": "User is configuring editor",
+            },
+        )
         assert "entries" in result
 
     def test_exception_handling(self, engine):
@@ -176,12 +181,15 @@ class TestHandleGetClassificationSchema:
 
 class TestHandleBatchClassify:
     def test_basic(self, engine):
-        result = handle_batch_classify(engine, {
-            "messages": [
-                {"message": "I prefer dark mode"},
-                {"message": "I use Python"},
-            ]
-        })
+        result = handle_batch_classify(
+            engine,
+            {
+                "messages": [
+                    {"message": "I prefer dark mode"},
+                    {"message": "I use Python"},
+                ]
+            },
+        )
         assert "results" in result
         assert len(result["results"]) == 2
 
@@ -207,10 +215,13 @@ class TestHandleClassifyAndRemember:
         assert "error" in result
 
     def test_with_context(self, cm):
-        result = handle_classify_and_remember(cm, {
-            "message": "I prefer dark mode",
-            "context": "User settings",
-        })
+        result = handle_classify_and_remember(
+            cm,
+            {
+                "message": "I prefer dark mode",
+                "context": "User settings",
+            },
+        )
         assert isinstance(result, dict)
 
 
@@ -225,10 +236,13 @@ class TestHandleRecallMemories:
         assert "memories" in result
 
     def test_with_filters(self, cm):
-        result = handle_recall_memories(cm, {
-            "query": "dark mode",
-            "filters": {"type": "user_preference"},
-        })
+        result = handle_recall_memories(
+            cm,
+            {
+                "query": "dark mode",
+                "filters": {"type": "user_preference"},
+            },
+        )
         assert "memories" in result
 
     def test_exception(self, cm):
@@ -341,11 +355,14 @@ class TestHandleGetSystemPrompt:
         assert result["language"] == "en"
 
     def test_with_params(self, cm):
-        result = handle_get_system_prompt(cm, {
-            "max_memories": 5,
-            "max_knowledge": 3,
-            "language": "zh",
-        })
+        result = handle_get_system_prompt(
+            cm,
+            {
+                "max_memories": 5,
+                "max_knowledge": 3,
+                "language": "zh",
+            },
+        )
         assert "system_prompt" in result
 
     def test_exception(self, cm):
@@ -357,11 +374,21 @@ class TestHandleGetSystemPrompt:
 class TestHandlerMap:
     def test_all_handlers_present(self):
         expected = [
-            "classify_message", "get_classification_schema", "batch_classify",
-            "mce_status", "classify_and_remember", "recall_memories",
-            "forget_memory", "index_knowledge", "recall_from_knowledge",
-            "recall_all", "declare_preference", "get_memory_profile",
-            "get_system_prompt", "summarize_and_store", "consolidate_memories",
+            "classify_message",
+            "get_classification_schema",
+            "batch_classify",
+            "mce_status",
+            "classify_and_remember",
+            "recall_memories",
+            "forget_memory",
+            "index_knowledge",
+            "recall_from_knowledge",
+            "recall_all",
+            "declare_preference",
+            "get_memory_profile",
+            "get_system_prompt",
+            "summarize_and_store",
+            "consolidate_memories",
         ]
         for name in expected:
             assert name in handler_map
@@ -592,7 +619,8 @@ class TestHandleSummarizeAndStore:
             session_id="sess-2",
         )
         result = handle_summarize_and_store(
-            cm, {"session_id": "sess-2", "max_tokens": 100},
+            cm,
+            {"session_id": "sess-2", "max_tokens": 100},
         )
         assert result["action"] == "summarize"
 
@@ -602,7 +630,8 @@ class TestHandleSummarizeAndStore:
             session_id="sess-3",
         )
         result = handle_summarize_and_store(
-            cm, {"session_id": "sess-3", "namespace": "work"},
+            cm,
+            {"session_id": "sess-3", "namespace": "work"},
         )
         assert result["namespace"] == "work"
 

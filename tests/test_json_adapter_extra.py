@@ -1,4 +1,5 @@
 """Extra tests for json_adapter to push coverage over 80%."""
+
 import json
 import os
 

@@ -26,6 +26,7 @@ DEFAULT_CONFIG_DIR = HOME_DIR / ".carrymem"
 # Configurable Paths (Environment Variable Support)
 # ============================================================================
 
+
 def get_config_dir() -> Path:
     """Get CarryMem configuration directory.
 
@@ -102,6 +103,7 @@ def get_backup_dir() -> Path:
 # MCP Integration Paths
 # ============================================================================
 
+
 def get_mcp_config_path(tool: str) -> Optional[Path]:
     """Get MCP configuration file path for a specific tool.
 
@@ -114,16 +116,16 @@ def get_mcp_config_path(tool: str) -> Optional[Path]:
     tool = tool.lower()
 
     mcp_paths = {
-        'cursor': HOME_DIR / ".cursor" / "mcp.json",
-        'claude': HOME_DIR / ".claude" / "mcp.json",
-        'claude-code': HOME_DIR / ".claude" / "mcp.json",
-        'windsurf': HOME_DIR / ".windsurf" / "mcp.json",
-        'cline': HOME_DIR / ".cline" / "mcp.json",
-        'continue': HOME_DIR / ".continue" / "config.json",
-        'aider': HOME_DIR / ".aider" / "mcp.json",
-        'openclaw': HOME_DIR / ".openclaw" / "mcp.json",
-        'kimi-code': HOME_DIR / ".kimi" / "mcp.json",
-        'codex': HOME_DIR / ".codex" / "mcp.json",
+        "cursor": HOME_DIR / ".cursor" / "mcp.json",
+        "claude": HOME_DIR / ".claude" / "mcp.json",
+        "claude-code": HOME_DIR / ".claude" / "mcp.json",
+        "windsurf": HOME_DIR / ".windsurf" / "mcp.json",
+        "cline": HOME_DIR / ".cline" / "mcp.json",
+        "continue": HOME_DIR / ".continue" / "config.json",
+        "aider": HOME_DIR / ".aider" / "mcp.json",
+        "openclaw": HOME_DIR / ".openclaw" / "mcp.json",
+        "kimi-code": HOME_DIR / ".kimi" / "mcp.json",
+        "codex": HOME_DIR / ".codex" / "mcp.json",
     }
 
     # Check for environment variable override
@@ -135,16 +137,16 @@ def get_mcp_config_path(tool: str) -> Optional[Path]:
     return mcp_paths.get(tool)
 
 
-MCP_CONFIG_CURSOR = get_mcp_config_path('cursor')
+MCP_CONFIG_CURSOR = get_mcp_config_path("cursor")
 """Cursor MCP configuration file path"""
 
-MCP_CONFIG_CLAUDE = get_mcp_config_path('claude')
+MCP_CONFIG_CLAUDE = get_mcp_config_path("claude")
 """Claude Code MCP configuration file path"""
 
-MCP_CONFIG_WINDSURF = get_mcp_config_path('windsurf')
+MCP_CONFIG_WINDSURF = get_mcp_config_path("windsurf")
 """Windsurf MCP configuration file path"""
 
-MCP_CONFIG_CLINE = get_mcp_config_path('cline')
+MCP_CONFIG_CLINE = get_mcp_config_path("cline")
 """Cline MCP configuration file path"""
 
 TRAE_MCP_CONFIG = HOME_DIR / ".trae" / "mcp.json"
@@ -174,13 +176,13 @@ CODEX_MCP_CONFIG = HOME_DIR / ".codex" / "mcp.json"
 # ============================================================================
 
 DANGEROUS_SYSTEM_DIRS = [
-    Path('/etc'),
-    Path('/usr'),
-    Path('/bin'),
-    Path('/sbin'),
-    Path('/System'),
-    Path('/Library'),
-    Path('/private/etc'),
+    Path("/etc"),
+    Path("/usr"),
+    Path("/bin"),
+    Path("/sbin"),
+    Path("/System"),
+    Path("/Library"),
+    Path("/private/etc"),
 ]
 """System directories that should never be written to or read from as data paths"""
 
@@ -188,6 +190,7 @@ DANGEROUS_SYSTEM_DIRS = [
 # ============================================================================
 # Knowledge Base Paths (Obsidian, etc.)
 # ============================================================================
+
 
 def get_obsidian_vault_path() -> Optional[Path]:
     """Get Obsidian vault path.
@@ -221,6 +224,7 @@ OBSIDIAN_DEFAULT_VAULT = get_obsidian_vault_path()
 # Temporary and Runtime Paths
 # ============================================================================
 
+
 def get_temp_dir() -> Path:
     """Get temporary directory for CarryMem.
 
@@ -232,6 +236,7 @@ def get_temp_dir() -> Path:
         return Path(temp_dir).expanduser().resolve()
 
     import tempfile
+
     return Path(tempfile.gettempdir()) / "carrymem"
 
 
@@ -251,6 +256,7 @@ def get_lock_file() -> Path:
 # Path Utilities
 # ============================================================================
 
+
 def ensure_dir_exists(path: Path) -> Path:
     """Ensure directory exists, create if necessary.
 
@@ -268,9 +274,7 @@ def ensure_dir_exists(path: Path) -> Path:
         try:
             path.mkdir(parents=True, exist_ok=True)
         except PermissionError as e:
-            raise PermissionError(
-                f"Cannot create directory {path}: {e}"
-            ) from e
+            raise PermissionError(f"Cannot create directory {path}: {e}") from e
     return path
 
 
@@ -295,17 +299,13 @@ def validate_path_safety(path: Path, allowed_base: Optional[Path] = None) -> boo
         try:
             path.relative_to(allowed_base)
         except ValueError:
-            raise ValueError(
-                f"Path {path} escapes allowed directory {allowed_base}"
-            )
+            raise ValueError(f"Path {path} escapes allowed directory {allowed_base}")
 
     # Check for dangerous system directories
     for dangerous in DANGEROUS_SYSTEM_DIRS:
         try:
             path.relative_to(dangerous)
-            raise ValueError(
-                f"Path {path} points to dangerous system directory {dangerous}"
-            )
+            raise ValueError(f"Path {path} points to dangerous system directory {dangerous}")
         except ValueError:
             # Path is not relative to dangerous dir, which is good
             continue
@@ -316,6 +316,7 @@ def validate_path_safety(path: Path, allowed_base: Optional[Path] = None) -> boo
 # ============================================================================
 # Initialization
 # ============================================================================
+
 
 def initialize_directories() -> None:
     """Initialize all required directories.
@@ -349,52 +350,46 @@ LOCK_FILE = get_lock_file()
 
 __all__ = [
     # Base directories
-    'HOME_DIR',
-    'DEFAULT_CONFIG_DIR',
-
+    "HOME_DIR",
+    "DEFAULT_CONFIG_DIR",
     # Getter functions
-    'get_config_dir',
-    'get_db_path',
-    'get_config_file',
-    'get_log_dir',
-    'get_cache_dir',
-    'get_backup_dir',
-    'get_temp_dir',
-    'get_lock_file',
-    'get_mcp_config_path',
-    'get_obsidian_vault_path',
-
+    "get_config_dir",
+    "get_db_path",
+    "get_config_file",
+    "get_log_dir",
+    "get_cache_dir",
+    "get_backup_dir",
+    "get_temp_dir",
+    "get_lock_file",
+    "get_mcp_config_path",
+    "get_obsidian_vault_path",
     # Commonly used paths
-    'CONFIG_DIR',
-    'DB_PATH',
-    'CONFIG_FILE',
-    'LOG_DIR',
-    'CACHE_DIR',
-    'BACKUP_DIR',
-    'TEMP_DIR',
-    'LOCK_FILE',
-
+    "CONFIG_DIR",
+    "DB_PATH",
+    "CONFIG_FILE",
+    "LOG_DIR",
+    "CACHE_DIR",
+    "BACKUP_DIR",
+    "TEMP_DIR",
+    "LOCK_FILE",
     # MCP paths
-    'MCP_CONFIG_CURSOR',
-    'MCP_CONFIG_CLAUDE',
-    'MCP_CONFIG_WINDSURF',
-    'MCP_CONFIG_CLINE',
-    'TRAE_MCP_CONFIG',
-    'TRAE_CN_DIR',
-    'TRAE_CN_MCP_CONFIG',
-    'CLAUDE_GLOBAL_CONFIG',
-    'OPENCLAW_MCP_CONFIG',
-    'KIMI_CODE_MCP_CONFIG',
-    'CODEX_MCP_CONFIG',
-
+    "MCP_CONFIG_CURSOR",
+    "MCP_CONFIG_CLAUDE",
+    "MCP_CONFIG_WINDSURF",
+    "MCP_CONFIG_CLINE",
+    "TRAE_MCP_CONFIG",
+    "TRAE_CN_DIR",
+    "TRAE_CN_MCP_CONFIG",
+    "CLAUDE_GLOBAL_CONFIG",
+    "OPENCLAW_MCP_CONFIG",
+    "KIMI_CODE_MCP_CONFIG",
+    "CODEX_MCP_CONFIG",
     # Security
-    'DANGEROUS_SYSTEM_DIRS',
-
+    "DANGEROUS_SYSTEM_DIRS",
     # Knowledge base paths
-    'OBSIDIAN_DEFAULT_VAULT',
-
+    "OBSIDIAN_DEFAULT_VAULT",
     # Utilities
-    'ensure_dir_exists',
-    'validate_path_safety',
-    'initialize_directories',
+    "ensure_dir_exists",
+    "validate_path_safety",
+    "initialize_directories",
 ]

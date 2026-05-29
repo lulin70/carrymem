@@ -154,10 +154,17 @@ class TestCmdMatchRulesDeep:
         assert "DDD" in captured.out or "Context" in captured.out
 
     def test_match_with_context_budget(self, db_with_rules, capsys):
-        result = cmd_match_rules([
-            "database", "--format", "anchored",
-            "--context-budget", "1000", "--db", db_with_rules,
-        ])
+        result = cmd_match_rules(
+            [
+                "database",
+                "--format",
+                "anchored",
+                "--context-budget",
+                "1000",
+                "--db",
+                db_with_rules,
+            ]
+        )
         assert result == 0
 
 

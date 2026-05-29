@@ -7,6 +7,7 @@ Implements memory lifecycle management:
 Inspired by AgentMemory's hourly consolidation, but adapted for
 CarryMem's identity-layer focus (preferences, decisions, corrections).
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -40,15 +41,15 @@ TYPE_DECAY_MULTIPLIERS = {
 
 
 def _content_hash(content: str) -> str:
-    normalized = re.sub(r'\s+', ' ', content.lower().strip())
+    normalized = re.sub(r"\s+", " ", content.lower().strip())
     return hashlib.sha256(normalized.encode()).hexdigest()[:16]
 
 
 def _similarity(a: str, b: str) -> float:
     if not a or not b:
         return 0.0
-    a_words = set(re.findall(r'\b\w+\b', a.lower()))
-    b_words = set(re.findall(r'\b\w+\b', b.lower()))
+    a_words = set(re.findall(r"\b\w+\b", a.lower()))
+    b_words = set(re.findall(r"\b\w+\b", b.lower()))
     if not a_words or not b_words:
         return 0.0
     intersection = a_words & b_words
@@ -84,6 +85,7 @@ def compute_decay_factor(
     effective_half_life = DECAY_HALF_LIFE_DAYS * multiplier
 
     import math
+
     decay = math.pow(0.5, age_days / effective_half_life)
 
     access_boost = min(0.2, access_count * 0.02)
@@ -195,28 +197,29 @@ def consolidate(
         if older.get("type") == "user_preference":
             result["stats"]["preferences_preserved"] += 1
             continue
-        result["to_supersede"].append({
-            "older_key": older.get("storage_key"),
-            "newer_key": newer.get("storage_key"),
-            "similarity": round(sim, 3),
-            "type": older.get("type"),
-            "reason": "duplicate_content",
-        })
+        result["to_supersede"].append(
+            {
+                "older_key": older.get("storage_key"),
+                "newer_key": newer.get("storage_key"),
+                "similarity": round(sim, 3),
+                "type": older.get("type"),
+                "reason": "duplicate_content",
+            }
+        )
 
     superseded_pairs = find_superseded_pairs(active)
     result["stats"]["superseded_pairs"] = len(superseded_pairs)
     for older, newer in superseded_pairs:
-        already_listed = any(
-            s["older_key"] == older.get("storage_key")
-            for s in result["to_supersede"]
-        )
+        already_listed = any(s["older_key"] == older.get("storage_key") for s in result["to_supersede"])
         if not already_listed:
-            result["to_supersede"].append({
-                "older_key": older.get("storage_key"),
-                "newer_key": newer.get("storage_key"),
-                "type": older.get("type"),
-                "reason": "updated_content",
-            })
+            result["to_supersede"].append(
+                {
+                    "older_key": older.get("storage_key"),
+                    "newer_key": newer.get("storage_key"),
+                    "type": older.get("type"),
+                    "reason": "updated_content",
+                }
+            )
 
     for m in active:
         mtype = m.get("type", "unknown")
@@ -230,20 +233,24 @@ def consolidate(
         decay = compute_decay_factor(created_at, mtype, confidence, access_count, now)
 
         if decay < 0.1:
-            result["to_forget"].append({
-                "storage_key": m.get("storage_key"),
-                "type": mtype,
-                "decay": decay,
-                "reason": "decay_below_threshold",
-            })
+            result["to_forget"].append(
+                {
+                    "storage_key": m.get("storage_key"),
+                    "type": mtype,
+                    "decay": decay,
+                    "reason": "decay_below_threshold",
+                }
+            )
             result["stats"]["decayed_below_threshold"] += 1
         elif decay < 0.5:
-            result["to_decay"].append({
-                "storage_key": m.get("storage_key"),
-                "type": mtype,
-                "decay": decay,
-                "current_confidence": confidence,
-            })
+            result["to_decay"].append(
+                {
+                    "storage_key": m.get("storage_key"),
+                    "type": mtype,
+                    "decay": decay,
+                    "current_confidence": confidence,
+                }
+            )
 
     return result
 
@@ -284,6 +291,7 @@ def consolidate_p1(
 
     try:
         from carrymem.rules.promotion_pipeline import PromotionPipeline
+
         pipeline = PromotionPipeline(storage=rule_storage)
         p1_result = pipeline.run_pipeline(
             memories=memories,
@@ -391,10 +399,7 @@ def consolidate_p2(
                 result["stats"]["preferences_preserved"] += 1
                 continue
 
-            already_requested = any(
-                older_key in req.get("source_keys", [])
-                for req in result["consolidation_requests"]
-            )
+            already_requested = any(older_key in req.get("source_keys", []) for req in result["consolidation_requests"])
             if already_requested:
                 continue
 

@@ -13,12 +13,29 @@ from unittest.mock import patch
 import pytest
 
 from carrymem.cli import (
-    cmd_add, cmd_list, cmd_search, cmd_show, cmd_edit, cmd_forget, cmd_clean,
-    cmd_export, cmd_import, cmd_stats, cmd_doctor, cmd_setup_mcp, cmd_init,
-    cmd_version, _format_time, _truncate, main,
-    _resolve_mcp_command, _build_mcp_server_config, _merge_json_file,
+    cmd_add,
+    cmd_list,
+    cmd_search,
+    cmd_show,
+    cmd_edit,
+    cmd_forget,
+    cmd_clean,
+    cmd_export,
+    cmd_import,
+    cmd_stats,
+    cmd_doctor,
+    cmd_setup_mcp,
+    cmd_init,
+    cmd_version,
+    _format_time,
+    _truncate,
+    main,
+    _resolve_mcp_command,
+    _build_mcp_server_config,
+    _merge_json_file,
     _merge_claude_global_config,
 )
+
 try:
     from carrymem import CarryMem
 except ImportError:
@@ -343,11 +360,7 @@ class TestCmdSetupMcp:
         project = str(tmp_path)
         cursor_dir = tmp_path / ".cursor"
         cursor_dir.mkdir()
-        existing_config = {
-            "mcpServers": {
-                "other-tool": {"command": "other"}
-            }
-        }
+        existing_config = {"mcpServers": {"other-tool": {"command": "other"}}}
         with open(cursor_dir / "mcp.json", "w") as f:
             json.dump(existing_config, f)
 
@@ -709,6 +722,7 @@ class TestHelperFunctions:
 
     def test_format_time_recent(self):
         from datetime import datetime, timezone, timedelta
+
         now = datetime.now(timezone.utc)
         iso = now.isoformat()
         result = _format_time(iso)

@@ -56,8 +56,14 @@ class MemoryEntry:
     domain: Optional[str] = None  # Auto-inferred professional domain
 
     # Types that represent evolving state (superseded by newer values)
-    STATE_TYPES = {"user_preference", "correction", "decision",
-        "fact_declaration", "relationship", "sentiment_marker"}
+    STATE_TYPES = {
+        "user_preference",
+        "correction",
+        "decision",
+        "fact_declaration",
+        "relationship",
+        "sentiment_marker",
+    }
     # Types that represent immutable events (complete retention, no versioning)
     EVENT_TYPES = {"session_summary", "task_pattern"}
 
@@ -156,25 +162,27 @@ class StoredMemory(MemoryEntry):
     def to_dict(self) -> Dict[str, Any]:
         """Serialize to plain dict (JSON-safe), including storage fields."""
         base = super().to_dict()
-        base.update({
-            "storage_key": self.storage_key,
-            "namespace": self.namespace,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
-            "access_count": self.access_count,
-            "importance_score": self.importance_score,
-            "last_accessed_at": self.last_accessed_at.isoformat() if self.last_accessed_at else None,
-            "version": self.version,
-            "vector_embedding": self.vector_embedding,
-            "storage_metadata": self.storage_metadata,
-            "superseded_at": self.superseded_at.isoformat() if self.superseded_at else None,
-            "supersedes": self.supersedes,
-            "memory_nature": self.memory_nature,
-            "version_chain_id": self.version_chain_id,
-            "version_number": self.version_number,
-            "domain": self.domain,
-        })
+        base.update(
+            {
+                "storage_key": self.storage_key,
+                "namespace": self.namespace,
+                "created_at": self.created_at.isoformat() if self.created_at else None,
+                "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+                "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+                "access_count": self.access_count,
+                "importance_score": self.importance_score,
+                "last_accessed_at": (self.last_accessed_at.isoformat() if self.last_accessed_at else None),
+                "version": self.version,
+                "vector_embedding": self.vector_embedding,
+                "storage_metadata": self.storage_metadata,
+                "superseded_at": self.superseded_at.isoformat() if self.superseded_at else None,
+                "supersedes": self.supersedes,
+                "memory_nature": self.memory_nature,
+                "version_chain_id": self.version_chain_id,
+                "version_number": self.version_number,
+                "domain": self.domain,
+            }
+        )
         return base
 
     @classmethod
@@ -472,36 +480,28 @@ class AsyncStorageAdapter(Protocol):
     Same interface as StorageAdapter, but all methods are async.
     """
 
-    async def remember(self, entry: MemoryEntry) -> StoredMemory:
-        ...
+    async def remember(self, entry: MemoryEntry) -> StoredMemory: ...
 
-    async def remember_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:
-        ...
+    async def remember_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]: ...
 
     async def recall(
         self,
         query: str,
         filters: Optional[Dict[str, Any]] = None,
         limit: int = 20,
-    ) -> List[StoredMemory]:
-        ...
+    ) -> List[StoredMemory]: ...
 
-    async def forget(self, storage_key: str) -> bool:
-        ...
+    async def forget(self, storage_key: str) -> bool: ...
 
-    async def forget_expired(self) -> int:
-        ...
+    async def forget_expired(self) -> int: ...
 
-    async def get_stats(self) -> Dict[str, Any]:
-        ...
+    async def get_stats(self) -> Dict[str, Any]: ...
 
     @property
-    def name(self) -> str:
-        ...
+    def name(self) -> str: ...
 
     @property
-    def capabilities(self) -> Dict[str, bool]:
-        ...
+    def capabilities(self) -> Dict[str, bool]: ...
 
 
 class TestStorageAdapterContract:
@@ -573,10 +573,7 @@ class TestStorageAdapterContract:
 
     def test_remember_batch(self):
         """remember_batch() must store all entries."""
-        entries = [
-            MemoryEntry(id=f"batch-{i}", type="fact_declaration", content=f"fact {i}")
-            for i in range(5)
-        ]
+        entries = [MemoryEntry(id=f"batch-{i}", type="fact_declaration", content=f"fact {i}") for i in range(5)]
 
         stored = self.adapter.remember_batch(entries)
         assert len(stored) == 5

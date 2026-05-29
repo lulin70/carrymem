@@ -42,7 +42,8 @@ class TestRuleCreationPerformance:
         start = time.perf_counter()
         for i in range(100):
             self.engine.add_rule(
-                f"trigger-{i}", f"action-{i}",
+                f"trigger-{i}",
+                f"action-{i}",
                 rule_type=types[i % 5],
                 scope="personal" if i % 3 == 0 else "company",
             )
@@ -56,7 +57,8 @@ class TestRuleCreationPerformance:
         start = time.perf_counter()
         for i in range(50):
             self.engine.add_rule(
-                f"trigger-{i}", f"action-{i}",
+                f"trigger-{i}",
+                f"action-{i}",
                 rule_type=types[i % 5],
                 scope=scopes[i % 3],
             )
@@ -74,7 +76,8 @@ class TestMatchingPerformance:
         for i in range(100):
             scope = ["personal", "company", "negotiated"][i % 3]
             self.engine.add_rule(
-                f"topic-{i // 10}", f"action-{i}",
+                f"topic-{i // 10}",
+                f"action-{i}",
                 scope=scope,
             )
 
@@ -109,7 +112,8 @@ class TestSkillPerformance:
         self.rules = []
         for i in range(100):
             r = self.storage.create(
-                trigger=f"trigger-{i}", action=f"action-{i}",
+                trigger=f"trigger-{i}",
+                action=f"action-{i}",
                 scope=["personal", "company", "negotiated"][i % 3],
             )
             self.rules.append(r)

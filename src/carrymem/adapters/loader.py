@@ -1,4 +1,5 @@
 """Adapter loader — dynamically load third-party storage adapters via entry_points."""
+
 import importlib
 from typing import Optional, Type
 
@@ -19,11 +20,12 @@ def load_adapter(name: str) -> Optional[Type[StorageAdapter]]:
 
     try:
         from importlib.metadata import entry_points
+
         eps = entry_points()
-        if hasattr(eps, 'select'):
-            adapter_eps = eps.select(group='carrymem.adapters', name=name)
+        if hasattr(eps, "select"):
+            adapter_eps = eps.select(group="carrymem.adapters", name=name)
         else:
-            adapter_eps = eps.get('carrymem.adapters', [])
+            adapter_eps = eps.get("carrymem.adapters", [])
             adapter_eps = [ep for ep in adapter_eps if ep.name == name]
 
         for ep in adapter_eps:
@@ -47,11 +49,12 @@ def list_available_adapters() -> dict:
 
     try:
         from importlib.metadata import entry_points
+
         eps = entry_points()
-        if hasattr(eps, 'select'):
-            adapter_eps = eps.select(group='carrymem.adapters')
+        if hasattr(eps, "select"):
+            adapter_eps = eps.select(group="carrymem.adapters")
         else:
-            adapter_eps = eps.get('carrymem.adapters', [])
+            adapter_eps = eps.get("carrymem.adapters", [])
 
         for ep in adapter_eps:
             result[ep.name] = f"{ep.value} (plugin)"

@@ -215,6 +215,7 @@ class TestIntegration:
     def test_coreference_in_classify_and_remember(self, tmp_path):
         """Test that coreference resolution is applied in classify_and_remember."""
         from carrymem import CarryMem
+
         cm = CarryMem(db_path=str(tmp_path / "test.db"))
 
         # First, store context about mom
@@ -232,6 +233,7 @@ class TestIntegration:
     def test_raw_text_preserved(self, tmp_path):
         """Test that raw_text preserves the original message with pronoun."""
         from carrymem import CarryMem
+
         cm = CarryMem(db_path=str(tmp_path / "test.db"))
 
         cm.classify_and_remember("My mom is from Sichuan", force_type="personal_fact")
@@ -247,6 +249,7 @@ class TestIntegration:
     def test_no_pronoun_no_resolution(self, tmp_path):
         """Test that messages without pronouns are not affected."""
         from carrymem import CarryMem
+
         cm = CarryMem(db_path=str(tmp_path / "test.db"))
 
         result = cm.classify_and_remember("I prefer Python for data analysis", force_type="user_preference")

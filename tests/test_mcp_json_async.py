@@ -33,6 +33,7 @@ class TestJSONAdapter(unittest.TestCase):
 
     def test_remember_and_recall(self):
         from carrymem.adapters.base import MemoryEntry
+
         entry = MemoryEntry(
             id="test1",
             type="user_preference",
@@ -51,6 +52,7 @@ class TestJSONAdapter(unittest.TestCase):
 
     def test_deduplication(self):
         from carrymem.adapters.base import MemoryEntry
+
         entry = MemoryEntry(
             type="user_preference",
             content="I prefer dark mode",
@@ -65,6 +67,7 @@ class TestJSONAdapter(unittest.TestCase):
 
     def test_forget(self):
         from carrymem.adapters.base import MemoryEntry
+
         entry = MemoryEntry(
             type="user_preference",
             content="I prefer dark mode",
@@ -80,6 +83,7 @@ class TestJSONAdapter(unittest.TestCase):
 
     def test_get_stats(self):
         from carrymem.adapters.base import MemoryEntry
+
         entry = MemoryEntry(
             type="user_preference",
             content="I prefer dark mode",
@@ -94,6 +98,7 @@ class TestJSONAdapter(unittest.TestCase):
 
     def test_importance_score(self):
         from carrymem.adapters.base import MemoryEntry
+
         entry = MemoryEntry(
             type="correction",
             content="Use PostgreSQL not MySQL",
@@ -106,6 +111,7 @@ class TestJSONAdapter(unittest.TestCase):
 
     def test_file_persistence(self):
         from carrymem.adapters.base import MemoryEntry
+
         entry = MemoryEntry(
             type="fact_declaration",
             content="The sky is blue",
@@ -122,6 +128,7 @@ class TestJSONAdapter(unittest.TestCase):
 
     def test_namespace_isolation(self):
         from carrymem.adapters.base import MemoryEntry
+
         entry = MemoryEntry(
             type="user_preference",
             content="I prefer dark mode",
@@ -259,7 +266,9 @@ class TestIntegrationConfigs(unittest.TestCase):
     def test_claude_code_config_exists(self):
         config_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-            "integrations", "claude_code", "mcp.json"
+            "integrations",
+            "claude_code",
+            "mcp.json",
         )
         if os.path.exists(config_path):
             with open(config_path) as f:
@@ -270,7 +279,9 @@ class TestIntegrationConfigs(unittest.TestCase):
     def test_cursor_config_exists(self):
         config_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-            "integrations", "cursor", "mcp.json"
+            "integrations",
+            "cursor",
+            "mcp.json",
         )
         if os.path.exists(config_path):
             with open(config_path) as f:

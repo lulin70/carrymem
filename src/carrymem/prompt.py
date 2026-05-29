@@ -132,10 +132,12 @@ def build_prompt(
         active = [m for m in memories if not m.get("superseded_at")]
         outdated = [m for m in memories if m.get("superseded_at")]
 
-        mandatory = [m for m in active if m.get("type") in (
-            "correction", "decision", "user_preference")]
-        important = [m for m in active if m.get("type") not in (
-            "correction", "decision", "user_preference") and m.get("confidence", 0) >= 0.8]
+        mandatory = [m for m in active if m.get("type") in ("correction", "decision", "user_preference")]
+        important = [
+            m
+            for m in active
+            if m.get("type") not in ("correction", "decision", "user_preference") and m.get("confidence", 0) >= 0.8
+        ]
         optional = [m for m in active if m not in mandatory and m not in important]
 
         if mandatory:

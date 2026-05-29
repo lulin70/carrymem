@@ -61,9 +61,9 @@ CREATE TRIGGER IF NOT EXISTS notes_ad AFTER DELETE ON notes BEGIN
 END;
 """
 
-_FRONTMATTER_RE = re.compile(r'^---\s*\n(.*?)\n---\s*\n', re.DOTALL)
-_WIKI_LINK_RE = re.compile(r'\[\[([^\]|]+)(?:\|[^\]]+)?\]\]')
-_TAG_RE = re.compile(r'(?:^|\s)#([a-zA-Z0-9_\-/]+)')
+_FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
+_WIKI_LINK_RE = re.compile(r"\[\[([^\]|]+)(?:\|[^\]]+)?\]\]")
+_TAG_RE = re.compile(r"(?:^|\s)#([a-zA-Z0-9_\-/]+)")
 
 
 def _parse_frontmatter(content: str) -> Dict[str, Any]:
@@ -74,23 +74,23 @@ def _parse_frontmatter(content: str) -> Dict[str, Any]:
     raw = match.group(1).strip()
     result: Dict[str, Any] = {}
 
-    for line in raw.split('\n'):
+    for line in raw.split("\n"):
         line = line.strip()
-        if ':' not in line:
+        if ":" not in line:
             continue
-        key, _, value = line.partition(':')
+        key, _, value = line.partition(":")
         key = key.strip()
         value = value.strip()
 
-        if value.startswith('[') and value.endswith(']'):
-            items = [v.strip().strip('"\'') for v in value[1:-1].split(',')]
+        if value.startswith("[") and value.endswith("]"):
+            items = [v.strip().strip("\"'") for v in value[1:-1].split(",")]
             result[key] = [i for i in items if i]
-        elif value.lower() in ('true', 'false'):
-            result[key] = value.lower() == 'true'
+        elif value.lower() in ("true", "false"):
+            result[key] = value.lower() == "true"
         elif value.isdigit():
             result[key] = int(value)
         else:
-            result[key] = value.strip('"\'')
+            result[key] = value.strip("\"'")
 
     return result
 
@@ -98,7 +98,7 @@ def _parse_frontmatter(content: str) -> Dict[str, Any]:
 def _extract_tags(content: str, frontmatter: Dict[str, Any]) -> List[str]:
     tags = set()
 
-    fm_tags = frontmatter.get('tags', [])
+    fm_tags = frontmatter.get("tags", [])
     if isinstance(fm_tags, list):
         tags.update(fm_tags)
     elif isinstance(fm_tags, str):
@@ -126,8 +126,7 @@ class ObsidianAdapter(StorageAdapter):
         results = adapter.recall("Python")
     """
 
-    def __init__(self, vault_path: str,
-                 db_path: Optional[str] = None, content_truncate: int = 2000):
+    def __init__(self, vault_path: str, db_path: Optional[str] = None, content_truncate: int = 2000):
         self._vault_path = Path(vault_path).expanduser().resolve()
 
         if not self._vault_path.exists():
@@ -135,6 +134,7 @@ class ObsidianAdapter(StorageAdapter):
 
         if db_path is None:
             from ..constants import DEFAULT_CONFIG_DIR
+
             carrymem_dir = DEFAULT_CONFIG_DIR
             carrymem_dir.mkdir(exist_ok=True)
             vault_hash = hashlib.md5(str(self._vault_path).encode()).hexdigest()[:8]
@@ -155,7 +155,7 @@ class ObsidianAdapter(StorageAdapter):
         if self._closed:
             raise RuntimeError("ObsidianAdapter has been closed")
 
-        if not hasattr(self._local, 'conn') or self._local.conn is None:
+        if not hasattr(self._local, "conn") or self._local.conn is None:
             conn = sqlite3.connect(self._db_path)
             conn.row_factory = sqlite3.Row
             conn.execute("PRAGMA journal_mode=WAL")
@@ -172,15 +172,11 @@ class ObsidianAdapter(StorageAdapter):
 
     def _migrate_trigram(self):
         conn = self._get_connection()
-        cursor = conn.execute(
-            "SELECT sql FROM sqlite_master WHERE type='table' AND name='notes_fts'"
-        )
+        cursor = conn.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='notes_fts'")
         row = cursor.fetchone()
         if row and "unicode61" in (row["sql"] or ""):
             conn.execute("INSERT INTO notes_fts(notes_fts) VALUES('rebuild')")
-            conn.execute(
-                "DROP TABLE IF EXISTS notes_fts"
-            )
+            conn.execute("DROP TABLE IF EXISTS notes_fts")
             conn.execute(
                 """CREATE VIRTUAL TABLE notes_fts USING fts5(
                     title, content,
@@ -250,7 +246,7 @@ class ObsidianAdapter(StorageAdapter):
             body = content
             fm_match = _FRONTMATTER_RE.match(content)
             if fm_match:
-                body = content[fm_match.end():]
+                body = content[fm_match.end() :]
 
             note_id = f"obs_{c_hash[:8]}_{title[:30].replace(' ', '_')}"
 
@@ -260,10 +256,14 @@ class ObsidianAdapter(StorageAdapter):
                        frontmatter=?, file_modified=?, content_hash=?, indexed_at=?
                        WHERE file_path=?""",
                     (
-                        title, body, json.dumps(tags), json.dumps(wiki_links),
+                        title,
+                        body,
+                        json.dumps(tags),
+                        json.dumps(wiki_links),
                         json.dumps(frontmatter),
                         datetime.fromtimestamp(md_file.stat().st_mtime).isoformat(),
-                        c_hash, datetime.now(timezone.utc).isoformat(),
+                        c_hash,
+                        datetime.now(timezone.utc).isoformat(),
                         str(md_file.relative_to(self._vault_path)),
                     ),
                 )
@@ -274,12 +274,16 @@ class ObsidianAdapter(StorageAdapter):
                        wiki_links, frontmatter, file_modified, content_hash, indexed_at)
                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (
-                        note_id, title,
+                        note_id,
+                        title,
                         str(md_file.relative_to(self._vault_path)),
-                        body, json.dumps(tags), json.dumps(wiki_links),
+                        body,
+                        json.dumps(tags),
+                        json.dumps(wiki_links),
                         json.dumps(frontmatter),
                         datetime.fromtimestamp(md_file.stat().st_mtime).isoformat(),
-                        c_hash, datetime.now(timezone.utc).isoformat(),
+                        c_hash,
+                        datetime.now(timezone.utc).isoformat(),
                     ),
                 )
                 new_count += 1
@@ -294,14 +298,10 @@ class ObsidianAdapter(StorageAdapter):
         }
 
     def remember(self, entry) -> Any:
-        raise NotImplementedError(
-            "ObsidianAdapter is read-only. Use SQLiteAdapter for storing memories."
-        )
+        raise NotImplementedError("ObsidianAdapter is read-only. Use SQLiteAdapter for storing memories.")
 
     def remember_batch(self, entries: list) -> list:
-        raise NotImplementedError(
-            "ObsidianAdapter is read-only. Use SQLiteAdapter for storing memories."
-        )
+        raise NotImplementedError("ObsidianAdapter is read-only. Use SQLiteAdapter for storing memories.")
 
     def recall(
         self,
@@ -407,7 +407,7 @@ class ObsidianAdapter(StorageAdapter):
 
     def _fallback_search(self, query: str, filters: Dict[str, Any], limit: int) -> list:
         conditions = ["(title LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')"]
-        params = [f'%{escape_like(query)}%', f'%{escape_like(query)}%']
+        params = [f"%{escape_like(query)}%", f"%{escape_like(query)}%"]
 
         if filters.get("tags"):
             tag_list = filters["tags"] if isinstance(filters["tags"], list) else [filters["tags"]]
@@ -446,17 +446,13 @@ class ObsidianAdapter(StorageAdapter):
         return [self._row_to_dict(row) for row in rows]
 
     def forget(self, storage_key: str) -> bool:
-        raise NotImplementedError(
-            "ObsidianAdapter is read-only. Delete notes from your vault directly."
-        )
+        raise NotImplementedError("ObsidianAdapter is read-only. Delete notes from your vault directly.")
 
     def get_stats(self) -> Dict[str, Any]:
         with self._lock:
             conn = self._get_connection()
             total = conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
-            tag_rows = conn.execute(
-                "SELECT tags FROM notes WHERE tags IS NOT NULL AND tags != '[]'"
-            ).fetchall()
+            tag_rows = conn.execute("SELECT tags FROM notes WHERE tags IS NOT NULL AND tags != '[]'").fetchall()
 
             all_tags: Dict[str, int] = {}
             for row in tag_rows:
@@ -476,9 +472,9 @@ class ObsidianAdapter(StorageAdapter):
             }
 
     def get_tags(self) -> Dict[str, int]:
-        tag_rows = self._get_connection().execute(
-            "SELECT tags FROM notes WHERE tags IS NOT NULL AND tags != '[]'"
-        ).fetchall()
+        tag_rows = (
+            self._get_connection().execute("SELECT tags FROM notes WHERE tags IS NOT NULL AND tags != '[]'").fetchall()
+        )
 
         all_tags: Dict[str, int] = {}
         for row in tag_rows:
@@ -492,10 +488,14 @@ class ObsidianAdapter(StorageAdapter):
         return dict(sorted(all_tags.items(), key=lambda x: -x[1]))
 
     def get_linked_notes(self, note_title: str) -> List[Dict[str, Any]]:
-        rows = self._get_connection().execute(
-            "SELECT * FROM notes WHERE wiki_links LIKE ? ESCAPE '\\'",
-            (f'%"{escape_like(note_title)}"%',),
-        ).fetchall()
+        rows = (
+            self._get_connection()
+            .execute(
+                "SELECT * FROM notes WHERE wiki_links LIKE ? ESCAPE '\\'",
+                (f'%"{escape_like(note_title)}"%',),
+            )
+            .fetchall()
+        )
         return [self._row_to_dict(row) for row in rows]
 
     def _row_to_dict(self, row: sqlite3.Row) -> Dict[str, Any]:
@@ -524,7 +524,7 @@ class ObsidianAdapter(StorageAdapter):
             "id": row["id"],
             "type": "knowledge_note",
             "title": row["title"],
-            "content": row["content"][:self._content_truncate],
+            "content": row["content"][: self._content_truncate],
             "file_path": row["file_path"],
             "tags": tags,
             "wiki_links": wiki_links,
@@ -548,7 +548,7 @@ class ObsidianAdapter(StorageAdapter):
                 except Exception:
                     pass
             self._all_connections.clear()
-        if hasattr(self._local, 'conn'):
+        if hasattr(self._local, "conn"):
             self._local.conn = None
 
     def __del__(self):

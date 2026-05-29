@@ -106,13 +106,17 @@ class TestSkillDistributionWorkflow:
 
         mid_rules = [Rule(trigger="api", action="Require auth")]
         mid_bundle = skill_pack(
-            rules=mid_rules, name="mid-sec", scope="company",
+            rules=mid_rules,
+            name="mid-sec",
+            scope="company",
             dependencies=["base-sec"],
         )
 
         top_rules = [Rule(trigger="logging", action="Audit all access")]
         top_bundle = skill_pack(
-            rules=top_rules, name="top-sec", scope="company",
+            rules=top_rules,
+            name="top-sec",
+            scope="company",
             dependencies=["mid-sec"],
         )
 
@@ -162,7 +166,15 @@ class TestMergeAuditTrail:
 
     def test_negotiate_generates_modify_audit(self):
         self.engine.add_rule("api", "Forbid REST", scope="personal", rule_type="forbid", override=True)
-        incoming = [Rule(trigger="api", action="Always use REST", scope="negotiated", rule_type="always", override=True)]
+        incoming = [
+            Rule(
+                trigger="api",
+                action="Always use REST",
+                scope="negotiated",
+                rule_type="always",
+                override=True,
+            )
+        ]
 
         result = self.engine.accept_rules(incoming, strategy="negotiate")
         modify_entries = [e for e in result["audit_entries"] if e["action"] == "modify"]

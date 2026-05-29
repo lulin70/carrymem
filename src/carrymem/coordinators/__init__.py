@@ -3,5 +3,5 @@
 from carrymem.coordinators.classification_pipeline import ClassificationPipeline
 
 __all__ = [
-    'ClassificationPipeline',
+    "ClassificationPipeline",
 ]

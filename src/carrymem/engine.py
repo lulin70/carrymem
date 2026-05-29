@@ -29,15 +29,10 @@ class MemoryClassificationEngine:
 
     def __init__(self, config_path: str = None, noise_filter_mode: str = "strict"):
         self.config = ConfigManager(config_path)
-        self.classification_pipeline = ClassificationPipeline(
-            self.config, noise_filter_mode=noise_filter_mode)
-        self.max_work_memory_size = self.config.get(
-            'storage.max_work_memory_size', 100
-        )
+        self.classification_pipeline = ClassificationPipeline(self.config, noise_filter_mode=noise_filter_mode)
+        self.max_work_memory_size = self.config.get("storage.max_work_memory_size", 100)
         self.working_memory = deque(maxlen=self.max_work_memory_size)
-        self.max_message_history_size = self.config.get(
-            'storage.max_message_history_size', 1000
-        )
+        self.max_message_history_size = self.config.get("storage.max_message_history_size", 1000)
         self.message_history = deque(maxlen=self.max_message_history_size)
 
     def process_message(
@@ -63,12 +58,12 @@ class MemoryClassificationEngine:
         if not message or not message.strip():
             duration = time.time() - start_time
             return {
-                'message': message,
-                'matches': [],
-                'working_memory_size': len(self.working_memory),
-                'processing_time': duration,
-                'language': language or 'unknown',
-                'language_confidence': 1.0 if language else 0.0,
+                "message": message,
+                "matches": [],
+                "working_memory_size": len(self.working_memory),
+                "processing_time": duration,
+                "language": language or "unknown",
+                "language_confidence": 1.0 if language else 0.0,
             }
 
         self._add_to_working_memory(message)
@@ -88,24 +83,24 @@ class MemoryClassificationEngine:
         stored_memories = []
         for match in unique_matches:
             memory_id = generate_memory_id()
-            match['id'] = memory_id
-            match['language'] = detected_lang
-            match['language_confidence'] = lang_confidence
-            if 'memory_type' in match:
-                match['type'] = match['memory_type']
-            if 'type' in match and 'memory_type' not in match:
-                match['memory_type'] = match['type']
+            match["id"] = memory_id
+            match["language"] = detected_lang
+            match["language_confidence"] = lang_confidence
+            if "memory_type" in match:
+                match["type"] = match["memory_type"]
+            if "type" in match and "memory_type" not in match:
+                match["memory_type"] = match["type"]
             stored_memories.append(match)
 
         duration = time.time() - start_time
 
         return {
-            'message': message,
-            'matches': stored_memories,
-            'working_memory_size': len(self.working_memory),
-            'processing_time': duration,
-            'language': detected_lang,
-            'language_confidence': lang_confidence,
+            "message": message,
+            "matches": stored_memories,
+            "working_memory_size": len(self.working_memory),
+            "processing_time": duration,
+            "language": detected_lang,
+            "language_confidence": lang_confidence,
         }
 
     def _deduplicate(self, matches: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -113,7 +108,7 @@ class MemoryClassificationEngine:
         seen_content = set()
         unique = []
         for m in matches:
-            content = m.get('content', '')
+            content = m.get("content", "")
             content_key = content.strip().lower()[:100]
             if content_key not in seen_content:
                 seen_content.add(content_key)
@@ -121,14 +116,18 @@ class MemoryClassificationEngine:
         return unique
 
     def _add_to_working_memory(self, message: str):
-        self.working_memory.append({
-            'message': message,
-            'timestamp': get_current_time(),
-        })
-        self.message_history.append({
-            'message': message,
-            'timestamp': time.time(),
-        })
+        self.working_memory.append(
+            {
+                "message": message,
+                "timestamp": get_current_time(),
+            }
+        )
+        self.message_history.append(
+            {
+                "message": message,
+                "timestamp": time.time(),
+            }
+        )
 
     def clear_working_memory(self):
         self.working_memory.clear()
@@ -150,20 +149,22 @@ class MemoryClassificationEngine:
         for match in matches:
             mem_type = match.get("memory_type") or match.get("type", "unknown")
             confidence = match.get("confidence", 0.0)
-            entries.append({
-                "id": f"mce_{dt.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:6]}",
-                "type": mem_type,
-                "content": match.get("content") or message[:200],
-                "confidence": round(confidence, 4),
-                "tier": match.get("tier", 2),
-                "source_layer": match.get("source", "unknown"),
-                "reasoning": match.get("reasoning", ""),
-                "suggested_action": "store" if confidence > 0.5 else ("defer" if confidence > 0.3 else "ignore"),
-                "metadata": {
-                    "original_message": message,
-                    "timestamp_utc": dt.now(timezone.utc).isoformat(),
-                },
-            })
+            entries.append(
+                {
+                    "id": f"mce_{dt.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:6]}",
+                    "type": mem_type,
+                    "content": match.get("content") or message[:200],
+                    "confidence": round(confidence, 4),
+                    "tier": match.get("tier", 2),
+                    "source_layer": match.get("source", "unknown"),
+                    "reasoning": match.get("reasoning", ""),
+                    "suggested_action": ("store" if confidence > 0.5 else ("defer" if confidence > 0.3 else "ignore")),
+                    "metadata": {
+                        "original_message": message,
+                        "timestamp_utc": dt.now(timezone.utc).isoformat(),
+                    },
+                }
+            )
 
         by_type: Dict[str, int] = {}
         by_tier: Dict[int, int] = {}

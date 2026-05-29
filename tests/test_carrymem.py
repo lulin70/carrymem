@@ -12,7 +12,7 @@ import tempfile
 import unittest
 import json
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from carrymem import CarryMem, SQLiteAdapter, ObsidianAdapter
 from carrymem.adapters.base import MemoryEntry, StorageAdapter, StoredMemory
@@ -24,534 +24,546 @@ from carrymem.engine import MemoryClassificationEngine
 # Part 1: Core Classification Tests (EN/CN/JP × 7 types)
 # ============================================================
 
+
 class TestENPreference(unittest.TestCase):
     def test_prefer_dark_mode(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("I prefer dark mode")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('user_preference', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("user_preference", types)
 
     def test_like_postgresql(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("I like PostgreSQL for relational data")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('user_preference', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("user_preference", types)
 
     def test_always_use_const(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("I always use const in JavaScript")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertTrue(any(t in ('user_preference', 'task_pattern') for t in types))
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertTrue(any(t in ("user_preference", "task_pattern") for t in types))
 
     def test_never_use_var(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("Never use var in JavaScript, always const/let")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
 
 class TestENCorrection(unittest.TestCase):
     def test_no_use_postgres(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("No, use PostgreSQL not MongoDB")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('correction', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("correction", types)
 
     def test_wrong_approach(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("Wrong approach, simplify it")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('correction', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("correction", types)
 
     def test_correction_prefix(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("Correction: the port should be 5432 not 5433")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('correction', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("correction", types)
 
     def test_actually_we_decided(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("Actually, we decided to go with option B")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('correction', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("correction", types)
 
     def test_scratch_that(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("Scratch that last idea, try something else")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('correction', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("correction", types)
 
 
 class TestENFactDeclaration(unittest.TestCase):
     def test_python_version(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("Python 3.9 is the minimum required version")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
     def test_api_rate_limit(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("Our API rate limit is 1000 requests per minute")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
     def test_company_founded(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("The company was founded in 2019")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
 
 class TestENDecision(unittest.TestCase):
     def test_lets_use_microservices(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("Let's go with the microservices approach")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertTrue(any(t in ('decision', 'fact_declaration') for t in types))
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertTrue(any(t in ("decision", "fact_declaration") for t in types))
 
     def test_decided_sqlite(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("I decided to use SQLite for the default storage")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('decision', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("decision", types)
 
 
 class TestENRelationship(unittest.TestCase):
     def test_sarah_manager(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("My manager Sarah wants the report by Friday")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
     def test_john_backend(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("John on the backend team handles the API")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
 
 class TestENTaskPattern(unittest.TestCase):
     def test_every_monday_standup(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("Every Monday we have a team standup at 10am")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
     def test_always_run_tests(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("I always run tests before pushing code")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
 
 class TestENSentiment(unittest.TestCase):
     def test_build_too_slow(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("The build is so slow, it's really frustrating")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
     def test_this_is_great(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("This new feature is amazing!")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
 
 # ============================================================
 # Part 2: Chinese Classification Tests (ZH × 7 types)
 # ============================================================
 
+
 class TestZHPreference(unittest.TestCase):
     def test_like_dark_mode(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("我喜欢用深色主题")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('user_preference', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("user_preference", types)
 
     def test_prefer_postgres(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("公开API我倾向于用REST而不是GraphQL")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
     def test_habit_camel_case(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("我习惯用驼峰命名法")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('user_preference', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("user_preference", types)
 
     def test_dont_use_tab(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("别用tab缩进，用空格")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
 
 class TestZHCorrection(unittest.TestCase):
     def test_wrong_use_postgres(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("那个错了，用PostgreSQL不是MongoDB")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('correction', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("correction", types)
 
     def test_not_right(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("不对，应该这样做")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('correction', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("correction", types)
 
     def test_correction_prefix(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("纠正一下，端口号应该是5432不是5433")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('correction', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("correction", types)
 
     def test_said_wrong_before(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("之前说错了，我纠正一下")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('correction', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("correction", types)
 
     def test_method_wrong(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("方法错了，简化一下")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('correction', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("correction", types)
 
     def test_config_error(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("配置有错误，修一下")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('correction', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("correction", types)
 
     def test_not_like_this(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("不对不对，不是这样的")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('correction', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("correction", types)
 
     def test_ignore_previous(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("之前说的忽略掉，用这个方案")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('correction', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("correction", types)
 
 
 class TestZHFactDeclaration(unittest.TestCase):
     def test_python_version(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("Python 3.9是最低要求版本")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
     def test_api_rate_limit(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("我们的API限流是每分钟1000次请求")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
 
 class TestZHDecision(unittest.TestCase):
     def test_use_microservices(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("我们用微服务架构吧")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertTrue(any(t in ('decision', 'fact_declaration') for t in types))
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertTrue(any(t in ("decision", "fact_declaration") for t in types))
 
     def test_decided_sqlite(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("我决定用SQLite做默认存储")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('decision', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("decision", types)
 
 
 class TestZHRelationship(unittest.TestCase):
     def test_sarah_manager(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("我的经理Sarah要求周五前交报告")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
     def test_john_backend(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("后端团队的John在处理API")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
 
 class TestZHTaskPattern(unittest.TestCase):
     def test_weekly_standup(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("每周一上午10点我们有站会")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
     def test_always_test(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("我每次推代码前都会跑测试")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
 
 class TestZHSentiment(unittest.TestCase):
     def test_build_slow(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("构建速度太慢了，真的很烦")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
     def test_great_feature(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("这个新功能太棒了！")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
 
 # ============================================================
 # Part 3: Japanese Classification Tests (JA × 7 types)
 # ============================================================
 
+
 class TestJAPreference(unittest.TestCase):
     def test_like_dark_mode(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("ダークモードが好きです")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertTrue(any(t in ('user_preference', 'sentiment_marker') for t in types))
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertTrue(any(t in ("user_preference", "sentiment_marker") for t in types))
 
     def test_camel_case(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("キャメルケースの命名規則を使いたいです")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
     def test_always_type_hints(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("Pythonを書くときはいつも型ヒントを付けます")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
     def test_prefer_rest(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("公開APIにはGraphQLよりRESTを使いたいです")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
 
 class TestJACorrection(unittest.TestCase):
     def test_wrong_use_postgres(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("それは間違っています、MongoDBではなくPostgreSQLを使ってください")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('correction', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("correction", types)
 
     def test_correction_prefix(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("訂正します、ポートは5433ではなく5432です")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('correction', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("correction", types)
 
     def test_no_wrong(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("いやいや、それは違います")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('correction', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("correction", types)
 
     def test_wrong_approach(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("間違ったアプローチです、シンプルにしてください")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('correction', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("correction", types)
 
     def test_config_error(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("設定にエラーがあります、修正してください")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('correction', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("correction", types)
 
     def test_previous_wrong(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("前に言ったのは間違いでした、訂正します")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertIn('correction', types)
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertIn("correction", types)
 
 
 class TestJAFactDeclaration(unittest.TestCase):
     def test_python_version(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("Python 3.9が最低要件バージョンです")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
     def test_api_rate_limit(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("APIのレート制限は1分あたり1000リクエストです")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
 
 class TestJADecision(unittest.TestCase):
     def test_lets_use_microservices(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("マイクロサービスアプローチで行きましょう")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
     def test_decided_sqlite(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("デフォルトストレージにSQLiteを使うことに決めました")
-        types = [m.get('memory_type') or m.get('type') for m in result['matches']]
-        self.assertTrue(any(t in ('decision', 'fact_declaration') for t in types))
+        types = [m.get("memory_type") or m.get("type") for m in result["matches"]]
+        self.assertTrue(any(t in ("decision", "fact_declaration") for t in types))
 
 
 class TestJARelationship(unittest.TestCase):
     def test_john_backend(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("バックエンドチームのJohnがAPIを担当しています")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
     def test_sarah_manager(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("マネージャーのSarahが金曜日までにレポートを求めています")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
 
 class TestJATaskPattern(unittest.TestCase):
     def test_weekly_standup(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("毎週月曜日の午前10時にチームスタンドアップがあります")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
     def test_always_test(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("コードをプッシュする前にいつもテストを実行します")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
 
 class TestJASentiment(unittest.TestCase):
     def test_build_slow(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("ビルドが遅すぎて、本当にイライラします")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
     def test_great_feature(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("この新機能は素晴らしい！")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
 
 # ============================================================
 # Part 4: Noise Rejection Tests (EN/CN/JP)
 # ============================================================
 
+
 class TestENNoiseRejection(unittest.TestCase):
     def test_ok(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("ok")
-        self.assertEqual(result['matches'], [])
+        self.assertEqual(result["matches"], [])
 
     def test_thanks(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("thanks")
-        self.assertEqual(result['matches'], [])
+        self.assertEqual(result["matches"], [])
 
     def test_hello(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("hello")
-        self.assertEqual(result['matches'], [])
+        self.assertEqual(result["matches"], [])
 
     def test_how_are_you(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("how are you?")
-        self.assertEqual(result['matches'], [])
+        self.assertEqual(result["matches"], [])
 
     def test_see_you_later(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("see you later")
-        self.assertEqual(result['matches'], [])
+        self.assertEqual(result["matches"], [])
 
     def test_just_a_test(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("this is just a test")
-        self.assertEqual(result['matches'], [])
+        self.assertEqual(result["matches"], [])
 
     def test_empty_message(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("")
-        self.assertEqual(result['matches'], [])
+        self.assertEqual(result["matches"], [])
 
 
 class TestZHNoiseRejection(unittest.TestCase):
     def test_ok(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("好的")
-        self.assertEqual(result['matches'], [])
+        self.assertEqual(result["matches"], [])
 
     def test_thanks(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("谢谢")
-        self.assertEqual(result['matches'], [])
+        self.assertEqual(result["matches"], [])
 
     def test_hello(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("你好！")
-        self.assertEqual(result['matches'], [])
+        self.assertEqual(result["matches"], [])
 
     def test_understood(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("明白了")
-        self.assertEqual(result['matches'], [])
+        self.assertEqual(result["matches"], [])
 
     def test_question(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("怎么搭建开发环境？")
-        self.assertEqual(result['matches'], [])
+        self.assertEqual(result["matches"], [])
 
 
 class TestJANoiseRejection(unittest.TestCase):
     def test_hai(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("はい")
-        self.assertEqual(result['matches'], [])
+        self.assertEqual(result["matches"], [])
 
     def test_thanks(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("ありがとう")
-        self.assertEqual(result['matches'], [])
+        self.assertEqual(result["matches"], [])
 
     def test_hello(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("こんにちは！")
-        self.assertEqual(result['matches'], [])
+        self.assertEqual(result["matches"], [])
 
     def test_wakarimashita(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("わかりました")
-        self.assertEqual(result['matches'], [])
+        self.assertEqual(result["matches"], [])
 
     def test_question(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("開発環境の構築方法は？")
-        self.assertTrue(len(result['matches']) <= 1)
+        self.assertTrue(len(result["matches"]) <= 1)
 
 
 # ============================================================
 # Part 5: Language Detection Tests
 # ============================================================
 
+
 class TestLanguageDetection(unittest.TestCase):
     def test_english(self):
         from carrymem.utils.language import language_manager
+
         lang, conf = language_manager.detect_language("I prefer dark mode")
-        self.assertEqual(lang, 'en')
+        self.assertEqual(lang, "en")
 
     def test_chinese(self):
         from carrymem.utils.language import language_manager
+
         lang, conf = language_manager.detect_language("我喜欢深色主题")
-        self.assertEqual(lang, 'zh-cn')
+        self.assertEqual(lang, "zh-cn")
 
     def test_japanese_hiragana(self):
         from carrymem.utils.language import language_manager
+
         lang, conf = language_manager.detect_language("ダークモードが好きです")
-        self.assertEqual(lang, 'ja')
+        self.assertEqual(lang, "ja")
 
     def test_japanese_katakana(self):
         from carrymem.utils.language import language_manager
+
         lang, conf = language_manager.detect_language("タブではなくスペースでインデントしてください")
-        self.assertEqual(lang, 'ja')
+        self.assertEqual(lang, "ja")
 
     def test_japanese_mixed(self):
         from carrymem.utils.language import language_manager
+
         lang, conf = language_manager.detect_language("Pythonを書くときはいつも型ヒントを付けます")
-        self.assertEqual(lang, 'ja')
+        self.assertEqual(lang, "ja")
 
     def test_chinese_no_kana(self):
         from carrymem.utils.language import language_manager
+
         lang, conf = language_manager.detect_language("我喜欢用深色主题")
-        self.assertEqual(lang, 'zh-cn')
+        self.assertEqual(lang, "zh-cn")
 
 
 # ============================================================
 # Part 6: CarryMem Core Integration Tests
 # ============================================================
 
+
 class TestCarryMemCore(unittest.TestCase):
     def setUp(self):
-        self.db = tempfile.mktemp(suffix='.db')
+        self.db = tempfile.mktemp(suffix=".db")
         self.cm = CarryMem(db_path=self.db)
 
     def tearDown(self):
@@ -560,7 +572,7 @@ class TestCarryMemCore(unittest.TestCase):
 
     def test_classify_and_remember(self):
         result = self.cm.classify_and_remember("I prefer dark mode")
-        self.assertTrue(result['stored'])
+        self.assertTrue(result["stored"])
 
     def test_recall_memories(self):
         self.cm.classify_and_remember("I prefer dark mode")
@@ -569,25 +581,25 @@ class TestCarryMemCore(unittest.TestCase):
 
     def test_forget_memory(self):
         result = self.cm.classify_and_remember("I prefer dark mode")
-        key = result['storage_keys'][0]
+        key = result["storage_keys"][0]
         deleted = self.cm.forget_memory(key)
         self.assertTrue(deleted)
 
     def test_declare(self):
         result = self.cm.declare("I always use Python 3.12")
-        self.assertTrue(result['declared'])
-        self.assertEqual(result['source'], 'declaration')
+        self.assertTrue(result["declared"])
+        self.assertEqual(result["source"], "declaration")
 
     def test_declare_confidence_1(self):
         result = self.cm.declare("I always use Python 3.12")
-        for entry in result['entries']:
-            self.assertEqual(entry['confidence'], 1.0)
+        for entry in result["entries"]:
+            self.assertEqual(entry["confidence"], 1.0)
 
     def test_get_memory_profile(self):
         self.cm.classify_and_remember("I prefer dark mode")
         self.cm.classify_and_remember("Let's use PostgreSQL")
         profile = self.cm.get_memory_profile()
-        self.assertGreater(profile['total_memories'], 0)
+        self.assertGreater(profile["total_memories"], 0)
 
     def test_build_system_prompt_en(self):
         self.cm.classify_and_remember("I prefer dark mode")
@@ -607,7 +619,7 @@ class TestCarryMemCore(unittest.TestCase):
     def test_classify_message_no_storage(self):
         cm = CarryMem(storage=None)
         result = cm.classify_message("I prefer dark mode")
-        self.assertTrue(result['should_remember'])
+        self.assertTrue(result["should_remember"])
 
     def test_storage_not_configured_error(self):
         cm = CarryMem(storage=None)
@@ -617,7 +629,7 @@ class TestCarryMemCore(unittest.TestCase):
 
 class TestNamespace(unittest.TestCase):
     def setUp(self):
-        self.db = tempfile.mktemp(suffix='.db')
+        self.db = tempfile.mktemp(suffix=".db")
 
     def tearDown(self):
         if os.path.exists(self.db):
@@ -630,9 +642,9 @@ class TestNamespace(unittest.TestCase):
         cm_b.classify_and_remember("I prefer light mode in project B")
         results_a = cm_a.recall_memories(query="mode")
         results_b = cm_b.recall_memories(query="mode")
-        contents_a = [r['content'] for r in results_a]
-        self.assertTrue(any('project A' in c for c in contents_a))
-        self.assertFalse(any('project B' in c for c in contents_a))
+        contents_a = [r["content"] for r in results_a]
+        self.assertTrue(any("project A" in c for c in contents_a))
+        self.assertFalse(any("project B" in c for c in contents_a))
 
     def test_cross_namespace_recall(self):
         cm_a = CarryMem(db_path=self.db, namespace="project-a")
@@ -640,41 +652,42 @@ class TestNamespace(unittest.TestCase):
         cm_a.classify_and_remember("Use React for frontend")
         cm_b.classify_and_remember("Use Django for backend")
         result = cm_a.recall_all(query="use", namespaces=["project-a", "project-b"])
-        self.assertGreater(result['total_count'], 0)
+        self.assertGreater(result["total_count"], 0)
 
 
 # ============================================================
 # Part 7: Plugin & Adapter Tests
 # ============================================================
 
+
 class TestPluginLoader(unittest.TestCase):
     def test_load_builtin_sqlite(self):
-        cls = load_adapter('sqlite')
+        cls = load_adapter("sqlite")
         self.assertEqual(cls, SQLiteAdapter)
 
     def test_load_builtin_obsidian(self):
-        cls = load_adapter('obsidian')
+        cls = load_adapter("obsidian")
         self.assertEqual(cls, ObsidianAdapter)
 
     def test_load_unknown(self):
-        cls = load_adapter('nonexistent_adapter')
+        cls = load_adapter("nonexistent_adapter")
         self.assertIsNone(cls)
 
     def test_list_available_adapters(self):
         adapters = list_available_adapters()
-        self.assertIn('sqlite', adapters)
-        self.assertIn('obsidian', adapters)
+        self.assertIn("sqlite", adapters)
+        self.assertIn("obsidian", adapters)
 
     def test_carrymem_with_string_storage(self):
-        db = tempfile.mktemp(suffix='.db')
-        cm = CarryMem(storage='sqlite', db_path=db)
+        db = tempfile.mktemp(suffix=".db")
+        cm = CarryMem(storage="sqlite", db_path=db)
         self.assertIsNotNone(cm.adapter)
         os.unlink(db)
 
 
 class TestSQLiteAdapter(unittest.TestCase):
     def setUp(self):
-        self.db = tempfile.mktemp(suffix='.db')
+        self.db = tempfile.mktemp(suffix=".db")
         self.adapter = SQLiteAdapter(db_path=self.db)
 
     def tearDown(self):
@@ -683,9 +696,14 @@ class TestSQLiteAdapter(unittest.TestCase):
 
     def test_remember_and_recall(self):
         entry = MemoryEntry(
-            id="test_1", type="user_preference", content="I prefer dark mode",
-            confidence=0.9, tier=2, source_layer="pattern",
-            reasoning="test", suggested_action="store",
+            id="test_1",
+            type="user_preference",
+            content="I prefer dark mode",
+            confidence=0.9,
+            tier=2,
+            source_layer="pattern",
+            reasoning="test",
+            suggested_action="store",
         )
         stored = self.adapter.remember(entry)
         self.assertIsNotNone(stored.storage_key)
@@ -694,9 +712,14 @@ class TestSQLiteAdapter(unittest.TestCase):
 
     def test_forget(self):
         entry = MemoryEntry(
-            id="test_2", type="fact_declaration", content="Python is great",
-            confidence=0.8, tier=3, source_layer="pattern",
-            reasoning="test", suggested_action="store",
+            id="test_2",
+            type="fact_declaration",
+            content="Python is great",
+            confidence=0.8,
+            tier=3,
+            source_layer="pattern",
+            reasoning="test",
+            suggested_action="store",
         )
         stored = self.adapter.remember(entry)
         deleted = self.adapter.forget(stored.storage_key)
@@ -704,32 +727,43 @@ class TestSQLiteAdapter(unittest.TestCase):
 
     def test_get_stats(self):
         entry = MemoryEntry(
-            id="test_3", type="user_preference", content="test content",
-            confidence=0.9, tier=2, source_layer="pattern",
-            reasoning="test", suggested_action="store",
+            id="test_3",
+            type="user_preference",
+            content="test content",
+            confidence=0.9,
+            tier=2,
+            source_layer="pattern",
+            reasoning="test",
+            suggested_action="store",
         )
         self.adapter.remember(entry)
         stats = self.adapter.get_stats()
-        self.assertGreater(stats['total_count'], 0)
+        self.assertGreater(stats["total_count"], 0)
 
     def test_get_profile(self):
         entry = MemoryEntry(
-            id="test_4", type="user_preference", content="I prefer dark mode",
-            confidence=0.9, tier=2, source_layer="pattern",
-            reasoning="test", suggested_action="store",
+            id="test_4",
+            type="user_preference",
+            content="I prefer dark mode",
+            confidence=0.9,
+            tier=2,
+            source_layer="pattern",
+            reasoning="test",
+            suggested_action="store",
         )
         self.adapter.remember(entry)
         profile = self.adapter.get_profile()
-        self.assertGreater(profile['total_memories'], 0)
+        self.assertGreater(profile["total_memories"], 0)
 
 
 # ============================================================
 # Part 8: Export/Import Tests (Portability)
 # ============================================================
 
+
 class TestExportImport(unittest.TestCase):
     def setUp(self):
-        self.db = tempfile.mktemp(suffix='.db')
+        self.db = tempfile.mktemp(suffix=".db")
         self.cm = CarryMem(db_path=self.db)
         self.cm.classify_and_remember("I prefer dark mode")
         self.cm.classify_and_remember("Let's use PostgreSQL")
@@ -741,40 +775,40 @@ class TestExportImport(unittest.TestCase):
 
     def test_export_json_to_dict(self):
         result = self.cm.export_memories()
-        self.assertTrue(result['exported'])
-        self.assertEqual(result['format'], 'json')
-        self.assertGreater(result['total_memories'], 0)
-        self.assertIsNotNone(result['data'])
-        self.assertEqual(result['data']['schema_version'], '1.0.0')
-        self.assertIn('memories', result['data'])
+        self.assertTrue(result["exported"])
+        self.assertEqual(result["format"], "json")
+        self.assertGreater(result["total_memories"], 0)
+        self.assertIsNotNone(result["data"])
+        self.assertEqual(result["data"]["schema_version"], "1.0.0")
+        self.assertIn("memories", result["data"])
 
     def test_export_json_to_file(self):
-        export_path = tempfile.mktemp(suffix='.json')
+        export_path = tempfile.mktemp(suffix=".json")
         try:
             result = self.cm.export_memories(output_path=export_path)
-            self.assertTrue(result['exported'])
+            self.assertTrue(result["exported"])
             self.assertTrue(os.path.exists(export_path))
-            with open(export_path, 'r') as f:
+            with open(export_path, "r") as f:
                 data = json.load(f)
-            self.assertIn('memories', data)
-            self.assertGreater(len(data['memories']), 0)
+            self.assertIn("memories", data)
+            self.assertGreater(len(data["memories"]), 0)
         finally:
             if os.path.exists(export_path):
                 os.unlink(export_path)
 
     def test_export_markdown(self):
         result = self.cm.export_memories(format="markdown")
-        self.assertTrue(result['exported'])
-        self.assertEqual(result['format'], 'markdown')
-        self.assertIn("# CarryMem Memory Export", result['content'])
-        self.assertIn("user_preference", result['content'])
+        self.assertTrue(result["exported"])
+        self.assertEqual(result["format"], "markdown")
+        self.assertIn("# CarryMem Memory Export", result["content"])
+        self.assertIn("user_preference", result["content"])
 
     def test_export_markdown_to_file(self):
-        export_path = tempfile.mktemp(suffix='.md')
+        export_path = tempfile.mktemp(suffix=".md")
         try:
             result = self.cm.export_memories(output_path=export_path, format="markdown")
             self.assertTrue(os.path.exists(export_path))
-            with open(export_path, 'r') as f:
+            with open(export_path, "r") as f:
                 content = f.read()
             self.assertIn("# CarryMem Memory Export", content)
         finally:
@@ -783,14 +817,14 @@ class TestExportImport(unittest.TestCase):
 
     def test_import_from_data(self):
         export_result = self.cm.export_memories()
-        export_data = export_result['data']
+        export_data = export_result["data"]
 
-        db2 = tempfile.mktemp(suffix='.db')
+        db2 = tempfile.mktemp(suffix=".db")
         try:
             cm2 = CarryMem(db_path=db2)
             import_result = cm2.import_memories(data=export_data)
-            self.assertGreater(import_result['imported'], 0)
-            self.assertEqual(import_result['errors'], 0)
+            self.assertGreater(import_result["imported"], 0)
+            self.assertEqual(import_result["errors"], 0)
 
             memories = cm2.recall_memories(query="", limit=10)
             self.assertTrue(len(memories) > 0)
@@ -799,15 +833,15 @@ class TestExportImport(unittest.TestCase):
                 os.unlink(db2)
 
     def test_import_from_file(self):
-        export_path = tempfile.mktemp(suffix='.json')
+        export_path = tempfile.mktemp(suffix=".json")
         try:
             self.cm.export_memories(output_path=export_path)
 
-            db2 = tempfile.mktemp(suffix='.db')
+            db2 = tempfile.mktemp(suffix=".db")
             try:
                 cm2 = CarryMem(db_path=db2)
                 import_result = cm2.import_memories(input_path=export_path)
-                self.assertGreater(import_result['imported'], 0)
+                self.assertGreater(import_result["imported"], 0)
             finally:
                 if os.path.exists(db2):
                     os.unlink(db2)
@@ -817,29 +851,29 @@ class TestExportImport(unittest.TestCase):
 
     def test_import_skip_existing(self):
         stats_before = self.cm.get_stats()
-        count_before = stats_before['total_count']
+        count_before = stats_before["total_count"]
 
         export_result = self.cm.export_memories()
-        export_data = export_result['data']
+        export_data = export_result["data"]
 
         import_result = self.cm.import_memories(data=export_data, merge_strategy="skip_existing")
-        self.assertLessEqual(import_result['total_processed'], count_before)
+        self.assertLessEqual(import_result["total_processed"], count_before)
 
         stats_after = self.cm.get_stats()
-        self.assertGreaterEqual(stats_after['total_count'], count_before)
+        self.assertGreaterEqual(stats_after["total_count"], count_before)
 
     def test_export_import_roundtrip(self):
         export_result = self.cm.export_memories()
-        export_data = export_result['data']
-        original_count = export_result['total_memories']
+        export_data = export_result["data"]
+        original_count = export_result["total_memories"]
 
-        db2 = tempfile.mktemp(suffix='.db')
+        db2 = tempfile.mktemp(suffix=".db")
         try:
             cm2 = CarryMem(db_path=db2)
             cm2.import_memories(data=export_data)
 
             re_export = cm2.export_memories()
-            self.assertEqual(re_export['total_memories'], original_count)
+            self.assertEqual(re_export["total_memories"], original_count)
         finally:
             if os.path.exists(db2):
                 os.unlink(db2)
@@ -863,9 +897,10 @@ class TestExportImport(unittest.TestCase):
 # Part 9: CJK Recall Tests (BUG-1 fix verification)
 # ============================================================
 
+
 class TestCJKRecall(unittest.TestCase):
     def setUp(self):
-        self.db = tempfile.mktemp(suffix='.db')
+        self.db = tempfile.mktemp(suffix=".db")
         self.cm = CarryMem(db_path=self.db)
 
     def tearDown(self):
@@ -908,8 +943,8 @@ class TestCJKRecall(unittest.TestCase):
         self.cm.classify_and_remember("团队决定用微服务架构")
         results = self.cm.recall_memories(query="偏好")
         self.assertTrue(len(results) > 0)
-        contents = [r['content'] for r in results]
-        self.assertTrue(any('PostgreSQL' in c for c in contents))
+        contents = [r["content"] for r in results]
+        self.assertTrue(any("PostgreSQL" in c for c in contents))
 
     def test_chinese_recall_original_message(self):
         self.cm.classify_and_remember("我偏好使用PostgreSQL")
@@ -921,53 +956,56 @@ class TestCJKRecall(unittest.TestCase):
 # Part 10: Edge Cases & Boundary Tests
 # ============================================================
 
+
 class TestEdgeCases(unittest.TestCase):
     def test_empty_message(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("")
-        self.assertEqual(result['matches'], [])
+        self.assertEqual(result["matches"], [])
 
     def test_none_message(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message(None)
-        self.assertEqual(result['matches'], [])
+        self.assertEqual(result["matches"], [])
 
     def test_very_short_message(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("ok")
-        self.assertEqual(result['matches'], [])
+        self.assertEqual(result["matches"], [])
 
     def test_to_memory_entry(self):
         engine = MemoryClassificationEngine()
         entry = engine.to_memory_entry("I prefer dark mode")
-        self.assertEqual(entry['schema_version'], '1.0.0')
-        self.assertTrue(entry['should_remember'])
+        self.assertEqual(entry["schema_version"], "1.0.0")
+        self.assertTrue(entry["should_remember"])
 
     def test_mixed_language_message(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("我喜欢用PostgreSQL数据库")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
     def test_japanese_with_english_tech(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("Python 3.9が最低要件バージョンです")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
     def test_chinese_with_english_tech(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("Python 3.9是最低要求版本")
-        self.assertTrue(result['matches'])
+        self.assertTrue(result["matches"])
 
 
 # ============================================================
 # Part 11: Semantic Recall Tests (58 new tests)
 # ============================================================
 
+
 class TestSemanticExpanderInit(unittest.TestCase):
     """Test SemanticExpander initialization and basic properties."""
 
     def test_init_default(self):
         from carrymem.semantic.expander import SemanticExpander
+
         expander = SemanticExpander()
         self.assertIsNotNone(expander)
         self.assertIsInstance(expander.vocabulary_size, int)
@@ -975,6 +1013,7 @@ class TestSemanticExpanderInit(unittest.TestCase):
 
     def test_init_with_config(self):
         from carrymem.semantic.expander import SemanticExpander
+
         expander = SemanticExpander(
             enable_spell_correction=True,
             max_expansions=30,
@@ -984,11 +1023,13 @@ class TestSemanticExpanderInit(unittest.TestCase):
 
     def test_vocabulary_not_empty(self):
         from carrymem.semantic.expander import SemanticExpander
+
         expander = SemanticExpander()
         self.assertGreater(expander.vocabulary_size, 100)
 
     def test_graph_not_empty(self):
         from carrymem.semantic.expander import SemanticExpander
+
         expander = SemanticExpander()
         self.assertGreater(expander.graph_size, 50)
 
@@ -999,6 +1040,7 @@ class TestSynonymExpansion(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from carrymem.semantic.expander import SemanticExpander
+
         cls.expander = SemanticExpander()
 
     def test_cn_database_synonyms(self):
@@ -1023,10 +1065,7 @@ class TestSynonymExpansion(unittest.TestCase):
     def test_en_dark_mode_synonyms(self):
         expansions = self.expander.expand("dark mode")
         # Should have dark mode related terms (may include theme, 深色, ダーク etc.)
-        has_dark_related = any(
-            'dark' in e.lower() or '深' in e or 'ダーク' in e
-            for e in expansions
-        )
+        has_dark_related = any("dark" in e.lower() or "深" in e or "ダーク" in e for e in expansions)
         self.assertTrue(has_dark_related, f"Expected dark-related terms in {expansions[:10]}")
         self.assertGreater(len(expansions), 3)
 
@@ -1074,6 +1113,7 @@ class TestSynonymExpansion(unittest.TestCase):
 
     def test_max_expansions_limit(self):
         from carrymem.semantic.expander import SemanticExpander
+
         expander = SemanticExpander(max_expansions=10)
         expansions = expander.expand("database")
         self.assertLessEqual(len(expansions), 15)  # +original, may vary with synonym graph size
@@ -1099,11 +1139,15 @@ class TestSpellCorrection(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from carrymem.semantic.expander import SemanticExpander
+
         cls.expander = SemanticExpander(enable_spell_correction=True)
 
     def test_postgres_to_postgresql(self):
         expansions = self.expander.expand("Postgres")
-        self.assertTrue(any("postgresql" in e.lower() for e in expansions), f"Expected 'postgresql' in {expansions}")
+        self.assertTrue(
+            any("postgresql" in e.lower() for e in expansions),
+            f"Expected 'postgresql' in {expansions}",
+        )
 
     def test_pyton_to_python(self):
         expansions = self.expander.expand("pyton")
@@ -1122,10 +1166,14 @@ class TestSpellCorrection(unittest.TestCase):
 
     def test_correct_word_unchanged(self):
         expansions = self.expander.expand("PostgreSQL")
-        self.assertTrue(any("postgresql" in e.lower() for e in expansions), f"Expected 'postgresql' in {expansions}")
+        self.assertTrue(
+            any("postgresql" in e.lower() for e in expansions),
+            f"Expected 'postgresql' in {expansions}",
+        )
 
     def test_edit_distance_threshold_respected(self):
         from carrymem.semantic.expander import SemanticExpander
+
         expander = SemanticExpander(edit_distance_threshold=1)
         expansions = expander.expand("abcde")  # Far from any real word
         # Should only have original if no close match within threshold 1
@@ -1134,6 +1182,7 @@ class TestSpellCorrection(unittest.TestCase):
 
     def test_spell_correction_disabled(self):
         from carrymem.semantic.expander import SemanticExpander
+
         expander = SemanticExpander(enable_spell_correction=False)
         expansions = expander.expand("Postgres")
         # When disabled, should not auto-correct (but may still find in synonyms)
@@ -1150,7 +1199,10 @@ class TestSpellCorrection(unittest.TestCase):
 
     def test_mixed_case_correction(self):
         expansions = self.expander.expand("POSTGRES")
-        self.assertTrue(any("postgresql" in e.lower() for e in expansions), f"Expected 'postgresql' in {expansions}")
+        self.assertTrue(
+            any("postgresql" in e.lower() for e in expansions),
+            f"Expected 'postgresql' in {expansions}",
+        )
 
 
 class TestCrossLanguageMapping(unittest.TestCase):
@@ -1159,6 +1211,7 @@ class TestCrossLanguageMapping(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from carrymem.semantic.expander import SemanticExpander
+
         cls.expander = SemanticExpander()
 
     def test_cn_to_en_database(self):
@@ -1223,12 +1276,14 @@ class TestEndToEndSemanticRecall(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         import tempfile
+
         cls.db_path = tempfile.mktemp(suffix=".db")
         cls.cm = CarryMem(storage="sqlite", db_path=cls.db_path)
 
     @classmethod
     def tearDownClass(cls):
         import os
+
         if os.path.exists(cls.db_path):
             os.unlink(cls.db_path)
 
@@ -1237,8 +1292,8 @@ class TestEndToEndSemanticRecall(unittest.TestCase):
         self.cm.classify_and_remember("我偏好使用PostgreSQL")
         results = self.cm.recall_memories(query="数据库")
         self.assertTrue(len(results) > 0, f"Expected results for '数据库', got {len(results)}")
-        contents = [r['content'] for r in results]
-        self.assertTrue(any('PostgreSQL' in c for c in contents), f"PostgreSQL not found in {contents}")
+        contents = [r["content"] for r in results]
+        self.assertTrue(any("PostgreSQL" in c for c in contents), f"PostgreSQL not found in {contents}")
 
     def test_en_dark_mode_finds_cn_theme(self):
         """English query finds Chinese stored preference."""
@@ -1259,8 +1314,8 @@ class TestEndToEndSemanticRecall(unittest.TestCase):
         self.cm.classify_and_remember("I prefer PostgreSQL over MySQL")
         results = self.cm.recall_memories(query="Postgres")
         self.assertTrue(len(results) > 0, f"Expected results for 'Postgres', got {len(results)}")
-        contents = [r['content'] for r in results]
-        self.assertTrue(any('PostgreSQL' in c for c in contents))
+        contents = [r["content"] for r in results]
+        self.assertTrue(any("PostgreSQL" in c for c in contents))
 
     def test_synonym_db_finds_sqlite(self):
         """'DB' should find memories about SQLite."""
@@ -1313,7 +1368,7 @@ class TestEndToEndSemanticRecall(unittest.TestCase):
         self.cm.declare("PostgreSQL version must be 14+")
 
         results = self.cm.recall_memories(query="数据库", filters={"type": "user_preference"})
-        self.assertTrue(all(r['type'] == 'user_preference' for r in results))
+        self.assertTrue(all(r["type"] == "user_preference" for r in results))
 
     def test_semantic_recall_namespace_isolation(self):
         """Semantic recall should respect namespace isolation."""
@@ -1324,8 +1379,8 @@ class TestEndToEndSemanticRecall(unittest.TestCase):
         results_a = self.cm.storage.recall(query="数据库", namespaces=["project-a"])
         results_b = self.cm.storage.recall(query="数据库", namespaces=["project-b"])
 
-        pg_in_a = any('PostgreSQL' in r.content for r in results_a)
-        my_in_b = any('MySQL' in r.content for r in results_b)
+        pg_in_a = any("PostgreSQL" in r.content for r in results_a)
+        my_in_b = any("MySQL" in r.content for r in results_b)
 
         # At minimum, should not crash and should return lists
         self.assertIsInstance(results_a, list)
@@ -1334,7 +1389,7 @@ class TestEndToEndSemanticRecall(unittest.TestCase):
     def test_disable_semantic_recall(self):
         """Semantic recall can be disabled."""
         adapter = self.cm.storage
-        if hasattr(adapter, 'enable_semantic_recall'):
+        if hasattr(adapter, "enable_semantic_recall"):
             adapter.enable_semantic_recall(False)
 
         self.cm.classify_and_remember("I prefer PostgreSQL")
@@ -1342,7 +1397,7 @@ class TestEndToEndSemanticRecall(unittest.TestCase):
 
         # With semantic disabled, may not find via synonym
         # Re-enable for other tests
-        if hasattr(adapter, 'enable_semantic_recall'):
+        if hasattr(adapter, "enable_semantic_recall"):
             adapter.enable_semantic_recall(True)
 
     def test_relevance_score_present(self):
@@ -1354,7 +1409,7 @@ class TestEndToEndSemanticRecall(unittest.TestCase):
             first_result = results[0]
             # Check if result is dict-like with metadata
             if isinstance(first_result, dict):
-                has_score = '_relevance_score' in first_result or 'confidence' in first_result
+                has_score = "_relevance_score" in first_result or "confidence" in first_result
                 self.assertTrue(has_score, "Results should have scoring info")
 
 
@@ -1363,11 +1418,10 @@ class TestResultMerger(unittest.TestCase):
 
     def test_merge_deduplication(self):
         from carrymem.semantic.merger import ResultMerger
+
         merger = ResultMerger()
 
-        original = [
-            {"storage_key": "key1", "content": "PostgreSQL", "confidence": 0.95}
-        ]
+        original = [{"storage_key": "key1", "content": "PostgreSQL", "confidence": 0.95}]
         expanded = [
             {"storage_key": "key1", "content": "PostgreSQL", "confidence": 0.95},  # Duplicate
             {"storage_key": "key2", "content": "MySQL", "confidence": 0.85},
@@ -1380,11 +1434,10 @@ class TestResultMerger(unittest.TestCase):
 
     def test_merge_ranking_order(self):
         from carrymem.semantic.merger import ResultMerger
+
         merger = ResultMerger()
 
-        original = [
-            {"storage_key": "key1", "content": "Exact match", "confidence": 0.9}
-        ]
+        original = [{"storage_key": "key1", "content": "Exact match", "confidence": 0.9}]
         expanded = [
             {"storage_key": "key2", "content": "Synonym match", "confidence": 0.8},
         ]
@@ -1394,6 +1447,7 @@ class TestResultMerger(unittest.TestCase):
 
     def test_merge_min_relevance_filter(self):
         from carrymem.semantic.merger import ResultMerger
+
         merger = ResultMerger(min_relevance=0.5)
 
         original = []
@@ -1407,6 +1461,7 @@ class TestResultMerger(unittest.TestCase):
 
     def test_merge_multiple_sources(self):
         from carrymem.semantic.merger import ResultMerger
+
         merger = ResultMerger()
 
         results_by_source = {
@@ -1429,12 +1484,14 @@ class TestBoundaryConditions(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         import tempfile
+
         cls.db_path = tempfile.mktemp(suffix=".db")
         cls.cm = CarryMem(storage="sqlite", db_path=cls.db_path)
 
     @classmethod
     def tearDownClass(cls):
         import os
+
         if os.path.exists(cls.db_path):
             os.unlink(cls.db_path)
 
@@ -1476,22 +1533,27 @@ class TestPerformanceBenchmark(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         import tempfile
+
         cls.db_path = tempfile.mktemp(suffix=".db")
         cls.cm = CarryMem(storage="sqlite", db_path=cls.db_path)
 
         # Pre-populate with 500 memories
         for i in range(500):
-            cls.cm.classify_and_remember(f"Memory {i}: I prefer using {'PostgreSQL' if i % 3 == 0 else 'MySQL' if i % 3 == 1 else 'SQLite'} for project data")
+            cls.cm.classify_and_remember(
+                f"Memory {i}: I prefer using {'PostgreSQL' if i % 3 == 0 else 'MySQL' if i % 3 == 1 else 'SQLite'} for project data"
+            )
 
     @classmethod
     def tearDownClass(cls):
         import os
+
         if os.path.exists(cls.db_path):
             os.unlink(cls.db_path)
 
     def test_recall_500_memories_under_100ms(self):
         """Recall on 500 memories should complete under 100ms."""
         import time
+
         start = time.time()
         results = self.cm.recall_memories(query="数据库")
         elapsed_ms = (time.time() - start) * 1000
@@ -1533,5 +1595,5 @@ class TestPerformanceBenchmark(unittest.TestCase):
         self.assertLess(avg_per_call, 5, f"Average merge() took {avg_per_call:.2f}ms > 5ms")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

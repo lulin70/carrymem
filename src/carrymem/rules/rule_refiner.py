@@ -124,29 +124,27 @@ _SCOPE_QUESTIONS: List[Dict] = [
 _GENERALITY_QUESTIONS: List[Dict] = [
     {
         "question": "Should this rule apply to all projects or just the current one?",
+        "options": ["Current project only", "All similar projects", "All projects"],
+        "scope_map": {
+            "Current project only": "narrow",
+            "All similar projects": "medium",
+            "All projects": "broad",
+        },
+    },
+    {
+        "question": "How strict should this rule be?",
         "options": [
-            "Current project only",
-            "All similar projects",
-            "All projects"],
-            "scope_map": {
-                "Current project only": "narrow",
-                "All similar projects": "medium",
-                "All projects": "broad",
-                },
-                },
-                {
-                    "question": "How strict should this rule be?",
-                    "options": [
-                        "Suggestion (can be overridden)",
-                        "Preference (usually followed)",
-                        "Hard rule (never override)"],
-                        "override_map": {
-                            "Suggestion (can be overridden)": False,
-                            "Preference (usually followed)": False,
-                            "Hard rule (never override)": True,
-                            },
-                            },
-                             ]
+            "Suggestion (can be overridden)",
+            "Preference (usually followed)",
+            "Hard rule (never override)",
+        ],
+        "override_map": {
+            "Suggestion (can be overridden)": False,
+            "Preference (usually followed)": False,
+            "Hard rule (never override)": True,
+        },
+    },
+]
 
 _EXCEPTION_QUESTIONS: List[Dict] = [
     {
@@ -162,16 +160,35 @@ _EXCEPTION_QUESTIONS: List[Dict] = [
 
 _SPECIFICITY_KEYWORDS: Dict[str, List[str]] = {
     "project_specific": [
-        "this project", "current project", "our project", "this repo",
-        "this codebase", "this team", "this sprint",
+        "this project",
+        "current project",
+        "our project",
+        "this repo",
+        "this codebase",
+        "this team",
+        "this sprint",
     ],
     "tool_specific": [
-        "MongoDB", "React", "Django", "PostgreSQL", "MySQL", "Redis",
-        "Docker", "Kubernetes", "AWS", "GCP", "Azure",
+        "MongoDB",
+        "React",
+        "Django",
+        "PostgreSQL",
+        "MySQL",
+        "Redis",
+        "Docker",
+        "Kubernetes",
+        "AWS",
+        "GCP",
+        "Azure",
     ],
     "time_specific": [
-        "today", "this week", "this sprint", "this quarter",
-        "currently", "right now", "for now",
+        "today",
+        "this week",
+        "this sprint",
+        "this quarter",
+        "currently",
+        "right now",
+        "for now",
     ],
 }
 
@@ -194,9 +211,7 @@ class RuleRefiner:
     """Multi-turn Q&A rule refiner for abstracting specific rules into general ones."""
 
     def __init__(self):
-        self._compiled_scope = [
-            (re.compile(p["pattern"]), p) for p in _SCOPE_QUESTIONS
-        ]
+        self._compiled_scope = [(re.compile(p["pattern"]), p) for p in _SCOPE_QUESTIONS]
 
     def analyze_specificity(self, trigger: str, action: str) -> Dict:
         """
@@ -264,17 +279,11 @@ class RuleRefiner:
         qid = f"q_{uuid.uuid4().hex[:8]}"
 
         if phase == RefinementPhase.SCOPE:
-            return self._generate_scope_question(
-                trigger, action, qid, session_id, round_number
-            )
+            return self._generate_scope_question(trigger, action, qid, session_id, round_number)
         elif phase == RefinementPhase.GENERALITY:
-            return self._generate_generality_question(
-                trigger, action, qid, session_id, round_number
-            )
+            return self._generate_generality_question(trigger, action, qid, session_id, round_number)
         elif phase == RefinementPhase.EXCEPTION:
-            return self._generate_exception_question(
-                trigger, action, qid, session_id, round_number
-            )
+            return self._generate_exception_question(trigger, action, qid, session_id, round_number)
         elif phase == RefinementPhase.CONFIRM:
             return RefinementQuestion(
                 question_id=qid,
@@ -356,12 +365,7 @@ class RuleRefiner:
         )
 
     def _build_confirm_text(self, trigger: str, action: str) -> str:
-        return (
-            f"Confirm the refined rule:\n"
-            f"  Trigger: {trigger}\n"
-            f"  Action:  {action}\n"
-            f"Is this correct?"
-        )
+        return f"Confirm the refined rule:\n" f"  Trigger: {trigger}\n" f"  Action:  {action}\n" f"Is this correct?"
 
     def refine_from_answer(
         self,
@@ -380,17 +384,11 @@ class RuleRefiner:
         scope_notes = current_draft.scope_notes
 
         if question.question_type == QuestionType.SCOPE_BROADEN:
-            trigger, action, scope_notes = self._apply_scope_refinement(
-                trigger, action, answer, scope_notes
-            )
+            trigger, action, scope_notes = self._apply_scope_refinement(trigger, action, answer, scope_notes)
         elif question.question_type == QuestionType.GENERALITY_UP:
-            scope_notes = self._apply_generality_refinement(
-                answer, scope_notes
-            )
+            scope_notes = self._apply_generality_refinement(answer, scope_notes)
         elif question.question_type == QuestionType.EXCEPTION_ADD:
-            action, scope_notes = self._apply_exception_refinement(
-                action, answer, scope_notes
-            )
+            action, scope_notes = self._apply_exception_refinement(action, answer, scope_notes)
 
         return RefinedRuleDraft(
             trigger=trigger,
@@ -410,8 +408,7 @@ class RuleRefiner:
             if tool.lower() in action.lower() and broader.lower() not in action.lower():
                 if any(kw in answer_text for kw in ["similar", "broader", "too", "all related"]):
                     action = action.replace(tool, f"{tool} and {broader}")
-                    scope_notes = f"broadened from {tool} to include {broader}; {scope_notes}".strip(
-                        "; ")
+                    scope_notes = f"broadened from {tool} to include {broader}; {scope_notes}".strip("; ")
                     break
 
         if any(kw in answer_text for kw in ["all project", "broad", "general"]):
@@ -421,9 +418,7 @@ class RuleRefiner:
 
         return trigger, action, scope_notes
 
-    def _apply_generality_refinement(
-        self, answer: RefinementAnswer, scope_notes: str
-    ) -> str:
+    def _apply_generality_refinement(self, answer: RefinementAnswer, scope_notes: str) -> str:
         selected = answer.selected_option or answer.answer_text
         template = _GENERALITY_QUESTIONS[0]
 
@@ -433,9 +428,7 @@ class RuleRefiner:
 
         return scope_notes
 
-    def _apply_exception_refinement(
-        self, action: str, answer: RefinementAnswer, scope_notes: str
-    ) -> Tuple[str, str]:
+    def _apply_exception_refinement(self, action: str, answer: RefinementAnswer, scope_notes: str) -> Tuple[str, str]:
         selected = answer.selected_option or answer.answer_text
         template = _EXCEPTION_QUESTIONS[0]
 
@@ -447,9 +440,7 @@ class RuleRefiner:
 
         return action, scope_notes
 
-    def determine_next_phase(
-        self, current_phase: RefinementPhase, round_number: int
-    ) -> RefinementPhase:
+    def determine_next_phase(self, current_phase: RefinementPhase, round_number: int) -> RefinementPhase:
         """Determine the next refinement phase."""
         phase_order = [
             RefinementPhase.SCOPE,
@@ -466,9 +457,7 @@ class RuleRefiner:
         except ValueError:
             return RefinementPhase.COMPLETE
 
-    def create_initial_draft(
-        self, trigger: str, action: str, rule_type: str = "avoid"
-    ) -> RefinedRuleDraft:
+    def create_initial_draft(self, trigger: str, action: str, rule_type: str = "avoid") -> RefinedRuleDraft:
         """Create an initial rule draft from raw trigger/action."""
         return RefinedRuleDraft(
             trigger=trigger,

@@ -102,30 +102,28 @@ class JSONAdapter(StorageAdapter):
             )
 
             stored_dict = {
-    "id": entry.id or storage_key,
-    "type": entry.type,
-    "content": entry.content,
-    "original_message": entry.metadata.get(
-        "original_message",
-        "") if entry.metadata else "",
-        "confidence": entry.confidence,
-        "tier": entry.tier,
-        "source_layer": entry.source_layer,
-        "reasoning": entry.reasoning or "",
-        "suggested_action": entry.suggested_action,
-        "recall_hint": entry.recall_hint,
-        "metadata": entry.metadata or {},
-        "storage_key": storage_key,
-        "namespace": self._namespace,
-        "created_at": now.isoformat(),
-        "updated_at": now.isoformat(),
-        "expires_at": expires_at,
-        "access_count": 0,
-        "content_hash": c_hash,
-        "importance_score": imp_score,
-        "last_accessed_at": None,
-        "version": 1,
-         }
+                "id": entry.id or storage_key,
+                "type": entry.type,
+                "content": entry.content,
+                "original_message": (entry.metadata.get("original_message", "") if entry.metadata else ""),
+                "confidence": entry.confidence,
+                "tier": entry.tier,
+                "source_layer": entry.source_layer,
+                "reasoning": entry.reasoning or "",
+                "suggested_action": entry.suggested_action,
+                "recall_hint": entry.recall_hint,
+                "metadata": entry.metadata or {},
+                "storage_key": storage_key,
+                "namespace": self._namespace,
+                "created_at": now.isoformat(),
+                "updated_at": now.isoformat(),
+                "expires_at": expires_at,
+                "access_count": 0,
+                "content_hash": c_hash,
+                "importance_score": imp_score,
+                "last_accessed_at": None,
+                "version": 1,
+            }
 
             memories[c_hash] = stored_dict
             if not _skip_commit:
@@ -185,8 +183,7 @@ class JSONAdapter(StorageAdapter):
                     m["access_count"] = new_count
                     m["last_accessed_at"] = now.isoformat()
                     try:
-                        created = datetime.fromisoformat(
-                            m["created_at"]) if m.get("created_at") else now
+                        created = datetime.fromisoformat(m["created_at"]) if m.get("created_at") else now
                         m["importance_score"] = calculate_importance(
                             confidence=m.get("confidence", 0),
                             memory_type=m.get("type", "unknown"),

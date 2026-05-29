@@ -100,6 +100,7 @@ class TestHelperFunctions:
 
     def test_format_time_recent(self):
         from datetime import datetime, timezone, timedelta
+
         now = datetime.now(timezone.utc)
         recent = now - timedelta(minutes=30)
         result = _format_time(recent.isoformat())
@@ -107,6 +108,7 @@ class TestHelperFunctions:
 
     def test_format_time_hours_ago(self):
         from datetime import datetime, timezone, timedelta
+
         now = datetime.now(timezone.utc)
         hours_ago = now - timedelta(hours=5)
         result = _format_time(hours_ago.isoformat())
@@ -114,6 +116,7 @@ class TestHelperFunctions:
 
     def test_format_time_yesterday(self):
         from datetime import datetime, timezone, timedelta
+
         now = datetime.now(timezone.utc)
         yesterday = now - timedelta(days=1)
         result = _format_time(yesterday.isoformat())
@@ -121,6 +124,7 @@ class TestHelperFunctions:
 
     def test_format_time_days_ago(self):
         from datetime import datetime, timezone, timedelta
+
         now = datetime.now(timezone.utc)
         days_ago = now - timedelta(days=10)
         result = _format_time(days_ago.isoformat())
@@ -128,6 +132,7 @@ class TestHelperFunctions:
 
     def test_format_time_old_date(self):
         from datetime import datetime, timezone
+
         old = datetime(2020, 1, 1, tzinfo=timezone.utc)
         result = _format_time(old.isoformat())
         assert "2020" in result
@@ -161,6 +166,7 @@ class TestHelperFunctions:
 
     def test_c_no_color(self):
         import carrymem.cli as cli_mod
+
         orig = cli_mod._HAS_COLOR
         try:
             cli_mod._HAS_COLOR = False
@@ -219,19 +225,27 @@ class TestCmdAddForce:
         assert result == 0
 
     def test_add_with_context_json(self, temp_db, capsys):
-        result = cmd_add([
-            "I prefer dark mode",
-            "--context", '{"editor": "vscode"}',
-            "--db", temp_db,
-        ])
+        result = cmd_add(
+            [
+                "I prefer dark mode",
+                "--context",
+                '{"editor": "vscode"}',
+                "--db",
+                temp_db,
+            ]
+        )
         assert result == 0
 
     def test_add_with_invalid_context(self, temp_db, capsys):
-        result = cmd_add([
-            "I prefer dark mode",
-            "--context", "not json",
-            "--db", temp_db,
-        ])
+        result = cmd_add(
+            [
+                "I prefer dark mode",
+                "--context",
+                "not json",
+                "--db",
+                temp_db,
+            ]
+        )
         assert result == 1
 
     def test_add_with_namespace(self, temp_db, capsys):
@@ -526,6 +540,7 @@ class TestCmdSetupMcp:
 class TestCmdServe:
     def test_serve_import(self):
         from carrymem.cli import cmd_serve
+
         assert callable(cmd_serve)
 
 
@@ -606,25 +621,44 @@ class TestShowHelp:
 
 class TestCmdAddRuleTemplate:
     def test_add_rule_template(self, temp_db, capsys):
-        result = cmd_add_rule([
-            "always use SSL", "--trigger", "security",
-            "--type", "always", "--template", "code-review",
-            "--db", temp_db,
-        ])
+        result = cmd_add_rule(
+            [
+                "always use SSL",
+                "--trigger",
+                "security",
+                "--type",
+                "always",
+                "--template",
+                "code-review",
+                "--db",
+                temp_db,
+            ]
+        )
         assert result in (0, 1)
 
     def test_add_rule_template_invalid(self, temp_db, capsys):
-        result = cmd_add_rule([
-            "test", "--template", "nonexistent_template",
-            "--db", temp_db,
-        ])
+        result = cmd_add_rule(
+            [
+                "test",
+                "--template",
+                "nonexistent_template",
+                "--db",
+                temp_db,
+            ]
+        )
         assert result == 1
 
     def test_add_rule_soft(self, temp_db, capsys):
-        result = cmd_add_rule([
-            "prefer PostgreSQL", "--trigger", "database",
-            "--soft", "--db", temp_db,
-        ])
+        result = cmd_add_rule(
+            [
+                "prefer PostgreSQL",
+                "--trigger",
+                "database",
+                "--soft",
+                "--db",
+                temp_db,
+            ]
+        )
         assert result == 0
 
     def test_add_rule_interactive_cancel(self, temp_db, capsys):
@@ -654,11 +688,17 @@ class TestCmdAddRuleTemplate:
 
     def test_add_rule_validation_error(self, temp_db, capsys):
         from carrymem.rules import RuleEngine
+
         with patch.object(RuleEngine, "add_rule", side_effect=ValueError("bad rule")):
-            result = cmd_add_rule([
-                "test action", "--trigger", "test trigger",
-                "--db", temp_db,
-            ])
+            result = cmd_add_rule(
+                [
+                    "test action",
+                    "--trigger",
+                    "test trigger",
+                    "--db",
+                    temp_db,
+                ]
+            )
             assert result == 1
 
 
@@ -843,12 +883,18 @@ class TestCmdReviewLessonsWithData:
         assert result == 0
 
     def test_review_with_trigger_override(self, temp_db, capsys):
-        result = cmd_review_lessons([
-            "--accept", "nonexistent_id",
-            "--trigger", "custom trigger",
-            "--action", "custom action",
-            "--db", temp_db,
-        ])
+        result = cmd_review_lessons(
+            [
+                "--accept",
+                "nonexistent_id",
+                "--trigger",
+                "custom trigger",
+                "--action",
+                "custom action",
+                "--db",
+                temp_db,
+            ]
+        )
         assert result == 0
 
 
@@ -865,10 +911,16 @@ class TestCmdLessonLogWithData:
 
 class TestCmdRefineRuleExtended:
     def test_refine_start_success(self, temp_db, capsys):
-        result = cmd_refine_rule([
-            "--trigger", "database selection", "--action", "avoid MongoDB",
-            "--db", temp_db,
-        ])
+        result = cmd_refine_rule(
+            [
+                "--trigger",
+                "database selection",
+                "--action",
+                "avoid MongoDB",
+                "--db",
+                temp_db,
+            ]
+        )
         assert result == 0
 
     def test_refine_missing_args(self, temp_db, capsys):
@@ -876,31 +928,55 @@ class TestCmdRefineRuleExtended:
         assert result == 1
 
     def test_refine_cancel(self, temp_db, capsys):
-        result = cmd_refine_rule([
-            "--session", "nonexistent", "--cancel", "--db", temp_db,
-        ])
+        result = cmd_refine_rule(
+            [
+                "--session",
+                "nonexistent",
+                "--cancel",
+                "--db",
+                temp_db,
+            ]
+        )
         assert result == 0
 
     def test_refine_confirm_nonexistent(self, temp_db, capsys):
-        result = cmd_refine_rule([
-            "--session", "nonexistent", "--confirm", "--db", temp_db,
-        ])
+        result = cmd_refine_rule(
+            [
+                "--session",
+                "nonexistent",
+                "--confirm",
+                "--db",
+                temp_db,
+            ]
+        )
         assert result == 0
 
     def test_refine_answer_nonexistent(self, temp_db, capsys):
-        result = cmd_refine_rule([
-            "--session", "nonexistent", "--answer", "test answer",
-            "--db", temp_db,
-        ])
+        result = cmd_refine_rule(
+            [
+                "--session",
+                "nonexistent",
+                "--answer",
+                "test answer",
+                "--db",
+                temp_db,
+            ]
+        )
         assert result == 1
 
 
 class TestCmdRefinementSessionsExtended:
     def test_sessions_with_active(self, temp_db, capsys):
-        cmd_refine_rule([
-            "--trigger", "database selection", "--action", "avoid MongoDB",
-            "--db", temp_db,
-        ])
+        cmd_refine_rule(
+            [
+                "--trigger",
+                "database selection",
+                "--action",
+                "avoid MongoDB",
+                "--db",
+                temp_db,
+            ]
+        )
         capsys.readouterr()
         result = cmd_refinement_sessions(["--db", temp_db])
         assert result == 0

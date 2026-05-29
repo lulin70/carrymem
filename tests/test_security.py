@@ -6,8 +6,12 @@ import pytest
 
 from carrymem import CarryMem
 from carrymem.utils.validators import (
-    validate_message, validate_limit, validate_namespace,
-    validate_storage_key, validate_query, ValidationError,
+    validate_message,
+    validate_limit,
+    validate_namespace,
+    validate_storage_key,
+    validate_query,
+    ValidationError,
 )
 
 
@@ -78,6 +82,7 @@ class TestContextManager:
 class TestMCPHandlerSafety:
     def test_safe_error_no_leak(self):
         from carrymem.integration.layer2_mcp.handlers import _safe_error
+
         e = RuntimeError("database path /home/user/.carrymem/memories.db not found")
         result = _safe_error(e)
         assert result == "internal_error"
@@ -87,12 +92,14 @@ class TestMCPHandlerSafety:
     def test_safe_error_known_type(self):
         from carrymem.integration.layer2_mcp.handlers import _safe_error
         from carrymem.carrymem import StorageNotConfiguredError
+
         e = StorageNotConfiguredError()
         result = _safe_error(e)
         assert result == "storage_not_configured"
 
     def test_clamp_limit(self):
         from carrymem.integration.layer2_mcp.handlers import _clamp
+
         assert _clamp(999999, 1, 1000) == 1000
         assert _clamp(-5, 1, 100) == 1
         assert _clamp(50, 1, 100) == 50
@@ -101,6 +108,7 @@ class TestMCPHandlerSafety:
 class TestExceptionSanitization:
     def test_exceptions_file_not_corrupted(self):
         from carrymem.exceptions import DatabaseError, DBConnectionError, QueryError
+
         assert issubclass(DatabaseError, Exception)
         assert issubclass(DBConnectionError, Exception)
         assert issubclass(QueryError, Exception)

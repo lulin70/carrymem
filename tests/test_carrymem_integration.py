@@ -24,12 +24,16 @@ def cm_with_rules(tmp_path):
     db_path = str(tmp_path / "test_cm_rules.db")
     carrymem = CarryMem(db_path=db_path)
     carrymem.engine.rules.add_rule(
-        trigger="security", action="Never leak secrets",
-        rule_type="forbid", override=True,
+        trigger="security",
+        action="Never leak secrets",
+        rule_type="forbid",
+        override=True,
     )
     carrymem.engine.rules.add_rule(
-        trigger="database", action="Prefer PostgreSQL",
-        rule_type="prefer", override=False,
+        trigger="database",
+        action="Prefer PostgreSQL",
+        rule_type="prefer",
+        override=False,
     )
     yield carrymem
     carrymem.close()

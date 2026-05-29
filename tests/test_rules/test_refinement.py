@@ -76,25 +76,18 @@ class TestRuleRefinerSpecificity:
 
 class TestRuleRefinerQuestionGeneration:
     def test_scope_question_for_tool(self, refiner):
-        q = refiner.generate_question(
-            "database selection", "avoid MongoDB",
-            RefinementPhase.SCOPE, session_id="test"
-        )
+        q = refiner.generate_question("database selection", "avoid MongoDB", RefinementPhase.SCOPE, session_id="test")
         assert q is not None
         assert q.question_type == QuestionType.SCOPE_BROADEN
         assert len(q.options) >= 2
 
     def test_scope_question_options(self, refiner):
-        q = refiner.generate_question(
-            "database selection", "avoid MongoDB",
-            RefinementPhase.SCOPE, session_id="test"
-        )
+        q = refiner.generate_question("database selection", "avoid MongoDB", RefinementPhase.SCOPE, session_id="test")
         assert len(q.options) >= 2
 
     def test_generality_question(self, refiner):
         q = refiner.generate_question(
-            "database selection", "avoid MongoDB",
-            RefinementPhase.GENERALITY, session_id="test"
+            "database selection", "avoid MongoDB", RefinementPhase.GENERALITY, session_id="test"
         )
         assert q is not None
         assert q.question_type == QuestionType.GENERALITY_UP
@@ -102,8 +95,7 @@ class TestRuleRefinerQuestionGeneration:
 
     def test_exception_question(self, refiner):
         q = refiner.generate_question(
-            "database selection", "avoid MongoDB",
-            RefinementPhase.EXCEPTION, session_id="test"
+            "database selection", "avoid MongoDB", RefinementPhase.EXCEPTION, session_id="test"
         )
         assert q is not None
         assert q.question_type == QuestionType.EXCEPTION_ADD
@@ -111,25 +103,21 @@ class TestRuleRefinerQuestionGeneration:
 
     def test_confirm_question(self, refiner):
         q = refiner.generate_question(
-            "database selection", "avoid document databases",
-            RefinementPhase.CONFIRM, session_id="test"
+            "database selection",
+            "avoid document databases",
+            RefinementPhase.CONFIRM,
+            session_id="test",
         )
         assert q is not None
         assert q.question_type == QuestionType.CONFIRM_RULE
         assert "Confirm" in q.question_text or "confirm" in q.question_text.lower()
 
     def test_complete_phase_returns_none(self, refiner):
-        q = refiner.generate_question(
-            "db selection", "avoid doc DBs",
-            RefinementPhase.COMPLETE, session_id="test"
-        )
+        q = refiner.generate_question("db selection", "avoid doc DBs", RefinementPhase.COMPLETE, session_id="test")
         assert q is None
 
     def test_generic_scope_question(self, refiner):
-        q = refiner.generate_question(
-            "general scenario", "do something",
-            RefinementPhase.SCOPE, session_id="test"
-        )
+        q = refiner.generate_question("general scenario", "do something", RefinementPhase.SCOPE, session_id="test")
         assert q is not None
         assert q.question_type == QuestionType.SCOPE_BROADEN
 
@@ -138,12 +126,14 @@ class TestRuleRefinerRefinement:
     def test_scope_broadening(self, refiner):
         draft = RefinedRuleDraft(trigger="db selection", action="avoid MongoDB")
         question = RefinementQuestion(
-            question_id="q1", session_id="s1",
+            question_id="q1",
+            session_id="s1",
             question_type=QuestionType.SCOPE_BROADEN,
             question_text="Should this apply to all document databases?",
         )
         answer = RefinementAnswer(
-            question_id="q1", answer_text="similar tools too",
+            question_id="q1",
+            answer_text="similar tools too",
             selected_option="Similar tools to MongoDB",
         )
         refined = refiner.refine_from_answer(draft, question, answer)
@@ -152,12 +142,14 @@ class TestRuleRefinerRefinement:
     def test_exception_addition(self, refiner):
         draft = RefinedRuleDraft(trigger="db selection", action="avoid MongoDB")
         question = RefinementQuestion(
-            question_id="q2", session_id="s1",
+            question_id="q2",
+            session_id="s1",
             question_type=QuestionType.EXCEPTION_ADD,
             question_text="Are there any exceptions?",
         )
         answer = RefinementAnswer(
-            question_id="q2", answer_text="When explicitly approved",
+            question_id="q2",
+            answer_text="When explicitly approved",
             selected_option="When explicitly approved",
         )
         refined = refiner.refine_from_answer(draft, question, answer)
@@ -166,7 +158,8 @@ class TestRuleRefinerRefinement:
     def test_confidence_increases(self, refiner):
         draft = RefinedRuleDraft(trigger="db selection", action="avoid MongoDB", confidence=0.6)
         question = RefinementQuestion(
-            question_id="q1", session_id="s1",
+            question_id="q1",
+            session_id="s1",
             question_type=QuestionType.SCOPE_BROADEN,
             question_text="Broaden scope?",
         )
@@ -177,7 +170,8 @@ class TestRuleRefinerRefinement:
     def test_confidence_capped_at_1(self, refiner):
         draft = RefinedRuleDraft(trigger="db", action="avoid X", confidence=0.99)
         question = RefinementQuestion(
-            question_id="q1", session_id="s1",
+            question_id="q1",
+            session_id="s1",
             question_type=QuestionType.SCOPE_BROADEN,
             question_text="Broaden?",
         )
@@ -259,18 +253,14 @@ class TestRefinementSession:
         assert confirm_result["status"] == "completed"
 
     def test_cancel_session(self, session_mgr):
-        result = session_mgr.start_session(
-            trigger="db selection", action="avoid MongoDB"
-        )
+        result = session_mgr.start_session(trigger="db selection", action="avoid MongoDB")
         session_id = result["session_id"]
 
         success = session_mgr.cancel_session(session_id)
         assert success is True
 
     def test_cannot_confirm_cancelled(self, session_mgr):
-        result = session_mgr.start_session(
-            trigger="db selection", action="avoid MongoDB"
-        )
+        result = session_mgr.start_session(trigger="db selection", action="avoid MongoDB")
         session_id = result["session_id"]
         session_mgr.cancel_session(session_id)
 
@@ -289,9 +279,7 @@ class TestRefinementSession:
             assert s.status == SESSION_STATUS_ACTIVE
 
     def test_get_session_detail(self, session_mgr):
-        result = session_mgr.start_session(
-            trigger="db selection", action="avoid MongoDB"
-        )
+        result = session_mgr.start_session(trigger="db selection", action="avoid MongoDB")
         session_id = result["session_id"]
 
         detail = session_mgr.get_session_detail(session_id)
@@ -300,9 +288,7 @@ class TestRefinementSession:
         assert isinstance(detail["conversation"], list)
 
     def test_conversation_tracking(self, session_mgr):
-        result = session_mgr.start_session(
-            trigger="db selection", action="avoid MongoDB"
-        )
+        result = session_mgr.start_session(trigger="db selection", action="avoid MongoDB")
         session_id = result["session_id"]
 
         session_mgr.answer_question(session_id, "all document DBs")
@@ -326,9 +312,7 @@ class TestRefinementSession:
         assert "phase" in d
 
     def test_max_rounds_forces_confirm(self, session_mgr):
-        result = session_mgr.start_session(
-            trigger="db selection", action="avoid MongoDB"
-        )
+        result = session_mgr.start_session(trigger="db selection", action="avoid MongoDB")
         session_id = result["session_id"]
 
         for _ in range(6):
@@ -344,9 +328,7 @@ class TestRefinementSession:
         assert expired >= 0
 
     def test_confirm_creates_rule_in_storage(self, session_mgr, storage):
-        result = session_mgr.start_session(
-            trigger="database selection", action="avoid MongoDB"
-        )
+        result = session_mgr.start_session(trigger="database selection", action="avoid MongoDB")
         session_id = result["session_id"]
 
         confirm = session_mgr.confirm_session(session_id)
@@ -357,10 +339,7 @@ class TestRefinementSession:
         assert rule.derived_from == "refinement_session"
 
     def test_question_to_dict(self, refiner):
-        q = refiner.generate_question(
-            "db selection", "avoid MongoDB",
-            RefinementPhase.SCOPE, session_id="test"
-        )
+        q = refiner.generate_question("db selection", "avoid MongoDB", RefinementPhase.SCOPE, session_id="test")
         d = q.to_dict()
         assert "question_id" in d
         assert "question_text" in d

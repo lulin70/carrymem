@@ -13,7 +13,7 @@ import sys
 import tempfile
 import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from carrymem.carrymem import CarryMem
 from carrymem.rules import RuleEngine
@@ -55,7 +55,10 @@ class TestNaturalConversationExtraction(unittest.TestCase):
         """Verify: Correction expressions are stored as correction type."""
         result = self.cm.classify_and_remember("下次别用这个方案了，太慢了")
         self.assertTrue(result["stored"], "Correction should be stored")
-        self.assertIn(result["type"], ["correction", "user_preference", "decision", "sentiment_marker", "fact_declaration"])
+        self.assertIn(
+            result["type"],
+            ["correction", "user_preference", "decision", "sentiment_marker", "fact_declaration"],
+        )
 
     def test_natural_habit_extraction(self):
         """Verify: Habit mentions are stored."""
@@ -151,7 +154,7 @@ class TestE2EUserJourney(unittest.TestCase):
         rules_section = context.get("rules", "")
         self.assertTrue(
             "PostgreSQL" in prompt or "PostgreSQL" in rules_section,
-            "Rule should be injected into prompt or rules section"
+            "Rule should be injected into prompt or rules section",
         )
 
     def test_journey_no_context_still_injects(self):
@@ -263,9 +266,9 @@ class TestRuleManagementMCP(unittest.TestCase):
         self.assertGreaterEqual(len(rules), 2)
 
         for r in rules:
-            self.assertTrue(hasattr(r, 'trigger'))
-            self.assertTrue(hasattr(r, 'action'))
-            self.assertTrue(hasattr(r, 'override'))
+            self.assertTrue(hasattr(r, "trigger"))
+            self.assertTrue(hasattr(r, "action"))
+            self.assertTrue(hasattr(r, "override"))
 
     def test_delete_nonexistent_rule(self):
         """Verify: Deleting a non-existent rule returns False."""

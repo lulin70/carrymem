@@ -95,7 +95,13 @@ class AsyncCarryMem:
         language: str = "en",
     ) -> Dict[str, Any]:
         return await self._run(
-            self._sync.build_context, context, max_memories, max_knowledge, max_rules, max_tokens, language
+            self._sync.build_context,
+            context,
+            max_memories,
+            max_knowledge,
+            max_rules,
+            max_tokens,
+            language,
         )
 
     async def build_system_prompt(
@@ -108,7 +114,12 @@ class AsyncCarryMem:
         language: str = "en",
     ) -> str:
         return await self._run(
-            self._sync.build_system_prompt, context, max_memories, max_knowledge, max_tokens, language
+            self._sync.build_system_prompt,
+            context,
+            max_memories,
+            max_knowledge,
+            max_tokens,
+            language,
         )
 
     async def export_memories(

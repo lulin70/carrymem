@@ -28,12 +28,14 @@ PROMOTION_STATUS_ACCEPTED = "accepted"
 PROMOTION_STATUS_REJECTED = "rejected"
 PROMOTION_STATUS_EXPIRED = "expired"
 
-VALID_PROMOTION_STATUSES = frozenset({
-    PROMOTION_STATUS_PENDING,
-    PROMOTION_STATUS_ACCEPTED,
-    PROMOTION_STATUS_REJECTED,
-    PROMOTION_STATUS_EXPIRED,
-})
+VALID_PROMOTION_STATUSES = frozenset(
+    {
+        PROMOTION_STATUS_PENDING,
+        PROMOTION_STATUS_ACCEPTED,
+        PROMOTION_STATUS_REJECTED,
+        PROMOTION_STATUS_EXPIRED,
+    }
+)
 
 DEFAULT_EXPIRY_DAYS = 7
 DEFAULT_MIN_OCCURRENCES = 3
@@ -77,9 +79,7 @@ class PromotionPipeline:
 
     def __init__(self, storage: RuleStorage, expiry_days: int = DEFAULT_EXPIRY_DAYS):
         self.storage = storage
-        self.pattern_detector = PatternDetector(
-            min_occurrences=DEFAULT_MIN_OCCURRENCES
-        )
+        self.pattern_detector = PatternDetector(min_occurrences=DEFAULT_MIN_OCCURRENCES)
         self.candidate_generator = CandidateRuleGenerator()
         self.expiry_days = expiry_days
         self._audit_table_ensured = False
@@ -90,7 +90,8 @@ class PromotionPipeline:
         """Create promotion_audit table if not exists."""
         conn = self.storage._get_connection()
         try:
-            conn.execute("""
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS promotion_audit (
                     id TEXT PRIMARY KEY,
                     candidate_trigger TEXT NOT NULL,
@@ -106,15 +107,20 @@ class PromotionPipeline:
                     review_note TEXT,
                     resulting_rule_id TEXT
                 )
-            """)
-            conn.execute("""
+            """
+            )
+            conn.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_promotion_status
                 ON promotion_audit(status)
-            """)
-            conn.execute("""
+            """
+            )
+            conn.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_promotion_created
                 ON promotion_audit(created_at)
-            """)
+            """
+            )
             conn.commit()
         finally:
             pass
@@ -146,13 +152,9 @@ class PromotionPipeline:
                 "candidates_auto_accepted": 0,
             }
 
-        patterns = self.pattern_detector.detect_patterns(
-            memories, memory_type=memory_type
-        )
+        patterns = self.pattern_detector.detect_patterns(memories, memory_type=memory_type)
 
-        candidates = self.candidate_generator.generate(
-            patterns, max_candidates=max_candidates
-        )
+        candidates = self.candidate_generator.generate(patterns, max_candidates=max_candidates)
 
         queued = 0
         auto_accepted = 0
@@ -332,8 +334,7 @@ class PromotionPipeline:
                 SET status = ?, reviewed_at = ?
                 WHERE status = ? AND created_at < ?
                 """,
-                (PROMOTION_STATUS_EXPIRED, now_iso,
-                 PROMOTION_STATUS_PENDING, cutoff),
+                (PROMOTION_STATUS_EXPIRED, now_iso, PROMOTION_STATUS_PENDING, cutoff),
             )
             conn.commit()
             return cursor.rowcount

@@ -425,7 +425,14 @@ class TestSkillEdgeCases:
             storage = RuleStorage(db_path)
             bundle = {
                 "format": "carrymem-skill-v1",
-                "manifest": {"name": "empty", "version": "1.0.0", "scope": "personal", "dependencies": [], "tags": [], "rule_count": 0},
+                "manifest": {
+                    "name": "empty",
+                    "version": "1.0.0",
+                    "scope": "personal",
+                    "dependencies": [],
+                    "tags": [],
+                    "rule_count": 0,
+                },
                 "signature": {"algorithm": "sha256", "hash": "abc"},
                 "rules": [],
                 "templates": [],

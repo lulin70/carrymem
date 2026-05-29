@@ -53,6 +53,7 @@ class TestExportRules:
     def test_export_includes_version(self, engine):
         """Export should include current version"""
         from carrymem.__version__ import __version__
+
         data = engine.export_rules()
         assert data["version"] == __version__
 

@@ -16,6 +16,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 try:
     import yaml
+
     YAML_AVAILABLE = True
 except ImportError:
     YAML_AVAILABLE = False
@@ -24,6 +25,7 @@ try:
     from carrymem.utils.logger import logger
 except ImportError:
     import logging
+
     logger = logging.getLogger(__name__)
 
 
@@ -183,7 +185,7 @@ class SemanticExpander:
             result.remove(query)
         result.insert(0, query)
 
-        return tuple(result[:self._max_expansions])
+        return tuple(result[: self._max_expansions])
 
     def _tokenize(self, text: str) -> List[str]:
         """Tokenize text with CJK awareness.
@@ -197,11 +199,7 @@ class SemanticExpander:
         is_cjk_mode = False
 
         for char in text:
-            cjk_char = (
-                "\u4e00" <= char <= "\u9fff"
-                or "\u3040" <= char <= "\u309f"
-                or "\u30a0" <= char <= "\u30ff"
-            )
+            cjk_char = "\u4e00" <= char <= "\u9fff" or "\u3040" <= char <= "\u309f" or "\u30a0" <= char <= "\u30ff"
 
             if cjk_char:
                 if current_token and not is_cjk_mode:
@@ -232,7 +230,7 @@ class SemanticExpander:
             if self._is_cjk_token(t) and len(t) > 2:
                 for n in (2, 3):
                     for i in range(len(t) - n + 1):
-                        sub = t[i:i + n]
+                        sub = t[i : i + n]
                         if sub not in expanded_tokens:
                             expanded_tokens.append(sub)
 
@@ -240,10 +238,7 @@ class SemanticExpander:
 
     @staticmethod
     def _is_cjk_token(token: str) -> bool:
-        return any(
-            "\u4e00" <= c <= "\u9fff" or "\u3040" <= c <= "\u309f" or "\u30a0" <= c <= "\u30ff"
-            for c in token
-        )
+        return any("\u4e00" <= c <= "\u9fff" or "\u3040" <= c <= "\u309f" or "\u30a0" <= c <= "\u30ff" for c in token)
 
     def _spell_correct(self, word: str) -> Optional[str]:
         """Correct spelling using edit distance against vocabulary.

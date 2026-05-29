@@ -16,7 +16,7 @@ def _estimate_tokens(text: str) -> int:
 
 
 def _tokenize_text(text: str) -> set:
-    words = set(re.findall(r'[a-zA-Z]{2,}', text.lower()))
+    words = set(re.findall(r"[a-zA-Z]{2,}", text.lower()))
     cjk_chars = set()
     for c in text:
         if has_cjk(c):
@@ -42,11 +42,11 @@ def context_relevance(memory_content: str, context: str) -> float:
 
 def _has_temporal_signal(text: str) -> bool:
     temporal_patterns = [
-        r'\b(first|last|before|after|earlier|later|previous|next)\b',
-        r'\bhow many days\b',
-        r'\bhow (long|much time)\b',
-        r'\bwhen\b',
-        r'\b(days?|weeks?|months?|years?) (ago|before|after|between|passed)\b',
+        r"\b(first|last|before|after|earlier|later|previous|next)\b",
+        r"\bhow many days\b",
+        r"\bhow (long|much time)\b",
+        r"\bwhen\b",
+        r"\b(days?|weeks?|months?|years?) (ago|before|after|between|passed)\b",
     ]
     for p in temporal_patterns:
         if re.search(p, text.lower()):
@@ -56,14 +56,33 @@ def _has_temporal_signal(text: str) -> bool:
 
 def _has_preference_signal(text: str) -> bool:
     pref_patterns = [
-        r'\bprefer\b', r'\bpreference\b', r'\bfavorite\b', r'\bfavourite\b',
-        r'\bdislike\b', r'\brecommend\b', r'\blike\b', r'\blove\b',
-        r'\bhate\b', r'\bavoid\b', r'\bwant\b', r'\bneed\b',
-        r'\bcare about\b', r'\bimportant to\b', r'\bcan\'t stand\b',
-        r'\bnot a fan\b', r'\bnot interested\b', r'\baverse\b',
-        r'\baversion\b', r'\bstrongly\b', r'\balways\b', r'\bnever\b',
-        r'\bbest\b', r'\bworst\b', r'\bsuggest\b', r'\badvice\b',
-        r'\bopinion\b',
+        r"\bprefer\b",
+        r"\bpreference\b",
+        r"\bfavorite\b",
+        r"\bfavourite\b",
+        r"\bdislike\b",
+        r"\brecommend\b",
+        r"\blike\b",
+        r"\blove\b",
+        r"\bhate\b",
+        r"\bavoid\b",
+        r"\bwant\b",
+        r"\bneed\b",
+        r"\bcare about\b",
+        r"\bimportant to\b",
+        r"\bcan\'t stand\b",
+        r"\bnot a fan\b",
+        r"\bnot interested\b",
+        r"\baverse\b",
+        r"\baversion\b",
+        r"\bstrongly\b",
+        r"\balways\b",
+        r"\bnever\b",
+        r"\bbest\b",
+        r"\bworst\b",
+        r"\bsuggest\b",
+        r"\badvice\b",
+        r"\bopinion\b",
     ]
     for p in pref_patterns:
         if re.search(p, text.lower()):
@@ -73,8 +92,13 @@ def _has_preference_signal(text: str) -> bool:
 
 def _has_aggregation_signal(text: str) -> bool:
     agg_patterns = [
-        r'\bhow many\b', r'\bhow much\b', r'\btotal\b',
-        r'\ball\b', r'\bevery\b', r'\bcount\b', r'\blist\b',
+        r"\bhow many\b",
+        r"\bhow much\b",
+        r"\btotal\b",
+        r"\ball\b",
+        r"\bevery\b",
+        r"\bcount\b",
+        r"\blist\b",
     ]
     for p in agg_patterns:
         if re.search(p, text.lower()):
@@ -114,7 +138,7 @@ def _mmr_select(
         max_score = 1.0
 
     for _ in range(max_count):
-        best_mmr = -float('inf')
+        best_mmr = -float("inf")
         best_idx = -1
 
         for idx in remaining:
@@ -124,9 +148,7 @@ def _mmr_select(
             mem_tokens = candidate_tokens[idx]
 
             if selected_tokens_list:
-                max_sim = max(
-                    _jaccard_sim(mem_tokens, s) for s in selected_tokens_list
-                )
+                max_sim = max(_jaccard_sim(mem_tokens, s) for s in selected_tokens_list)
             else:
                 max_sim = 0.0
 
@@ -198,22 +220,35 @@ def select_memories(
             content_lower = (m.get("content", "") or "").lower()
             raw_lower = (m.get("raw_text", "") or "").lower()
             combined = content_lower + " " + raw_lower
-            has_date = bool(re.search(
-                r'\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\.?\s+\d{1,2}',
-                combined,
-            )) or bool(re.search(r'\d{4}-\d{2}-\d{2}', combined))
-            has_short_date = bool(re.search(
-                r'\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b',
-                combined,
-            ))
+            has_date = bool(
+                re.search(
+                    r"\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\.?\s+\d{1,2}",
+                    combined,
+                )
+            ) or bool(re.search(r"\d{4}-\d{2}-\d{2}", combined))
+            has_short_date = bool(
+                re.search(
+                    r"\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b",
+                    combined,
+                )
+            )
             if has_date or has_short_date:
                 final += 0.4
-            date_count = len(re.findall(
-                r'\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\.?\s+\d{1,2}',
-                combined,
-            )) + len(re.findall(r'\d{4}-\d{2}-\d{2}', combined)) + len(re.findall(
-                r'\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b', combined,
-            ))
+            date_count = (
+                len(
+                    re.findall(
+                        r"\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\.?\s+\d{1,2}",
+                        combined,
+                    )
+                )
+                + len(re.findall(r"\d{4}-\d{2}-\d{2}", combined))
+                + len(
+                    re.findall(
+                        r"\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b",
+                        combined,
+                    )
+                )
+            )
             if date_count >= 2:
                 final += 0.15
             if m.get("type") in ("fact_declaration", "decision"):
@@ -248,8 +283,9 @@ def select_memories(
     mandatory_types = {"correction", "decision"}
     mandatory_scored = [(s, m) for s, m in scored if m.get("type") in mandatory_types]
     pref_scored = [(s, m) for s, m in scored if m.get("type") == "user_preference"]
-    other_scored = [(s, m) for s, m in scored if m.get("type")
-                     not in mandatory_types and m.get("type") != "user_preference"]
+    other_scored = [
+        (s, m) for s, m in scored if m.get("type") not in mandatory_types and m.get("type") != "user_preference"
+    ]
     scored = mandatory_scored + pref_scored + other_scored
 
     selected = []
@@ -262,9 +298,7 @@ def select_memories(
             break
         m_copy = dict(m)
         m_copy["_selection_score"] = round(score, 6)
-        m_copy["_context_relevance"] = round(
-            context_relevance(m.get("content", ""), context or ""), 6
-        )
+        m_copy["_context_relevance"] = round(context_relevance(m.get("content", ""), context or ""), 6)
         selected.append(m_copy)
         total_tokens += entry_tokens
 

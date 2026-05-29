@@ -16,14 +16,26 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from carrymem.__version__ import __version__ as _version
-from .tools import CLASSIFICATION_SCHEMA, TOOL_NAMES, CORE_TOOL_NAMES, OPTIONAL_TOOL_NAMES, KNOWLEDGE_TOOL_NAMES, PROFILE_TOOL_NAMES, PROMPT_TOOL_NAMES, CONSOLIDATION_TOOL_NAMES, RULE_TOOL_NAMES
+from .tools import (
+    CLASSIFICATION_SCHEMA,
+    TOOL_NAMES,
+    CORE_TOOL_NAMES,
+    OPTIONAL_TOOL_NAMES,
+    KNOWLEDGE_TOOL_NAMES,
+    PROFILE_TOOL_NAMES,
+    PROMPT_TOOL_NAMES,
+    CONSOLIDATION_TOOL_NAMES,
+    RULE_TOOL_NAMES,
+)
 
 _validator: Any = None
 try:
     from carrymem.security.input_validator import InputValidator
+
     _validator = InputValidator(strict_mode=False)
 except ImportError:
     import logging
+
     logging.getLogger(__name__).warning("InputValidator not available — input validation disabled")
 
 _SAFE_ERROR_TYPES = {
@@ -77,11 +89,11 @@ def _format_memory_entry(match: Dict[str, Any], original_message: str) -> Dict[s
         "tier": tier,
         "source_layer": match.get("source", "unknown"),
         "reasoning": match.get("reasoning", ""),
-        "suggested_action": "store" if confidence > 0.5 else ("defer" if confidence > 0.3 else "ignore"),
+        "suggested_action": ("store" if confidence > 0.5 else ("defer" if confidence > 0.3 else "ignore")),
         "metadata": {
             "original_message": original_message,
-            "timestamp_utc": datetime.now(timezone.utc).isoformat()
-        }
+            "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        },
     }
 
 
@@ -102,7 +114,7 @@ def _build_summary(entries: List[Dict[str, Any]], llm_calls: int = 0) -> Dict[st
         "by_tier": by_tier,
         "avg_confidence": round(total_confidence / max(len(entries), 1), 4),
         "filtered_count": 0,
-        "llm_calls_used": llm_calls
+        "llm_calls_used": llm_calls,
     }
 
 
@@ -117,7 +129,7 @@ def handle_classify_message(engine, arguments: Dict[str, Any]) -> Dict[str, Any]
             "entries": [],
             "summary": {"total_entries": 0},
             "engine_info": {"mode": "classification_only"},
-            "error": "Empty message provided"
+            "error": "Empty message provided",
         }
 
     try:
@@ -137,8 +149,8 @@ def handle_classify_message(engine, arguments: Dict[str, Any]) -> Dict[str, Any]
             "summary": _build_summary(entries),
             "engine_info": {
                 "mode": "classification_only",
-                "processing_time_ms": round(processing_time * 1000, 2) if processing_time else None
-            }
+                "processing_time_ms": round(processing_time * 1000, 2) if processing_time else None,
+            },
         }
     except Exception as e:
         return {
@@ -147,7 +159,7 @@ def handle_classify_message(engine, arguments: Dict[str, Any]) -> Dict[str, Any]
             "entries": [],
             "summary": {"total_entries": 0},
             "engine_info": {"mode": "classification_only"},
-            "error": _safe_error(e)
+            "error": _safe_error(e),
         }
 
 
@@ -162,7 +174,7 @@ def handle_get_classification_schema(engine, arguments: Dict[str, Any]) -> Dict[
             f"**Mode**: {CLASSIFICATION_SCHEMA['mode']}",
             "",
             "## Memory Types (7)",
-            ""
+            "",
         ]
         for mt in CLASSIFICATION_SCHEMA["memory_types"]:
             # type: ignore[index]
@@ -176,10 +188,7 @@ def handle_get_classification_schema(engine, arguments: Dict[str, Any]) -> Dict[
             lines.append("")
         return {"schema": "\n".join(lines), "format": "markdown"}
 
-    return {
-        "schema": CLASSIFICATION_SCHEMA,
-        "format": "json"
-    }
+    return {"schema": CLASSIFICATION_SCHEMA, "format": "json"}
 
 
 def handle_batch_classify(engine, arguments: Dict[str, Any]) -> Dict[str, Any]:
@@ -189,7 +198,7 @@ def handle_batch_classify(engine, arguments: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "results": [],
             "summary": {"total_messages": 0, "total_entries": 0},
-            "error": "No messages provided"
+            "error": "No messages provided",
         }
 
     results = []
@@ -207,8 +216,8 @@ def handle_batch_classify(engine, arguments: Dict[str, Any]) -> Dict[str, Any]:
         "summary": {
             "total_messages": len(messages_data),
             "total_entries": total_entries,
-            "messages_with_memories": sum(1 for r in results if r.get("should_remember"))
-        }
+            "messages_with_memories": sum(1 for r in results if r.get("should_remember")),
+        },
     }
 
 
@@ -225,7 +234,7 @@ def handle_mce_status(engine, arguments: Dict[str, Any]) -> Dict[str, Any]:
             "core_tools": list(CORE_TOOL_NAMES),
             "optional_tools": list(OPTIONAL_TOOL_NAMES),
         },
-        "uptime_seconds": round(time.time() - getattr(engine, '_start_time', time.time()), 1)
+        "uptime_seconds": round(time.time() - getattr(engine, "_start_time", time.time()), 1),
     }
     return status
 
@@ -428,9 +437,7 @@ def handle_schedule_consolidation(carrymem, arguments: Dict[str, Any]) -> Dict[s
     run_p1 = arguments.get("run_p1", True)
     run_p2 = arguments.get("run_p2", False)
     try:
-        result = carrymem.schedule_consolidation(
-            interval_hours=interval, dry_run=dry_run, run_p1=run_p1, run_p2=run_p2
-        )
+        result = carrymem.schedule_consolidation(interval_hours=interval, dry_run=dry_run, run_p1=run_p1, run_p2=run_p2)
         return result
     except Exception as e:
         return {"error": _safe_error(e)}
@@ -453,8 +460,11 @@ def handle_add_rule(engine, args: Dict[str, Any]) -> Dict[str, Any]:
         override = args.get("override", False)
 
         rule = engine.add_rule(
-            trigger=trigger, action=action,
-            scope=scope, rule_type=rule_type, override=override,
+            trigger=trigger,
+            action=action,
+            scope=scope,
+            rule_type=rule_type,
+            override=override,
         )
         return {
             "added": True,
@@ -623,16 +633,15 @@ def handle_suggest_rules(engine, args: Dict[str, Any]) -> Dict[str, Any]:
         if not memories:
             return {"suggestions": [], "total": 0, "message": "No memories found to analyze"}
 
-        candidates = engine.suggest_rules(
-            memories, memory_type=memory_type, max_candidates=max_candidates)
+        candidates = engine.suggest_rules(memories, memory_type=memory_type, max_candidates=max_candidates)
         return {
             "total": len(candidates),
             "suggestions": [
                 {
-                    "trigger": c.trigger if hasattr(c, 'trigger') else str(c),
-                    "action": c.action if hasattr(c, 'action') else "",
-                    "rule_type": c.rule_type if hasattr(c, 'rule_type') else "prefer",
-                    "confidence": c.confidence if hasattr(c, 'confidence') else 0.5,
+                    "trigger": c.trigger if hasattr(c, "trigger") else str(c),
+                    "action": c.action if hasattr(c, "action") else "",
+                    "rule_type": c.rule_type if hasattr(c, "rule_type") else "prefer",
+                    "confidence": c.confidence if hasattr(c, "confidence") else 0.5,
                 }
                 for c in candidates
             ],
@@ -732,11 +741,13 @@ def handle_my_profile(carrymem, args: Dict[str, Any]) -> Dict[str, Any]:
                 for m in memories[:20]:
                     m_type = m.get("type", "unknown")
                     type_counts[m_type] = type_counts.get(m_type, 0) + 1
-                    recent.append({
-                        "type": m_type,
-                        "content": m.get("content", "")[:80],
-                        "confidence": m.get("confidence", 0),
-                    })
+                    recent.append(
+                        {
+                            "type": m_type,
+                            "content": m.get("content", "")[:80],
+                            "confidence": m.get("confidence", 0),
+                        }
+                    )
                 profile["memories"] = {
                     "total": len(memories),
                     "type_distribution": type_counts,
@@ -748,8 +759,8 @@ def handle_my_profile(carrymem, args: Dict[str, Any]) -> Dict[str, Any]:
         if include_rules:
             try:
                 from carrymem.rules import RuleEngine
-                db_path = carrymem._adapter.db_path if hasattr(
-                    carrymem._adapter, 'db_path') else None
+
+                db_path = carrymem._adapter.db_path if hasattr(carrymem._adapter, "db_path") else None
                 engine = RuleEngine(db_path=db_path)
                 rules = engine.list_rules(status="active", limit=200)
                 scope_counts: Dict[str, int] = {}
@@ -886,30 +897,36 @@ class Handlers:
         self._engine = self._carrymem.engine
 
         from carrymem.rules import RuleEngine
-        rule_db_path: Optional[str] = getattr(self._carrymem._adapter, '_db_path', None) or getattr(
-            self._carrymem._adapter, 'db_path', None)
+
+        rule_db_path: Optional[str] = getattr(self._carrymem._adapter, "_db_path", None) or getattr(
+            self._carrymem._adapter, "db_path", None
+        )
         self._rule_engine = RuleEngine(db_path=rule_db_path)
 
     async def handle_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
         if tool_name not in handler_map:
             return {
                 "error": f"Unknown tool: {tool_name}",
-                "available_tools": list(handler_map.keys())
+                "available_tools": list(handler_map.keys()),
             }
 
         handler_func = handler_map[tool_name]
         try:
-            if tool_name in OPTIONAL_TOOL_NAMES or tool_name in KNOWLEDGE_TOOL_NAMES or tool_name in PROFILE_TOOL_NAMES or tool_name in PROMPT_TOOL_NAMES or tool_name in CONSOLIDATION_TOOL_NAMES or tool_name in (
-                "my_profile", "onboard"):
+            if (
+                tool_name in OPTIONAL_TOOL_NAMES
+                or tool_name in KNOWLEDGE_TOOL_NAMES
+                or tool_name in PROFILE_TOOL_NAMES
+                or tool_name in PROMPT_TOOL_NAMES
+                or tool_name in CONSOLIDATION_TOOL_NAMES
+                or tool_name in ("my_profile", "onboard")
+            ):
                 target: Any = self._carrymem
             elif tool_name in RULE_TOOL_NAMES:
                 target = self._rule_engine
             else:
                 target = self._engine
             loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(
-                None, lambda: handler_func(target, arguments or {})
-            )
+            result = await loop.run_in_executor(None, lambda: handler_func(target, arguments or {}))
             return {"success": True, "data": result}
         except Exception as e:
             return {"success": False, "error": _safe_error(e)}

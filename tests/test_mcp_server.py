@@ -137,10 +137,13 @@ class TestMCPServer:
     @pytest.mark.asyncio
     async def test_handle_initialize(self, tmp_path):
         server = MCPServer(data_path=str(tmp_path))
-        result = await server.handle_initialize(1, {
-            "protocolVersion": "2024-11-05",
-            "clientInfo": {"name": "test", "version": "1.0"},
-        })
+        result = await server.handle_initialize(
+            1,
+            {
+                "protocolVersion": "2024-11-05",
+                "clientInfo": {"name": "test", "version": "1.0"},
+            },
+        )
         assert result["id"] == 1
         assert "result" in result
         assert result["result"]["protocolVersion"] == "2024-11-05"
@@ -157,10 +160,13 @@ class TestMCPServer:
     @pytest.mark.asyncio
     async def test_handle_tools_call(self, tmp_path):
         server = MCPServer(data_path=str(tmp_path))
-        result = await server.handle_tools_call(3, {
-            "name": "mce_status",
-            "arguments": {},
-        })
+        result = await server.handle_tools_call(
+            3,
+            {
+                "name": "mce_status",
+                "arguments": {},
+            },
+        )
         assert result["id"] == 3
         assert "result" in result
         await server.cleanup()
@@ -176,12 +182,14 @@ class TestMCPServer:
     @pytest.mark.asyncio
     async def test_handle_request_initialize(self, tmp_path):
         server = MCPServer(data_path=str(tmp_path))
-        result = await server.handle_request({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "initialize",
-            "params": {"protocolVersion": "2024-11-05"},
-        })
+        result = await server.handle_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {"protocolVersion": "2024-11-05"},
+            }
+        )
         assert result is not None
         assert "result" in result
         await server.cleanup()
@@ -189,65 +197,77 @@ class TestMCPServer:
     @pytest.mark.asyncio
     async def test_handle_request_initialized(self, tmp_path):
         server = MCPServer(data_path=str(tmp_path))
-        result = await server.handle_request({
-            "jsonrpc": "2.0",
-            "method": "initialized",
-        })
+        result = await server.handle_request(
+            {
+                "jsonrpc": "2.0",
+                "method": "initialized",
+            }
+        )
         assert result is None
         await server.cleanup()
 
     @pytest.mark.asyncio
     async def test_handle_request_tools_list(self, tmp_path):
         server = MCPServer(data_path=str(tmp_path))
-        result = await server.handle_request({
-            "jsonrpc": "2.0",
-            "id": 2,
-            "method": "tools/list",
-        })
+        result = await server.handle_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/list",
+            }
+        )
         assert result is not None
         await server.cleanup()
 
     @pytest.mark.asyncio
     async def test_handle_request_tools_call(self, tmp_path):
         server = MCPServer(data_path=str(tmp_path))
-        result = await server.handle_request({
-            "jsonrpc": "2.0",
-            "id": 3,
-            "method": "tools/call",
-            "params": {"name": "mce_status", "arguments": {}},
-        })
+        result = await server.handle_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "tools/call",
+                "params": {"name": "mce_status", "arguments": {}},
+            }
+        )
         assert result is not None
         await server.cleanup()
 
     @pytest.mark.asyncio
     async def test_handle_request_shutdown(self, tmp_path):
         server = MCPServer(data_path=str(tmp_path))
-        result = await server.handle_request({
-            "jsonrpc": "2.0",
-            "id": 4,
-            "method": "shutdown",
-        })
+        result = await server.handle_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 4,
+                "method": "shutdown",
+            }
+        )
         assert result is not None
         await server.cleanup()
 
     @pytest.mark.asyncio
     async def test_handle_request_exit(self, tmp_path):
         server = MCPServer(data_path=str(tmp_path))
-        result = await server.handle_request({
-            "jsonrpc": "2.0",
-            "method": "exit",
-        })
+        result = await server.handle_request(
+            {
+                "jsonrpc": "2.0",
+                "method": "exit",
+            }
+        )
         assert result is None
         await server.cleanup()
 
     @pytest.mark.asyncio
     async def test_handle_request_unknown(self, tmp_path):
         server = MCPServer(data_path=str(tmp_path))
-        result = await server.handle_request({
-            "jsonrpc": "2.0",
-            "id": 5,
-            "method": "unknown_method",
-        })
+        result = await server.handle_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 5,
+                "method": "unknown_method",
+            }
+        )
         assert "error" in result
         await server.cleanup()
 
@@ -283,4 +303,5 @@ class TestMCPServer:
 class TestRunHTTPServer:
     def test_import(self):
         from carrymem.integration.layer2_mcp.http_server import run_http_server
+
         assert callable(run_http_server)

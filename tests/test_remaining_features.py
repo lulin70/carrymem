@@ -14,7 +14,7 @@ import tempfile
 import unittest
 from datetime import datetime, timezone, timedelta
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from carrymem.carrymem import CarryMem
 from carrymem.rules import RuleEngine
@@ -174,10 +174,12 @@ class TestImplicitPreferenceInference(unittest.TestCase):
         result = self.cm.classify_and_remember("I prefer Python for backend too")
         auto_rules = result.get("auto_rules", [])
         all_implicit = [r for r in auto_rules if r.get("source") == "implicit_preference"]
-        all_python = [r for r in auto_rules if "python" in r.get("action", "").lower() or "Python" in r.get("action", "")]
+        all_python = [
+            r for r in auto_rules if "python" in r.get("action", "").lower() or "Python" in r.get("action", "")
+        ]
         self.assertTrue(
             len(all_implicit) > 0 or len(all_python) > 0,
-            "Should detect Python preference (implicit or direct)"
+            "Should detect Python preference (implicit or direct)",
         )
 
     def test_implicit_database_preference(self):
@@ -189,10 +191,12 @@ class TestImplicitPreferenceInference(unittest.TestCase):
         result = self.cm.classify_and_remember("I prefer PostgreSQL for analytics too")
         auto_rules = result.get("auto_rules", [])
         all_implicit = [r for r in auto_rules if r.get("source") == "implicit_preference"]
-        all_pg = [r for r in auto_rules if "postgresql" in r.get("action", "").lower() or "PostgreSQL" in r.get("action", "")]
+        all_pg = [
+            r for r in auto_rules if "postgresql" in r.get("action", "").lower() or "PostgreSQL" in r.get("action", "")
+        ]
         self.assertTrue(
             len(all_implicit) > 0 or len(all_pg) > 0,
-            "Should detect PostgreSQL preference (implicit or direct)"
+            "Should detect PostgreSQL preference (implicit or direct)",
         )
 
     def test_implicit_preference_has_domain_info(self):
@@ -238,7 +242,10 @@ class TestRuleExpiry(unittest.TestCase):
         """Verify: Rules with future expires_at are not expired."""
         future = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
         rule = self.engine.add_rule(
-            trigger="test", action="test", rule_type="prefer", expires_at=future,
+            trigger="test",
+            action="test",
+            rule_type="prefer",
+            expires_at=future,
         )
         self.assertFalse(rule.is_expired())
 
@@ -246,7 +253,10 @@ class TestRuleExpiry(unittest.TestCase):
         """Verify: Rules with past expires_at are expired."""
         past = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
         rule = self.engine.add_rule(
-            trigger="test", action="test", rule_type="prefer", expires_at=past,
+            trigger="test",
+            action="test",
+            rule_type="prefer",
+            expires_at=past,
         )
         self.assertTrue(rule.is_expired())
 
@@ -254,7 +264,10 @@ class TestRuleExpiry(unittest.TestCase):
         """Verify: Expired rules are filtered out during matching."""
         past = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
         self.engine.add_rule(
-            trigger="expired_test", action="old action", rule_type="always", expires_at=past,
+            trigger="expired_test",
+            action="old action",
+            rule_type="always",
+            expires_at=past,
         )
         matches = self.engine.match("expired_test")
         self.assertEqual(len(matches), 0, "Expired rules should not match")
@@ -263,7 +276,10 @@ class TestRuleExpiry(unittest.TestCase):
         """Verify: Active (non-expired) rules still match."""
         future = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
         self.engine.add_rule(
-            trigger="active_test", action="current action", rule_type="always", expires_at=future,
+            trigger="active_test",
+            action="current action",
+            rule_type="always",
+            expires_at=future,
         )
         matches = self.engine.match("active_test")
         self.assertGreater(len(matches), 0, "Active rules should still match")

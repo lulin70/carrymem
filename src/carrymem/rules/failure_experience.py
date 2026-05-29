@@ -89,8 +89,14 @@ _MISTAKE_PATTERNS_ZH: List[Tuple[str, str]] = [
 ]
 
 _OUTCOME_PATTERNS_EN: List[Tuple[str, str]] = [
-    (r"(?i)(?:client|customer|boss|manager|user)\s+(?:complained|rejected|was\s+angry)", "negative_outcome"),
-    (r"(?i)(?:caused|led\s+to)\s+(?:a\s+)?(?:problem|issue|bug|error|incident)", "negative_outcome"),
+    (
+        r"(?i)(?:client|customer|boss|manager|user)\s+(?:complained|rejected|was\s+angry)",
+        "negative_outcome",
+    ),
+    (
+        r"(?i)(?:caused|led\s+to)\s+(?:a\s+)?(?:problem|issue|bug|error|incident)",
+        "negative_outcome",
+    ),
     (r"(?i)(?:cost|took)\s+(?:us\s+)?(?:hours|days|weeks|\$\d+)", "negative_outcome"),
 ]
 
@@ -116,32 +122,84 @@ _ACTION_EXTRACTION_ZH: List[Tuple[str, str]] = [
 
 _DOMAIN_KEYWORDS: Dict[str, List[str]] = {
     "competitive_analysis": [
-        "竞品", "对手", "竞争", "市场分析",
-        "competitor", "competition", "market analysis", "rival",
+        "竞品",
+        "对手",
+        "竞争",
+        "市场分析",
+        "competitor",
+        "competition",
+        "market analysis",
+        "rival",
     ],
     "vendor_management": [
-        "供应商", "外包", "乙方", "服务商",
-        "vendor", "supplier", "outsourcing", "contractor",
+        "供应商",
+        "外包",
+        "乙方",
+        "服务商",
+        "vendor",
+        "supplier",
+        "outsourcing",
+        "contractor",
     ],
     "tech_selection": [
-        "框架", "语言", "技术", "选型", "架构",
-        "framework", "language", "tech", "stack", "architecture",
+        "框架",
+        "语言",
+        "技术",
+        "选型",
+        "架构",
+        "framework",
+        "language",
+        "tech",
+        "stack",
+        "architecture",
     ],
     "code_quality": [
-        "代码", "bug", "测试", "质量", "规范",
-        "code", "bug", "test", "quality", "standard",
+        "代码",
+        "bug",
+        "测试",
+        "质量",
+        "规范",
+        "code",
+        "bug",
+        "test",
+        "quality",
+        "standard",
     ],
     "project_management": [
-        "项目", "排期", "需求", "里程碑", "交付",
-        "project", "schedule", "requirement", "milestone", "delivery",
+        "项目",
+        "排期",
+        "需求",
+        "里程碑",
+        "交付",
+        "project",
+        "schedule",
+        "requirement",
+        "milestone",
+        "delivery",
     ],
     "data_handling": [
-        "数据", "来源", "统计", "报告", "信息",
-        "data", "source", "statistics", "report", "information",
+        "数据",
+        "来源",
+        "统计",
+        "报告",
+        "信息",
+        "data",
+        "source",
+        "statistics",
+        "report",
+        "information",
     ],
     "communication": [
-        "沟通", "会议", "邮件", "汇报", "反馈",
-        "communication", "meeting", "email", "report", "feedback",
+        "沟通",
+        "会议",
+        "邮件",
+        "汇报",
+        "反馈",
+        "communication",
+        "meeting",
+        "email",
+        "report",
+        "feedback",
     ],
 }
 
@@ -191,22 +249,12 @@ class FailureExperienceExtractor:
     """Extract actionable lessons from failure memories."""
 
     def __init__(self):
-        self._compiled_en = [
-            (re.compile(p), s) for p, s in _MISTAKE_PATTERNS_EN + _OUTCOME_PATTERNS_EN
-        ]
-        self._compiled_zh = [
-            (re.compile(p), s) for p, s in _MISTAKE_PATTERNS_ZH + _OUTCOME_PATTERNS_ZH
-        ]
-        self._action_en = [
-            (re.compile(p), t) for p, t in _ACTION_EXTRACTION_EN
-        ]
-        self._action_zh = [
-            (re.compile(p), t) for p, t in _ACTION_EXTRACTION_ZH
-        ]
+        self._compiled_en = [(re.compile(p), s) for p, s in _MISTAKE_PATTERNS_EN + _OUTCOME_PATTERNS_EN]
+        self._compiled_zh = [(re.compile(p), s) for p, s in _MISTAKE_PATTERNS_ZH + _OUTCOME_PATTERNS_ZH]
+        self._action_en = [(re.compile(p), t) for p, t in _ACTION_EXTRACTION_EN]
+        self._action_zh = [(re.compile(p), t) for p, t in _ACTION_EXTRACTION_ZH]
 
-    def extract(
-        self, memories: List[Dict], memory_type: Optional[str] = None
-    ) -> List[ExtractedLesson]:
+    def extract(self, memories: List[Dict], memory_type: Optional[str] = None) -> List[ExtractedLesson]:
         """
         Extract lessons from memories that contain failure signals.
 
@@ -271,9 +319,7 @@ class FailureExperienceExtractor:
             domain=domain,
         )
 
-    def _detect_failure_signal(
-        self, content: str
-    ) -> Tuple[Optional[FailureSignal], str]:
+    def _detect_failure_signal(self, content: str) -> Tuple[Optional[FailureSignal], str]:
         """Detect if content contains a failure signal."""
         for pattern, signal_type in self._compiled_en:
             if pattern.search(content):
@@ -313,9 +359,7 @@ class FailureExperienceExtractor:
 
         return content.strip()
 
-    def _extract_action_hint(
-        self, content: str, signal_type: str, lesson: str
-    ) -> str:
+    def _extract_action_hint(self, content: str, signal_type: str, lesson: str) -> str:
         """Extract or generate an action hint for the rule."""
         for pattern, _ in self._action_en:
             match = pattern.search(content)
@@ -354,9 +398,7 @@ class FailureExperienceExtractor:
                 best_domain = domain
         return best_domain
 
-    def _calc_confidence(
-        self, signal_type: str, content: str
-    ) -> FailureConfidence:
+    def _calc_confidence(self, signal_type: str, content: str) -> FailureConfidence:
         """Calculate confidence based on signal type and content richness."""
         base = _SIGNAL_CONFIDENCE.get(signal_type, FailureConfidence.LOW)
 

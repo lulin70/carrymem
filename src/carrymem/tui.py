@@ -9,12 +9,14 @@ try:
     from textual.containers import Container, Horizontal, Vertical
     from textual.binding import Binding
     from textual.reactive import reactive
+
     HAS_TEXTUAL = True
 except ImportError:
     HAS_TEXTUAL = False
 
 
 if not HAS_TEXTUAL:
+
     def run_tui():
         print("  Textual is not installed.")
         print("  Install with: pip install textual")
@@ -196,10 +198,7 @@ else:
 
         def _render_memories(self) -> None:
             if not self.memories:
-                self._set_content(
-                    "No memories found.\n\n"
-                    "Press 'a' to add a memory, or 's' to search."
-                )
+                self._set_content("No memories found.\n\n" "Press 'a' to add a memory, or 's' to search.")
                 return
 
             lines = []
@@ -212,8 +211,7 @@ else:
                 key = m.get("storage_key", "")
 
                 lines.append(f"{i}. {icon} [{mtype}] {content}")
-                lines.append(
-                    f"   Conf: {confidence:.0%} | Importance: {importance:.2f} | Key: {key}")
+                lines.append(f"   Conf: {confidence:.0%} | Importance: {importance:.2f} | Key: {key}")
                 lines.append("")
 
             self._set_content("\n".join(lines))
@@ -259,7 +257,7 @@ else:
         def on_input_submitted(self, event: Input.Submitted) -> None:  # noqa: F811
             if event.input.id == "search-input":
                 value = event.value.strip()
-                if hasattr(self, '_add_mode') and self._add_mode:
+                if hasattr(self, "_add_mode") and self._add_mode:
                     self._add_mode = False
                     if value:
                         try:
@@ -303,7 +301,7 @@ else:
 
         def on_key(self, event) -> None:
             if event.key == "escape":
-                if hasattr(self, '_add_mode') and self._add_mode:
+                if hasattr(self, "_add_mode") and self._add_mode:
                     self._add_mode = False
                     try:
                         search_input = self.query_one("#search-input", Input)

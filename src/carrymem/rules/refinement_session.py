@@ -31,12 +31,14 @@ SESSION_STATUS_COMPLETED = "completed"
 SESSION_STATUS_CANCELLED = "cancelled"
 SESSION_STATUS_EXPIRED = "expired"
 
-VALID_SESSION_STATUSES = frozenset({
-    SESSION_STATUS_ACTIVE,
-    SESSION_STATUS_COMPLETED,
-    SESSION_STATUS_CANCELLED,
-    SESSION_STATUS_EXPIRED,
-})
+VALID_SESSION_STATUSES = frozenset(
+    {
+        SESSION_STATUS_ACTIVE,
+        SESSION_STATUS_COMPLETED,
+        SESSION_STATUS_CANCELLED,
+        SESSION_STATUS_EXPIRED,
+    }
+)
 
 DEFAULT_SESSION_EXPIRY_DAYS = 7
 MAX_ROUNDS = 5
@@ -98,7 +100,8 @@ class RefinementSessionManager:
     def _ensure_sessions_table(self):
         conn = self.storage._get_connection()
         try:
-            conn.execute("""
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS refinement_sessions (
                     id TEXT PRIMARY KEY,
                     source_rule_id TEXT,
@@ -119,11 +122,14 @@ class RefinementSessionManager:
                     completed_at TEXT,
                     resulting_rule_id TEXT
                 )
-            """)
-            conn.execute("""
+            """
+            )
+            conn.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_refinement_status
                 ON refinement_sessions(status)
-            """)
+            """
+            )
             conn.commit()
         finally:
             pass
@@ -211,9 +217,7 @@ class RefinementSessionManager:
             },
         }
 
-    def answer_question(
-        self, session_id: str, answer_text: str, selected_option: Optional[str] = None
-    ) -> Dict:
+    def answer_question(self, session_id: str, answer_text: str, selected_option: Optional[str] = None) -> Dict:
         """
         Process an answer to the current question and advance the session.
 
@@ -255,17 +259,17 @@ class RefinementSessionManager:
         refined_draft = self.refiner.refine_from_answer(draft, question, answer)
 
         conversation = json.loads(entry.conversation)
-        conversation.append({
-            "round": entry.round_number + 1,
-            "phase": current_phase.value,
-            "question": question.question_text,
-            "answer": answer_text,
-            "selected_option": selected_option,
-        })
-
-        next_phase = self.refiner.determine_next_phase(
-            current_phase, entry.round_number + 1
+        conversation.append(
+            {
+                "round": entry.round_number + 1,
+                "phase": current_phase.value,
+                "question": question.question_text,
+                "answer": answer_text,
+                "selected_option": selected_option,
+            }
         )
+
+        next_phase = self.refiner.determine_next_phase(current_phase, entry.round_number + 1)
 
         now = datetime.now(timezone.utc).isoformat()
         conn = self.storage._get_connection()
@@ -415,9 +419,7 @@ class RefinementSessionManager:
     def get_stats(self) -> Dict:
         conn = self.storage._get_connection()
         try:
-            cursor = conn.execute(
-                "SELECT status, COUNT(*) as count FROM refinement_sessions GROUP BY status"
-            )
+            cursor = conn.execute("SELECT status, COUNT(*) as count FROM refinement_sessions GROUP BY status")
             stats = {row[0]: row[1] for row in cursor.fetchall()}
             stats["total"] = sum(stats.values())
             return stats

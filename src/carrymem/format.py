@@ -42,9 +42,9 @@ def _extract_event_dates(text: str) -> str:
     if not text:
         return ""
     patterns = [
-        r'\b((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:,?\s*\d{4})?)\b',
-        r'\b((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\.?\s+\d{1,2}(?:,?\s*\d{4})?)\b',
-        r'\b(\d{1,2}/\d{1,2}(?:/\d{2,4})?)\b',
+        r"\b((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:,?\s*\d{4})?)\b",
+        r"\b((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\.?\s+\d{1,2}(?:,?\s*\d{4})?)\b",
+        r"\b(\d{1,2}/\d{1,2}(?:/\d{2,4})?)\b",
     ]
     found = []
     for p in patterns:
@@ -73,13 +73,14 @@ def format_memory_entry(m: Dict[str, Any], language: str = "en") -> str:
         if created:
             try:
                 from datetime import datetime
+
                 dt = datetime.fromisoformat(created)
                 time_tag = f" ({dt.strftime('%Y-%m-%d')})"
             except (ValueError, TypeError):
                 pass
 
     if superseded_at:
-        return f"- NOTE: \"{content[:80]}\" is outdated{time_tag}"
+        return f'- NOTE: "{content[:80]}" is outdated{time_tag}'
 
     if mtype == "user_preference" and auto_rule == "avoid":
         return f"- [IMPORTANT] The user does NOT want: {content}"
@@ -119,9 +120,9 @@ def _build_superseded_notes(memories: List[Dict[str, Any]], language: str = "en"
                     break
                 seen_pairs.add(pair_key)
                 if language == "zh":
-                    notes.append(f"- 更新：\"{old_content[:60]}\" → \"{new_content[:60]}\"")
+                    notes.append(f'- 更新："{old_content[:60]}" → "{new_content[:60]}"')
                 else:
-                    notes.append(f"- Updated: \"{old_content[:60]}\" → \"{new_content[:60]}\"")
+                    notes.append(f'- Updated: "{old_content[:60]}" → "{new_content[:60]}"')
                 break
     return notes
 

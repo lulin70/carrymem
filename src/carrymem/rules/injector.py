@@ -32,13 +32,8 @@ class ContextBudget:
     - Mixed: weighted average
     """
 
-    CJK_RANGES = (
-        '\u4e00-\u9fff'
-        '\u3040-\u309f'
-        '\u30a0-\u30ff'
-        '\uac00-\ud7af'
-    )
-    CJK_PATTERN = re.compile(f'[{CJK_RANGES}]')
+    CJK_RANGES = "\u4e00-\u9fff" "\u3040-\u309f" "\u30a0-\u30ff" "\uac00-\ud7af"
+    CJK_PATTERN = re.compile(f"[{CJK_RANGES}]")
 
     COMPRESSION_THRESHOLD = 0.70
 
@@ -57,9 +52,7 @@ class ContextBudget:
         used = self.estimate_tokens(text)
         return used > self.budget_tokens * self.COMPRESSION_THRESHOLD
 
-    def compress_rules(
-        self, matches: List, budget_tokens: int = None
-    ) -> List:
+    def compress_rules(self, matches: List, budget_tokens: int = None) -> List:
         if budget_tokens is None:
             budget_tokens = self.budget_tokens
 
@@ -68,9 +61,7 @@ class ContextBudget:
 
         result = list(override_matches)
 
-        remaining_budget = budget_tokens - self._estimate_matches_tokens(
-            override_matches
-        )
+        remaining_budget = budget_tokens - self._estimate_matches_tokens(override_matches)
 
         for match in soft_matches:
             rule = match.rule
@@ -87,9 +78,7 @@ class ContextBudget:
     def _estimate_matches_tokens(self, matches: List) -> int:
         total = 0
         for m in matches:
-            total += self.estimate_tokens(
-                f"[{m.rule.rule_type}] {m.rule.trigger} {m.rule.action}"
-            )
+            total += self.estimate_tokens(f"[{m.rule.rule_type}] {m.rule.trigger} {m.rule.action}")
         return total
 
 
@@ -140,35 +129,35 @@ class RuleInjector:
     ANCHORED_MIDDLE_HEADER = "### Recommended"
     ANCHORED_TAIL_HEADER = "### Mandatory Actions (never skip)"
 
-    VALID_FORMATS = (
-        "structured", "compact", "json", "anchored", "ddd"
-    )
+    VALID_FORMATS = ("structured", "compact", "json", "anchored", "ddd")
 
     def __init__(self, matcher):
         self.matcher = matcher
 
     INJECTION_DANGER_PATTERNS = re.compile(
-    r'(?:'
-    r'ignore\s+(?:previous|above|all|prior|earlier)\s+(?:instructions?|rules?|prompts?)|'
-    r'system\s*[:：]\s*|'
-    r'forget\s+(?:all\s+)?(?:previous\s+)?(?:rules?|instructions?)|'
-    r'override\s+(?:all\s+)?safety|'
-    r'you\s+are\s+now|'
-    r'new\s+instructions?\s*[:：]|'
-    r'disregard\s+(?:your|the|all)\s+(?:rules?|guidelines?|instructions?)|'
-    r'(?:act|pretend|roleplay|simulate|impersonate)\s+(?:as|to\s+be)|'
-    r'(?:DAN|jailbreak|developer|sudo|god|admin)\s+mode|'
-    r'bypass\s+(?:all\s+)?(?:restrictions?|filters?|safety)|'
-    r'(?:from\s+now\s+on|starting\s+now)\s*[,.]?\s*(?:you|your)|'
-    r'your\s+(?:new|real|true)\s+(?:role|purpose|instructions?)|'
-    r'(?:reveal|show|display|repeat|print)\s+(?:your|the)\s+(?:prompt|instructions?|rules?|system)|'
-    r'忽略(?:之前的|上面的|所有)(?:指令|规则|提示)|'
-    r'忘记(?:之前的|所有)?(?:规则|指令)|'
-    r'\[SYSTEM\]|<\|system\|>|<!--\s*system|'
-    r'<system>|<instruction>|<command>|'
-    r'\$\{.*?\}|\{\{.*?\}\}|<%.*?%>|'
-    r'base64.*decode|eval\(|exec\(|__import__'
-    r')', re.IGNORECASE, )
+        r"(?:"
+        r"ignore\s+(?:previous|above|all|prior|earlier)\s+(?:instructions?|rules?|prompts?)|"
+        r"system\s*[:：]\s*|"
+        r"forget\s+(?:all\s+)?(?:previous\s+)?(?:rules?|instructions?)|"
+        r"override\s+(?:all\s+)?safety|"
+        r"you\s+are\s+now|"
+        r"new\s+instructions?\s*[:：]|"
+        r"disregard\s+(?:your|the|all)\s+(?:rules?|guidelines?|instructions?)|"
+        r"(?:act|pretend|roleplay|simulate|impersonate)\s+(?:as|to\s+be)|"
+        r"(?:DAN|jailbreak|developer|sudo|god|admin)\s+mode|"
+        r"bypass\s+(?:all\s+)?(?:restrictions?|filters?|safety)|"
+        r"(?:from\s+now\s+on|starting\s+now)\s*[,.]?\s*(?:you|your)|"
+        r"your\s+(?:new|real|true)\s+(?:role|purpose|instructions?)|"
+        r"(?:reveal|show|display|repeat|print)\s+(?:your|the)\s+(?:prompt|instructions?|rules?|system)|"
+        r"忽略(?:之前的|上面的|所有)(?:指令|规则|提示)|"
+        r"忘记(?:之前的|所有)?(?:规则|指令)|"
+        r"\[SYSTEM\]|<\|system\|>|<!--\s*system|"
+        r"<system>|<instruction>|<command>|"
+        r"\$\{.*?\}|\{\{.*?\}\}|<%.*?%>|"
+        r"base64.*decode|eval\(|exec\(|__import__"
+        r")",
+        re.IGNORECASE,
+    )
 
     def _sanitize_for_injection(self, text: str) -> str:
         if not text:
@@ -253,9 +242,7 @@ class RuleInjector:
         else:
             return self._format_structured(matches, include_metadata)
 
-    def _classify_anchored(
-        self, matches: List
-    ) -> Tuple[List, List, List]:
+    def _classify_anchored(self, matches: List) -> Tuple[List, List, List]:
         """
         Classify matches into anchored layout groups.
 
@@ -289,9 +276,7 @@ class RuleInjector:
 
         return head, middle, tail
 
-    def _format_anchored(
-        self, matches: List, include_metadata: bool
-    ) -> str:
+    def _format_anchored(self, matches: List, include_metadata: bool) -> str:
         """
         Format with anchored layout for LLM attention optimization.
 
@@ -321,14 +306,12 @@ class RuleInjector:
                 lines.append(self._format_rule_line(match, "anchored_tail"))
             lines.append("")
 
-        ts = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
+        ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
         lines.append(f"*{len(matches)} rule(s) active | Generated at {ts}*")
 
         return "\n".join(lines)
 
-    def _format_ddd(
-        self, matches: List, include_metadata: bool
-    ) -> str:
+    def _format_ddd(self, matches: List, include_metadata: bool) -> str:
         """
         Format using Domain-Driven Design terminology.
 
@@ -351,15 +334,9 @@ class RuleInjector:
 
         for match in sorted_matches:
             rule = match.rule
-            ddd_type = self.DDD_TYPE_MAP.get(
-                rule.rule_type, "Soft Constraint"
-            )
+            ddd_type = self.DDD_TYPE_MAP.get(rule.rule_type, "Soft Constraint")
 
-            line = (
-                f"- **[{ddd_type}]** "
-                f"{self.DDD_TRIGGER_LABEL}: \"{rule.trigger}\" → "
-                f"{rule.action}"
-            )
+            line = f"- **[{ddd_type}]** " f'{self.DDD_TRIGGER_LABEL}: "{rule.trigger}" → ' f"{rule.action}"
 
             if rule.override:
                 line += f" [{self.DDD_OVERRIDE_LABEL}]"
@@ -372,7 +349,7 @@ class RuleInjector:
 
             lines.append(line)
 
-        ts = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
+        ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
         lines.append("")
         lines.append(f"*{len(matches)} constraint(s) | Generated at {ts}*")
 
@@ -384,9 +361,7 @@ class RuleInjector:
         "negotiated": " [NEGOTIATED]",
     }
 
-    def _format_rule_line(
-        self, match, context: str = "default"
-    ) -> str:
+    def _format_rule_line(self, match, context: str = "default") -> str:
         rule = match.rule
         scope_label = self.SCOPE_LABELS.get(rule.scope, "")
 
@@ -395,11 +370,7 @@ class RuleInjector:
         elif context == "anchored_tail":
             return f"- [ALWAYS]{scope_label} {rule.action}"
         else:
-            marker = (
-                self.HARD_RULE_MARKER
-                if rule.override
-                else self.SOFT_RULE_MARKER
-            )
+            marker = self.HARD_RULE_MARKER if rule.override else self.SOFT_RULE_MARKER
             line = self.RULE_TEMPLATE.format(
                 type=rule.rule_type.upper(),
                 trigger=f'"{rule.trigger}"',
@@ -408,9 +379,7 @@ class RuleInjector:
             line += f"{scope_label} {marker}"
             return line
 
-    def _format_structured(
-        self, matches: List, include_metadata: bool
-    ) -> str:
+    def _format_structured(self, matches: List, include_metadata: bool) -> str:
         """Format as structured markdown section"""
         lines = [self.SECTION_HEADER]
         lines.append("")
@@ -428,9 +397,7 @@ class RuleInjector:
             rule = match.rule
             scope_label = self.SCOPE_LABELS.get(rule.scope, "")
 
-            marker = (
-                self.HARD_RULE_MARKER if rule.override else self.SOFT_RULE_MARKER
-            )
+            marker = self.HARD_RULE_MARKER if rule.override else self.SOFT_RULE_MARKER
 
             line = self.RULE_TEMPLATE.format(
                 type=rule.rule_type.upper(),
@@ -445,7 +412,7 @@ class RuleInjector:
             lines.append(line)
 
         lines.append("")
-        ts = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
+        ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
         lines.append(f"*{len(matches)} rule(s) active | Generated at {ts}*")
 
         return "\n".join(lines)
@@ -529,8 +496,11 @@ class RuleInjector:
         }
 
     def estimate_context_usage(
-        self, scene_description: str, format: str = "structured",
-        max_rules: int = 10, budget_tokens: int = 2000,
+        self,
+        scene_description: str,
+        format: str = "structured",
+        max_rules: int = 10,
+        budget_tokens: int = 2000,
     ) -> dict:
         """
         Estimate context budget usage for a given scene.

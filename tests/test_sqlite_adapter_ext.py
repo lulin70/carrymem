@@ -61,10 +61,7 @@ class TestProperties:
 
 class TestRememberBatch:
     def test_batch_basic(self, adapter):
-        entries = [
-            MemoryEntry(content=f"Memory {i}", type="user_preference")
-            for i in range(3)
-        ]
+        entries = [MemoryEntry(content=f"Memory {i}", type="user_preference") for i in range(3)]
         results = adapter.remember_batch(entries)
         assert isinstance(results, list)
         assert len(results) == 3
@@ -102,9 +99,7 @@ class TestRecallWithFilters:
         assert isinstance(results, list)
 
     def test_recall_with_confidence_min(self, adapter_with_data):
-        results = adapter_with_data.recall(
-            "dark mode", filters={"confidence_min": 0.5}
-        )
+        results = adapter_with_data.recall("dark mode", filters={"confidence_min": 0.5})
         assert isinstance(results, list)
 
 
@@ -137,5 +132,6 @@ class TestClosedAdapter:
         adapter = SQLiteAdapter(db_path, enable_semantic_recall=False, enable_cache=False)
         adapter.close()
         from carrymem.exceptions import DBConnectionError
+
         with pytest.raises((DBConnectionError, Exception)):
             adapter.recall("test")

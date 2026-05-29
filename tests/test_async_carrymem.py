@@ -7,7 +7,7 @@ from carrymem.async_carrymem import AsyncCarryMem
 
 @pytest.fixture
 def mock_carrymem():
-    with patch('carrymem.async_carrymem.CarryMem') as mock:
+    with patch("carrymem.async_carrymem.CarryMem") as mock:
         yield mock
 
 

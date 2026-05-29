@@ -19,14 +19,25 @@ from carrymem.selection import _estimate_tokens, _tokenize_text
 
 # ── TYPE_SELECTION_BOOST tests ──────────────────────────────────────
 
+
 class TestTypeSelectionBoost:
     """Verify that type-based scoring boosts work correctly."""
 
     def test_correction_gets_highest_boost(self):
         """Corrections should outrank facts with same base score."""
         memories = [
-            {"content": "Do NOT use Java", "type": "correction", "importance_score": 0.5, "confidence": 0.8},
-            {"content": "My car is Toyota", "type": "fact_declaration", "importance_score": 0.5, "confidence": 0.8},
+            {
+                "content": "Do NOT use Java",
+                "type": "correction",
+                "importance_score": 0.5,
+                "confidence": 0.8,
+            },
+            {
+                "content": "My car is Toyota",
+                "type": "fact_declaration",
+                "importance_score": 0.5,
+                "confidence": 0.8,
+            },
         ]
         result = select_memories(memories, context="programming", max_count=2, use_mmr=False)
         types_order = [m["type"] for m in result]
@@ -35,8 +46,18 @@ class TestTypeSelectionBoost:
     def test_decision_outranks_preference(self):
         """Decisions should outrank preferences with same base score."""
         memories = [
-            {"content": "Project uses React", "type": "decision", "importance_score": 0.5, "confidence": 0.8},
-            {"content": "I like dark mode", "type": "user_preference", "importance_score": 0.5, "confidence": 0.8},
+            {
+                "content": "Project uses React",
+                "type": "decision",
+                "importance_score": 0.5,
+                "confidence": 0.8,
+            },
+            {
+                "content": "I like dark mode",
+                "type": "user_preference",
+                "importance_score": 0.5,
+                "confidence": 0.8,
+            },
         ]
         result = select_memories(memories, context="frontend", max_count=2, use_mmr=False)
         types_order = [m["type"] for m in result]
@@ -45,8 +66,18 @@ class TestTypeSelectionBoost:
     def test_summary_penalized(self):
         """Session summaries should be penalized unless highly relevant."""
         memories = [
-            {"content": "User discussed Python web frameworks", "type": "session_summary", "importance_score": 0.7, "confidence": 0.8},
-            {"content": "I prefer Python", "type": "user_preference", "importance_score": 0.5, "confidence": 0.8},
+            {
+                "content": "User discussed Python web frameworks",
+                "type": "session_summary",
+                "importance_score": 0.7,
+                "confidence": 0.8,
+            },
+            {
+                "content": "I prefer Python",
+                "type": "user_preference",
+                "importance_score": 0.5,
+                "confidence": 0.8,
+            },
         ]
         result = select_memories(memories, context="cooking recipes", max_count=2, use_mmr=False)
         # Preference should still appear (boosted), summary may not
@@ -57,16 +88,23 @@ class TestTypeSelectionBoost:
         """Corrections should survive even with tight token budget."""
         # Fill budget with high-scoring facts
         memories = [
-            {"content": "Do NOT use tabs in code", "type": "correction", "importance_score": 0.3, "confidence": 0.8},
+            {
+                "content": "Do NOT use tabs in code",
+                "type": "correction",
+                "importance_score": 0.3,
+                "confidence": 0.8,
+            },
         ]
         # Add many facts with higher base scores
         for i in range(20):
-            memories.append({
-                "content": f"Fact number {i} about something important",
-                "type": "fact_declaration",
-                "importance_score": 0.9,
-                "confidence": 0.9,
-            })
+            memories.append(
+                {
+                    "content": f"Fact number {i} about something important",
+                    "type": "fact_declaration",
+                    "importance_score": 0.9,
+                    "confidence": 0.9,
+                }
+            )
         result = select_memories(memories, context="coding", max_count=5, max_tokens=500, use_mmr=False)
         types = [m["type"] for m in result]
         assert "correction" in types, "Correction should survive budget pressure"
@@ -74,8 +112,18 @@ class TestTypeSelectionBoost:
     def test_unknown_type_gets_zero_boost(self):
         """Unknown types should get no boost (0.0 default)."""
         memories = [
-            {"content": "Some custom type", "type": "custom_type", "importance_score": 0.5, "confidence": 0.8},
-            {"content": "A regular fact", "type": "fact_declaration", "importance_score": 0.5, "confidence": 0.8},
+            {
+                "content": "Some custom type",
+                "type": "custom_type",
+                "importance_score": 0.5,
+                "confidence": 0.8,
+            },
+            {
+                "content": "A regular fact",
+                "type": "fact_declaration",
+                "importance_score": 0.5,
+                "confidence": 0.8,
+            },
         ]
         result = select_memories(memories, context="test", max_count=2, use_mmr=False)
         # Both should appear, order by base score (same) so either order is fine
@@ -84,13 +132,24 @@ class TestTypeSelectionBoost:
 
 # ── Mandatory type ordering tests ───────────────────────────────────
 
+
 class TestMandatoryOrdering:
     """Verify correction > decision > preference > other ordering."""
 
     def test_correction_before_preference(self):
         memories = [
-            {"content": "I like Python", "type": "user_preference", "importance_score": 0.9, "confidence": 0.9},
-            {"content": "Do NOT use Java", "type": "correction", "importance_score": 0.3, "confidence": 0.8},
+            {
+                "content": "I like Python",
+                "type": "user_preference",
+                "importance_score": 0.9,
+                "confidence": 0.9,
+            },
+            {
+                "content": "Do NOT use Java",
+                "type": "correction",
+                "importance_score": 0.3,
+                "confidence": 0.8,
+            },
         ]
         result = select_memories(memories, context="programming", max_count=2, use_mmr=False)
         types = [m["type"] for m in result]
@@ -99,8 +158,18 @@ class TestMandatoryOrdering:
 
     def test_decision_before_preference(self):
         memories = [
-            {"content": "I like Python", "type": "user_preference", "importance_score": 0.9, "confidence": 0.9},
-            {"content": "Project uses React", "type": "decision", "importance_score": 0.3, "confidence": 0.8},
+            {
+                "content": "I like Python",
+                "type": "user_preference",
+                "importance_score": 0.9,
+                "confidence": 0.9,
+            },
+            {
+                "content": "Project uses React",
+                "type": "decision",
+                "importance_score": 0.3,
+                "confidence": 0.8,
+            },
         ]
         result = select_memories(memories, context="frontend", max_count=2, use_mmr=False)
         types = [m["type"] for m in result]
@@ -108,10 +177,30 @@ class TestMandatoryOrdering:
 
     def test_full_ordering_correction_decision_preference_other(self):
         memories = [
-            {"content": "Some fact", "type": "fact_declaration", "importance_score": 0.9, "confidence": 0.9},
-            {"content": "I like Python", "type": "user_preference", "importance_score": 0.5, "confidence": 0.8},
-            {"content": "Project uses React", "type": "decision", "importance_score": 0.5, "confidence": 0.8},
-            {"content": "Do NOT use Java", "type": "correction", "importance_score": 0.5, "confidence": 0.8},
+            {
+                "content": "Some fact",
+                "type": "fact_declaration",
+                "importance_score": 0.9,
+                "confidence": 0.9,
+            },
+            {
+                "content": "I like Python",
+                "type": "user_preference",
+                "importance_score": 0.5,
+                "confidence": 0.8,
+            },
+            {
+                "content": "Project uses React",
+                "type": "decision",
+                "importance_score": 0.5,
+                "confidence": 0.8,
+            },
+            {
+                "content": "Do NOT use Java",
+                "type": "correction",
+                "importance_score": 0.5,
+                "confidence": 0.8,
+            },
         ]
         result = select_memories(memories, context="programming", max_count=4, use_mmr=False)
         types = [m["type"] for m in result]
@@ -121,9 +210,10 @@ class TestMandatoryOrdering:
 
 # ── 24h recency cliff removal tests ─────────────────────────────────
 
+
 class TestRecencyCliffRemoval:
     """Verify that the 24-hour recency cliff is gone.
-    
+
     Before: memories < 24h old got +0.3 bonus, creating a cliff.
     After: recency is handled only by scoring.py's smooth decay.
     """
@@ -131,12 +221,24 @@ class TestRecencyCliffRemoval:
     def test_no_24h_bonus_in_selection_score(self):
         """Selection score should NOT include a 24h recency bonus."""
         from datetime import datetime, timezone
+
         now = datetime.now(timezone.utc).isoformat()
         one_hour_ago = datetime.now(timezone.utc).isoformat()
 
         memories = [
-            {"content": "Recent memory", "type": "fact_declaration", "importance_score": 0.5, "confidence": 0.8, "created_at": one_hour_ago},
-            {"content": "Old memory", "type": "fact_declaration", "importance_score": 0.5, "confidence": 0.8},
+            {
+                "content": "Recent memory",
+                "type": "fact_declaration",
+                "importance_score": 0.5,
+                "confidence": 0.8,
+                "created_at": one_hour_ago,
+            },
+            {
+                "content": "Old memory",
+                "type": "fact_declaration",
+                "importance_score": 0.5,
+                "confidence": 0.8,
+            },
         ]
         result = select_memories(memories, context="test", max_count=2, use_mmr=False)
         # Both should have similar scores (no +0.3 bonus for recent)
@@ -148,8 +250,18 @@ class TestRecencyCliffRemoval:
     def test_old_relevant_memory_not_displaced(self):
         """An old but relevant memory should not be displaced by a new irrelevant one."""
         memories = [
-            {"content": "Python is great for data science", "type": "fact_declaration", "importance_score": 0.7, "confidence": 0.8},
-            {"content": "I had lunch today", "type": "fact_declaration", "importance_score": 0.7, "confidence": 0.8},
+            {
+                "content": "Python is great for data science",
+                "type": "fact_declaration",
+                "importance_score": 0.7,
+                "confidence": 0.8,
+            },
+            {
+                "content": "I had lunch today",
+                "type": "fact_declaration",
+                "importance_score": 0.7,
+                "confidence": 0.8,
+            },
         ]
         result = select_memories(memories, context="Python programming", max_count=1, use_mmr=False)
         assert len(result) == 1
@@ -157,6 +269,7 @@ class TestRecencyCliffRemoval:
 
 
 # ── build_qa_prompt with rules tests ────────────────────────────────
+
 
 class TestBuildQaPromptWithRules:
     """Verify that build_qa_prompt accepts and renders rules."""
@@ -180,10 +293,15 @@ class TestBuildQaPromptWithRules:
             {"content": "I prefer Python", "type": "user_preference"},
         ]
         result_with_rules = build_qa_prompt(
-            memories=memories, knowledge=[], question="test", rules="",
+            memories=memories,
+            knowledge=[],
+            question="test",
+            rules="",
         )
         result_without = build_qa_prompt(
-            memories=memories, knowledge=[], question="test",
+            memories=memories,
+            knowledge=[],
+            question="test",
         )
         assert result_with_rules == result_without
 
@@ -192,8 +310,10 @@ class TestBuildQaPromptWithRules:
         knowledge = [{"title": "Guide", "content": "Some knowledge"}]
         rules = "RULE: Always use spaces"
         result = build_qa_prompt(
-            memories=memories, knowledge=knowledge,
-            question="How to indent?", rules=rules,
+            memories=memories,
+            knowledge=knowledge,
+            question="How to indent?",
+            rules=rules,
         )
         # Rules should appear after knowledge but before question
         rules_pos = result.find("Always use spaces")
@@ -204,6 +324,7 @@ class TestBuildQaPromptWithRules:
 
 
 # ── Token estimation tests ──────────────────────────────────────────
+
 
 class TestEstimateTokens:
     def test_english_text(self):
@@ -229,6 +350,7 @@ class TestEstimateTokens:
 
 # ── Context relevance edge cases ────────────────────────────────────
 
+
 class TestContextRelevanceEdgeCases:
     def test_both_empty(self):
         score = context_relevance("", "")
@@ -252,11 +374,17 @@ class TestContextRelevanceEdgeCases:
 
 # ── Select memories edge cases ──────────────────────────────────────
 
+
 class TestSelectMemoriesEdgeCases:
     def test_confidence_floor_for_preferences(self):
         """Preferences below confidence floor should be filtered."""
         memories = [
-            {"content": "I like Python", "type": "user_preference", "confidence": 0.3, "importance_score": 0.9},
+            {
+                "content": "I like Python",
+                "type": "user_preference",
+                "confidence": 0.3,
+                "importance_score": 0.9,
+            },
         ]
         result = select_memories(memories, context="Python", max_count=5)
         assert len(result) == 0  # Below 0.4 floor
@@ -264,7 +392,12 @@ class TestSelectMemoriesEdgeCases:
     def test_confidence_floor_for_sentiment(self):
         """Sentiment markers below confidence floor should be filtered."""
         memories = [
-            {"content": "I feel happy", "type": "sentiment_marker", "confidence": 0.4, "importance_score": 0.9},
+            {
+                "content": "I feel happy",
+                "type": "sentiment_marker",
+                "confidence": 0.4,
+                "importance_score": 0.9,
+            },
         ]
         result = select_memories(memories, context="mood", max_count=5)
         assert len(result) == 0  # Below 0.5 floor
@@ -272,9 +405,24 @@ class TestSelectMemoriesEdgeCases:
     def test_token_budget_respected(self):
         """Memories exceeding token budget should be cut."""
         memories = [
-            {"content": "A" * 500, "type": "fact_declaration", "confidence": 0.8, "importance_score": 0.9},
-            {"content": "B" * 500, "type": "fact_declaration", "confidence": 0.8, "importance_score": 0.9},
-            {"content": "C" * 500, "type": "fact_declaration", "confidence": 0.8, "importance_score": 0.9},
+            {
+                "content": "A" * 500,
+                "type": "fact_declaration",
+                "confidence": 0.8,
+                "importance_score": 0.9,
+            },
+            {
+                "content": "B" * 500,
+                "type": "fact_declaration",
+                "confidence": 0.8,
+                "importance_score": 0.9,
+            },
+            {
+                "content": "C" * 500,
+                "type": "fact_declaration",
+                "confidence": 0.8,
+                "importance_score": 0.9,
+            },
         ]
         result = select_memories(memories, context="test", max_tokens=200, use_mmr=False)
         total = sum(_estimate_tokens(m["content"]) for m in result)
@@ -282,7 +430,12 @@ class TestSelectMemoriesEdgeCases:
 
     def test_max_count_respected(self):
         memories = [
-            {"content": f"Memory {i}", "type": "fact_declaration", "confidence": 0.8, "importance_score": 0.5}
+            {
+                "content": f"Memory {i}",
+                "type": "fact_declaration",
+                "confidence": 0.8,
+                "importance_score": 0.5,
+            }
             for i in range(20)
         ]
         result = select_memories(memories, context="test", max_count=3, use_mmr=False)
@@ -292,9 +445,24 @@ class TestSelectMemoriesEdgeCases:
         """MMR should produce more diverse results than pure relevance."""
         # Create memories with similar content
         memories = [
-            {"content": "Python is great for web", "type": "fact_declaration", "confidence": 0.8, "importance_score": 0.9},
-            {"content": "Python is great for data", "type": "fact_declaration", "confidence": 0.8, "importance_score": 0.9},
-            {"content": "JavaScript is great for frontend", "type": "fact_declaration", "confidence": 0.8, "importance_score": 0.9},
+            {
+                "content": "Python is great for web",
+                "type": "fact_declaration",
+                "confidence": 0.8,
+                "importance_score": 0.9,
+            },
+            {
+                "content": "Python is great for data",
+                "type": "fact_declaration",
+                "confidence": 0.8,
+                "importance_score": 0.9,
+            },
+            {
+                "content": "JavaScript is great for frontend",
+                "type": "fact_declaration",
+                "confidence": 0.8,
+                "importance_score": 0.9,
+            },
         ]
         result_mmr = select_memories(memories, context="Python programming", max_count=2, use_mmr=True)
         result_no_mmr = select_memories(memories, context="Python programming", max_count=2, use_mmr=False)
@@ -304,7 +472,12 @@ class TestSelectMemoriesEdgeCases:
     def test_selection_score_attached(self):
         """Selected memories should have _selection_score and _context_relevance."""
         memories = [
-            {"content": "I prefer Python", "type": "user_preference", "confidence": 0.8, "importance_score": 0.7},
+            {
+                "content": "I prefer Python",
+                "type": "user_preference",
+                "confidence": 0.8,
+                "importance_score": 0.7,
+            },
         ]
         result = select_memories(memories, context="Python", max_count=5)
         assert len(result) == 1

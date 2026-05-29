@@ -41,8 +41,10 @@ class TestNewUserOnboarding:
 
     def test_user_creates_first_personal_rule(self):
         rule = self.engine.add_rule(
-            "code review", "Always review before merge",
-            scope="personal", rule_type="always",
+            "code review",
+            "Always review before merge",
+            scope="personal",
+            rule_type="always",
         )
         assert rule.scope == "personal"
         assert rule.rule_type == "always"
@@ -168,7 +170,8 @@ class TestTeamLeadSharesConventions:
     def test_team_lead_creates_skill_with_dependencies(self):
         self.engine.add_rule("base-security", "Use HTTPS", scope="company")
         base_bundle = self.engine.skill_pack(
-            name="base-security", scope="company",
+            name="base-security",
+            scope="company",
             dependencies=[],
         )
         assert base_bundle["manifest"]["dependencies"] == []
@@ -192,7 +195,13 @@ class TestDeveloperInstallsTeamSkill:
 
         company_rules = [
             Rule(trigger="database", action="Always use SSL", scope="company", override=True),
-            Rule(trigger="security", action="Never commit secrets", scope="company", rule_type="forbid", override=True),
+            Rule(
+                trigger="security",
+                action="Never commit secrets",
+                scope="company",
+                rule_type="forbid",
+                override=True,
+            ),
         ]
         company_bundle = skill_pack(rules=company_rules, name="company-conventions", scope="company")
 
@@ -261,7 +270,15 @@ class TestMergeConflictResolution:
     def test_negotiate_merge_adapts_conflicting_rules(self):
         self.engine.add_rule("api design", "Use REST only", scope="personal", rule_type="always", override=True)
 
-        incoming = [Rule(trigger="api design", action="Use GraphQL", scope="negotiated", rule_type="forbid", override=True)]
+        incoming = [
+            Rule(
+                trigger="api design",
+                action="Use GraphQL",
+                scope="negotiated",
+                rule_type="forbid",
+                override=True,
+            )
+        ]
 
         result = self.engine.accept_rules(incoming, strategy="negotiate")
         assert result["accepted_count"] >= 1
@@ -274,7 +291,14 @@ class TestMergeConflictResolution:
     def test_company_overrides_never_loses_company_rules(self):
         self.engine.add_rule("security", "Always encrypt", scope="company", override=True)
 
-        incoming = [Rule(trigger="security", action="Skip encryption for dev", scope="personal", override=True)]
+        incoming = [
+            Rule(
+                trigger="security",
+                action="Skip encryption for dev",
+                scope="personal",
+                override=True,
+            )
+        ]
         result = self.engine.accept_rules(incoming, strategy="company_overrides")
 
         company = self.engine.list_rules(scope="company")
@@ -318,8 +342,11 @@ class TestVSCodeExtensionWorkflow:
 
     def test_add_rule_via_editor(self):
         rule = self.engine.add_rule(
-            "new topic", "new action",
-            scope="company", rule_type="always", override=True,
+            "new topic",
+            "new action",
+            scope="company",
+            rule_type="always",
+            override=True,
         )
         assert rule.scope == "company"
         assert rule.rule_type == "always"
@@ -397,7 +424,14 @@ class TestEndToEndSecurityScenario:
     def test_personal_rule_never_overrides_company(self):
         self.engine.add_rule("database", "Always encrypt", scope="company", override=True)
 
-        incoming = [Rule(trigger="database", action="Skip encryption for dev", scope="personal", override=True)]
+        incoming = [
+            Rule(
+                trigger="database",
+                action="Skip encryption for dev",
+                scope="personal",
+                override=True,
+            )
+        ]
 
         result = self.engine.accept_rules(incoming, strategy="company_overrides")
         assert result["skipped_count"] >= 1 or result["accepted_count"] == 0

@@ -175,6 +175,7 @@ class TestCodingContextAdapter(unittest.TestCase):
     def tearDown(self):
         self.adapter.close()
         import shutil
+
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     def test_index_project(self):

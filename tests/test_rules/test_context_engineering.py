@@ -88,12 +88,16 @@ class TestContextBudgetCompression:
 
     def test_compress_preserves_override_rules(self, matcher, storage):
         storage.create(
-            trigger="*", action="Override rule 1",
-            rule_type="forbid", override=True,
+            trigger="*",
+            action="Override rule 1",
+            rule_type="forbid",
+            override=True,
         )
         storage.create(
-            trigger="*", action="Soft rule 1",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Soft rule 1",
+            rule_type="avoid",
+            override=False,
         )
 
         matches = matcher.match("test")
@@ -105,13 +109,17 @@ class TestContextBudgetCompression:
 
     def test_compress_drops_soft_when_over_budget(self, matcher, storage):
         storage.create(
-            trigger="*", action="Override rule",
-            rule_type="forbid", override=True,
+            trigger="*",
+            action="Override rule",
+            rule_type="forbid",
+            override=True,
         )
         for i in range(5):
             storage.create(
-                trigger="*", action=f"Soft rule {i} with long description",
-                rule_type="avoid", override=False,
+                trigger="*",
+                action=f"Soft rule {i} with long description",
+                rule_type="avoid",
+                override=False,
             )
 
         matches = matcher.match("test")
@@ -122,12 +130,16 @@ class TestContextBudgetCompression:
 
     def test_compress_keeps_all_when_within_budget(self, matcher, storage):
         storage.create(
-            trigger="*", action="Rule 1",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Rule 1",
+            rule_type="avoid",
+            override=False,
         )
         storage.create(
-            trigger="*", action="Rule 2",
-            rule_type="prefer", override=False,
+            trigger="*",
+            action="Rule 2",
+            rule_type="prefer",
+            override=False,
         )
 
         matches = matcher.match("test")
@@ -142,16 +154,22 @@ class TestAnchoredLayout:
 
     def test_anchored_format_basic(self, injector, storage):
         storage.create(
-            trigger="*", action="Never leak secrets",
-            rule_type="forbid", override=True,
+            trigger="*",
+            action="Never leak secrets",
+            rule_type="forbid",
+            override=True,
         )
         storage.create(
-            trigger="*", action="Prefer Python",
-            rule_type="prefer", override=False,
+            trigger="*",
+            action="Prefer Python",
+            rule_type="prefer",
+            override=False,
         )
         storage.create(
-            trigger="*", action="Always include tests",
-            rule_type="always", override=True,
+            trigger="*",
+            action="Always include tests",
+            rule_type="always",
+            override=True,
         )
 
         result = injector.inject("test", format="anchored")
@@ -161,12 +179,16 @@ class TestAnchoredLayout:
 
     def test_anchored_head_contains_forbid_override(self, injector, storage):
         storage.create(
-            trigger="*", action="Never leak secrets",
-            rule_type="forbid", override=True,
+            trigger="*",
+            action="Never leak secrets",
+            rule_type="forbid",
+            override=True,
         )
         storage.create(
-            trigger="*", action="Always include tests",
-            rule_type="always", override=True,
+            trigger="*",
+            action="Always include tests",
+            rule_type="always",
+            override=True,
         )
 
         result = injector.inject("test", format="anchored")
@@ -190,8 +212,10 @@ class TestAnchoredLayout:
 
     def test_anchored_forbid_in_head_section(self, injector, storage):
         storage.create(
-            trigger="security", action="Never leak secrets",
-            rule_type="forbid", override=True,
+            trigger="security",
+            action="Never leak secrets",
+            rule_type="forbid",
+            override=True,
         )
 
         result = injector.inject("security", format="anchored")
@@ -200,8 +224,10 @@ class TestAnchoredLayout:
 
     def test_anchored_always_in_tail_section(self, injector, storage):
         storage.create(
-            trigger="code review", action="Always check SQL injection",
-            rule_type="always", override=True,
+            trigger="code review",
+            action="Always check SQL injection",
+            rule_type="always",
+            override=True,
         )
 
         result = injector.inject("code review", format="anchored")
@@ -210,8 +236,10 @@ class TestAnchoredLayout:
 
     def test_anchored_soft_in_middle(self, injector, storage):
         storage.create(
-            trigger="*", action="Prefer domestic warehouses",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Prefer domestic warehouses",
+            rule_type="avoid",
+            override=False,
         )
 
         result = injector.inject("test", format="anchored")
@@ -220,8 +248,10 @@ class TestAnchoredLayout:
 
     def test_anchored_no_head_when_no_forbid_override(self, injector, storage):
         storage.create(
-            trigger="*", action="Prefer Python",
-            rule_type="prefer", override=False,
+            trigger="*",
+            action="Prefer Python",
+            rule_type="prefer",
+            override=False,
         )
 
         result = injector.inject("test", format="anchored")
@@ -229,8 +259,10 @@ class TestAnchoredLayout:
 
     def test_anchored_no_tail_when_no_always_override(self, injector, storage):
         storage.create(
-            trigger="*", action="Avoid MongoDB",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Avoid MongoDB",
+            rule_type="avoid",
+            override=False,
         )
 
         result = injector.inject("test", format="anchored")
@@ -242,8 +274,10 @@ class TestAnchoredLayout:
 
     def test_anchored_header_present(self, injector, storage):
         storage.create(
-            trigger="*", action="Some rule",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Some rule",
+            rule_type="avoid",
+            override=False,
         )
 
         result = injector.inject("test", format="anchored")
@@ -251,8 +285,10 @@ class TestAnchoredLayout:
 
     def test_anchored_footer_present(self, injector, storage):
         storage.create(
-            trigger="*", action="Some rule",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Some rule",
+            rule_type="avoid",
+            override=False,
         )
 
         result = injector.inject("test", format="anchored")
@@ -260,20 +296,28 @@ class TestAnchoredLayout:
 
     def test_classify_anchored_groups(self, injector, storage):
         storage.create(
-            trigger="*", action="Forbid rule",
-            rule_type="forbid", override=True,
+            trigger="*",
+            action="Forbid rule",
+            rule_type="forbid",
+            override=True,
         )
         storage.create(
-            trigger="*", action="Soft avoid",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Soft avoid",
+            rule_type="avoid",
+            override=False,
         )
         storage.create(
-            trigger="*", action="Soft prefer",
-            rule_type="prefer", override=False,
+            trigger="*",
+            action="Soft prefer",
+            rule_type="prefer",
+            override=False,
         )
         storage.create(
-            trigger="*", action="Always rule",
-            rule_type="always", override=True,
+            trigger="*",
+            action="Always rule",
+            rule_type="always",
+            override=True,
         )
 
         matches = injector.matcher.match("test")
@@ -287,8 +331,10 @@ class TestAnchoredLayout:
 
     def test_anchored_override_format_in_middle(self, injector, storage):
         storage.create(
-            trigger="*", action="Override prefer",
-            rule_type="prefer", override=True,
+            trigger="*",
+            action="Override prefer",
+            rule_type="prefer",
+            override=True,
         )
 
         result = injector.inject("test", format="anchored")
@@ -301,8 +347,10 @@ class TestDDDFormat:
 
     def test_ddd_format_basic(self, injector, storage):
         storage.create(
-            trigger="code review", action="Check SQL injection",
-            rule_type="forbid", override=True,
+            trigger="code review",
+            action="Check SQL injection",
+            rule_type="forbid",
+            override=True,
         )
 
         result = injector.inject("code review", format="ddd")
@@ -312,8 +360,10 @@ class TestDDDFormat:
 
     def test_ddd_type_mapping_forbid(self, injector, storage):
         storage.create(
-            trigger="security", action="Never leak data",
-            rule_type="forbid", override=True,
+            trigger="security",
+            action="Never leak data",
+            rule_type="forbid",
+            override=True,
         )
 
         result = injector.inject("security", format="ddd")
@@ -321,8 +371,10 @@ class TestDDDFormat:
 
     def test_ddd_type_mapping_always(self, injector, storage):
         storage.create(
-            trigger="code review", action="Always check tests",
-            rule_type="always", override=True,
+            trigger="code review",
+            action="Always check tests",
+            rule_type="always",
+            override=True,
         )
 
         result = injector.inject("code review", format="ddd")
@@ -330,8 +382,10 @@ class TestDDDFormat:
 
     def test_ddd_type_mapping_avoid(self, injector, storage):
         storage.create(
-            trigger="*", action="Avoid MongoDB",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Avoid MongoDB",
+            rule_type="avoid",
+            override=False,
         )
 
         result = injector.inject("test", format="ddd")
@@ -339,8 +393,10 @@ class TestDDDFormat:
 
     def test_ddd_type_mapping_prefer(self, injector, storage):
         storage.create(
-            trigger="*", action="Prefer Python",
-            rule_type="prefer", override=False,
+            trigger="*",
+            action="Prefer Python",
+            rule_type="prefer",
+            override=False,
         )
 
         result = injector.inject("test", format="ddd")
@@ -348,8 +404,10 @@ class TestDDDFormat:
 
     def test_ddd_type_mapping_format(self, injector, storage):
         storage.create(
-            trigger="report", action="Use 3-page format",
-            rule_type="format", override=False,
+            trigger="report",
+            action="Use 3-page format",
+            rule_type="format",
+            override=False,
         )
 
         result = injector.inject("report", format="ddd")
@@ -357,8 +415,10 @@ class TestDDDFormat:
 
     def test_ddd_override_flag(self, injector, storage):
         storage.create(
-            trigger="security", action="Never leak",
-            rule_type="forbid", override=True,
+            trigger="security",
+            action="Never leak",
+            rule_type="forbid",
+            override=True,
         )
 
         result = injector.inject("security", format="ddd")
@@ -366,8 +426,10 @@ class TestDDDFormat:
 
     def test_ddd_no_override_no_flag(self, injector, storage):
         storage.create(
-            trigger="*", action="Prefer Python",
-            rule_type="prefer", override=False,
+            trigger="*",
+            action="Prefer Python",
+            rule_type="prefer",
+            override=False,
         )
 
         result = injector.inject("test", format="ddd")
@@ -375,21 +437,23 @@ class TestDDDFormat:
 
     def test_ddd_metadata_with_source_memories(self, injector, storage):
         storage.create(
-            trigger="security", action="Never leak",
-            rule_type="forbid", override=True,
+            trigger="security",
+            action="Never leak",
+            rule_type="forbid",
+            override=True,
             source_memories=["mem_001", "mem_002"],
         )
 
-        result = injector.inject(
-            "security", format="ddd", include_metadata=True
-        )
+        result = injector.inject("security", format="ddd", include_metadata=True)
         assert "Event Sourcing Chain" in result
         assert "2 events" in result
 
     def test_ddd_header(self, injector, storage):
         storage.create(
-            trigger="*", action="Some rule",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Some rule",
+            rule_type="avoid",
+            override=False,
         )
 
         result = injector.inject("test", format="ddd")
@@ -397,8 +461,10 @@ class TestDDDFormat:
 
     def test_ddd_footer(self, injector, storage):
         storage.create(
-            trigger="*", action="Some rule",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Some rule",
+            rule_type="avoid",
+            override=False,
         )
 
         result = injector.inject("test", format="ddd")
@@ -410,8 +476,10 @@ class TestDDDFormat:
 
     def test_ddd_bounded_context_shown(self, injector, storage):
         storage.create(
-            trigger="database selection", action="Use PostgreSQL",
-            rule_type="prefer", override=False,
+            trigger="database selection",
+            action="Use PostgreSQL",
+            rule_type="prefer",
+            override=False,
         )
 
         result = injector.inject("database selection", format="ddd")
@@ -424,37 +492,41 @@ class TestContextBudgetIntegration:
 
     def test_inject_with_budget_no_compression(self, injector, storage):
         storage.create(
-            trigger="*", action="Simple rule",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Simple rule",
+            rule_type="avoid",
+            override=False,
         )
 
-        result = injector.inject(
-            "test", context_budget_tokens=5000
-        )
+        result = injector.inject("test", context_budget_tokens=5000)
         assert "Simple rule" in result
 
     def test_inject_with_budget_triggers_compression(self, injector, storage):
         storage.create(
-            trigger="*", action="Override rule",
-            rule_type="forbid", override=True,
+            trigger="*",
+            action="Override rule",
+            rule_type="forbid",
+            override=True,
         )
         for i in range(10):
             storage.create(
-                trigger="*", action=f"Soft rule {i} with extra text",
-                rule_type="avoid", override=False,
+                trigger="*",
+                action=f"Soft rule {i} with extra text",
+                rule_type="avoid",
+                override=False,
             )
 
         result_no_budget = injector.inject("test")
-        result_with_budget = injector.inject(
-            "test", context_budget_tokens=5
-        )
+        result_with_budget = injector.inject("test", context_budget_tokens=5)
 
         assert len(result_with_budget) <= len(result_no_budget)
 
     def test_estimate_context_usage(self, injector, storage):
         storage.create(
-            trigger="*", action="Simple rule",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Simple rule",
+            rule_type="avoid",
+            override=False,
         )
 
         usage = injector.estimate_context_usage("test")
@@ -472,8 +544,10 @@ class TestContextBudgetIntegration:
 
     def test_inject_with_memories_and_budget(self, injector, storage):
         storage.create(
-            trigger="*", action="Simple rule",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Simple rule",
+            rule_type="avoid",
+            override=False,
         )
 
         result = injector.inject_with_memories(
@@ -490,8 +564,10 @@ class TestValidFormats:
 
     def test_structured_format_still_works(self, injector, storage):
         storage.create(
-            trigger="*", action="Test rule",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Test rule",
+            rule_type="avoid",
+            override=False,
         )
 
         result = injector.inject("test", format="structured")
@@ -499,8 +575,10 @@ class TestValidFormats:
 
     def test_compact_format_still_works(self, injector, storage):
         storage.create(
-            trigger="*", action="Test rule",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Test rule",
+            rule_type="avoid",
+            override=False,
         )
 
         result = injector.inject("test", format="compact")
@@ -508,8 +586,10 @@ class TestValidFormats:
 
     def test_json_format_still_works(self, injector, storage):
         storage.create(
-            trigger="*", action="Test rule",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Test rule",
+            rule_type="avoid",
+            override=False,
         )
 
         result = injector.inject("test", format="json")
@@ -528,13 +608,17 @@ class TestInjectorCoverageGaps:
 
     def test_context_budget_compress_with_explicit_budget(self, matcher, storage):
         storage.create(
-            trigger="*", action="Override",
-            rule_type="forbid", override=True,
+            trigger="*",
+            action="Override",
+            rule_type="forbid",
+            override=True,
         )
         for i in range(5):
             storage.create(
-                trigger="*", action=f"Soft rule {i} with extra description text",
-                rule_type="avoid", override=False,
+                trigger="*",
+                action=f"Soft rule {i} with extra description text",
+                rule_type="avoid",
+                override=False,
             )
 
         matches = matcher.match("test")
@@ -544,8 +628,10 @@ class TestInjectorCoverageGaps:
 
     def test_context_budget_compress_no_soft_rules(self, matcher, storage):
         storage.create(
-            trigger="*", action="Override only",
-            rule_type="forbid", override=True,
+            trigger="*",
+            action="Override only",
+            rule_type="forbid",
+            override=True,
         )
 
         matches = matcher.match("test")
@@ -555,8 +641,10 @@ class TestInjectorCoverageGaps:
 
     def test_structured_with_metadata(self, injector, storage):
         storage.create(
-            trigger="*", action="Test rule",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Test rule",
+            rule_type="avoid",
+            override=False,
         )
 
         result = injector.inject("test", format="structured", include_metadata=True)
@@ -565,8 +653,10 @@ class TestInjectorCoverageGaps:
 
     def test_json_with_metadata(self, injector, storage):
         storage.create(
-            trigger="*", action="Test rule",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Test rule",
+            rule_type="avoid",
+            override=False,
         )
 
         result = injector.inject("test", format="json", include_metadata=True)
@@ -575,12 +665,16 @@ class TestInjectorCoverageGaps:
 
     def test_get_rules_summary_with_matches(self, injector, storage):
         storage.create(
-            trigger="*", action="Override rule",
-            rule_type="forbid", override=True,
+            trigger="*",
+            action="Override rule",
+            rule_type="forbid",
+            override=True,
         )
         storage.create(
-            trigger="*", action="Soft rule",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Soft rule",
+            rule_type="avoid",
+            override=False,
         )
 
         summary = injector.get_rules_summary("test")
@@ -613,8 +707,10 @@ class TestInjectorCoverageGaps:
 
     def test_inject_with_memories_rules_and_memories(self, injector, storage):
         storage.create(
-            trigger="*", action="Test rule",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Test rule",
+            rule_type="avoid",
+            override=False,
         )
 
         result = injector.inject_with_memories(
@@ -627,8 +723,10 @@ class TestInjectorCoverageGaps:
 
     def test_inject_with_memories_format_param(self, injector, storage):
         storage.create(
-            trigger="*", action="Test rule",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Test rule",
+            rule_type="avoid",
+            override=False,
         )
 
         result = injector.inject_with_memories(
@@ -640,16 +738,22 @@ class TestInjectorCoverageGaps:
 
     def test_anchored_with_all_three_sections(self, injector, storage):
         storage.create(
-            trigger="*", action="Never leak",
-            rule_type="forbid", override=True,
+            trigger="*",
+            action="Never leak",
+            rule_type="forbid",
+            override=True,
         )
         storage.create(
-            trigger="*", action="Prefer Python",
-            rule_type="prefer", override=False,
+            trigger="*",
+            action="Prefer Python",
+            rule_type="prefer",
+            override=False,
         )
         storage.create(
-            trigger="*", action="Always test",
-            rule_type="always", override=True,
+            trigger="*",
+            action="Always test",
+            rule_type="always",
+            override=True,
         )
 
         result = injector.inject("test", format="anchored")
@@ -661,8 +765,10 @@ class TestInjectorCoverageGaps:
 
     def test_ddd_with_metadata_no_source_memories(self, injector, storage):
         storage.create(
-            trigger="*", action="Soft rule",
-            rule_type="avoid", override=False,
+            trigger="*",
+            action="Soft rule",
+            rule_type="avoid",
+            override=False,
         )
 
         result = injector.inject("test", format="ddd", include_metadata=True)
@@ -671,8 +777,10 @@ class TestInjectorCoverageGaps:
 
     def test_ddd_override_prefer_goes_to_middle(self, injector, storage):
         storage.create(
-            trigger="*", action="Override prefer",
-            rule_type="prefer", override=True,
+            trigger="*",
+            action="Override prefer",
+            rule_type="prefer",
+            override=True,
         )
 
         result = injector.inject("test", format="ddd")
@@ -686,12 +794,16 @@ class TestInjectorCoverageGaps:
 
     def test_context_budget_compress_all_override(self, matcher, storage):
         storage.create(
-            trigger="*", action="Override 1",
-            rule_type="forbid", override=True,
+            trigger="*",
+            action="Override 1",
+            rule_type="forbid",
+            override=True,
         )
         storage.create(
-            trigger="*", action="Override 2",
-            rule_type="always", override=True,
+            trigger="*",
+            action="Override 2",
+            rule_type="always",
+            override=True,
         )
 
         matches = matcher.match("test")

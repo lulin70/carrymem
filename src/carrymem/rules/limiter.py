@@ -58,9 +58,7 @@ class RuleLimiter:
             >>> RuleLimiter.check_global_limit(active_rules)
             ValueError: Maximum number of global rules (3) reached
         """
-        global_rules = [
-            r for r in active_rules if r.trigger == "*" and r.status == "active"
-        ]
+        global_rules = [r for r in active_rules if r.trigger == "*" and r.status == "active"]
 
         if len(global_rules) >= cls.MAX_GLOBAL_RULES:
             raise ValueError(
@@ -98,9 +96,7 @@ class RuleLimiter:
             )
 
     @classmethod
-    def check_per_type_limit(
-        cls, rules_by_type: dict, new_rule_type: str
-    ) -> None:
+    def check_per_type_limit(cls, rules_by_type: dict, new_rule_type: str) -> None:
         """
         Check if adding a rule would exceed per-type limits.
 
@@ -247,7 +243,5 @@ class RuleLimiter:
             "total_limit": f"{len(all_rules)}/{cls.MAX_TOTAL_RULES}",
             "rules_by_type": type_counts,
             "rules_by_status": status_counts,
-            "utilization_percent": round(
-                (len(all_rules) / cls.MAX_TOTAL_RULES) * 100, 1
-            ),
+            "utilization_percent": round((len(all_rules) / cls.MAX_TOTAL_RULES) * 100, 1),
         }

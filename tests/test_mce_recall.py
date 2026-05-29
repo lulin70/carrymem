@@ -18,21 +18,18 @@ def test_mce_recall():
         "method": "tools/call",
         "params": {
             "name": "mce_recall",
-            "arguments": {
-                "context": "general",
-                "limit": 5,
-                "format": "text"
-            }
-        }
+            "arguments": {"context": "general", "limit": 5, "format": "text"},
+        },
     }
-    
+
     # Send the request
     print(json.dumps(request))
     sys.stdout.flush()
-    
+
     # Only read response if not running under pytest
     import os
-    if 'PYTEST_CURRENT_TEST' not in os.environ:
+
+    if "PYTEST_CURRENT_TEST" not in os.environ:
         # Read the response
         response = sys.stdin.readline()
         print("Response:")

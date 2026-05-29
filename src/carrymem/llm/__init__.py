@@ -26,8 +26,7 @@ if _BACKEND is None:
         pass
 
 _CJK_RANGES = re.compile(
-    r"[\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\uff00-\uffef"
-    r"\uac00-\ud7af\u3040-\u309f\u30a0-\u30ff]"
+    r"[\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\uff00-\uffef" r"\uac00-\ud7af\u3040-\u309f\u30a0-\u30ff]"
 )
 
 
@@ -46,9 +45,9 @@ class LLMClient:
         self._enabled = self._resolve_enabled(config)
         self._api_key = self._resolve("llm.api_key", "CARRYMEM_LLM_API_KEY", config)
         self._base_url = self._resolve(
-            "llm.base_url", "CARRYMEM_LLM_BASE_URL", config, default="https://api.openai.com/v1")
-        self._model = self._resolve("llm.model", "CARRYMEM_LLM_MODEL",
-                                    config, default="gpt-4o-mini")
+            "llm.base_url", "CARRYMEM_LLM_BASE_URL", config, default="https://api.openai.com/v1"
+        )
+        self._model = self._resolve("llm.model", "CARRYMEM_LLM_MODEL", config, default="gpt-4o-mini")
         try:
             self._temperature = float(
                 self._resolve("llm.temperature", "CARRYMEM_LLM_TEMPERATURE", config, default="0.3")
@@ -56,15 +55,11 @@ class LLMClient:
         except (ValueError, TypeError):
             self._temperature = 0.3
         try:
-            self._max_tokens = int(
-                self._resolve("llm.max_tokens", "CARRYMEM_LLM_MAX_TOKENS", config, default="500")
-            )
+            self._max_tokens = int(self._resolve("llm.max_tokens", "CARRYMEM_LLM_MAX_TOKENS", config, default="500"))
         except (ValueError, TypeError):
             self._max_tokens = 500
         try:
-            self._timeout = int(
-                self._resolve("llm.timeout", "CARRYMEM_LLM_TIMEOUT", config, default="30")
-            )
+            self._timeout = int(self._resolve("llm.timeout", "CARRYMEM_LLM_TIMEOUT", config, default="30"))
         except (ValueError, TypeError):
             self._timeout = 30
         self._client = self._init_client()

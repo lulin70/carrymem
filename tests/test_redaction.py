@@ -25,11 +25,15 @@ class TestDetectSensitiveContent:
         assert any("assword" in f[2] for f in findings)
 
     def test_bearer_token(self):
-        findings = detect_sensitive_content("Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U")
+        findings = detect_sensitive_content(
+            "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"
+        )
         assert len(findings) >= 1
 
     def test_private_key(self):
-        findings = detect_sensitive_content("-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC=")
+        findings = detect_sensitive_content(
+            "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC="
+        )
         assert len(findings) >= 1
         assert any(f[0] == "private_key" for f in findings)
 
@@ -138,6 +142,7 @@ class TestIntegration:
     def test_api_key_blocked(self, tmp_path):
         """Test that API keys are automatically blocked from storage."""
         from carrymem import CarryMem
+
         cm = CarryMem(db_path=str(tmp_path / "test.db"))
 
         result = cm.classify_and_remember("My API key is sk-abc123def456ghi789jkl012mno345")
@@ -147,6 +152,7 @@ class TestIntegration:
     def test_password_blocked(self, tmp_path):
         """Test that passwords with = or : are automatically blocked from storage."""
         from carrymem import CarryMem
+
         cm = CarryMem(db_path=str(tmp_path / "test.db"))
 
         result = cm.classify_and_remember("password=SuperSecret123!")
@@ -155,6 +161,7 @@ class TestIntegration:
     def test_normal_preference_stored(self, tmp_path):
         """Test that normal preferences are still stored."""
         from carrymem import CarryMem
+
         cm = CarryMem(db_path=str(tmp_path / "test.db"))
 
         result = cm.classify_and_remember("I prefer Python for data analysis", force_type="user_preference")
@@ -163,6 +170,7 @@ class TestIntegration:
     def test_force_type_overrides_redaction(self, tmp_path):
         """Test that force_type allows storing even sensitive content."""
         from carrymem import CarryMem
+
         cm = CarryMem(db_path=str(tmp_path / "test.db"))
 
         # force_type should bypass auto-redaction (user explicitly wants to store)
@@ -173,6 +181,7 @@ class TestIntegration:
     def test_github_token_blocked(self, tmp_path):
         """Test that GitHub tokens are blocked."""
         from carrymem import CarryMem
+
         cm = CarryMem(db_path=str(tmp_path / "test.db"))
 
         result = cm.classify_and_remember("Set token=ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")

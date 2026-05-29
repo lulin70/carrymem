@@ -91,12 +91,8 @@ class Rule:
     scope: RuleScope = "personal"
 
     # === Timestamps ===
-    created_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
-    updated_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     expires_at: str = ""
 
     # === Conditional Logic ===
@@ -112,36 +108,24 @@ class Rule:
     def _validate_types(self):
         """Validate enum-type fields have valid values"""
         if self.rule_type not in VALID_RULE_TYPES:
-            raise ValueError(
-                f"Invalid rule_type '{self.rule_type}'. "
-                f"Must be one of {VALID_RULE_TYPES}"
-            )
+            raise ValueError(f"Invalid rule_type '{self.rule_type}'. " f"Must be one of {VALID_RULE_TYPES}")
 
         if self.status not in VALID_RULE_STATUSES:
-            raise ValueError(
-                f"Invalid status '{self.status}'. "
-                f"Must be one of {VALID_RULE_STATUSES}"
-            )
+            raise ValueError(f"Invalid status '{self.status}'. " f"Must be one of {VALID_RULE_STATUSES}")
 
         if self.derived_from not in VALID_DERIVATION_SOURCES:
             raise ValueError(
-                f"Invalid derived_from '{self.derived_from}'. "
-                f"Must be one of {VALID_DERIVATION_SOURCES}"
+                f"Invalid derived_from '{self.derived_from}'. " f"Must be one of {VALID_DERIVATION_SOURCES}"
             )
 
         if not 0.0 <= self.confidence <= 1.0:
-            raise ValueError(
-                f"Confidence must be between 0.0 and 1.0, got {self.confidence}"
-            )
+            raise ValueError(f"Confidence must be between 0.0 and 1.0, got {self.confidence}")
 
         if self.trigger_count < 0:
             raise ValueError(f"trigger_count cannot be negative: {self.trigger_count}")
 
         if self.scope not in VALID_RULE_SCOPES:
-            raise ValueError(
-                f"Invalid scope '{self.scope}'. "
-                f"Must be one of {VALID_RULE_SCOPES}"
-            )
+            raise ValueError(f"Invalid scope '{self.scope}'. " f"Must be one of {VALID_RULE_SCOPES}")
 
     def to_dict(self) -> dict:
         """
@@ -194,6 +178,7 @@ class Rule:
         source_memories = data.get("source_memories", [])
         if isinstance(source_memories, str):
             import json
+
             try:
                 source_memories = json.loads(source_memories)
             except (json.JSONDecodeError, TypeError):
@@ -202,6 +187,7 @@ class Rule:
         metadata = data.get("metadata", {})
         if isinstance(metadata, str):
             import json
+
             try:
                 metadata = json.loads(metadata)
             except (json.JSONDecodeError, TypeError):
@@ -260,10 +246,7 @@ class Rule:
         return self.override
 
     def __repr__(self) -> str:
-        return (
-            f"Rule(id={self.id}, trigger='{self.trigger}', "
-            f"type={self.rule_type}, status={self.status})"
-        )
+        return f"Rule(id={self.id}, trigger='{self.trigger}', " f"type={self.rule_type}, status={self.status})"
 
     def summary(self) -> str:
         """Generate human-readable summary for display"""

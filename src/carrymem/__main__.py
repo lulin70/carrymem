@@ -3,10 +3,7 @@ import argparse
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="CarryMem — Your portable AI memory layer",
-        prog="python -m carrymem"
-    )
+    parser = argparse.ArgumentParser(description="CarryMem — Your portable AI memory layer", prog="python -m carrymem")
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
@@ -43,6 +40,7 @@ def main():
 
     elif args.command == "version":
         from carrymem import __version__
+
         print(f"CarryMem v{__version__}")
 
     elif args.command == "demo":
@@ -50,6 +48,7 @@ def main():
 
     elif args.command == "doctor":
         from carrymem.cli import cmd_doctor
+
         cmd_args = []
         if args.db:
             cmd_args.extend(["--db", args.db])
@@ -61,6 +60,7 @@ def main():
 
     elif args.command == "cli":
         from carrymem.cli import main as cli_main
+
         cli_main(args.cli_args)
 
     else:
@@ -73,6 +73,7 @@ def _run_demo():
 
     print("=" * 60)
     from carrymem import __version__
+
     print(f"  CarryMem v{__version__} — Interactive Demo")
     print("=" * 60)
     print()

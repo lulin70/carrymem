@@ -5,12 +5,12 @@ from carrymem.utils.logger import logger
 class SemanticClassifier:
     def __init__(self, config):
         self.config = config
-        self.llm_enabled = self.config.get('llm.enabled', False)
-        self.llm_api_key = self.config.get('llm.api_key', '')
-        self.llm_model = self.config.get('llm.model', 'glm-4-plus')
-        self.llm_temperature = self.config.get('llm.temperature', 0.3)
-        self.llm_max_tokens = self.config.get('llm.max_tokens', 500)
-        self.llm_timeout = self.config.get('llm.timeout', 30)
+        self.llm_enabled = self.config.get("llm.enabled", False)
+        self.llm_api_key = self.config.get("llm.api_key", "")
+        self.llm_model = self.config.get("llm.model", "glm-4-plus")
+        self.llm_temperature = self.config.get("llm.temperature", 0.3)
+        self.llm_max_tokens = self.config.get("llm.max_tokens", 500)
+        self.llm_timeout = self.config.get("llm.timeout", 30)
 
         # LLM client
         self.llm_client = self._init_llm_client()
@@ -51,6 +51,7 @@ class SemanticClassifier:
         # Supports ZhipuAI (GLM) as primary LLM backend
         try:
             from zhipuai import ZhipuAI
+
             if self.llm_api_key:
                 return ZhipuAI(api_key=self.llm_api_key)
         except ImportError:
@@ -65,10 +66,7 @@ class SemanticClassifier:
 
         try:
             # Format classification prompt
-            prompt = self.classification_prompt.format(
-                message=message,
-                context=context or ""
-            )
+            prompt = self.classification_prompt.format(message=message, context=context or "")
 
             # Append execution context if available
             if execution_context:
@@ -77,12 +75,10 @@ class SemanticClassifier:
             # Call LLM API
             response = self.llm_client.chat.completions.create(
                 model=self.llm_model,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ],
+                messages=[{"role": "user", "content": prompt}],
                 temperature=self.llm_temperature,
                 max_tokens=self.llm_max_tokens,
-                timeout=self.llm_timeout
+                timeout=self.llm_timeout,
             )
 
             # Parse LLM response

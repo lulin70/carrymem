@@ -20,8 +20,9 @@ CLI:
 """
 
 import os as _os
-_os.environ.setdefault('TRANSFORMERS_OFFLINE', '1')
-_os.environ.setdefault('HF_HUB_OFFLINE', '1')
+
+_os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+_os.environ.setdefault("HF_HUB_OFFLINE", "1")
 
 from carrymem.carrymem import CarryMem, StorageNotConfiguredError, KnowledgeNotConfiguredError
 from carrymem.engine import MemoryClassificationEngine
@@ -35,6 +36,7 @@ def _make_lazy_import(module_path, class_name):
     def _import(*args, **kwargs):
         try:
             import importlib
+
             mod = importlib.import_module(module_path)
             cls = getattr(mod, class_name)
             return cls(*args, **kwargs) if args or kwargs else cls
@@ -43,6 +45,7 @@ def _make_lazy_import(module_path, class_name):
                 f"Optional dependency not available for {class_name}: {e}. "
                 f"Install required dependencies with: pip install carrymem[full]"
             ) from e
+
     _import.__name__ = class_name
     _import.__qualname__ = class_name
     return _import

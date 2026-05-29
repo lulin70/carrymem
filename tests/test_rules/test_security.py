@@ -301,8 +301,7 @@ class TestGlobalRuleLimiter:
     def test_at_limit_raises(self):
         """Should raise when at global rule limit"""
         active_rules = [
-            Rule(trigger="*", action=f"global{i}", status="active")
-            for i in range(RuleLimiter.MAX_GLOBAL_RULES)
+            Rule(trigger="*", action=f"global{i}", status="active") for i in range(RuleLimiter.MAX_GLOBAL_RULES)
         ]
 
         with pytest.raises(ValueError, match="Maximum number of global rules"):
@@ -310,10 +309,7 @@ class TestGlobalRuleLimiter:
 
     def test_non_global_rules_ignored(self):
         """Should only count global rules (trigger='*')"""
-        many_specific_rules = [
-            Rule(trigger=f"scene{i}", action=f"action{i}", status="active")
-            for i in range(100)
-        ]
+        many_specific_rules = [Rule(trigger=f"scene{i}", action=f"action{i}", status="active") for i in range(100)]
 
         # Should pass even with 100 specific rules
         RuleLimiter.check_global_limit(many_specific_rules)
@@ -401,18 +397,14 @@ class TestRateLimiting:
 
     def test_hourly_rate_limit_exceeded(self):
         """Should raise when hourly rate limit exceeded"""
-        recent_rules = [
-            Rule(trigger=f"r{i}", action=f"a{i}") for i in range(25)
-        ]  # Over MAX_RULES_PER_HOUR (20)
+        recent_rules = [Rule(trigger=f"r{i}", action=f"a{i}") for i in range(25)]  # Over MAX_RULES_PER_HOUR (20)
 
         with pytest.raises(ValueError, match="Rate limit exceeded"):
             RuleLimiter.check_rate_limit(recent_rules, time_window_hours=1.0)
 
     def test_daily_rate_limit_exceeded(self):
         """Should raise when daily rate limit exceeded"""
-        recent_rules = [
-            Rule(trigger=f"r{i}", action=f"a{i}") for i in range(60)
-        ]  # Over MAX_RULES_PER_DAY (50)
+        recent_rules = [Rule(trigger=f"r{i}", action=f"a{i}") for i in range(60)]  # Over MAX_RULES_PER_DAY (50)
 
         with pytest.raises(ValueError, match="Rate limit exceeded"):
             RuleLimiter.check_rate_limit(recent_rules, time_window_hours=24.0)

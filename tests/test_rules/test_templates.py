@@ -35,37 +35,33 @@ class TestTemplateRegistry:
         """Each template rule_type must be a valid type"""
         valid_types = {"avoid", "always", "prefer", "forbid", "format"}
         for name, tmpl in RULE_TEMPLATES.items():
-            assert tmpl["rule_type"] in valid_types, (
-                f"Template '{name}' has invalid rule_type: {tmpl['rule_type']}"
-            )
+            assert tmpl["rule_type"] in valid_types, f"Template '{name}' has invalid rule_type: {tmpl['rule_type']}"
 
     def test_override_is_boolean(self):
         """Each template override must be boolean"""
         for name, tmpl in RULE_TEMPLATES.items():
-            assert isinstance(tmpl["override"], bool), (
-                f"Template '{name}' override is not boolean: {tmpl['override']}"
-            )
+            assert isinstance(tmpl["override"], bool), f"Template '{name}' override is not boolean: {tmpl['override']}"
 
     def test_trigger_not_empty(self):
         """Each template trigger must be non-empty string"""
         for name, tmpl in RULE_TEMPLATES.items():
-            assert isinstance(tmpl["trigger"], str) and len(tmpl["trigger"].strip()) > 0, (
-                f"Template '{name}' has empty trigger"
-            )
+            assert (
+                isinstance(tmpl["trigger"], str) and len(tmpl["trigger"].strip()) > 0
+            ), f"Template '{name}' has empty trigger"
 
     def test_action_not_empty(self):
         """Each template action must be non-empty string"""
         for name, tmpl in RULE_TEMPLATES.items():
-            assert isinstance(tmpl["action"], str) and len(tmpl["action"].strip()) > 0, (
-                f"Template '{name}' has empty action"
-            )
+            assert (
+                isinstance(tmpl["action"], str) and len(tmpl["action"].strip()) > 0
+            ), f"Template '{name}' has empty action"
 
     def test_description_not_empty(self):
         """Each template description must be non-empty string"""
         for name, tmpl in RULE_TEMPLATES.items():
-            assert isinstance(tmpl["description"], str) and len(tmpl["description"].strip()) > 0, (
-                f"Template '{name}' has empty description"
-            )
+            assert (
+                isinstance(tmpl["description"], str) and len(tmpl["description"].strip()) > 0
+            ), f"Template '{name}' has empty description"
 
 
 class TestGetTemplate:

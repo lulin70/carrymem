@@ -53,10 +53,7 @@ class RuleConflict:
 
     def __repr__(self) -> str:
         rule_ids = ", ".join(r.id for r in self.rules)
-        return (
-            f"RuleConflict({self.conflict_type.value}, "
-            f"{self.severity.value}, rules=[{rule_ids}])"
-        )
+        return f"RuleConflict({self.conflict_type.value}, " f"{self.severity.value}, rules=[{rule_ids}])"
 
     def summary(self) -> str:
         rule_summaries = " | ".join(r.summary() for r in self.rules)
@@ -131,9 +128,7 @@ class RuleConflictDetector:
 
             # Also check if new_rule creates global conflicts
             if new_rule.trigger == "*" and new_rule.status == "active":
-                global_conflicts = cls._check_global_rules(
-                    active_rules + [new_rule]
-                )
+                global_conflicts = cls._check_global_rules(active_rules + [new_rule])
                 conflicts.extend(global_conflicts)
         else:
             # Check all pairs (O(n^2), but rule count is bounded by limiter)
@@ -179,14 +174,8 @@ class RuleConflictDetector:
                 conflict_type=ConflictType.CONTRADICTION,
                 severity=ConflictSeverity.CRITICAL,
                 rules=[rule_a, rule_b],
-                reason=(
-                    f"Contradictory types: {rule_a.rule_type} vs {rule_b.rule_type} "
-                    f"with overlapping triggers"
-                ),
-                suggestion=(
-                    "Review which rule should take precedence. "
-                    "Consider pausing one or adjusting triggers."
-                ),
+                reason=(f"Contradictory types: {rule_a.rule_type} vs {rule_b.rule_type} " f"with overlapping triggers"),
+                suggestion=("Review which rule should take precedence. " "Consider pausing one or adjusting triggers."),
             )
 
         # Check overlapping type pairs
@@ -197,10 +186,7 @@ class RuleConflictDetector:
                     conflict_type=ConflictType.OVERLAP,
                     severity=ConflictSeverity.MEDIUM,
                     rules=[rule_a, rule_b],
-                    reason=(
-                        f"Overlapping {rule_a.rule_type} rules with different actions "
-                        f"for similar triggers"
-                    ),
+                    reason=(f"Overlapping {rule_a.rule_type} rules with different actions " f"for similar triggers"),
                     suggestion="Consider merging or differentiating the triggers",
                 )
 
@@ -210,9 +196,7 @@ class RuleConflictDetector:
     def _is_duplicate(cls, rule_a: Rule, rule_b: Rule) -> bool:
         """Check if two rules are duplicates"""
         return (
-            rule_a.trigger == rule_b.trigger
-            and rule_a.action == rule_b.action
-            and rule_a.rule_type == rule_b.rule_type
+            rule_a.trigger == rule_b.trigger and rule_a.action == rule_b.action and rule_a.rule_type == rule_b.rule_type
         )
 
     @classmethod
@@ -278,10 +262,7 @@ class RuleConflictDetector:
                             conflict_type=ConflictType.GLOBAL_CONFLICT,
                             severity=ConflictSeverity.CRITICAL,
                             rules=[rule_a, rule_b],
-                            reason=(
-                                f"Contradictory global rules: "
-                                f"{rule_a.rule_type} vs {rule_b.rule_type}"
-                            ),
+                            reason=(f"Contradictory global rules: " f"{rule_a.rule_type} vs {rule_b.rule_type}"),
                             suggestion=(
                                 "Global rules apply to ALL scenes. "
                                 "Contradictory global rules will cause unpredictable behavior."

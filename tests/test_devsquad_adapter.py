@@ -38,14 +38,13 @@ def adapter(temp_db):
 @pytest.fixture
 def adapter_with_rules(adapter):
     adapter._rule_engine.add_rule(
-        trigger="database selection", action="always use PostgreSQL", rule_type="always", override=True
+        trigger="database selection",
+        action="always use PostgreSQL",
+        rule_type="always",
+        override=True,
     )
-    adapter._rule_engine.add_rule(
-        trigger="security", action="avoid storing passwords in plain text", rule_type="avoid"
-    )
-    adapter._rule_engine.add_rule(
-        trigger="code review", action="never skip code review", rule_type="forbid"
-    )
+    adapter._rule_engine.add_rule(trigger="security", action="avoid storing passwords in plain text", rule_type="avoid")
+    adapter._rule_engine.add_rule(trigger="code review", action="never skip code review", rule_type="forbid")
     return adapter
 
 
@@ -158,9 +157,7 @@ class TestGetRules:
         assert isinstance(rules, list)
 
     def test_get_rules_with_context(self, adapter_with_rules):
-        rules = adapter_with_rules.get_rules(
-            "user1", context={"task": "database selection", "role": "architect"}
-        )
+        rules = adapter_with_rules.get_rules("user1", context={"task": "database selection", "role": "architect"})
         assert isinstance(rules, list)
 
     def test_get_rules_unavailable(self, tmp_path):
@@ -254,9 +251,7 @@ class TestMatchRules:
         assert isinstance(matched, list)
 
     def test_match_rules_with_role(self, adapter_with_rules):
-        matched = adapter_with_rules.match_rules(
-            "database selection", "user1", role="architect", max_rules=3
-        )
+        matched = adapter_with_rules.match_rules("database selection", "user1", role="architect", max_rules=3)
         assert isinstance(matched, list)
         assert len(matched) <= 3
 
@@ -283,7 +278,12 @@ class TestFormatRulesAsPrompt:
     def test_format_basic(self):
         rules = [
             {"rule_type": "always", "action": "Use SSL", "trigger": "security", "override": True},
-            {"rule_type": "avoid", "action": "Avoid MongoDB", "trigger": "database", "override": False},
+            {
+                "rule_type": "avoid",
+                "action": "Avoid MongoDB",
+                "trigger": "database",
+                "override": False,
+            },
         ]
         adapter = MagicMock(spec=DevSquadAdapter)
         result = DevSquadAdapter.format_rules_as_prompt(adapter, rules)
@@ -297,7 +297,12 @@ class TestFormatRulesAsPrompt:
 
     def test_format_override_rules(self):
         rules = [
-            {"rule_type": "forbid", "action": "No plain text", "trigger": "security", "override": True},
+            {
+                "rule_type": "forbid",
+                "action": "No plain text",
+                "trigger": "security",
+                "override": True,
+            },
         ]
         adapter = MagicMock(spec=DevSquadAdapter)
         result = DevSquadAdapter.format_rules_as_prompt(adapter, rules)
@@ -305,7 +310,12 @@ class TestFormatRulesAsPrompt:
 
     def test_format_normal_rules(self):
         rules = [
-            {"rule_type": "avoid", "action": "Avoid MySQL", "trigger": "database", "override": False},
+            {
+                "rule_type": "avoid",
+                "action": "Avoid MySQL",
+                "trigger": "database",
+                "override": False,
+            },
         ]
         adapter = MagicMock(spec=DevSquadAdapter)
         result = DevSquadAdapter.format_rules_as_prompt(adapter, rules)

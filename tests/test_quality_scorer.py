@@ -46,17 +46,17 @@ class TestMemoryQualityScorerInit:
 
     def test_custom_weights(self):
         custom = {
-            'confidence': 0.5,
-            'access_frequency': 0.2,
-            'freshness': 0.2,
-            'source_reliability': 0.1,
+            "confidence": 0.5,
+            "access_frequency": 0.2,
+            "freshness": 0.2,
+            "source_reliability": 0.1,
         }
         scorer = MemoryQualityScorer(weights=custom)
         assert scorer.weights == custom
 
     def test_invalid_weights_rejected(self):
         with pytest.raises(ValueError, match="must sum to 1.0"):
-            MemoryQualityScorer(weights={'confidence': 0.5})
+            MemoryQualityScorer(weights={"confidence": 0.5})
 
     def test_default_max_access_count(self):
         scorer = MemoryQualityScorer()
@@ -121,29 +121,29 @@ class TestScoreBreakdown:
         scorer = MemoryQualityScorer()
         mem = make_memory()
         breakdown = scorer.score_with_breakdown(mem)
-        assert 'overall' in breakdown
-        assert 'confidence' in breakdown
-        assert 'access_frequency' in breakdown
-        assert 'freshness' in breakdown
-        assert 'source_reliability' in breakdown
-        assert 'weighted' in breakdown
+        assert "overall" in breakdown
+        assert "confidence" in breakdown
+        assert "access_frequency" in breakdown
+        assert "freshness" in breakdown
+        assert "source_reliability" in breakdown
+        assert "weighted" in breakdown
 
     def test_breakdown_weighted_keys(self):
         scorer = MemoryQualityScorer()
         mem = make_memory()
         breakdown = scorer.score_with_breakdown(mem)
-        weighted = breakdown['weighted']
-        assert 'confidence' in weighted
-        assert 'access_frequency' in weighted
-        assert 'freshness' in weighted
-        assert 'source_reliability' in weighted
+        weighted = breakdown["weighted"]
+        assert "confidence" in weighted
+        assert "access_frequency" in weighted
+        assert "freshness" in weighted
+        assert "source_reliability" in weighted
 
     def test_breakdown_overall_equals_weighted_sum(self):
         scorer = MemoryQualityScorer()
         mem = make_memory()
         breakdown = scorer.score_with_breakdown(mem)
-        weighted_sum = sum(breakdown['weighted'].values())
-        assert abs(breakdown['overall'] - round(weighted_sum, 3)) < 0.01
+        weighted_sum = sum(breakdown["weighted"].values())
+        assert abs(breakdown["overall"] - round(weighted_sum, 3)) < 0.01
 
 
 class TestAccessFrequencyScoring:
@@ -151,32 +151,32 @@ class TestAccessFrequencyScoring:
         scorer = MemoryQualityScorer()
         mem = make_memory(access_count=0)
         breakdown = scorer.score_with_breakdown(mem)
-        assert breakdown['access_frequency'] == 0.0
+        assert breakdown["access_frequency"] == 0.0
 
     def test_max_access(self):
         scorer = MemoryQualityScorer()
         mem = make_memory(access_count=10)
         breakdown = scorer.score_with_breakdown(mem)
-        assert breakdown['access_frequency'] == 1.0
+        assert breakdown["access_frequency"] == 1.0
 
     def test_over_max_capped(self):
         scorer = MemoryQualityScorer()
         mem = make_memory(access_count=100)
         breakdown = scorer.score_with_breakdown(mem)
-        assert breakdown['access_frequency'] == 1.0
+        assert breakdown["access_frequency"] == 1.0
 
     def test_half_access(self):
         scorer = MemoryQualityScorer()
         mem = make_memory(access_count=5)
         breakdown = scorer.score_with_breakdown(mem)
-        assert breakdown['access_frequency'] == 0.5
+        assert breakdown["access_frequency"] == 0.5
 
     def test_none_access_count(self):
         scorer = MemoryQualityScorer()
         mem = make_memory()
         mem.access_count = None
         breakdown = scorer.score_with_breakdown(mem)
-        assert breakdown['access_frequency'] == 0.0
+        assert breakdown["access_frequency"] == 0.0
 
 
 class TestFreshnessScoring:
@@ -184,30 +184,26 @@ class TestFreshnessScoring:
         scorer = MemoryQualityScorer()
         mem = make_memory(created_at=datetime.now(timezone.utc))
         breakdown = scorer.score_with_breakdown(mem)
-        assert breakdown['freshness'] > 0.9
+        assert breakdown["freshness"] > 0.9
 
     def test_very_old(self):
         scorer = MemoryQualityScorer()
-        mem = make_memory(
-            created_at=datetime.now(timezone.utc) - timedelta(days=400)
-        )
+        mem = make_memory(created_at=datetime.now(timezone.utc) - timedelta(days=400))
         breakdown = scorer.score_with_breakdown(mem)
-        assert breakdown['freshness'] < 0.1
+        assert breakdown["freshness"] < 0.1
 
     def test_no_created_at(self):
         scorer = MemoryQualityScorer()
         mem = make_memory()
         mem.created_at = None
         breakdown = scorer.score_with_breakdown(mem)
-        assert breakdown['freshness'] == 0.5
+        assert breakdown["freshness"] == 0.5
 
     def test_naive_datetime(self):
         scorer = MemoryQualityScorer()
-        mem = make_memory(
-            created_at=datetime.now().replace(tzinfo=None)
-        )
+        mem = make_memory(created_at=datetime.now().replace(tzinfo=None))
         breakdown = scorer.score_with_breakdown(mem)
-        assert 0.0 <= breakdown['freshness'] <= 1.01
+        assert 0.0 <= breakdown["freshness"] <= 1.01
 
 
 class TestSourceReliabilityScoring:
@@ -215,60 +211,60 @@ class TestSourceReliabilityScoring:
         scorer = MemoryQualityScorer()
         mem = make_memory(source_layer="declaration")
         breakdown = scorer.score_with_breakdown(mem)
-        assert breakdown['source_reliability'] == 1.0
+        assert breakdown["source_reliability"] == 1.0
 
     def test_rule_source(self):
         scorer = MemoryQualityScorer()
         mem = make_memory(source_layer="rule")
         breakdown = scorer.score_with_breakdown(mem)
-        assert breakdown['source_reliability'] == 0.9
+        assert breakdown["source_reliability"] == 0.9
 
     def test_pattern_source(self):
         scorer = MemoryQualityScorer()
         mem = make_memory(source_layer="pattern")
         breakdown = scorer.score_with_breakdown(mem)
-        assert breakdown['source_reliability'] == 0.7
+        assert breakdown["source_reliability"] == 0.7
 
     def test_semantic_source(self):
         scorer = MemoryQualityScorer()
         mem = make_memory(source_layer="semantic")
         breakdown = scorer.score_with_breakdown(mem)
-        assert breakdown['source_reliability'] == 0.5
+        assert breakdown["source_reliability"] == 0.5
 
     def test_unknown_source(self):
         scorer = MemoryQualityScorer()
         mem = make_memory(source_layer="unknown")
         breakdown = scorer.score_with_breakdown(mem)
-        assert breakdown['source_reliability'] == 0.3
+        assert breakdown["source_reliability"] == 0.3
 
     def test_none_source(self):
         scorer = MemoryQualityScorer()
         mem = make_memory()
         mem.source_layer = None
         breakdown = scorer.score_with_breakdown(mem)
-        assert breakdown['source_reliability'] == 0.3
+        assert breakdown["source_reliability"] == 0.3
 
 
 class TestQualityTiers:
     def test_excellent(self):
         scorer = MemoryQualityScorer()
-        assert scorer.get_quality_tier(0.9) == 'excellent'
-        assert scorer.get_quality_tier(0.8) == 'excellent'
+        assert scorer.get_quality_tier(0.9) == "excellent"
+        assert scorer.get_quality_tier(0.8) == "excellent"
 
     def test_good(self):
         scorer = MemoryQualityScorer()
-        assert scorer.get_quality_tier(0.7) == 'good'
-        assert scorer.get_quality_tier(0.6) == 'good'
+        assert scorer.get_quality_tier(0.7) == "good"
+        assert scorer.get_quality_tier(0.6) == "good"
 
     def test_fair(self):
         scorer = MemoryQualityScorer()
-        assert scorer.get_quality_tier(0.5) == 'fair'
-        assert scorer.get_quality_tier(0.4) == 'fair'
+        assert scorer.get_quality_tier(0.5) == "fair"
+        assert scorer.get_quality_tier(0.4) == "fair"
 
     def test_poor(self):
         scorer = MemoryQualityScorer()
-        assert scorer.get_quality_tier(0.3) == 'poor'
-        assert scorer.get_quality_tier(0.0) == 'poor'
+        assert scorer.get_quality_tier(0.3) == "poor"
+        assert scorer.get_quality_tier(0.0) == "poor"
 
 
 class TestBatchScoring:
@@ -281,14 +277,14 @@ class TestBatchScoring:
         ]
         results = scorer.score_batch(mems)
         assert len(results) == 3
-        assert results[0]['score'] >= results[1]['score']
-        assert results[1]['score'] >= results[2]['score']
+        assert results[0]["score"] >= results[1]["score"]
+        assert results[1]["score"] >= results[2]["score"]
 
     def test_score_batch_has_storage_key(self):
         scorer = MemoryQualityScorer()
         mems = [make_memory(storage_key="test_key")]
         results = scorer.score_batch(mems)
-        assert results[0]['storage_key'] == "test_key"
+        assert results[0]["storage_key"] == "test_key"
 
     def test_score_batch_empty(self):
         scorer = MemoryQualityScorer()
@@ -349,9 +345,9 @@ class TestQualityAnalyzer:
     def test_analyze_empty(self):
         analyzer = QualityAnalyzer()
         result = analyzer.analyze([])
-        assert result['count'] == 0
-        assert result['average_score'] == 0.0
-        assert result['by_tier'] == {}
+        assert result["count"] == 0
+        assert result["average_score"] == 0.0
+        assert result["by_tier"] == {}
 
     def test_analyze_with_memories(self):
         analyzer = QualityAnalyzer()
@@ -360,9 +356,9 @@ class TestQualityAnalyzer:
             make_memory(confidence=0.3, source_layer="unknown"),
         ]
         result = analyzer.analyze(mems)
-        assert result['count'] == 2
-        assert result['average_score'] > 0
-        assert 'excellent' in result['by_tier'] or 'good' in result['by_tier']
+        assert result["count"] == 2
+        assert result["average_score"] > 0
+        assert "excellent" in result["by_tier"] or "good" in result["by_tier"]
 
     def test_analyze_by_type(self):
         analyzer = QualityAnalyzer()
@@ -371,8 +367,8 @@ class TestQualityAnalyzer:
             make_memory(memory_type="correction", confidence=0.5),
         ]
         result = analyzer.analyze(mems)
-        assert 'user_preference' in result['by_type']
-        assert 'correction' in result['by_type']
+        assert "user_preference" in result["by_type"]
+        assert "correction" in result["by_type"]
 
     def test_analyze_by_source(self):
         analyzer = QualityAnalyzer()
@@ -381,8 +377,8 @@ class TestQualityAnalyzer:
             make_memory(source_layer="pattern", confidence=0.5),
         ]
         result = analyzer.analyze(mems)
-        assert 'declaration' in result['by_source']
-        assert 'pattern' in result['by_source']
+        assert "declaration" in result["by_source"]
+        assert "pattern" in result["by_source"]
 
     def test_analyze_statistics(self):
         analyzer = QualityAnalyzer()
@@ -392,22 +388,22 @@ class TestQualityAnalyzer:
             make_memory(confidence=0.1),
         ]
         result = analyzer.analyze(mems)
-        assert result['min_score'] <= result['average_score']
-        assert result['average_score'] <= result['max_score']
-        assert result['median_score'] > 0
+        assert result["min_score"] <= result["average_score"]
+        assert result["average_score"] <= result["max_score"]
+        assert result["median_score"] > 0
 
     def test_custom_scorer(self):
         custom_weights = {
-            'confidence': 0.5,
-            'access_frequency': 0.2,
-            'freshness': 0.2,
-            'source_reliability': 0.1,
+            "confidence": 0.5,
+            "access_frequency": 0.2,
+            "freshness": 0.2,
+            "source_reliability": 0.1,
         }
         scorer = MemoryQualityScorer(weights=custom_weights)
         analyzer = QualityAnalyzer(scorer=scorer)
         mem = make_memory()
         result = analyzer.analyze([mem])
-        assert result['count'] == 1
+        assert result["count"] == 1
 
 
 class TestIdentifyLowQuality:
@@ -418,7 +414,7 @@ class TestIdentifyLowQuality:
         ]
         low = analyzer.identify_low_quality(mems, threshold=0.5)
         assert len(low) >= 1
-        assert low[0]['score'] < 0.5
+        assert low[0]["score"] < 0.5
 
     def test_identify_with_reasons(self):
         analyzer = QualityAnalyzer()
@@ -432,7 +428,7 @@ class TestIdentifyLowQuality:
         ]
         low = analyzer.identify_low_quality(mems, threshold=0.5)
         assert len(low) >= 1
-        assert len(low[0]['reasons']) > 0
+        assert len(low[0]["reasons"]) > 0
 
     def test_identify_no_low_quality(self):
         analyzer = QualityAnalyzer()
@@ -450,7 +446,7 @@ class TestIdentifyLowQuality:
         ]
         low = analyzer.identify_low_quality(mems, threshold=0.5)
         if len(low) >= 2:
-            assert low[0]['score'] <= low[1]['score']
+            assert low[0]["score"] <= low[1]["score"]
 
     def test_identify_has_breakdown(self):
         analyzer = QualityAnalyzer()
@@ -459,5 +455,5 @@ class TestIdentifyLowQuality:
         ]
         low = analyzer.identify_low_quality(mems, threshold=0.5)
         if low:
-            assert 'breakdown' in low[0]
-            assert 'overall' in low[0]['breakdown']
+            assert "breakdown" in low[0]
+            assert "overall" in low[0]["breakdown"]

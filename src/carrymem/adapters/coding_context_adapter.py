@@ -107,10 +107,10 @@ _PROJECT_METADATA_FILES = {
 }
 
 _CONTENT_TYPE_PATTERNS = [
-    (r'\b(prefer|always|never|must|should|avoid|don\'t|do not)\b', "user_preference"),
-    (r'\b(lint|format|style|indent|tab|space|semicolon|comma|quote)\b', "decision"),
-    (r'\b(fix|bug|issue|error|workaround|hack|patch)\b', "correction"),
-    (r'\b(use|using|built.?with|stack|framework|library|version|runtime)\b', "personal_fact"),
+    (r"\b(prefer|always|never|must|should|avoid|don\'t|do not)\b", "user_preference"),
+    (r"\b(lint|format|style|indent|tab|space|semicolon|comma|quote)\b", "decision"),
+    (r"\b(fix|bug|issue|error|workaround|hack|patch)\b", "correction"),
+    (r"\b(use|using|built.?with|stack|framework|library|version|runtime)\b", "personal_fact"),
 ]
 
 
@@ -134,10 +134,17 @@ def _infer_language(file_path: str, content: str) -> Optional[str]:
     path_lower = file_path.lower()
 
     lang_map = {
-        ".py": "python", ".js": "javascript", ".ts": "typescript",
-        ".rs": "rust", ".go": "go", ".java": "java",
-        ".rb": "ruby", ".php": "php", ".swift": "swift",
-        ".kt": "kotlin", ".cs": "csharp",
+        ".py": "python",
+        ".js": "javascript",
+        ".ts": "typescript",
+        ".rs": "rust",
+        ".go": "go",
+        ".java": "java",
+        ".rb": "ruby",
+        ".php": "php",
+        ".swift": "swift",
+        ".kt": "kotlin",
+        ".cs": "csharp",
     }
     for ext, lang in lang_map.items():
         if path_lower.endswith(ext):
@@ -146,8 +153,7 @@ def _infer_language(file_path: str, content: str) -> Optional[str]:
     if "package.json" in path_lower:
         try:
             data = json.loads(content)
-            deps = list(data.get("dependencies", {}).keys()) + \
-                        list(data.get("devDependencies", {}).keys())
+            deps = list(data.get("dependencies", {}).keys()) + list(data.get("devDependencies", {}).keys())
             if any("react" in d for d in deps):
                 return "react"
             if any("vue" in d for d in deps):
@@ -178,20 +184,32 @@ def _infer_framework(content: str, language: Optional[str]) -> Optional[str]:
 
     framework_patterns = {
         "python": [
-            (r'django', "django"), (r'flask', "flask"), (r'fastapi', "fastapi"),
-            (r'pytorch', "pytorch"), (r'tensorflow', "tensorflow"),
+            (r"django", "django"),
+            (r"flask", "flask"),
+            (r"fastapi", "fastapi"),
+            (r"pytorch", "pytorch"),
+            (r"tensorflow", "tensorflow"),
         ],
         "javascript": [
-            (r'react', "react"), (r'vue', "vue"), (r'angular', "angular"),
-            (r'next\.?js', "nextjs"), (r'svelte', "svelte"),
-            (r'express', "express"), (r'nuxt', "nuxt"),
+            (r"react", "react"),
+            (r"vue", "vue"),
+            (r"angular", "angular"),
+            (r"next\.?js", "nextjs"),
+            (r"svelte", "svelte"),
+            (r"express", "express"),
+            (r"nuxt", "nuxt"),
         ],
         "typescript": [
-            (r'react', "react"), (r'vue', "vue"), (r'angular', "angular"),
-            (r'next\.?js', "nextjs"), (r'nuxt', "nuxt"),
+            (r"react", "react"),
+            (r"vue", "vue"),
+            (r"angular", "angular"),
+            (r"next\.?js", "nextjs"),
+            (r"nuxt", "nuxt"),
         ],
         "rust": [
-            (r'actix', "actix"), (r'axum', "axum"), (r'rocket', "rocket"),
+            (r"actix", "actix"),
+            (r"axum", "axum"),
+            (r"rocket", "rocket"),
         ],
     }
 
@@ -225,25 +243,27 @@ def _parse_file(file_path: Path) -> List[Dict[str, Any]]:
         return entries
 
     if source_type == "ai_instruction" and len(content_raw) > 200:
-        sections = re.split(r'\n(?=#{1,3}\s)', content_raw)
+        sections = re.split(r"\n(?=#{1,3}\s)", content_raw)
         if len(sections) > 1:
             for section in sections:
                 section = section.strip()
                 if not section or len(section) < 20:
                     continue
                 first_line = section.split("\n")[0].strip()
-                title = re.sub(r'^#+\s*', '', first_line)[:80] or file_name
+                title = re.sub(r"^#+\s*", "", first_line)[:80] or file_name
                 mtype = _infer_memory_type(section, source_type)
                 lang = _infer_language(str(file_path), section)
                 fw = _infer_framework(section, lang)
-                entries.append({
-                    "title": title,
-                    "content": section[:2000],
-                    "memory_type": mtype,
-                    "source_type": source_type,
-                    "language": lang,
-                    "framework": fw,
-                })
+                entries.append(
+                    {
+                        "title": title,
+                        "content": section[:2000],
+                        "memory_type": mtype,
+                        "source_type": source_type,
+                        "language": lang,
+                        "framework": fw,
+                    }
+                )
             return entries
 
     title = file_name
@@ -251,14 +271,16 @@ def _parse_file(file_path: Path) -> List[Dict[str, Any]]:
     lang = _infer_language(str(file_path), content_raw)
     fw = _infer_framework(content_raw, lang)
 
-    entries.append({
-        "title": title,
-        "content": content_raw[:2000],
-        "memory_type": mtype,
-        "source_type": source_type,
-        "language": lang,
-        "framework": fw,
-    })
+    entries.append(
+        {
+            "title": title,
+            "content": content_raw[:2000],
+            "memory_type": mtype,
+            "source_type": source_type,
+            "language": lang,
+            "framework": fw,
+        }
+    )
 
     return entries
 
@@ -283,6 +305,7 @@ class CodingContextAdapter(StorageAdapter):
 
         if db_path is None:
             from ..constants import DEFAULT_CONFIG_DIR
+
             carrymem_dir = DEFAULT_CONFIG_DIR
             carrymem_dir.mkdir(exist_ok=True)
             project_hash = hashlib.md5(str(self._project_path).encode()).hexdigest()[:8]
@@ -302,7 +325,7 @@ class CodingContextAdapter(StorageAdapter):
         if self._closed:
             raise RuntimeError("CodingContextAdapter has been closed")
 
-        if not hasattr(self._local, 'conn') or self._local.conn is None:
+        if not hasattr(self._local, "conn") or self._local.conn is None:
             conn = sqlite3.connect(self._db_path)
             conn.row_factory = sqlite3.Row
             conn.execute("PRAGMA journal_mode=WAL")
@@ -379,9 +402,7 @@ class CodingContextAdapter(StorageAdapter):
                 )
 
                 for entry in entries:
-                    entry_id = hashlib.md5(
-                        f"{file_path}:{entry['title']}".encode()
-                    ).hexdigest()[:12]
+                    entry_id = hashlib.md5(f"{file_path}:{entry['title']}".encode()).hexdigest()[:12]
 
                     conn.execute(
                         """INSERT OR REPLACE INTO coding_entries
@@ -489,5 +510,5 @@ class CodingContextAdapter(StorageAdapter):
                 except Exception:
                     pass
             self._all_connections.clear()
-        if hasattr(self._local, 'conn'):
+        if hasattr(self._local, "conn"):
             self._local.conn = None

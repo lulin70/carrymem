@@ -128,9 +128,7 @@ class TestScopeAwareStorage:
             os.remove(self.db_path)
 
     def test_create_rule_with_scope(self):
-        rule = self.storage.create(
-            trigger="test", action="do something", scope="company"
-        )
+        rule = self.storage.create(trigger="test", action="do something", scope="company")
         assert rule.scope == "company"
 
     def test_list_rules_filter_by_scope(self):
@@ -241,7 +239,8 @@ class TestSkillPack:
         rules = [Rule(trigger="test", action="a")]
         with pytest.raises(ValueError, match="Duplicate dependency"):
             skill_pack(
-                rules=rules, name="my-skill",
+                rules=rules,
+                name="my-skill",
                 dependencies=["dep-a", "dep-a"],
             )
 
@@ -363,7 +362,12 @@ class TestSkillInstall:
         assert result["installed"] == 0
 
     def test_install_invalid_signature_rejected(self):
-        bundle = {"format": SKILL_FORMAT, "manifest": {}, "rules": [{"trigger": "t", "action": "a"}], "signature": {"algorithm": "sha256", "hash": "wrong"}}
+        bundle = {
+            "format": SKILL_FORMAT,
+            "manifest": {},
+            "rules": [{"trigger": "t", "action": "a"}],
+            "signature": {"algorithm": "sha256", "hash": "wrong"},
+        }
         result = skill_install(bundle, self.storage)
         assert result["installed"] == 0
 
@@ -437,8 +441,20 @@ class TestMergeConflictResolution:
 
     def test_negotiate_strategy_type_contradiction(self):
         conflict = MergeConflict(
-            incoming_rule=Rule(trigger="db", action="always use SSL", scope="negotiated", rule_type="always", override=True),
-            existing_rule=Rule(trigger="db", action="forbid SSL", scope="personal", rule_type="forbid", override=True),
+            incoming_rule=Rule(
+                trigger="db",
+                action="always use SSL",
+                scope="negotiated",
+                rule_type="always",
+                override=True,
+            ),
+            existing_rule=Rule(
+                trigger="db",
+                action="forbid SSL",
+                scope="personal",
+                rule_type="forbid",
+                override=True,
+            ),
             conflict_type="type_contradiction",
             severity="high",
             reason="test",
@@ -498,8 +514,24 @@ class TestMergeRules:
         assert incoming[0].scope == "personal"
 
     def test_merge_negotiate_downgrades_existing_override(self):
-        incoming = [Rule(trigger="db", action="always use MySQL", scope="negotiated", rule_type="always", override=True)]
-        existing = [Rule(trigger="db", action="forbid MySQL", scope="personal", rule_type="forbid", override=True)]
+        incoming = [
+            Rule(
+                trigger="db",
+                action="always use MySQL",
+                scope="negotiated",
+                rule_type="always",
+                override=True,
+            )
+        ]
+        existing = [
+            Rule(
+                trigger="db",
+                action="forbid MySQL",
+                scope="personal",
+                rule_type="forbid",
+                override=True,
+            )
+        ]
 
         result = merge_rules(incoming, existing, MergeStrategy.NEGOTIATE)
         assert len(result.downgrade_override_ids) == 1
@@ -585,9 +617,9 @@ class TestScopeSecurityBoundaries:
                 reason="test",
             )
             decision = resolve_conflict(conflict, strategy)
-            assert decision == MergeDecision.KEEP_EXISTING, (
-                f"Strategy {strategy.value} allowed personal to override company!"
-            )
+            assert (
+                decision == MergeDecision.KEEP_EXISTING
+            ), f"Strategy {strategy.value} allowed personal to override company!"
 
     def test_company_override_always_wins(self):
         for strategy in MergeStrategy:
@@ -599,9 +631,9 @@ class TestScopeSecurityBoundaries:
                 reason="test",
             )
             decision = resolve_conflict(conflict, strategy)
-            assert decision == MergeDecision.KEEP_INCOMING, (
-                f"Strategy {strategy.value} did not let company override win!"
-            )
+            assert (
+                decision == MergeDecision.KEEP_INCOMING
+            ), f"Strategy {strategy.value} did not let company override win!"
 
 
 class TestSkillSignatureSecurity:

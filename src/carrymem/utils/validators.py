@@ -28,9 +28,7 @@ def validate_message(message: str, max_length: int = 10000) -> None:
         raise ValidationError(f"Message must be a string, got {type(message).__name__}")
 
     if len(message) > max_length:
-        raise ValidationError(
-            f"Message too long: {len(message)} characters (max {max_length})"
-        )
+        raise ValidationError(f"Message too long: {len(message)} characters (max {max_length})")
 
 
 def validate_context(context: Optional[Dict[str, Any]]) -> None:
@@ -72,7 +70,7 @@ def validate_language(language: Optional[str]) -> None:
         raise ValidationError(f"Language code too long: {len(language)} (max 10)")
 
     # Basic format check (2-3 letter codes, or locale like 'en-US')
-    if not language.replace('-', '').replace('_', '').isalnum():
+    if not language.replace("-", "").replace("_", "").isalnum():
         raise ValidationError(f"Invalid language code format: {language}")
 
 
@@ -95,10 +93,9 @@ def validate_namespace(namespace: str) -> None:
         raise ValidationError(f"Namespace too long: {len(namespace)} (max 128)")
 
     # Check for valid characters (alphanumeric, dash, underscore)
-    if not all(c.isalnum() or c in '-_' for c in namespace):
+    if not all(c.isalnum() or c in "-_" for c in namespace):
         raise ValidationError(
-            f"Namespace contains invalid characters: {namespace}. "
-            "Only alphanumeric, dash, and underscore allowed."
+            f"Namespace contains invalid characters: {namespace}. " "Only alphanumeric, dash, and underscore allowed."
         )
 
 
@@ -135,10 +132,7 @@ def validate_filters(filters: Optional[Dict[str, Any]], allowed_keys: set = None
     keys = allowed_keys or _DEFAULT_ALLOWED_FILTER_KEYS
     invalid_keys = set(filters.keys()) - keys
     if invalid_keys:
-        raise ValidationError(
-            f"Invalid filter keys: {invalid_keys}. "
-            f"Allowed keys: {keys}"
-        )
+        raise ValidationError(f"Invalid filter keys: {invalid_keys}. " f"Allowed keys: {keys}")
 
 
 def validate_memory_type(memory_type: str, valid_types: set) -> None:
@@ -158,10 +152,7 @@ def validate_memory_type(memory_type: str, valid_types: set) -> None:
         raise ValidationError(f"Memory type must be a string, got {type(memory_type).__name__}")
 
     if memory_type not in valid_types:
-        raise ValidationError(
-            f"Invalid memory type: '{memory_type}'. "
-            f"Valid types: {valid_types}"
-        )
+        raise ValidationError(f"Invalid memory type: '{memory_type}'. " f"Valid types: {valid_types}")
 
 
 def validate_confidence(confidence: float) -> None:
@@ -174,14 +165,10 @@ def validate_confidence(confidence: float) -> None:
         ValidationError: If validation fails
     """
     if not isinstance(confidence, (int, float)):
-        raise ValidationError(
-            f"Confidence must be a number, got {type(confidence).__name__}"
-        )
+        raise ValidationError(f"Confidence must be a number, got {type(confidence).__name__}")
 
     if not 0.0 <= confidence <= 1.0:
-        raise ValidationError(
-            f"Confidence must be between 0.0 and 1.0, got {confidence}"
-        )
+        raise ValidationError(f"Confidence must be between 0.0 and 1.0, got {confidence}")
 
 
 def validate_tier(tier: int) -> None:
@@ -234,9 +221,7 @@ def validate_query(query: str, max_length: int = 10000) -> None:
         raise ValidationError(f"Query must be a string, got {type(query).__name__}")
 
     if len(query) > max_length:
-        raise ValidationError(
-            f"Query too long: {len(query)} characters (max {max_length})"
-        )
+        raise ValidationError(f"Query too long: {len(query)} characters (max {max_length})")
 
 
 def validate_namespaces(namespaces: Optional[List[str]]) -> None:

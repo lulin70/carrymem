@@ -1,4 +1,5 @@
 """Tests for scheduled consolidation functionality."""
+
 import time
 import pytest
 from carrymem import CarryMem

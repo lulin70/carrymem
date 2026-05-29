@@ -57,6 +57,7 @@ class TestEncryption:
     def test_encryption_module_import(self):
         try:
             from carrymem.security.encryption import EncryptionManager
+
             em = EncryptionManager()
             assert em is not None
         except (ImportError, TypeError, Exception):

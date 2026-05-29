@@ -149,9 +149,7 @@ class TestStoredMemoryFromDict:
             content="I prefer dark mode",
             type="user_preference",
         )
-        stored = StoredMemory.from_memory_entry(
-            entry, storage_key="mem_008"
-        )
+        stored = StoredMemory.from_memory_entry(entry, storage_key="mem_008")
         assert stored.content == "I prefer dark mode"
         assert stored.storage_key == "mem_008"
 
@@ -161,10 +159,13 @@ class TestStorageAdapterDefaults:
         class TestAdapter(StorageAdapter):
             def remember(self, entry):
                 return None
+
             def recall(self, query, **kwargs):
                 return []
+
             def forget(self, storage_key):
                 return False
+
             @property
             def name(self):
                 return "test"

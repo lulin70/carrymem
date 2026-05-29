@@ -15,8 +15,12 @@ class RuleMatcher:
         """
         self.rules = rules
 
-    def match(self, message: str, context: Optional[Dict[str, Any]] = None,
-              execution_context: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    def match(
+        self,
+        message: str,
+        context: Optional[Dict[str, Any]] = None,
+        execution_context: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
         """Match rules against a message.
 
         Args:
@@ -36,13 +40,13 @@ class RuleMatcher:
         language, _ = language_manager.detect_language(message)
 
         for rule in self.rules:
-            pattern = rule.get('pattern')
-            memory_type = rule.get('memory_type')
-            tier = rule.get('tier')
-            action = rule.get('action')
-            description = rule.get('description')
-            rule_language = rule.get('language')
-            priority = rule.get('priority', 5)  # Default priority if not specified
+            pattern = rule.get("pattern")
+            memory_type = rule.get("memory_type")
+            tier = rule.get("tier")
+            action = rule.get("action")
+            description = rule.get("description")
+            rule_language = rule.get("language")
+            priority = rule.get("priority", 5)  # Default priority if not specified
 
             if rule_language and rule_language != "all" and rule_language != language:
                 continue
@@ -56,24 +60,24 @@ class RuleMatcher:
 
                 if content:
                     # Build source field, ensure preference rules include 'preference' in source
-                    if memory_type == 'user_preference':
-                        source = 'rule:preference'
+                    if memory_type == "user_preference":
+                        source = "rule:preference"
                     else:
-                        source = f'rule:{pattern}'
+                        source = f"rule:{pattern}"
 
                     match = {
-                        'memory_type': memory_type,
-                        'tier': tier,
-                        'content': content,
-                        'source': source,
-                        'description': description,
-                        'language': language,
-                        'priority': priority  # Add priority to match
+                        "memory_type": memory_type,
+                        "tier": tier,
+                        "content": content,
+                        "source": source,
+                        "description": description,
+                        "language": language,
+                        "priority": priority,  # Add priority to match
                     }
                     matches.append(match)
 
         # Sort matches by priority (highest first)
-        matches.sort(key=lambda x: x.get('priority', 5), reverse=True)
+        matches.sort(key=lambda x: x.get("priority", 5), reverse=True)
 
         return matches
 
@@ -91,7 +95,7 @@ class RuleMatcher:
         Args:
             pattern: The pattern of the rule to remove.
         """
-        self.rules = [rule for rule in self.rules if rule.get('pattern') != pattern]
+        self.rules = [rule for rule in self.rules if rule.get("pattern") != pattern]
 
     def get_rules(self) -> List[Dict[str, Any]]:
         """Get all rules.

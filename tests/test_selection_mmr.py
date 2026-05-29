@@ -1,4 +1,5 @@
 """Tests for MMR selection algorithm in selection.py."""
+
 import pytest
 from carrymem.selection import _mmr_select, _tokenize_text, select_memories
 
@@ -35,6 +36,7 @@ class TestMMRSelect:
     def test_precomputed_tokens_no_retokenization(self):
         """Verify that token sets are pre-computed (performance test)."""
         import time
+
         # Create 100 candidates
         scored = [(float(100 - i), {"content": f"item {i} unique word{i}", "raw_text": ""}) for i in range(100)]
         query_tokens = _tokenize_text("item")
@@ -55,8 +57,18 @@ class TestSelectMemories:
     def test_confidence_floor(self):
         """Memories below type-specific confidence floor should be filtered."""
         memories = [
-            {"content": "pref", "type": "user_preference", "confidence": 0.2, "importance_score": 0.5},
-            {"content": "fact", "type": "fact_declaration", "confidence": 0.2, "importance_score": 0.5},
+            {
+                "content": "pref",
+                "type": "user_preference",
+                "confidence": 0.2,
+                "importance_score": 0.5,
+            },
+            {
+                "content": "fact",
+                "type": "fact_declaration",
+                "confidence": 0.2,
+                "importance_score": 0.5,
+            },
         ]
         result = select_memories(memories)
         types = [m["type"] for m in result]
@@ -66,8 +78,18 @@ class TestSelectMemories:
     def test_temporal_boost(self):
         """Temporal queries should boost memories with dates."""
         memories = [
-            {"content": "started job March 2024", "type": "fact_declaration", "confidence": 0.8, "importance_score": 0.5},
-            {"content": "like coffee", "type": "user_preference", "confidence": 0.8, "importance_score": 0.5},
+            {
+                "content": "started job March 2024",
+                "type": "fact_declaration",
+                "confidence": 0.8,
+                "importance_score": 0.5,
+            },
+            {
+                "content": "like coffee",
+                "type": "user_preference",
+                "confidence": 0.8,
+                "importance_score": 0.5,
+            },
         ]
         result = select_memories(memories, context="when did I start my job?")
         # The dated memory should rank higher with temporal boost

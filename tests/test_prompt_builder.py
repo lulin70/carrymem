@@ -25,6 +25,7 @@ from carrymem.scoring import RecallBudget
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def cm():
     """Create a CarryMem instance with temp DB."""
@@ -73,6 +74,7 @@ def _set_field(cm, content_fragment, field, value):
 # ===================================================================
 # 1. _recall_base_memories
 # ===================================================================
+
 
 class TestRecallBaseMemories:
     """Tests for PromptBuilder._recall_base_memories."""
@@ -153,6 +155,7 @@ class TestRecallBaseMemories:
 # 2. _identify_preferences
 # ===================================================================
 
+
 class TestIdentifyPreferences:
     """Tests for PromptBuilder._identify_preferences."""
 
@@ -205,7 +208,9 @@ class TestIdentifyPreferences:
 
         all_mems, seen = pb._recall_base_memories("travel to Paris", limit=30)
         pref_mems, pref_keys, all_mems = pb._identify_preferences(
-            all_mems, seen, "travel to Paris",
+            all_mems,
+            seen,
+            "travel to Paris",
         )
         # Programming preference should not match travel scope
         python_prefs = [m for m in pref_mems if "Python" in m.get("content", "")]
@@ -229,7 +234,9 @@ class TestIdentifyPreferences:
 
         all_mems, seen = pb._recall_base_memories("coding project", limit=30)
         pref_mems, pref_keys, all_mems = pb._identify_preferences(
-            all_mems, seen, "coding project",
+            all_mems,
+            seen,
+            "coding project",
         )
         python_prefs = [m for m in pref_mems if "Python" in m.get("content", "")]
         assert len(python_prefs) >= 1
@@ -252,7 +259,10 @@ class TestIdentifyPreferences:
         # Use unrelated query so core pref is not in main recall
         all_mems, seen = pb._recall_base_memories("weather forecast", limit=30)
         pref_mems, pref_keys, all_mems = pb._identify_preferences(
-            all_mems, seen, "weather", ensure_core=False,
+            all_mems,
+            seen,
+            "weather",
+            ensure_core=False,
         )
         # Without ensure_core, the vegetarian/dark mode pref should not be fetched
         # (it might still appear if FTS matches, but ensure_core=False won't add it)
@@ -264,6 +274,7 @@ class TestIdentifyPreferences:
 # ===================================================================
 # 3. _compute_recalc_scores
 # ===================================================================
+
 
 class TestComputeRecalcScores:
     """Tests for PromptBuilder._compute_recalc_scores."""
@@ -322,6 +333,7 @@ class TestComputeRecalcScores:
 # ===================================================================
 # 4. _budget_filter
 # ===================================================================
+
 
 class TestBudgetFilter:
     """Tests for PromptBuilder._budget_filter."""
@@ -404,6 +416,7 @@ class TestBudgetFilter:
 # 5. _inject_rules
 # ===================================================================
 
+
 class TestInjectRules:
     """Tests for PromptBuilder._inject_rules."""
 
@@ -451,12 +464,15 @@ class TestInjectRules:
 
     def test_exception_returns_empty(self, pb, cm):
         """Exceptions during rule injection return empty string."""
+
         # Force an exception by making rule_engine.inject raise
         class BrokenEngine:
             def inject(self, *a, **kw):
                 raise RuntimeError("broken")
+
             def list_rules(self, *a, **kw):
                 raise RuntimeError("broken")
+
         cm._rule_engine = BrokenEngine()
         result = pb._inject_rules("test", max_rules=5, rules_budget=400, override_only=False)
         assert result == ""
@@ -466,6 +482,7 @@ class TestInjectRules:
 # 6. build_context
 # ===================================================================
 
+
 class TestBuildContext:
     """Tests for PromptBuilder.build_context — full integration."""
 
@@ -474,9 +491,17 @@ class TestBuildContext:
         cm.classify_and_remember("I prefer dark mode", force_type="user_preference")
         result = pb.build_context(context="dark mode")
         expected_keys = {
-            "system_prompt", "rules", "memories", "knowledge",
-            "applied_rules", "rule_count", "memory_count",
-            "knowledge_count", "total_count", "token_estimate", "language",
+            "system_prompt",
+            "rules",
+            "memories",
+            "knowledge",
+            "applied_rules",
+            "rule_count",
+            "memory_count",
+            "knowledge_count",
+            "total_count",
+            "token_estimate",
+            "language",
         }
         assert expected_keys.issubset(result.keys())
 
@@ -536,6 +561,7 @@ class TestBuildContext:
 # 7. build_system_prompt
 # ===================================================================
 
+
 class TestBuildSystemPrompt:
     """Tests for PromptBuilder.build_system_prompt — convenience wrapper."""
 
@@ -569,6 +595,7 @@ class TestBuildSystemPrompt:
 # ===================================================================
 # 8. build_qa_prompt
 # ===================================================================
+
 
 class TestBuildQaPrompt:
     """Tests for PromptBuilder.build_qa_prompt — full integration with budget."""
@@ -654,6 +681,7 @@ class TestBuildQaPrompt:
 # ===================================================================
 # Delegation tests — CarryMem delegates to PromptBuilder
 # ===================================================================
+
 
 class TestCarryMemDelegation:
     """Verify CarryMem correctly delegates to PromptBuilder."""

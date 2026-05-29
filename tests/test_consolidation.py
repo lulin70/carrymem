@@ -1,4 +1,5 @@
 """Tests for CarryMem consolidation engine."""
+
 import pytest
 from datetime import datetime, timezone, timedelta
 from unittest.mock import MagicMock
@@ -117,8 +118,16 @@ class TestFindDuplicates:
 
     def test_near_duplicates(self):
         memories = [
-            {"content": "I prefer Python over other languages", "type": "personal_fact", "storage_key": "a"},
-            {"content": "I prefer Python over other programming languages", "type": "personal_fact", "storage_key": "b"},
+            {
+                "content": "I prefer Python over other languages",
+                "type": "personal_fact",
+                "storage_key": "a",
+            },
+            {
+                "content": "I prefer Python over other programming languages",
+                "type": "personal_fact",
+                "storage_key": "b",
+            },
         ]
         dups = find_duplicates(memories, similarity_threshold=0.7)
         assert len(dups) >= 1
@@ -142,7 +151,12 @@ class TestFindDuplicates:
     def test_superseded_skipped(self):
         memories = [
             {"content": "I prefer Python", "type": "personal_fact", "storage_key": "a"},
-            {"content": "I prefer Python", "type": "personal_fact", "storage_key": "b", "superseded_at": "2026-01-01"},
+            {
+                "content": "I prefer Python",
+                "type": "personal_fact",
+                "storage_key": "b",
+                "superseded_at": "2026-01-01",
+            },
         ]
         dups = find_duplicates(memories)
         assert len(dups) == 0
@@ -151,16 +165,36 @@ class TestFindDuplicates:
 class TestFindSupersededPairs:
     def test_updated_content(self):
         memories = [
-            {"content": "I work at Google", "type": "personal_fact", "storage_key": "a", "created_at": "2025-01-01"},
-            {"content": "I work at Meta now", "type": "personal_fact", "storage_key": "b", "created_at": "2026-01-01"},
+            {
+                "content": "I work at Google",
+                "type": "personal_fact",
+                "storage_key": "a",
+                "created_at": "2025-01-01",
+            },
+            {
+                "content": "I work at Meta now",
+                "type": "personal_fact",
+                "storage_key": "b",
+                "created_at": "2026-01-01",
+            },
         ]
         pairs = find_superseded_pairs(memories)
         assert len(pairs) >= 0
 
     def test_different_types_not_paired(self):
         memories = [
-            {"content": "I like Python", "type": "user_preference", "storage_key": "a", "created_at": "2025-01-01"},
-            {"content": "I like Python", "type": "personal_fact", "storage_key": "b", "created_at": "2026-01-01"},
+            {
+                "content": "I like Python",
+                "type": "user_preference",
+                "storage_key": "a",
+                "created_at": "2025-01-01",
+            },
+            {
+                "content": "I like Python",
+                "type": "personal_fact",
+                "storage_key": "b",
+                "created_at": "2026-01-01",
+            },
         ]
         pairs = find_superseded_pairs(memories)
         assert len(pairs) == 0
@@ -169,8 +203,14 @@ class TestFindSupersededPairs:
 class TestConsolidate:
     def test_dry_run_default(self):
         memories = [
-            {"content": "I prefer Python", "type": "user_preference", "storage_key": "a",
-             "confidence": 0.9, "created_at": datetime.now(timezone.utc).isoformat(), "superseded_at": None},
+            {
+                "content": "I prefer Python",
+                "type": "user_preference",
+                "storage_key": "a",
+                "confidence": 0.9,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "superseded_at": None,
+            },
         ]
         report = consolidate(memories)
         assert "dry_run" not in report
@@ -179,8 +219,15 @@ class TestConsolidate:
     def test_old_memories_to_forget(self):
         old_date = (datetime.now(timezone.utc) - timedelta(days=365)).isoformat()
         memories = [
-            {"content": "Random thought", "type": "sentiment_marker", "storage_key": "old1",
-             "confidence": 0.3, "created_at": old_date, "superseded_at": None, "access_count": 0},
+            {
+                "content": "Random thought",
+                "type": "sentiment_marker",
+                "storage_key": "old1",
+                "confidence": 0.3,
+                "created_at": old_date,
+                "superseded_at": None,
+                "access_count": 0,
+            },
         ]
         report = consolidate(memories)
         assert len(report["to_forget"]) >= 1
@@ -188,8 +235,15 @@ class TestConsolidate:
     def test_preferences_never_forgotten(self):
         old_date = (datetime.now(timezone.utc) - timedelta(days=365)).isoformat()
         memories = [
-            {"content": "I prefer Python", "type": "user_preference", "storage_key": "pref1",
-             "confidence": 0.9, "created_at": old_date, "superseded_at": None, "access_count": 0},
+            {
+                "content": "I prefer Python",
+                "type": "user_preference",
+                "storage_key": "pref1",
+                "confidence": 0.9,
+                "created_at": old_date,
+                "superseded_at": None,
+                "access_count": 0,
+            },
         ]
         report = consolidate(memories)
         assert len(report["to_forget"]) == 0
@@ -202,10 +256,22 @@ class TestConsolidate:
     def test_stats_populated(self):
         now = datetime.now(timezone.utc).isoformat()
         memories = [
-            {"content": "I prefer Python", "type": "user_preference", "storage_key": "a",
-             "confidence": 0.9, "created_at": now, "superseded_at": None},
-            {"content": "I work at Google", "type": "personal_fact", "storage_key": "b",
-             "confidence": 0.8, "created_at": now, "superseded_at": None},
+            {
+                "content": "I prefer Python",
+                "type": "user_preference",
+                "storage_key": "a",
+                "confidence": 0.9,
+                "created_at": now,
+                "superseded_at": None,
+            },
+            {
+                "content": "I work at Google",
+                "type": "personal_fact",
+                "storage_key": "b",
+                "confidence": 0.8,
+                "created_at": now,
+                "superseded_at": None,
+            },
         ]
         report = consolidate(memories)
         assert "stats" in report
@@ -215,8 +281,13 @@ class TestConsolidate:
 class TestConsolidateP1:
     def test_p1_skipped_without_rule_storage(self):
         memories = [
-            {"content": "I prefer Python", "type": "user_preference", "storage_key": "a",
-             "confidence": 0.9, "created_at": datetime.now(timezone.utc).isoformat()},
+            {
+                "content": "I prefer Python",
+                "type": "user_preference",
+                "storage_key": "a",
+                "confidence": 0.9,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
         ]
         result = consolidate_p1(memories, rule_storage=None)
         assert result["p1_enabled"] is False
@@ -235,8 +306,13 @@ class TestConsolidateP1:
         mock_storage._get_connection.return_value.fetchone.return_value = None
 
         memories = [
-            {"content": "I prefer Python", "type": "user_preference", "storage_key": "a",
-             "confidence": 0.9, "created_at": datetime.now(timezone.utc).isoformat()},
+            {
+                "content": "I prefer Python",
+                "type": "user_preference",
+                "storage_key": "a",
+                "confidence": 0.9,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
         ]
         result = consolidate_p1(memories, rule_storage=mock_storage)
         assert result["p1_enabled"] is True
@@ -247,8 +323,13 @@ class TestConsolidateP1:
         mock_storage._get_connection.side_effect = RuntimeError("db error")
 
         memories = [
-            {"content": "test", "type": "personal_fact", "storage_key": "a",
-             "confidence": 0.9, "created_at": datetime.now(timezone.utc).isoformat()},
+            {
+                "content": "test",
+                "type": "personal_fact",
+                "storage_key": "a",
+                "confidence": 0.9,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
         ]
         result = consolidate_p1(memories, rule_storage=mock_storage)
         assert "p1_error" in result
@@ -262,10 +343,20 @@ class TestConsolidateP2:
 
     def test_p2_no_clusters(self):
         memories = [
-            {"content": "I prefer Python", "type": "user_preference", "storage_key": "a",
-             "confidence": 0.9, "created_at": datetime.now(timezone.utc).isoformat()},
-            {"content": "I work at Google", "type": "personal_fact", "storage_key": "b",
-             "confidence": 0.8, "created_at": datetime.now(timezone.utc).isoformat()},
+            {
+                "content": "I prefer Python",
+                "type": "user_preference",
+                "storage_key": "a",
+                "confidence": 0.9,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
+            {
+                "content": "I work at Google",
+                "type": "personal_fact",
+                "storage_key": "b",
+                "confidence": 0.8,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
         ]
         result = consolidate_p2(memories)
         assert result["stats"]["clusters_found"] == 0
@@ -273,10 +364,20 @@ class TestConsolidateP2:
     def test_p2_finds_similar_cluster(self):
         now = datetime.now(timezone.utc).isoformat()
         memories = [
-            {"content": "I prefer Python for backend development", "type": "personal_fact",
-             "storage_key": "a", "confidence": 0.8, "created_at": now},
-            {"content": "I prefer Python for backend services", "type": "personal_fact",
-             "storage_key": "b", "confidence": 0.7, "created_at": now},
+            {
+                "content": "I prefer Python for backend development",
+                "type": "personal_fact",
+                "storage_key": "a",
+                "confidence": 0.8,
+                "created_at": now,
+            },
+            {
+                "content": "I prefer Python for backend services",
+                "type": "personal_fact",
+                "storage_key": "b",
+                "confidence": 0.7,
+                "created_at": now,
+            },
         ]
         result = consolidate_p2(memories)
         assert result["stats"]["clusters_found"] >= 1
@@ -289,10 +390,20 @@ class TestConsolidateP2:
     def test_p2_preserves_preferences(self):
         now = datetime.now(timezone.utc).isoformat()
         memories = [
-            {"content": "I prefer dark mode", "type": "user_preference",
-             "storage_key": "a", "confidence": 0.9, "created_at": now},
-            {"content": "I prefer dark mode always", "type": "user_preference",
-             "storage_key": "b", "confidence": 0.9, "created_at": now},
+            {
+                "content": "I prefer dark mode",
+                "type": "user_preference",
+                "storage_key": "a",
+                "confidence": 0.9,
+                "created_at": now,
+            },
+            {
+                "content": "I prefer dark mode always",
+                "type": "user_preference",
+                "storage_key": "b",
+                "confidence": 0.9,
+                "created_at": now,
+            },
         ]
         result = consolidate_p2(memories)
         assert result["stats"]["clusters_found"] == 0
@@ -301,18 +412,30 @@ class TestConsolidateP2:
     def test_p2_with_p0_report(self):
         now = datetime.now(timezone.utc).isoformat()
         memories = [
-            {"content": "I work at Google", "type": "personal_fact",
-             "storage_key": "a", "confidence": 0.8, "created_at": "2025-01-01"},
-            {"content": "I work at Meta now", "type": "personal_fact",
-             "storage_key": "b", "confidence": 0.9, "created_at": now},
+            {
+                "content": "I work at Google",
+                "type": "personal_fact",
+                "storage_key": "a",
+                "confidence": 0.8,
+                "created_at": "2025-01-01",
+            },
+            {
+                "content": "I work at Meta now",
+                "type": "personal_fact",
+                "storage_key": "b",
+                "confidence": 0.9,
+                "created_at": now,
+            },
         ]
         p0_report = {
-            "to_supersede": [{
-                "older_key": "a",
-                "newer_key": "b",
-                "type": "personal_fact",
-                "reason": "updated_content",
-            }],
+            "to_supersede": [
+                {
+                    "older_key": "a",
+                    "newer_key": "b",
+                    "type": "personal_fact",
+                    "reason": "updated_content",
+                }
+            ],
         }
         result = consolidate_p2(memories, p0_report=p0_report)
         assert result["stats"]["memories_to_consolidate"] >= 2
@@ -320,12 +443,27 @@ class TestConsolidateP2:
     def test_find_semantic_clusters(self):
         now = datetime.now(timezone.utc).isoformat()
         memories = [
-            {"content": "I use Python for data analysis", "type": "personal_fact",
-             "storage_key": "a", "confidence": 0.8, "created_at": now},
-            {"content": "I use Python for data science", "type": "personal_fact",
-             "storage_key": "b", "confidence": 0.7, "created_at": now},
-            {"content": "The weather is nice today", "type": "personal_fact",
-             "storage_key": "c", "confidence": 0.5, "created_at": now},
+            {
+                "content": "I use Python for data analysis",
+                "type": "personal_fact",
+                "storage_key": "a",
+                "confidence": 0.8,
+                "created_at": now,
+            },
+            {
+                "content": "I use Python for data science",
+                "type": "personal_fact",
+                "storage_key": "b",
+                "confidence": 0.7,
+                "created_at": now,
+            },
+            {
+                "content": "The weather is nice today",
+                "type": "personal_fact",
+                "storage_key": "c",
+                "confidence": 0.5,
+                "created_at": now,
+            },
         ]
         clusters = _find_semantic_clusters(memories, similarity_threshold=0.6)
         assert len(clusters) >= 1
@@ -334,10 +472,20 @@ class TestConsolidateP2:
     def test_find_semantic_clusters_skips_preferences(self):
         now = datetime.now(timezone.utc).isoformat()
         memories = [
-            {"content": "I prefer Python", "type": "user_preference",
-             "storage_key": "a", "confidence": 0.9, "created_at": now},
-            {"content": "I prefer Python always", "type": "user_preference",
-             "storage_key": "b", "confidence": 0.9, "created_at": now},
+            {
+                "content": "I prefer Python",
+                "type": "user_preference",
+                "storage_key": "a",
+                "confidence": 0.9,
+                "created_at": now,
+            },
+            {
+                "content": "I prefer Python always",
+                "type": "user_preference",
+                "storage_key": "b",
+                "confidence": 0.9,
+                "created_at": now,
+            },
         ]
         clusters = _find_semantic_clusters(memories)
         assert len(clusters) == 0

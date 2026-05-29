@@ -88,10 +88,7 @@ def merge_memories(
         for m in group:
             conflict_keys.add(m.get("storage_key", m.get("id", "")))
 
-    non_conflict = [
-        m for m in memories
-        if m.get("storage_key", m.get("id", "")) not in conflict_keys
-    ]
+    non_conflict = [m for m in memories if m.get("storage_key", m.get("id", "")) not in conflict_keys]
 
     resolved = []
     for group in conflicts:
@@ -109,11 +106,7 @@ def merge_memories(
         elif strategy == "merge_all":
             for m in group:
                 m_copy = dict(m)
-                duplicates = [
-                    other.get("storage_key", other.get("id", ""))
-                    for other in group
-                    if other is not m
-                ]
+                duplicates = [other.get("storage_key", other.get("id", "")) for other in group if other is not m]
                 m_copy["_duplicates"] = duplicates
                 m_copy["_conflict_resolved"] = False
                 resolved.append(m_copy)

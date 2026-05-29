@@ -86,7 +86,7 @@ class MCPHTTPServer:
             return ""
 
         # Validate origin format (must be a valid URL)
-        if not re.match(r'^https?://[a-zA-Z0-9\.\-]+(:\d+)?$', request_origin):
+        if not re.match(r"^https?://[a-zA-Z0-9\.\-]+(:\d+)?$", request_origin):
             logger.debug(f"Invalid origin format: {request_origin}")
             return ""
 
@@ -103,8 +103,8 @@ class MCPHTTPServer:
                 # Check if origin starts with the prefix
                 if request_origin.startswith(prefix):
                     # Extract and validate the port part
-                    port_part = request_origin[len(prefix):]
-                    if re.fullmatch(r'\d+', port_part):
+                    port_part = request_origin[len(prefix) :]
+                    if re.fullmatch(r"\d+", port_part):
                         port = int(port_part)
                         # Validate port range (1-65535)
                         if 1 <= port <= 65535:
@@ -252,8 +252,15 @@ class MCPHTTPServer:
                 await client.send(json.dumps(notification))
 
     async def _send_response(self, writer, status_code: int, body: Dict, request_origin: str = ""):
-        status_messages = {200: "OK", 400: "Bad Request", 401: "Unauthorized", 404: "Not Found",
-            413: "Payload Too Large", 500: "Internal Server Error", 503: "Service Unavailable"}
+        status_messages = {
+            200: "OK",
+            400: "Bad Request",
+            401: "Unauthorized",
+            404: "Not Found",
+            413: "Payload Too Large",
+            500: "Internal Server Error",
+            503: "Service Unavailable",
+        }
         status_msg = status_messages.get(status_code, "Unknown")
         body_bytes = json.dumps(body).encode("utf-8")
         cors_origin = self._get_cors_origin(request_origin)
@@ -272,9 +279,7 @@ class MCPHTTPServer:
         await writer.drain()
 
     async def start(self):
-        self._server = await asyncio.start_server(
-            self._handle_request, self._host, self._port
-        )
+        self._server = await asyncio.start_server(self._handle_request, self._host, self._port)
         addrs = ", ".join(str(s.getsockname()) for s in self._server.sockets)
         print(f"CarryMem MCP HTTP Server running on {addrs}")
         if self._api_key:

@@ -51,12 +51,8 @@ class TestGlobalMatching:
 
     def test_multiple_global_rules(self, matcher, storage):
         """Should return all active global rules"""
-        storage.create(
-            trigger="*", action="Global rule 1", rule_type="always"
-        )
-        storage.create(
-            trigger="*", action="Global rule 2", rule_type="format"
-        )
+        storage.create(trigger="*", action="Global rule 1", rule_type="always")
+        storage.create(trigger="*", action="Global rule 2", rule_type="format")
 
         results = matcher.match("测试场景")
         global_results = [r for r in results if r.match_type == "global"]
@@ -64,12 +60,8 @@ class TestGlobalMatching:
 
     def test_paused_global_rules_excluded(self, matcher, storage):
         """Paused global rules should not match"""
-        storage.create(
-            trigger="*", action="Active global", status="active"
-        )
-        storage.create(
-            trigger="*", action="Paused global", status="paused"
-        )
+        storage.create(trigger="*", action="Active global", status="active")
+        storage.create(trigger="*", action="Paused global", status="paused")
 
         results = matcher.match("场景")
         global_results = [r for r in results if r.match_type == "global"]
@@ -162,12 +154,8 @@ class TestScoreCalculation:
         fts_results = matcher.match("partial exact_match text")
 
         if exact_results and fts_results:
-            exact_score = next(
-                (r.score for r in exact_results if r.match_type == "exact"), 0
-            )
-            fts_score = next(
-                (r.score for r in fts_results if r.match_type == "fts"), 0
-            )
+            exact_score = next((r.score for r in exact_results if r.match_type == "exact"), 0)
+            fts_score = next((r.score for r in fts_results if r.match_type == "fts"), 0)
             assert exact_score > fts_score
 
     def test_hard_rule_bonus(self, matcher, storage):
@@ -184,14 +172,8 @@ class TestScoreCalculation:
         )
 
         results = matcher.match("test")
-        hard_scores = [
-            r.score for r in results if r.rule.override and r.rule.trigger == "test"
-        ]
-        soft_scores = [
-            r.score
-            for r in results
-            if not r.rule.override and r.rule.trigger == "test"
-        ]
+        hard_scores = [r.score for r in results if r.rule.override and r.rule.trigger == "test"]
+        soft_scores = [r.score for r in results if not r.rule.override and r.rule.trigger == "test"]
 
         if hard_scores and soft_scores:
             # Hard rules should have >= score (they get bonus)

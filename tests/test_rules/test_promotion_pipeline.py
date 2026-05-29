@@ -96,9 +96,7 @@ class TestPipelineExecution:
         assert result["candidates_auto_accepted"] >= 1
 
     def test_run_pipeline_max_candidates(self, pipeline):
-        result = pipeline.run_pipeline(
-            MIXED_MEMORIES, max_candidates=1
-        )
+        result = pipeline.run_pipeline(MIXED_MEMORIES, max_candidates=1)
         assert result["candidates_queued"] <= 1
 
 

@@ -7,7 +7,12 @@ from .json_adapter import JSONAdapter
 from .loader import load_adapter, list_available_adapters
 
 __all__ = [
-    "MemoryEntry", "StorageAdapter", "StoredMemory",
-    "SQLiteAdapter", "ObsidianAdapter", "JSONAdapter",
-    "load_adapter", "list_available_adapters",
+    "MemoryEntry",
+    "StorageAdapter",
+    "StoredMemory",
+    "SQLiteAdapter",
+    "ObsidianAdapter",
+    "JSONAdapter",
+    "load_adapter",
+    "list_available_adapters",
 ]

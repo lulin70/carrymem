@@ -27,7 +27,7 @@ from typing import List
 
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from carrymem import CarryMem, SQLiteAdapter
 from carrymem.adapters.base import MemoryEntry
@@ -36,6 +36,7 @@ from carrymem.adapters.base import MemoryEntry
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_temp_db() -> str:
     """Create a temporary database file path."""
@@ -72,6 +73,7 @@ def _make_entry(worker_id: int, op_idx: int, content: str) -> MemoryEntry:
 # Test 1: Multi-threaded concurrent read/write via CarryMem
 # ---------------------------------------------------------------------------
 
+
 class TestMultiThreadConcurrentReadWrite:
     """5 threads simultaneously execute classify_and_remember + recall_memories,
     each performing 30 operations. Verify: no 'database is locked' errors,
@@ -101,14 +103,10 @@ class TestMultiThreadConcurrentReadWrite:
                         err_msg = str(e)
                         if "database is locked" in err_msg.lower():
                             with lock:
-                                lock_errors.append(
-                                    f"Worker-{worker_id} op={i}: {err_msg}"
-                                )
+                                lock_errors.append(f"Worker-{worker_id} op={i}: {err_msg}")
                         else:
                             with lock:
-                                operation_errors.append(
-                                    f"Worker-{worker_id} op={i}: {err_msg}"
-                                )
+                                operation_errors.append(f"Worker-{worker_id} op={i}: {err_msg}")
                 with lock:
                     success_counts[worker_id] = local_success
 
@@ -128,21 +126,17 @@ class TestMultiThreadConcurrentReadWrite:
             elapsed = time.time() - start
 
             # Verify no "database is locked" errors
-            assert len(lock_errors) == 0, (
-                f"Got {len(lock_errors)} 'database is locked' errors:\n"
-                + "\n".join(lock_errors[:10])
+            assert len(lock_errors) == 0, f"Got {len(lock_errors)} 'database is locked' errors:\n" + "\n".join(
+                lock_errors[:10]
             )
 
             # Verify no unexpected errors
-            assert len(operation_errors) == 0, (
-                f"Got {len(operation_errors)} unexpected errors:\n"
-                + "\n".join(operation_errors[:5])
+            assert len(operation_errors) == 0, f"Got {len(operation_errors)} unexpected errors:\n" + "\n".join(
+                operation_errors[:5]
             )
 
             # Verify all threads completed their operations
-            assert len(success_counts) == num_threads, (
-                f"Only {len(success_counts)}/{num_threads} threads completed"
-            )
+            assert len(success_counts) == num_threads, f"Only {len(success_counts)}/{num_threads} threads completed"
 
             # Verify data was actually stored
             stats = cm.get_stats()
@@ -151,9 +145,7 @@ class TestMultiThreadConcurrentReadWrite:
             # Verify data can be read back
             for tid in range(num_threads):
                 results = cm.recall_memories(query=f"Worker-{tid}")
-                assert len(results) > 0, (
-                    f"Worker-{tid} memories not found after concurrent write"
-                )
+                assert len(results) > 0, f"Worker-{tid} memories not found after concurrent write"
 
             # Verify test completed in reasonable time (no deadlock)
             # Note: CarryMem's _lock serializes operations, so concurrent
@@ -168,6 +160,7 @@ class TestMultiThreadConcurrentReadWrite:
 # ---------------------------------------------------------------------------
 # Test 2: Multi-process concurrent read/write
 # ---------------------------------------------------------------------------
+
 
 def _process_worker(db_path: str, worker_id: int, num_ops: int, result_queue: Queue):
     """Worker function that runs in a separate process."""
@@ -189,17 +182,21 @@ def _process_worker(db_path: str, worker_id: int, num_ops: int, result_queue: Qu
                 local_errors.append(f"Process-{worker_id} op={i}: {err_msg}")
 
         cm.close()
-        result_queue.put({
-            "worker_id": worker_id,
-            "success_count": local_success,
-            "errors": local_errors,
-        })
+        result_queue.put(
+            {
+                "worker_id": worker_id,
+                "success_count": local_success,
+                "errors": local_errors,
+            }
+        )
     except Exception as e:
-        result_queue.put({
-            "worker_id": worker_id,
-            "success_count": 0,
-            "errors": [f"Process-{worker_id} fatal: {e}\n{traceback.format_exc()}"],
-        })
+        result_queue.put(
+            {
+                "worker_id": worker_id,
+                "success_count": 0,
+                "errors": [f"Process-{worker_id} fatal: {e}\n{traceback.format_exc()}"],
+            }
+        )
 
 
 class TestMultiProcessConcurrentReadWrite:
@@ -238,9 +235,7 @@ class TestMultiProcessConcurrentReadWrite:
                     pass
 
             # Verify all processes completed
-            assert len(results) == num_processes, (
-                f"Only {len(results)}/{num_processes} processes reported results"
-            )
+            assert len(results) == num_processes, f"Only {len(results)}/{num_processes} processes reported results"
 
             # Check for "database is locked" errors
             lock_errors = []
@@ -251,17 +246,13 @@ class TestMultiProcessConcurrentReadWrite:
                     if "database is locked" in err.lower():
                         lock_errors.append(err)
 
-            assert len(lock_errors) == 0, (
-                f"Got {len(lock_errors)} 'database is locked' errors:\n"
-                + "\n".join(lock_errors[:10])
+            assert len(lock_errors) == 0, f"Got {len(lock_errors)} 'database is locked' errors:\n" + "\n".join(
+                lock_errors[:10]
             )
 
             # Verify data was stored (at least some successes)
             total_success = sum(r.get("success_count", 0) for r in results)
-            assert total_success > 0, (
-                f"No successful operations. Errors:\n"
-                + "\n".join(all_errors[:10])
-            )
+            assert total_success > 0, f"No successful operations. Errors:\n" + "\n".join(all_errors[:10])
 
             # Verify data can be read back from a new CarryMem instance
             cm = CarryMem(db_path=db_path)
@@ -271,9 +262,7 @@ class TestMultiProcessConcurrentReadWrite:
             # Verify each process's data is readable
             for pid in range(num_processes):
                 mems = cm.recall_memories(query=f"Process-{pid}")
-                assert len(mems) > 0, (
-                    f"Process-{pid} memories not found after concurrent write"
-                )
+                assert len(mems) > 0, f"Process-{pid} memories not found after concurrent write"
 
             cm.close()
 
@@ -287,6 +276,7 @@ class TestMultiProcessConcurrentReadWrite:
 # ---------------------------------------------------------------------------
 # Test 3: Mixed read/write concurrency
 # ---------------------------------------------------------------------------
+
 
 class TestMixedReadWriteConcurrency:
     """2 write threads + 3 read threads running for 30 seconds.
@@ -327,9 +317,7 @@ class TestMixedReadWriteConcurrency:
                                 lock_errors.append(f"Writer-{writer_id}: {err_msg}")
                         else:
                             with lock:
-                                write_errors.append(
-                                    f"Writer-{writer_id}: {err_msg}"
-                                )
+                                write_errors.append(f"Writer-{writer_id}: {err_msg}")
                     time.sleep(0.01)
                 cm_w.close()
 
@@ -347,9 +335,7 @@ class TestMixedReadWriteConcurrency:
                                 lock_errors.append(f"Reader-{reader_id}: {err_msg}")
                         else:
                             with lock:
-                                read_errors.append(
-                                    f"Reader-{reader_id}: {err_msg}"
-                                )
+                                read_errors.append(f"Reader-{reader_id}: {err_msg}")
                     time.sleep(0.01)
                 cm_r.close()
 
@@ -376,22 +362,15 @@ class TestMixedReadWriteConcurrency:
                 t.join(timeout=10)
 
             # Verify no "database is locked" errors
-            assert len(lock_errors) == 0, (
-                f"Got {len(lock_errors)} 'database is locked' errors:\n"
-                + "\n".join(lock_errors[:10])
+            assert len(lock_errors) == 0, f"Got {len(lock_errors)} 'database is locked' errors:\n" + "\n".join(
+                lock_errors[:10]
             )
 
             # Verify no unexpected write errors
-            assert len(write_errors) == 0, (
-                f"Got {len(write_errors)} write errors:\n"
-                + "\n".join(write_errors[:5])
-            )
+            assert len(write_errors) == 0, f"Got {len(write_errors)} write errors:\n" + "\n".join(write_errors[:5])
 
             # Verify no unexpected read errors
-            assert len(read_errors) == 0, (
-                f"Got {len(read_errors)} read errors:\n"
-                + "\n".join(read_errors[:5])
-            )
+            assert len(read_errors) == 0, f"Got {len(read_errors)} read errors:\n" + "\n".join(read_errors[:5])
 
             # Verify writes actually happened
             assert write_count["value"] > 0, "No writes completed during test"
@@ -402,15 +381,11 @@ class TestMixedReadWriteConcurrency:
             # Verify data can be read back
             cm_verify = CarryMem(db_path=db_path)
             stats = cm_verify.get_stats()
-            assert stats["total_count"] > 10, (
-                f"Expected more than 10 memories, got {stats['total_count']}"
-            )
+            assert stats["total_count"] > 10, f"Expected more than 10 memories, got {stats['total_count']}"
 
             # Verify written data is retrievable (use broad query or empty query)
             results = cm_verify.recall_memories(query="", limit=100)
-            assert len(results) > 10, (
-                f"Expected many memories after mixed R/W, got {len(results)}"
-            )
+            assert len(results) > 10, f"Expected many memories after mixed R/W, got {len(results)}"
 
             cm_verify.close()
 
@@ -425,6 +400,7 @@ class TestMixedReadWriteConcurrency:
 # initialize RuleStorage on the same db_path (separate SQLite connections
 # all executing schema DDL simultaneously).
 # ---------------------------------------------------------------------------
+
 
 class TestSharedDbPathInstances:
     """Create 5 independent CarryMem instances sharing the same db_path.
@@ -458,30 +434,23 @@ class TestSharedDbPathInstances:
                     for i in range(num_ops):
                         try:
                             content = (
-                                f"Instance-{instance_id} decision {i}: "
-                                f"We decided to use React for the frontend"
+                                f"Instance-{instance_id} decision {i}: " f"We decided to use React for the frontend"
                             )
                             entry = _make_entry(instance_id, i, content)
                             stored = adapter.remember(entry)
                             if stored.storage_key:
                                 local_stored += 1
 
-                            results = adapter.recall(
-                                query=f"Instance-{instance_id}"
-                            )
+                            results = adapter.recall(query=f"Instance-{instance_id}")
                             local_recalled += len(results)
                         except Exception as e:
                             err_msg = str(e)
                             if "database is locked" in err_msg.lower():
                                 with lock:
-                                    lock_errors.append(
-                                        f"Instance-{instance_id} op={i}: {err_msg}"
-                                    )
+                                    lock_errors.append(f"Instance-{instance_id} op={i}: {err_msg}")
                             else:
                                 with lock:
-                                    operation_errors.append(
-                                        f"Instance-{instance_id} op={i}: {err_msg}"
-                                    )
+                                    operation_errors.append(f"Instance-{instance_id} op={i}: {err_msg}")
 
                     adapter.close()
                     with lock:
@@ -491,9 +460,7 @@ class TestSharedDbPathInstances:
                         }
                 except Exception as e:
                     with lock:
-                        operation_errors.append(
-                            f"Instance-{instance_id} fatal: {e}\n{traceback.format_exc()}"
-                        )
+                        operation_errors.append(f"Instance-{instance_id} fatal: {e}\n{traceback.format_exc()}")
 
             num_instances = 5
             num_ops = 20
@@ -501,9 +468,7 @@ class TestSharedDbPathInstances:
             start = time.time()
 
             for iid in range(num_instances):
-                t = threading.Thread(
-                    target=instance_worker, args=(iid, num_ops)
-                )
+                t = threading.Thread(target=instance_worker, args=(iid, num_ops))
                 threads.append(t)
                 t.start()
 
@@ -513,27 +478,23 @@ class TestSharedDbPathInstances:
             elapsed = time.time() - start
 
             # Verify no "database is locked" errors
-            assert len(lock_errors) == 0, (
-                f"Got {len(lock_errors)} 'database is locked' errors:\n"
-                + "\n".join(lock_errors[:10])
+            assert len(lock_errors) == 0, f"Got {len(lock_errors)} 'database is locked' errors:\n" + "\n".join(
+                lock_errors[:10]
             )
 
             # Verify no unexpected errors
-            assert len(operation_errors) == 0, (
-                f"Got {len(operation_errors)} unexpected errors:\n"
-                + "\n".join(operation_errors[:5])
+            assert len(operation_errors) == 0, f"Got {len(operation_errors)} unexpected errors:\n" + "\n".join(
+                operation_errors[:5]
             )
 
             # Verify all instances completed
-            assert len(instance_results) == num_instances, (
-                f"Only {len(instance_results)}/{num_instances} instances completed"
-            )
+            assert (
+                len(instance_results) == num_instances
+            ), f"Only {len(instance_results)}/{num_instances} instances completed"
 
             # Verify each instance stored some data
             for iid, result in instance_results.items():
-                assert result["stored"] > 0, (
-                    f"Instance-{iid} stored 0 memories"
-                )
+                assert result["stored"] > 0, f"Instance-{iid} stored 0 memories"
 
             # Verify data can be read from a fresh instance
             verify_adapter = SQLiteAdapter(db_path=db_path)
@@ -543,9 +504,7 @@ class TestSharedDbPathInstances:
             # Verify each instance's data is readable
             for iid in range(num_instances):
                 mems = verify_adapter.recall(query=f"Instance-{iid}")
-                assert len(mems) > 0, (
-                    f"Instance-{iid} memories not found after shared-db write"
-                )
+                assert len(mems) > 0, f"Instance-{iid} memories not found after shared-db write"
 
             verify_adapter.close()
 
@@ -584,30 +543,21 @@ class TestSharedDbPathInstances:
 
                     for i in range(num_ops):
                         try:
-                            msg = (
-                                f"Instance-{instance_id} decision {i}: "
-                                f"We decided to use React for the frontend"
-                            )
+                            msg = f"Instance-{instance_id} decision {i}: " f"We decided to use React for the frontend"
                             result = cm.classify_and_remember(msg)
                             if result.get("stored", False):
                                 local_stored += 1
 
-                            results = cm.recall_memories(
-                                query=f"Instance-{instance_id}"
-                            )
+                            results = cm.recall_memories(query=f"Instance-{instance_id}")
                             local_recalled += len(results)
                         except Exception as e:
                             err_msg = str(e)
                             if "database is locked" in err_msg.lower():
                                 with lock:
-                                    lock_errors.append(
-                                        f"Instance-{instance_id} op={i}: {err_msg}"
-                                    )
+                                    lock_errors.append(f"Instance-{instance_id} op={i}: {err_msg}")
                             else:
                                 with lock:
-                                    operation_errors.append(
-                                        f"Instance-{instance_id} op={i}: {err_msg}"
-                                    )
+                                    operation_errors.append(f"Instance-{instance_id} op={i}: {err_msg}")
 
                     cm.close()
                     with lock:
@@ -617,9 +567,7 @@ class TestSharedDbPathInstances:
                         }
                 except Exception as e:
                     with lock:
-                        operation_errors.append(
-                            f"Instance-{instance_id} fatal: {e}\n{traceback.format_exc()}"
-                        )
+                        operation_errors.append(f"Instance-{instance_id} fatal: {e}\n{traceback.format_exc()}")
 
             num_instances = 5
             num_ops = 20
@@ -627,9 +575,7 @@ class TestSharedDbPathInstances:
             start = time.time()
 
             for iid in range(num_instances):
-                t = threading.Thread(
-                    target=instance_worker, args=(iid, num_ops)
-                )
+                t = threading.Thread(target=instance_worker, args=(iid, num_ops))
                 threads.append(t)
                 t.start()
 
@@ -639,27 +585,23 @@ class TestSharedDbPathInstances:
             elapsed = time.time() - start
 
             # Verify no "database is locked" errors
-            assert len(lock_errors) == 0, (
-                f"Got {len(lock_errors)} 'database is locked' errors:\n"
-                + "\n".join(lock_errors[:10])
+            assert len(lock_errors) == 0, f"Got {len(lock_errors)} 'database is locked' errors:\n" + "\n".join(
+                lock_errors[:10]
             )
 
             # Verify no unexpected errors
-            assert len(operation_errors) == 0, (
-                f"Got {len(operation_errors)} unexpected errors:\n"
-                + "\n".join(operation_errors[:5])
+            assert len(operation_errors) == 0, f"Got {len(operation_errors)} unexpected errors:\n" + "\n".join(
+                operation_errors[:5]
             )
 
             # Verify all instances completed
-            assert len(instance_results) == num_instances, (
-                f"Only {len(instance_results)}/{num_instances} instances completed"
-            )
+            assert (
+                len(instance_results) == num_instances
+            ), f"Only {len(instance_results)}/{num_instances} instances completed"
 
             # Verify each instance stored some data
             for iid, result in instance_results.items():
-                assert result["stored"] > 0, (
-                    f"Instance-{iid} stored 0 memories"
-                )
+                assert result["stored"] > 0, f"Instance-{iid} stored 0 memories"
 
             # Verify data can be read from a fresh instance
             cm_verify = CarryMem(db_path=db_path)
@@ -669,9 +611,7 @@ class TestSharedDbPathInstances:
             # Verify each instance's data is readable
             for iid in range(num_instances):
                 mems = cm_verify.recall_memories(query=f"Instance-{iid}")
-                assert len(mems) > 0, (
-                    f"Instance-{iid} memories not found after shared-db write"
-                )
+                assert len(mems) > 0, f"Instance-{iid} memories not found after shared-db write"
 
             cm_verify.close()
 
@@ -685,6 +625,7 @@ class TestSharedDbPathInstances:
 # ---------------------------------------------------------------------------
 # Test 5: High contention via SQLiteAdapter (direct adapter access)
 # ---------------------------------------------------------------------------
+
 
 class TestHighContentionStress:
     """High contention scenario: 10 threads doing rapid fire writes
@@ -714,14 +655,10 @@ class TestHighContentionStress:
                         err_msg = str(e)
                         if "database is locked" in err_msg.lower():
                             with lock:
-                                lock_errors.append(
-                                    f"Rapid-{worker_id} op={i}: {err_msg}"
-                                )
+                                lock_errors.append(f"Rapid-{worker_id} op={i}: {err_msg}")
                         else:
                             with lock:
-                                operation_errors.append(
-                                    f"Rapid-{worker_id} op={i}: {err_msg}"
-                                )
+                                operation_errors.append(f"Rapid-{worker_id} op={i}: {err_msg}")
                 with lock:
                     success_counts[worker_id] = local_success
 
@@ -741,21 +678,17 @@ class TestHighContentionStress:
             elapsed = time.time() - start
 
             # Verify no "database is locked" errors
-            assert len(lock_errors) == 0, (
-                f"Got {len(lock_errors)} 'database is locked' errors:\n"
-                + "\n".join(lock_errors[:10])
+            assert len(lock_errors) == 0, f"Got {len(lock_errors)} 'database is locked' errors:\n" + "\n".join(
+                lock_errors[:10]
             )
 
             # Verify no unexpected errors
-            assert len(operation_errors) == 0, (
-                f"Got {len(operation_errors)} unexpected errors:\n"
-                + "\n".join(operation_errors[:5])
+            assert len(operation_errors) == 0, f"Got {len(operation_errors)} unexpected errors:\n" + "\n".join(
+                operation_errors[:5]
             )
 
             # Verify all threads completed
-            assert len(success_counts) == num_threads, (
-                f"Only {len(success_counts)}/{num_threads} threads completed"
-            )
+            assert len(success_counts) == num_threads, f"Only {len(success_counts)}/{num_threads} threads completed"
 
             # Verify data was stored
             stats = adapter.get_stats()
@@ -841,15 +774,13 @@ class TestHighContentionStress:
                 t.join(timeout=10)
 
             # Verify no "database is locked" errors
-            assert len(lock_errors) == 0, (
-                f"Got {len(lock_errors)} 'database is locked' errors:\n"
-                + "\n".join(lock_errors[:10])
+            assert len(lock_errors) == 0, f"Got {len(lock_errors)} 'database is locked' errors:\n" + "\n".join(
+                lock_errors[:10]
             )
 
             # Verify no unexpected errors
-            assert len(operation_errors) == 0, (
-                f"Got {len(operation_errors)} unexpected errors:\n"
-                + "\n".join(operation_errors[:5])
+            assert len(operation_errors) == 0, f"Got {len(operation_errors)} unexpected errors:\n" + "\n".join(
+                operation_errors[:5]
             )
 
             # Verify both reads and writes happened

@@ -1,4 +1,5 @@
 """Tests for memory_nature (state/event) and version chain functionality."""
+
 import os
 import tempfile
 import pytest
@@ -33,8 +34,13 @@ class TestMemoryNature:
 
     def test_to_dict_includes_nature(self):
         """to_dict should include memory_nature, version_chain_id, version_number."""
-        e = MemoryEntry(type="user_preference", content="test", memory_nature="state",
-                        version_chain_id="chain_1", version_number=2)
+        e = MemoryEntry(
+            type="user_preference",
+            content="test",
+            memory_nature="state",
+            version_chain_id="chain_1",
+            version_number=2,
+        )
         d = e.to_dict()
         assert d["memory_nature"] == "state"
         assert d["version_chain_id"] == "chain_1"
@@ -42,8 +48,13 @@ class TestMemoryNature:
 
     def test_from_dict_includes_nature(self):
         """from_dict should parse memory_nature, version_chain_id, version_number."""
-        d = {"type": "user_preference", "content": "test", "memory_nature": "event",
-             "version_chain_id": "chain_2", "version_number": 3}
+        d = {
+            "type": "user_preference",
+            "content": "test",
+            "memory_nature": "event",
+            "version_chain_id": "chain_2",
+            "version_number": 3,
+        }
         e = MemoryEntry.from_dict(d)
         assert e.memory_nature == "event"
         assert e.version_chain_id == "chain_2"
@@ -63,8 +74,13 @@ class TestStoredMemoryNature:
 
     def test_from_memory_entry_carries_nature(self):
         """from_memory_entry should carry memory_nature."""
-        e = MemoryEntry(type="user_preference", content="test", memory_nature="state",
-                        version_chain_id="chain_1", version_number=2)
+        e = MemoryEntry(
+            type="user_preference",
+            content="test",
+            memory_nature="state",
+            version_chain_id="chain_1",
+            version_number=2,
+        )
         s = StoredMemory.from_memory_entry(e, storage_key="cm_test")
         assert s.memory_nature == "state"
         assert s.version_chain_id == "chain_1"
@@ -72,8 +88,13 @@ class TestStoredMemoryNature:
 
     def test_to_dict_includes_nature(self):
         """StoredMemory.to_dict should include new fields."""
-        e = MemoryEntry(type="user_preference", content="test", memory_nature="state",
-                        version_chain_id="chain_1", version_number=2)
+        e = MemoryEntry(
+            type="user_preference",
+            content="test",
+            memory_nature="state",
+            version_chain_id="chain_1",
+            version_number=2,
+        )
         s = StoredMemory.from_memory_entry(e, storage_key="cm_test")
         d = s.to_dict()
         assert d["memory_nature"] == "state"
@@ -82,9 +103,16 @@ class TestStoredMemoryNature:
 
     def test_from_dict_includes_nature(self):
         """StoredMemory.from_dict should parse new fields."""
-        d = {"id": "1", "type": "user_preference", "content": "test", "storage_key": "cm_test",
-             "created_at": "2026-01-01T00:00:00+00:00", "memory_nature": "event",
-             "version_chain_id": "chain_2", "version_number": 3}
+        d = {
+            "id": "1",
+            "type": "user_preference",
+            "content": "test",
+            "storage_key": "cm_test",
+            "created_at": "2026-01-01T00:00:00+00:00",
+            "memory_nature": "event",
+            "version_chain_id": "chain_2",
+            "version_number": 3,
+        }
         s = StoredMemory.from_dict(d)
         assert s.memory_nature == "event"
         assert s.version_chain_id == "chain_2"
@@ -208,6 +236,7 @@ class TestVersionChain:
     def test_migration_adds_columns(self, db):
         """Migration should add memory_nature, version_chain_id, version_number columns."""
         import sqlite3
+
         conn = db._get_connection()
         # Check columns exist
         cursor = conn.execute("PRAGMA table_info(memories)")

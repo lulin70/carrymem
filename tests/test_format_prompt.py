@@ -1,4 +1,5 @@
 """Tests for format.py and prompt.py modules."""
+
 import pytest
 from carrymem.format import format_memory_entry, format_knowledge_entry, _extract_event_dates
 from carrymem.prompt import build_prompt, build_qa_prompt
@@ -6,23 +7,45 @@ from carrymem.prompt import build_prompt, build_qa_prompt
 
 class TestFormatMemoryEntry:
     def test_preference_format(self):
-        m = {"type": "user_preference", "content": "dark mode", "raw_text": "I prefer dark mode", "confidence": 0.9}
+        m = {
+            "type": "user_preference",
+            "content": "dark mode",
+            "raw_text": "I prefer dark mode",
+            "confidence": 0.9,
+        }
         result = format_memory_entry(m, "en")
         assert "dark mode" in result
         assert "IMPORTANT" in result
 
     def test_correction_format(self):
-        m = {"type": "correction", "content": "not Java but Python", "raw_text": "", "confidence": 0.8}
+        m = {
+            "type": "correction",
+            "content": "not Java but Python",
+            "raw_text": "",
+            "confidence": 0.8,
+        }
         result = format_memory_entry(m, "en")
         assert "NOT repeat" in result
 
     def test_superseded_format(self):
-        m = {"type": "user_preference", "content": "light mode", "raw_text": "", "superseded_at": "2024-01-01", "confidence": 0.8}
+        m = {
+            "type": "user_preference",
+            "content": "light mode",
+            "raw_text": "",
+            "superseded_at": "2024-01-01",
+            "confidence": 0.8,
+        }
         result = format_memory_entry(m, "en")
         assert "outdated" in result.lower()
 
     def test_chinese_labels(self):
-        m = {"type": "user_preference", "content": "深色模式", "raw_text": "", "confidence": 0.8, "auto_rule": "prefer"}
+        m = {
+            "type": "user_preference",
+            "content": "深色模式",
+            "raw_text": "",
+            "confidence": 0.8,
+            "auto_rule": "prefer",
+        }
         result = format_memory_entry(m, "zh")
         assert "偏好" in result or "IMPORTANT" in result
 
@@ -44,7 +67,13 @@ class TestExtractEventDates:
 class TestBuildQAPrompt:
     def test_preference_only(self):
         memories = [
-            {"type": "user_preference", "content": "dark mode", "raw_text": "", "confidence": 0.9, "auto_rule": "prefer"},
+            {
+                "type": "user_preference",
+                "content": "dark mode",
+                "raw_text": "",
+                "confidence": 0.9,
+                "auto_rule": "prefer",
+            },
         ]
         result = build_qa_prompt(memories, [], "What theme do I prefer?")
         assert "Preference" in result or "dark mode" in result

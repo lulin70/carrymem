@@ -30,6 +30,7 @@ from carrymem.scoring import RecallBudget
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def cm():
     """Create a CarryMem instance with temp DB."""
@@ -79,6 +80,7 @@ def _set_field(cm, content_fragment, field, value):
 # _recall_base_memories — uncovered branches
 # ===================================================================
 
+
 class TestRecallBaseMemoriesExtra:
     """Extra tests for uncovered lines in _recall_base_memories."""
 
@@ -124,6 +126,7 @@ class TestRecallBaseMemoriesExtra:
 # _identify_preferences — uncovered branches
 # ===================================================================
 
+
 class TestIdentifyPreferencesExtra:
     """Extra tests for uncovered lines in _identify_preferences."""
 
@@ -135,7 +138,10 @@ class TestIdentifyPreferencesExtra:
         # Use unrelated query so core pref is not in main recall
         all_mems, seen = pb._recall_base_memories("weather forecast", limit=30)
         pref_mems, pref_keys, all_mems = pb._identify_preferences(
-            all_mems, seen, "weather", ensure_core=False,
+            all_mems,
+            seen,
+            "weather",
+            ensure_core=False,
         )
         # The dark mode pref should NOT be fetched since ensure_core=False
         # and it wasn't in the original recall
@@ -172,6 +178,7 @@ class TestIdentifyPreferencesExtra:
 # _compute_recalc_scores — uncovered branches
 # ===================================================================
 
+
 class TestComputeRecalcScoresExtra:
     """Extra tests for uncovered lines in _compute_recalc_scores."""
 
@@ -190,6 +197,7 @@ class TestComputeRecalcScoresExtra:
 # ===================================================================
 # _budget_filter — uncovered branches
 # ===================================================================
+
 
 class TestBudgetFilterExtra:
     """Extra tests for uncovered lines in _budget_filter."""
@@ -250,6 +258,7 @@ class TestBudgetFilterExtra:
 # _inject_rules — uncovered branches
 # ===================================================================
 
+
 class TestInjectRulesExtra:
     """Extra tests for uncovered lines in _inject_rules."""
 
@@ -269,12 +278,16 @@ class TestInjectRulesExtra:
 
     def test_exception_in_inject_returns_empty(self, pb, cm):
         """Lines 241-243: exception during rule injection returns empty string."""
+
         class BrokenEngine:
             def inject(self, *a, **kw):
                 raise RuntimeError("inject broken")
+
             def list_rules(self, *a, **kw):
                 raise RuntimeError("list_rules broken")
+
             matcher = MagicMock()
+
         cm._rule_engine = BrokenEngine()
         result = pb._inject_rules("test", max_rules=5, rules_budget=400, override_only=False)
         assert result == ""
@@ -295,6 +308,7 @@ class TestInjectRulesExtra:
 # ===================================================================
 # build_context — uncovered branches
 # ===================================================================
+
 
 class TestBuildContextExtra:
     """Extra tests for uncovered lines in build_context."""
@@ -325,7 +339,11 @@ class TestBuildContextExtra:
         """Lines 302-311: knowledge adapter is used when context is provided."""
         mock_ka = MagicMock()
         mock_ka.recall.return_value = [
-            {"content": "Python is a programming language", "title": "Python Guide", "tags": ["python"]},
+            {
+                "content": "Python is a programming language",
+                "title": "Python Guide",
+                "tags": ["python"],
+            },
         ]
         cm._knowledge_adapter = mock_ka
         result = pb.build_context(context="Python programming")
@@ -361,11 +379,14 @@ class TestBuildContextExtra:
 
     def test_applied_rules_exception(self, pb, cm):
         """Lines 336-337: exception in rule matching is caught."""
+
         class BrokenMatcher:
             def match(self, *a, **kw):
                 raise RuntimeError("matcher broken")
+
         class BrokenRuleEngine:
             matcher = BrokenMatcher()
+
         cm._rule_engine = BrokenRuleEngine()
         result = pb.build_context(context="test")
         assert isinstance(result["applied_rules"], list)
@@ -374,6 +395,7 @@ class TestBuildContextExtra:
 # ===================================================================
 # build_qa_prompt — uncovered branches
 # ===================================================================
+
 
 class TestBuildQaPromptExtra:
     """Extra tests for uncovered lines in build_qa_prompt."""
@@ -424,7 +446,11 @@ class TestBuildQaPromptExtra:
         """Lines 463-472: knowledge adapter is used in QA prompt."""
         mock_ka = MagicMock()
         mock_ka.recall.return_value = [
-            {"content": "Python is a programming language", "title": "Python Guide", "tags": ["python"]},
+            {
+                "content": "Python is a programming language",
+                "title": "Python Guide",
+                "tags": ["python"],
+            },
         ]
         cm._knowledge_adapter = mock_ka
         prompt = pb.build_qa_prompt(question="What is Python?")
@@ -451,6 +477,7 @@ class TestBuildQaPromptExtra:
 # ===================================================================
 # Additional edge-case tests for remaining uncovered branches
 # ===================================================================
+
 
 class TestPromptBuilderRemainingBranches:
     """Tests for remaining uncovered branches in prompt_builder.py."""
@@ -535,12 +562,14 @@ class TestPromptBuilderRemainingBranches:
 # context.py — uncovered branches
 # ===================================================================
 
+
 class TestContextModuleExtra:
     """Extra tests for uncovered lines in context.py."""
 
     def test_context_relevance_empty_tokens(self):
         """Lines 42-43: empty token sets return 0.0."""
         from carrymem.context import context_relevance
+
         # Non-alphabetic text produces empty token sets
         assert context_relevance("!!!", "hello") == 0.0
         assert context_relevance("hello", "!!!") == 0.0
@@ -548,6 +577,7 @@ class TestContextModuleExtra:
     def test_context_relevance_zero_union(self):
         """Line 46-47: zero union returns 0.0."""
         from carrymem.context import context_relevance
+
         # Both empty strings
         assert context_relevance("", "") == 0.0
         assert context_relevance("", "test") == 0.0
@@ -556,6 +586,7 @@ class TestContextModuleExtra:
     def test_context_relevance_non_string_memory(self):
         """Line 38-39: non-string memory_content returns 0.0."""
         from carrymem.context import context_relevance
+
         # memory_content is the first arg, context is second
         assert context_relevance(123, "test") == 0.0
         assert context_relevance(None, "test") == 0.0
@@ -563,6 +594,7 @@ class TestContextModuleExtra:
     def test_has_temporal_signal(self):
         """Lines 51-62: _has_temporal_signal detects temporal patterns."""
         from carrymem.selection import _has_temporal_signal
+
         assert _has_temporal_signal("when did I last visit Tokyo?") is True
         assert _has_temporal_signal("how many days ago?") is True
         assert _has_temporal_signal("how long has it been?") is True
@@ -572,6 +604,7 @@ class TestContextModuleExtra:
     def test_has_preference_signal(self):
         """Lines 65-98: _has_preference_signal detects preference patterns."""
         from carrymem.selection import _has_preference_signal
+
         assert _has_preference_signal("I prefer dark mode") is True
         assert _has_preference_signal("my favorite color is blue") is True
         assert _has_preference_signal("I dislike waiting") is True
@@ -601,6 +634,7 @@ class TestContextModuleExtra:
     def test_jaccard_sim_empty(self):
         """Line 253-254: _jaccard_sim with empty sets returns 0.0."""
         from carrymem.selection import _jaccard_sim
+
         assert _jaccard_sim(set(), {"a"}) == 0.0
         assert _jaccard_sim({"a"}, set()) == 0.0
         assert _jaccard_sim(set(), set()) == 0.0
@@ -608,11 +642,13 @@ class TestContextModuleExtra:
     def test_mmr_select_empty(self):
         """Line 264-265: _mmr_select with empty scored returns empty."""
         from carrymem.selection import _mmr_select
+
         assert _mmr_select([], {"query"}, 5) == []
 
     def test_mmr_select_small_input(self):
         """Line 266-267: _mmr_select with scored <= max_count returns all."""
         from carrymem.selection import _mmr_select
+
         scored = [(0.9, {"content": "a"}), (0.8, {"content": "b"})]
         result = _mmr_select(scored, {"query"}, 5)
         assert len(result) == 2
@@ -620,6 +656,7 @@ class TestContextModuleExtra:
     def test_mmr_select_max_score_zero(self):
         """Line 274-275: max_score <= 0 is reset to 1.0."""
         from carrymem.selection import _mmr_select
+
         scored = [(0.0, {"content": "a"}), (0.0, {"content": "b"})]
         result = _mmr_select(scored, {"query"}, 2)
         assert len(result) == 2
@@ -627,13 +664,20 @@ class TestContextModuleExtra:
     def test_select_memories_temporal_signal(self):
         """Lines 367-390: temporal signal boosts memories with dates."""
         from carrymem.context import select_memories
+
         memories = [
-            {"content": "Meeting on January 15 about project",
-             "type": "fact_declaration", "importance_score": 0.5,
-             "storage_key": "a"},
-            {"content": "Regular fact without dates",
-             "type": "fact_declaration", "importance_score": 0.5,
-             "storage_key": "b"},
+            {
+                "content": "Meeting on January 15 about project",
+                "type": "fact_declaration",
+                "importance_score": 0.5,
+                "storage_key": "a",
+            },
+            {
+                "content": "Regular fact without dates",
+                "type": "fact_declaration",
+                "importance_score": 0.5,
+                "storage_key": "b",
+            },
         ]
         selected = select_memories(memories, context="when was the meeting?", max_count=5)
         assert len(selected) >= 1
@@ -644,13 +688,29 @@ class TestContextModuleExtra:
     def test_select_memories_aggregation_signal(self):
         """Lines 392-393, 399-411: aggregation signal boosts and deduplicates."""
         from carrymem.context import select_memories
+
         memories = [
-            {"content": "Fact 1", "type": "fact_declaration", "importance_score": 0.5,
-             "storage_key": "a", "metadata": {"session_id": "s1"}},
-            {"content": "Fact 2", "type": "fact_declaration", "importance_score": 0.4,
-             "storage_key": "b", "metadata": {"session_id": "s2"}},
-            {"content": "Fact 3", "type": "fact_declaration", "importance_score": 0.3,
-             "storage_key": "c", "metadata": {"session_id": "s1"}},
+            {
+                "content": "Fact 1",
+                "type": "fact_declaration",
+                "importance_score": 0.5,
+                "storage_key": "a",
+                "metadata": {"session_id": "s1"},
+            },
+            {
+                "content": "Fact 2",
+                "type": "fact_declaration",
+                "importance_score": 0.4,
+                "storage_key": "b",
+                "metadata": {"session_id": "s2"},
+            },
+            {
+                "content": "Fact 3",
+                "type": "fact_declaration",
+                "importance_score": 0.3,
+                "storage_key": "c",
+                "metadata": {"session_id": "s1"},
+            },
         ]
         selected = select_memories(memories, context="how many facts?", max_count=2)
         assert len(selected) <= 2
@@ -658,11 +718,13 @@ class TestContextModuleExtra:
     def test_select_knowledge_empty(self):
         """Line 450-451: select_knowledge with empty list returns empty."""
         from carrymem.context import select_knowledge
+
         assert select_knowledge([]) == []
 
     def test_select_knowledge_token_limit(self):
         """Lines 467-471: select_knowledge stops when token limit reached."""
         from carrymem.context import select_knowledge
+
         knowledge = [
             {"content": "x" * 500, "title": "Long 1"},
             {"content": "y" * 500, "title": "Long 2"},
@@ -674,6 +736,7 @@ class TestContextModuleExtra:
     def test_extract_event_dates(self):
         """Lines 509-522: _extract_event_dates extracts dates from text."""
         from carrymem.format import _extract_event_dates
+
         assert "January 15" in _extract_event_dates("Meeting on January 15, 2025")
         assert "3/15" in _extract_event_dates("Due by 3/15/2025")
         assert _extract_event_dates("no dates here") == ""
@@ -682,54 +745,85 @@ class TestContextModuleExtra:
     def test_format_memory_entry_with_event_date(self):
         """Line 538-539: format_memory_entry includes event date tag."""
         from carrymem.context import format_memory_entry
-        m = {"type": "fact_declaration", "content": "Meeting on January 15",
-             "raw_text": "Meeting on January 15", "confidence": 0.8}
+
+        m = {
+            "type": "fact_declaration",
+            "content": "Meeting on January 15",
+            "raw_text": "Meeting on January 15",
+            "confidence": 0.8,
+        }
         result = format_memory_entry(m)
         assert "event:" in result
 
     def test_format_memory_entry_with_created_at(self):
         """Lines 541-548: format_memory_entry uses created_at when no event date."""
         from carrymem.context import format_memory_entry
-        m = {"type": "fact_declaration", "content": "Simple fact",
-             "created_at": "2025-06-15T10:00:00", "confidence": 0.8}
+
+        m = {
+            "type": "fact_declaration",
+            "content": "Simple fact",
+            "created_at": "2025-06-15T10:00:00",
+            "confidence": 0.8,
+        }
         result = format_memory_entry(m)
         assert "2025-06-15" in result
 
     def test_format_memory_entry_invalid_created_at(self):
         """Lines 547-548: invalid created_at is silently skipped."""
         from carrymem.context import format_memory_entry
-        m = {"type": "fact_declaration", "content": "Simple fact",
-             "created_at": "not-a-date", "confidence": 0.8}
+
+        m = {
+            "type": "fact_declaration",
+            "content": "Simple fact",
+            "created_at": "not-a-date",
+            "confidence": 0.8,
+        }
         result = format_memory_entry(m)
         assert isinstance(result, str)
 
     def test_format_memory_entry_superseded(self):
         """Line 550-551: superseded memory shows outdated note."""
         from carrymem.context import format_memory_entry
-        m = {"type": "fact_declaration", "content": "Old fact",
-             "superseded_at": "2026-01-01", "confidence": 0.8}
+
+        m = {
+            "type": "fact_declaration",
+            "content": "Old fact",
+            "superseded_at": "2026-01-01",
+            "confidence": 0.8,
+        }
         result = format_memory_entry(m)
         assert "outdated" in result.lower()
 
     def test_format_memory_entry_avoid_rule(self):
         """Line 553-554: user_preference with avoid rule."""
         from carrymem.context import format_memory_entry
-        m = {"type": "user_preference", "content": "spicy food",
-             "auto_rule": "avoid", "confidence": 0.9}
+
+        m = {
+            "type": "user_preference",
+            "content": "spicy food",
+            "auto_rule": "avoid",
+            "confidence": 0.9,
+        }
         result = format_memory_entry(m)
         assert "NOT want" in result
 
     def test_format_memory_entry_prefer_rule(self):
         """Line 555-556: user_preference with prefer rule."""
         from carrymem.context import format_memory_entry
-        m = {"type": "user_preference", "content": "dark mode",
-             "auto_rule": "prefer", "confidence": 0.9}
+
+        m = {
+            "type": "user_preference",
+            "content": "dark mode",
+            "auto_rule": "prefer",
+            "confidence": 0.9,
+        }
         result = format_memory_entry(m)
         assert "prefers" in result
 
     def test_format_memory_entry_correction(self):
         """Line 559-560: correction type."""
         from carrymem.context import format_memory_entry
+
         m = {"type": "correction", "content": "My name is Alice not Bob", "confidence": 0.9}
         result = format_memory_entry(m)
         assert "Do NOT repeat" in result
@@ -737,6 +831,7 @@ class TestContextModuleExtra:
     def test_format_memory_entry_decision(self):
         """Line 561-562: decision type."""
         from carrymem.context import format_memory_entry
+
         m = {"type": "decision", "content": "Use Python 3.12", "confidence": 0.9}
         result = format_memory_entry(m)
         assert "Always follow" in result
@@ -744,6 +839,7 @@ class TestContextModuleExtra:
     def test_format_memory_entry_session_summary(self):
         """Line 563-564: session_summary type."""
         from carrymem.context import format_memory_entry
+
         m = {"type": "session_summary", "content": "Discussed Python frameworks", "confidence": 0.8}
         result = format_memory_entry(m)
         assert "previous conversations" in result.lower()
@@ -751,6 +847,7 @@ class TestContextModuleExtra:
     def test_format_memory_entry_mandatory_tag(self):
         """Lines 567-568: correction and decision get MANDATORY tag."""
         from carrymem.context import format_memory_entry
+
         m = {"type": "correction", "content": "Fix this", "confidence": 0.5}
         result = format_memory_entry(m)
         # Correction uses special format, not the generic one
@@ -759,6 +856,7 @@ class TestContextModuleExtra:
     def test_format_memory_entry_important_tag(self):
         """Lines 569-570: high-confidence preference gets IMPORTANT tag."""
         from carrymem.context import format_memory_entry
+
         m = {"type": "user_preference", "content": "I like Python", "confidence": 0.9}
         result = format_memory_entry(m)
         assert "IMPORTANT" in result
@@ -766,9 +864,9 @@ class TestContextModuleExtra:
     def test_build_superseded_notes(self):
         """Lines 575-594: _build_superseded_notes generates update notes."""
         from carrymem.format import _build_superseded_notes
+
         memories = [
-            {"content": "I work at Google", "storage_key": "a",
-             "supersedes": "b"},
+            {"content": "I work at Google", "storage_key": "a", "supersedes": "b"},
             {"content": "I work at Meta", "storage_key": "b"},
         ]
         notes = _build_superseded_notes(memories)
@@ -778,9 +876,9 @@ class TestContextModuleExtra:
     def test_build_superseded_notes_chinese(self):
         """Lines 590-591: Chinese language superseded notes."""
         from carrymem.format import _build_superseded_notes
+
         memories = [
-            {"content": "我在Google工作", "storage_key": "a",
-             "supersedes": "b"},
+            {"content": "我在Google工作", "storage_key": "a", "supersedes": "b"},
             {"content": "我在Meta工作", "storage_key": "b"},
         ]
         notes = _build_superseded_notes(memories, language="zh")
@@ -790,6 +888,7 @@ class TestContextModuleExtra:
     def test_format_knowledge_entry(self):
         """format_knowledge_entry formats knowledge items."""
         from carrymem.context import format_knowledge_entry
+
         k = {"title": "Python Guide", "content": "Python is great", "tags": ["python", "guide"]}
         result = format_knowledge_entry(k)
         assert "Python Guide" in result
@@ -800,6 +899,7 @@ class TestContextModuleExtra:
 # carrymem.py — uncovered branches for quick coverage wins
 # ===================================================================
 
+
 class TestCarryMemExtra:
     """Extra tests for uncovered lines in carrymem.py."""
 
@@ -807,6 +907,7 @@ class TestCarryMemExtra:
         """Lines 40-42: _validate_file_path with allowed_base rejects escaping paths."""
         from carrymem.carrymem import _validate_file_path
         import tempfile
+
         tmp = tempfile.mkdtemp()
         try:
             # Valid path within allowed base
@@ -821,12 +922,14 @@ class TestCarryMemExtra:
     def test_validate_file_path_dangerous_dir(self):
         """Lines 44-50: _validate_file_path rejects system directories."""
         from carrymem.carrymem import _validate_file_path
+
         with pytest.raises(ValueError, match="system directory"):
             _validate_file_path("/etc/config")
 
     def test_backup_with_exception(self):
         """Lines 192-193: backup catches exception and returns error dict."""
         from carrymem import CarryMem
+
         cm = CarryMem(storage="sqlite", db_path=":memory:")
         # In-memory DB returns error
         result = cm.backup()
@@ -836,6 +939,7 @@ class TestCarryMemExtra:
     def test_restore_backup_non_sqlite(self):
         """Lines 205-206: restore_backup with non-SQLite adapter returns error."""
         from carrymem import CarryMem
+
         cm = CarryMem(storage=None)
         result = cm.restore_backup("/tmp/nonexistent.bak")
         assert "error" in result
@@ -844,6 +948,7 @@ class TestCarryMemExtra:
     def test_get_audit_log_no_adapter(self):
         """Line 228-229: get_audit_log with no adapter returns empty list."""
         from carrymem import CarryMem
+
         cm = CarryMem(storage=None)
         result = cm.get_audit_log()
         assert result == []
@@ -852,6 +957,7 @@ class TestCarryMemExtra:
     def test_get_audit_log_no_audit(self):
         """Lines 231-232: get_audit_log with no audit returns empty list."""
         from carrymem import CarryMem
+
         cm = CarryMem(storage="sqlite", db_path=":memory:")
         result = cm.get_audit_log()
         assert isinstance(result, list)
@@ -860,6 +966,7 @@ class TestCarryMemExtra:
     def test_list_backups_no_adapter(self):
         """Lines 196-197: list_backups with no adapter returns empty list."""
         from carrymem import CarryMem
+
         cm = CarryMem(storage=None)
         result = cm.list_backups()
         assert result == []
@@ -868,6 +975,7 @@ class TestCarryMemExtra:
     def test_carrymem_no_storage(self):
         """CarryMem without storage adapter."""
         from carrymem import CarryMem
+
         cm = CarryMem(storage=None)
         assert cm._adapter is None
         cm.close()
@@ -877,6 +985,7 @@ class TestCarryMemExtra:
         from carrymem import CarryMem
         from carrymem.adapters.sqlite_adapter import SQLiteAdapter
         import tempfile
+
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         db_path = tmp.name
         tmp.close()
@@ -892,12 +1001,14 @@ class TestCarryMemExtra:
     def test_carrymem_invalid_storage_type(self):
         """Lines 142-145: invalid storage type raises ValueError."""
         from carrymem import CarryMem
+
         with pytest.raises(ValueError, match="Invalid storage type"):
             CarryMem(storage=12345)
 
     def test_carrymem_close_no_adapter(self):
         """Closing CarryMem with no adapter doesn't crash."""
         from carrymem import CarryMem
+
         cm = CarryMem(storage=None)
         cm.close()  # Should not raise
 
@@ -905,13 +1016,24 @@ class TestCarryMemExtra:
         """Line 290: update_memory with non-SQLite adapter raises ValueError."""
         from carrymem import CarryMem
         from carrymem.adapters.base import StorageAdapter
+
         class DummyAdapter(StorageAdapter):
             @property
-            def name(self): return "dummy"
-            def remember(self, *a, **kw): return None
-            def recall(self, *a, **kw): return []
-            def forget(self, *a, **kw): return False
-            def close(self): pass
+            def name(self):
+                return "dummy"
+
+            def remember(self, *a, **kw):
+                return None
+
+            def recall(self, *a, **kw):
+                return []
+
+            def forget(self, *a, **kw):
+                return False
+
+            def close(self):
+                pass
+
         cm = CarryMem(storage=DummyAdapter())
         with pytest.raises(ValueError, match="Memory versioning"):
             cm.update_memory("key", "new content")
@@ -921,13 +1043,24 @@ class TestCarryMemExtra:
         """Line 314: get_memory_history with non-SQLite adapter raises ValueError."""
         from carrymem import CarryMem
         from carrymem.adapters.base import StorageAdapter
+
         class DummyAdapter(StorageAdapter):
             @property
-            def name(self): return "dummy"
-            def remember(self, *a, **kw): return None
-            def recall(self, *a, **kw): return []
-            def forget(self, *a, **kw): return False
-            def close(self): pass
+            def name(self):
+                return "dummy"
+
+            def remember(self, *a, **kw):
+                return None
+
+            def recall(self, *a, **kw):
+                return []
+
+            def forget(self, *a, **kw):
+                return False
+
+            def close(self):
+                pass
+
         cm = CarryMem(storage=DummyAdapter())
         with pytest.raises(ValueError, match="Memory versioning"):
             cm.get_memory_history("key")
@@ -937,13 +1070,24 @@ class TestCarryMemExtra:
         """Line 327: rollback_memory with non-SQLite adapter raises ValueError."""
         from carrymem import CarryMem
         from carrymem.adapters.base import StorageAdapter
+
         class DummyAdapter(StorageAdapter):
             @property
-            def name(self): return "dummy"
-            def remember(self, *a, **kw): return None
-            def recall(self, *a, **kw): return []
-            def forget(self, *a, **kw): return False
-            def close(self): pass
+            def name(self):
+                return "dummy"
+
+            def remember(self, *a, **kw):
+                return None
+
+            def recall(self, *a, **kw):
+                return []
+
+            def forget(self, *a, **kw):
+                return False
+
+            def close(self):
+                pass
+
         cm = CarryMem(storage=DummyAdapter())
         with pytest.raises(ValueError, match="Memory versioning"):
             cm.rollback_memory("key", 1)
@@ -953,6 +1097,7 @@ class TestCarryMemExtra:
         """classify_and_remember with no adapter raises StorageNotConfiguredError."""
         from carrymem import CarryMem
         from carrymem.exceptions import StorageNotConfiguredError
+
         cm = CarryMem(storage=None)
         with pytest.raises(StorageNotConfiguredError):
             cm.classify_and_remember("I prefer Python")
@@ -962,12 +1107,14 @@ class TestCarryMemExtra:
         """Lines 192-193: backup with failing create_backup catches exception."""
         from carrymem import CarryMem
         import tempfile
+
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         db_path = tmp.name
         tmp.close()
         cm = CarryMem(storage="sqlite", db_path=db_path)
         # Patch BackupManager.create_backup to raise an exception
         from unittest.mock import patch
+
         with patch("carrymem.backup.BackupManager.create_backup", side_effect=OSError("disk full")):
             result = cm.backup()
         assert result.get("backed_up") is False or result.get("error") is not None
@@ -981,6 +1128,7 @@ class TestCarryMemExtra:
         """Lines 217-218: restore_backup catches exception."""
         from carrymem import CarryMem
         import tempfile
+
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         db_path = tmp.name
         tmp.close()

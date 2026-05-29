@@ -38,9 +38,7 @@ class TestRuleStorageSchema:
         """Should create rules table on initialization"""
         conn = storage._get_connection()
         try:
-            cursor = conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='rules'"
-            )
+            cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='rules'")
             result = cursor.fetchone()
             assert result is not None
             assert result[0] == "rules"
@@ -51,9 +49,7 @@ class TestRuleStorageSchema:
         """Should create FTS5 virtual table for search"""
         conn = storage._get_connection()
         try:
-            cursor = conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='rules_fts'"
-            )
+            cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='rules_fts'")
             result = cursor.fetchone()
             assert result is not None
             assert result[0] == "rules_fts"
@@ -64,9 +60,7 @@ class TestRuleStorageSchema:
         """Should create performance indexes"""
         conn = storage._get_connection()
         try:
-            cursor = conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_rules_%'"
-            )
+            cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_rules_%'")
             indexes = cursor.fetchall()
             index_names = [idx[0] for idx in indexes]
             assert "idx_rules_status" in index_names

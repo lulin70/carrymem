@@ -55,16 +55,14 @@ _AVOIDANCE_TEMPLATES = {
         "trigger_template": "tech selection or solution design",
         "action_template": "avoid using {keywords} (corrected multiple times)",
         "explanation": (
-            "You've corrected about {keywords} {count} times. "
-            "Consider making this a default avoidance rule."
+            "You've corrected about {keywords} {count} times. " "Consider making this a default avoidance rule."
         ),
     },
     "user_preference": {
         "trigger_template": "tech selection or solution design",
         "action_template": "avoid using {keywords} (explicitly disliked)",
         "explanation": (
-            "You've expressed dislike for {keywords} {count} times. "
-            "Consider making this a default avoidance rule."
+            "You've expressed dislike for {keywords} {count} times. " "Consider making this a default avoidance rule."
         ),
     },
     "default": {
@@ -79,8 +77,7 @@ _PREFERENCE_TEMPLATES = {
         "trigger_template": "tech selection or solution design",
         "action_template": "prefer {keywords}",
         "explanation": (
-            "You've expressed preference for {keywords} {count} times. "
-            "Consider making this a default preference."
+            "You've expressed preference for {keywords} {count} times. " "Consider making this a default preference."
         ),
     },
     "default": {
@@ -94,10 +91,7 @@ _CONSISTENCY_TEMPLATES = {
     "decision": {
         "trigger_template": "{domain} decisions",
         "action_template": "stay consistent with previous decisions: {keywords}",
-        "explanation": (
-            "You've made {count} consistent decisions about {domain}. "
-            "Consider standardizing this."
-        ),
+        "explanation": ("You've made {count} consistent decisions about {domain}. " "Consider standardizing this."),
     },
     "default": {
         "trigger_template": "{domain} scenarios",
@@ -111,8 +105,7 @@ _AVERSION_TEMPLATES = {
         "trigger_template": "scenarios involving {keywords}",
         "action_template": "forbid using or recommending {keywords}",
         "explanation": (
-            "You've shown strong negative sentiment about {keywords} "
-            "{count} times. Consider a hard forbid rule."
+            "You've shown strong negative sentiment about {keywords} " "{count} times. Consider a hard forbid rule."
         ),
     },
 }
@@ -161,9 +154,7 @@ class CandidateRuleGenerator:
     def __init__(self):
         pass
 
-    def generate(
-        self, patterns: List[MemoryPattern], max_candidates: int = 10
-    ) -> List[RuleCandidate]:
+    def generate(self, patterns: List[MemoryPattern], max_candidates: int = 10) -> List[RuleCandidate]:
         """
         Generate rule candidates from detected patterns.
 

@@ -30,6 +30,7 @@ def _get_carrymem():
         with _cm_lock:
             if _cm_instance is None:
                 from carrymem import CarryMem
+
                 _cm_instance = CarryMem()
     return _cm_instance
 

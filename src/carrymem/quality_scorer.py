@@ -29,19 +29,19 @@ class MemoryQualityScorer:
 
     # Default weights for quality factors
     DEFAULT_WEIGHTS = {
-        'confidence': 0.40,
-        'access_frequency': 0.30,
-        'freshness': 0.20,
-        'source_reliability': 0.10,
+        "confidence": 0.40,
+        "access_frequency": 0.30,
+        "freshness": 0.20,
+        "source_reliability": 0.10,
     }
 
     # Source layer reliability scores
     SOURCE_RELIABILITY = {
-        'declaration': 1.0,    # User explicitly declared
-        'rule': 0.9,           # Rule-based classification
-        'pattern': 0.7,        # Pattern matching
-        'semantic': 0.5,       # Semantic inference
-        'unknown': 0.3,        # Unknown source
+        "declaration": 1.0,  # User explicitly declared
+        "rule": 0.9,  # Rule-based classification
+        "pattern": 0.7,  # Pattern matching
+        "semantic": 0.5,  # Semantic inference
+        "unknown": 0.3,  # Unknown source
     }
 
     def __init__(
@@ -64,9 +64,7 @@ class MemoryQualityScorer:
         # Validate weights
         total_weight = sum(self.weights.values())
         if abs(total_weight - 1.0) > 0.01:
-            raise ValueError(
-                f"Weights must sum to 1.0, got {total_weight:.3f}"
-            )
+            raise ValueError(f"Weights must sum to 1.0, got {total_weight:.3f}")
 
     def score(self, memory: StoredMemory) -> float:
         """Calculate the overall quality score for a memory.
@@ -83,10 +81,10 @@ class MemoryQualityScorer:
         source_score = self._score_source_reliability(memory)
 
         total_score = (
-            confidence_score * self.weights['confidence'] +
-            access_score * self.weights['access_frequency'] +
-            freshness_score * self.weights['freshness'] +
-            source_score * self.weights['source_reliability']
+            confidence_score * self.weights["confidence"]
+            + access_score * self.weights["access_frequency"]
+            + freshness_score * self.weights["freshness"]
+            + source_score * self.weights["source_reliability"]
         )
 
         return round(total_score, 3)
@@ -106,24 +104,24 @@ class MemoryQualityScorer:
         source_score = self._score_source_reliability(memory)
 
         total_score = (
-            confidence_score * self.weights['confidence'] +
-            access_score * self.weights['access_frequency'] +
-            freshness_score * self.weights['freshness'] +
-            source_score * self.weights['source_reliability']
+            confidence_score * self.weights["confidence"]
+            + access_score * self.weights["access_frequency"]
+            + freshness_score * self.weights["freshness"]
+            + source_score * self.weights["source_reliability"]
         )
 
         return {
-            'overall': round(total_score, 3),
-            'confidence': round(confidence_score, 3),
-            'access_frequency': round(access_score, 3),
-            'freshness': round(freshness_score, 3),
-            'source_reliability': round(source_score, 3),
-            'weighted': {
-                'confidence': round(confidence_score * self.weights['confidence'], 3),
-                'access_frequency': round(access_score * self.weights['access_frequency'], 3),
-                'freshness': round(freshness_score * self.weights['freshness'], 3),
-                'source_reliability': round(source_score * self.weights['source_reliability'], 3),
-            }
+            "overall": round(total_score, 3),
+            "confidence": round(confidence_score, 3),
+            "access_frequency": round(access_score, 3),
+            "freshness": round(freshness_score, 3),
+            "source_reliability": round(source_score, 3),
+            "weighted": {
+                "confidence": round(confidence_score * self.weights["confidence"], 3),
+                "access_frequency": round(access_score * self.weights["access_frequency"], 3),
+                "freshness": round(freshness_score * self.weights["freshness"], 3),
+                "source_reliability": round(source_score * self.weights["source_reliability"], 3),
+            },
         }
 
     def score_batch(self, memories: List[StoredMemory]) -> List[Dict[str, Any]]:
@@ -138,14 +136,16 @@ class MemoryQualityScorer:
         scored = []
         for memory in memories:
             score = self.score(memory)
-            scored.append({
-                'memory': memory,
-                'score': score,
-                'storage_key': memory.storage_key,
-            })
+            scored.append(
+                {
+                    "memory": memory,
+                    "score": score,
+                    "storage_key": memory.storage_key,
+                }
+            )
 
         # Sort by score descending
-        scored.sort(key=lambda x: x['score'], reverse=True)
+        scored.sort(key=lambda x: x["score"], reverse=True)
         return scored
 
     def _score_confidence(self, memory: StoredMemory) -> float:
@@ -205,7 +205,7 @@ class MemoryQualityScorer:
         Returns:
             Score between 0.0 and 1.0
         """
-        source = memory.source_layer or 'unknown'
+        source = memory.source_layer or "unknown"
         return self.SOURCE_RELIABILITY.get(source, 0.3)
 
     def get_quality_tier(self, score: float) -> str:
@@ -218,13 +218,13 @@ class MemoryQualityScorer:
             Tier label: 'excellent', 'good', 'fair', 'poor'
         """
         if score >= 0.8:
-            return 'excellent'
+            return "excellent"
         elif score >= 0.6:
-            return 'good'
+            return "good"
         elif score >= 0.4:
-            return 'fair'
+            return "fair"
         else:
-            return 'poor'
+            return "poor"
 
     def filter_by_quality(
         self,
@@ -263,7 +263,7 @@ class MemoryQualityScorer:
             List of memories sorted by quality score (descending)
         """
         scored = self.score_batch(memories)
-        ranked = [item['memory'] for item in scored]
+        ranked = [item["memory"] for item in scored]
 
         if limit:
             ranked = ranked[:limit]
@@ -299,14 +299,14 @@ class QualityAnalyzer:
         """
         if not memories:
             return {
-                'count': 0,
-                'average_score': 0.0,
-                'median_score': 0.0,
-                'min_score': 0.0,
-                'max_score': 0.0,
-                'by_tier': {},
-                'by_type': {},
-                'by_source': {},
+                "count": 0,
+                "average_score": 0.0,
+                "median_score": 0.0,
+                "min_score": 0.0,
+                "max_score": 0.0,
+                "by_tier": {},
+                "by_type": {},
+                "by_source": {},
             }
 
         scores = [self.scorer.score(m) for m in memories]
@@ -315,13 +315,12 @@ class QualityAnalyzer:
         # Calculate statistics
         count = len(scores)
         average = sum(scores) / count
-        median = scores[count //
-            2] if count % 2 == 1 else (scores[count // 2 - 1] + scores[count // 2]) / 2
+        median = scores[count // 2] if count % 2 == 1 else (scores[count // 2 - 1] + scores[count // 2]) / 2
         min_score = min(scores)
         max_score = max(scores)
 
         # Group by tier
-        by_tier = {'excellent': 0, 'good': 0, 'fair': 0, 'poor': 0}
+        by_tier = {"excellent": 0, "good": 0, "fair": 0, "poor": 0}
         for score in scores:
             tier = self.scorer.get_quality_tier(score)
             by_tier[tier] += 1
@@ -334,33 +333,27 @@ class QualityAnalyzer:
                 by_type[mem_type] = []
             by_type[mem_type].append(self.scorer.score(memory))
 
-        type_averages = {
-            t: round(sum(scores) / len(scores), 3)
-            for t, scores in by_type.items()
-        }
+        type_averages = {t: round(sum(scores) / len(scores), 3) for t, scores in by_type.items()}
 
         # Group by source layer
         by_source: Dict[str, List[float]] = {}
         for memory in memories:
-            source = memory.source_layer or 'unknown'
+            source = memory.source_layer or "unknown"
             if source not in by_source:
                 by_source[source] = []
             by_source[source].append(self.scorer.score(memory))
 
-        source_averages = {
-            s: round(sum(scores) / len(scores), 3)
-            for s, scores in by_source.items()
-        }
+        source_averages = {s: round(sum(scores) / len(scores), 3) for s, scores in by_source.items()}
 
         return {
-            'count': count,
-            'average_score': round(average, 3),
-            'median_score': round(median, 3),
-            'min_score': round(min_score, 3),
-            'max_score': round(max_score, 3),
-            'by_tier': by_tier,
-            'by_type': type_averages,
-            'by_source': source_averages,
+            "count": count,
+            "average_score": round(average, 3),
+            "median_score": round(median, 3),
+            "min_score": round(min_score, 3),
+            "max_score": round(max_score, 3),
+            "by_tier": by_tier,
+            "by_type": type_averages,
+            "by_source": source_averages,
         }
 
     def identify_low_quality(
@@ -382,16 +375,16 @@ class QualityAnalyzer:
         for memory in memories:
             breakdown = self.scorer.score_with_breakdown(memory)
 
-            if breakdown['overall'] < threshold:
+            if breakdown["overall"] < threshold:
                 reasons = []
 
-                if breakdown['confidence'] < 0.5:
+                if breakdown["confidence"] < 0.5:
                     reasons.append(f"Low confidence ({breakdown['confidence']:.2f})")
 
-                if breakdown['access_frequency'] < 0.2:
+                if breakdown["access_frequency"] < 0.2:
                     reasons.append(f"Rarely accessed ({memory.access_count} times)")
 
-                if breakdown['freshness'] < 0.3:
+                if breakdown["freshness"] < 0.3:
                     now = datetime.now(timezone.utc)
                     created = memory.created_at
                     if created and created.tzinfo is None:
@@ -399,17 +392,19 @@ class QualityAnalyzer:
                     age_days = (now - created).days if created else 0
                     reasons.append(f"Old ({age_days} days)")
 
-                if breakdown['source_reliability'] < 0.5:
+                if breakdown["source_reliability"] < 0.5:
                     reasons.append(f"Unreliable source ({memory.source_layer})")
 
-                low_quality.append({
-                    'memory': memory,
-                    'storage_key': memory.storage_key,
-                    'score': breakdown['overall'],
-                    'reasons': reasons,
-                    'breakdown': breakdown,
-                })
+                low_quality.append(
+                    {
+                        "memory": memory,
+                        "storage_key": memory.storage_key,
+                        "score": breakdown["overall"],
+                        "reasons": reasons,
+                        "breakdown": breakdown,
+                    }
+                )
 
         # Sort by score ascending (worst first)
-        low_quality.sort(key=lambda x: x['score'])
+        low_quality.sort(key=lambda x: x["score"])
         return low_quality

@@ -170,6 +170,7 @@ class TestCarryMemMerge:
 
     def test_merge_non_sqlite_adapter(self):
         from carrymem.adapters.base import StorageAdapter
+
         mock_adapter = MagicMock(spec=StorageAdapter)
         cm = CarryMem(storage=mock_adapter)
         result = cm.merge_memories()
@@ -335,16 +336,12 @@ class TestCarryMemProfile:
 class TestCarryMemExport:
     def test_export_with_namespace(self, cm_with_data, tmp_path):
         output_path = str(tmp_path / "export_ns.json")
-        result = cm_with_data.export_memories(
-            output_path=output_path, namespace="default"
-        )
+        result = cm_with_data.export_memories(output_path=output_path, namespace="default")
         assert result.get("exported") is True
 
     def test_export_markdown(self, cm_with_data, tmp_path):
         output_path = str(tmp_path / "export.md")
-        result = cm_with_data.export_memories(
-            output_path=output_path, format="markdown"
-        )
+        result = cm_with_data.export_memories(output_path=output_path, format="markdown")
         assert result.get("exported") is True
         assert result.get("format") == "markdown"
 
@@ -447,6 +444,7 @@ class TestCarryMemListExpired:
 
     def test_list_expired_non_sqlite(self):
         from carrymem.adapters.base import StorageAdapter
+
         mock_adapter = MagicMock(spec=StorageAdapter)
         cm = CarryMem(storage=mock_adapter)
         result = cm.list_expired()

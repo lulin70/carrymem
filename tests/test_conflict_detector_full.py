@@ -201,7 +201,6 @@ class TestConflictDetector:
         assert isinstance(conflicts, list)
 
 
-
 class TestMemoryConflict:
     def test_init(self):
         memories = [make_stored(storage_key="k1"), make_stored(storage_key="k2")]

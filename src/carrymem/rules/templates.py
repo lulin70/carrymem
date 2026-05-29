@@ -97,9 +97,7 @@ def get_template(name: str) -> Dict[str, Any]:
     """
     if name not in RULE_TEMPLATES:
         available = ", ".join(sorted(RULE_TEMPLATES.keys()))
-        raise KeyError(
-            f"Template '{name}' not found. Available: {available}"
-        )
+        raise KeyError(f"Template '{name}' not found. Available: {available}")
     return RULE_TEMPLATES[name]
 
 

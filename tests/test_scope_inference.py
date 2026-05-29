@@ -16,6 +16,7 @@ from carrymem.context import (
 
 # ── SCOPE_VOCABULARY structure tests ────────────────────────────────
 
+
 class TestScopeVocabulary:
     """Verify SCOPE_VOCABULARY is well-formed."""
 
@@ -24,8 +25,14 @@ class TestScopeVocabulary:
 
     def test_expected_domains_present(self):
         expected = {
-            "education", "entertainment", "lifestyle", "shopping",
-            "travel", "work", "pet", "programming",
+            "education",
+            "entertainment",
+            "lifestyle",
+            "shopping",
+            "travel",
+            "work",
+            "pet",
+            "programming",
         }
         assert set(SCOPE_VOCABULARY.keys()) == expected
 
@@ -41,6 +48,7 @@ class TestScopeVocabulary:
 
 
 # ── infer_scopes tests ──────────────────────────────────────────────
+
 
 class TestInferScopes:
     """Test keyword-based scope inference."""
@@ -126,6 +134,7 @@ class TestInferScopes:
 
 # ── preference_matches_scope tests ──────────────────────────────────
 
+
 class TestPreferenceMatchesScope:
     """Test scope-aware preference matching with core exemption."""
 
@@ -204,6 +213,7 @@ class TestPreferenceMatchesScope:
     def test_metadata_as_json_string(self):
         """Metadata may be a JSON string; should be parsed."""
         import json
+
         pref = {
             "content": "I like things",
             "raw_text": "I like things",
@@ -232,6 +242,7 @@ class TestPreferenceMatchesScope:
 
 
 # ── Integration tests ───────────────────────────────────────────────
+
 
 class TestScopeIntegration:
     """End-to-end scenarios combining infer_scopes and preference_matches_scope."""
@@ -305,6 +316,7 @@ class TestScopeIntegration:
 
 
 # ── Edge cases ──────────────────────────────────────────────────────
+
 
 class TestEdgeCases:
     """Edge cases for infer_scopes and preference_matches_scope."""
