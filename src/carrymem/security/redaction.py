@@ -72,14 +72,16 @@ SENSITIVE_PATTERNS: List[Tuple[str, re.Pattern, str]] = [
 ]
 
 
-def detect_sensitive_content(text: str) -> List[Tuple[str, str, str]]:
+def detect_sensitive_content(text: str, mask_matches: bool = True) -> List[Tuple[str, str, str]]:
     """Detect sensitive content in text.
 
     Args:
         text: The text to check for sensitive content.
+        mask_matches: If True, truncate matched text to first 8 chars + '...'.
+                     Set to False for internal redaction logic that needs full matches.
 
     Returns:
-        List of (pattern_name, matched_text, description) tuples.
+        List of (pattern_name, matched_text_or_mask, description) tuples.
         Empty list means no sensitive content detected.
     """
     if not text:
@@ -88,7 +90,10 @@ def detect_sensitive_content(text: str) -> List[Tuple[str, str, str]]:
     findings = []
     for name, pattern, description in SENSITIVE_PATTERNS:
         for match in pattern.finditer(text):
-            findings.append((name, match.group(0), description))
+            matched = match.group(0)
+            if mask_matches and len(matched) > 12:
+                matched = matched[:8] + "..."
+            findings.append((name, matched, description))
 
     return findings
 
@@ -116,6 +121,9 @@ def should_redact(text: str) -> Tuple[bool, Optional[str]]:
 def redact_content(text: str, replacement: str = "[REDACTED]") -> str:
     """Redact sensitive content in text by replacing it with a placeholder.
 
+    Collects all match spans first, then replaces from end to start
+    to avoid overlapping replacements from sequential pattern application.
+
     Args:
         text: The text to redact.
         replacement: The string to replace sensitive content with.
@@ -123,7 +131,25 @@ def redact_content(text: str, replacement: str = "[REDACTED]") -> str:
     Returns:
         The text with sensitive content replaced.
     """
-    result = text
+    spans = []
     for name, pattern, description in SENSITIVE_PATTERNS:
-        result = pattern.sub(replacement, result)
+        for match in pattern.finditer(text):
+            spans.append((match.start(), match.end()))
+
+    if not spans:
+        return text
+
+    spans.sort(key=lambda s: s[0])
+
+    merged = []
+    for start, end in spans:
+        if merged and start <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+        else:
+            merged.append((start, end))
+
+    result = text
+    for start, end in reversed(merged):
+        result = result[:start] + replacement + result[end:]
+
     return result

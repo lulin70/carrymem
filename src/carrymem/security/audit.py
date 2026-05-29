@@ -25,7 +25,7 @@ _audit_logger = logging.getLogger(__name__)
 _AUDIT_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS audit_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp TEXT NOT NULL DEFAULT (datetime('now')),
+    timestamp TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     operation TEXT NOT NULL,
     namespace TEXT NOT NULL,
     storage_key TEXT,

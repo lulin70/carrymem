@@ -209,7 +209,7 @@ python3 -m carrymem.cli version
 
 ### 5 行で始める
 
-> ⚠️ **パッケージ名とインポート名**: `pip install carrymem` でインストール、`from carrymem import CarryMem` または `from carrymem import CarryMem` でインポート。v1.0.0 で統一予定。
+> ⚠️ **パッケージ名とインポート名**: `pip install carrymem`（小文字）でインストール、`from carrymem import CarryMem`（キャメルケース）でインポート。パッケージ名（`carrymem`）とクラス名（`CarryMem`）は大文字小文字が異なります。
 
 ```python
 from carrymem import CarryMem

@@ -209,7 +209,7 @@ python3 -m carrymem.cli version
 
 ### 5 行代码
 
-> ⚠️ **包名与导入名**：安装用 `pip install carrymem`，导入用 `from carrymem import CarryMem` 或 `from carrymem import CarryMem`。将在 v1.0.0 统一。
+> ⚠️ **包名与导入名**：安装用 `pip install carrymem`（小写），导入用 `from carrymem import CarryMem`（驼峰类名）。包名（`carrymem`）和类名（`CarryMem`）大小写不同。
 
 ```python
 from carrymem import CarryMem

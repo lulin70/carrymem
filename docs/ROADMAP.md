@@ -9,12 +9,12 @@
 ## Version Strategy
 
 ```
-v0.3.0 ─── Design Baseline (Memory Foundation + Rules Design Docs)
+v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoning) ✅
   │
+  ├── v0.2.0  Scene Detection      (Pattern Recognition from Memories)   ✅
   ├── v0.2.1  Rules Engine Alpha   (Manual CRUD + FTS5 Match + Security) ✅
   ├── v0.2.2  Rules Engine Alpha+  (Performance + Conflict Detection)    ✅
   ├── v0.2.3  Rules Engine Alpha+  (Export/Import + Interactive CLI)     ✅
-  ├── v0.2.0  Scene Detection      (Pattern Recognition from Memories)   ✅
   ├── v0.2.5  Auto-Promotion       (Memory → Rule Candidate Generation)  ✅
   ├── v0.2.6  Experience Learning   (Failure → Avoidance Rules)          ✅
   ├── v0.2.7  Q&A Refinement       (Multi-turn Rule Abstraction)         ✅
@@ -23,7 +23,6 @@ v0.3.0 ─── Design Baseline (Memory Foundation + Rules Design Docs)
   ├── v0.3.0  GA Release           (Production Ready + Knowledge Adapter) ✅
   ├── v0.4.0  Enterprise           (Scopes + Skill + Merge + VS Code)     ✅
   └── v0.4.1  Core Loop Fix        (Auto Rule Suggestion + Security)      ✅
-  └── v0.1.7  Memory Layer Enhancement (Session + Supersession + Time Reasoning + Structured Prompt) ✅
 ```
 
 **Versioning Rules**:
@@ -402,7 +401,8 @@ See CHANGELOG.md for detailed history.
 
 **Next**: Phase 4 — Session Summary + Semantic Aggregation (requires LLM)
 
-### v0.5.0 — Intelligence Enhancement
+### v0.5.0 — Intelligence Enhancement (Partially Complete)
+> **Status**: Partially complete — Consolidation Engine and PrefEval achieved in pre-reset cycle. Remaining items deferred to v0.6.0+.
 - [x] Consolidation Engine (P0: dedup+decay, P1: pattern→rules, P2: semantic merge)
 - [x] PrefEval 96.0% preference adherence (50 items, ICLR 2025 Oral)
 - [x] 27 MCP tools (added consolidate_memories)
@@ -572,7 +572,5 @@ See CHANGELOG.md for detailed history.
 
 ---
 
-**Last Updated**: 2026-05-28
-**Maintainer**: CarryMem Team
 **Next Milestone**: v0.3.0 GA (General Availability)
 **Status**: ✅ **v0.2.0 complete (3050+ tests, 79%+ coverage, Memory + Rules + Knowledge + Enterprise)**

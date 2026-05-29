@@ -135,8 +135,8 @@ class TestQuery:
 
     def test_query_by_time_range(self, audit_logger):
         audit_logger.log_operation("remember")
-        now = datetime.now(timezone.utc).isoformat()
-        results = audit_logger.query(since="2020-01-01", until=now)
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        results = audit_logger.query(since="2020-01-01T00:00:00Z", until=now)
         assert len(results) >= 1
 
     def test_query_no_filters(self, audit_logger):

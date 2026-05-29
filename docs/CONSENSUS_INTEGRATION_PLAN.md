@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-CarryMem v0.2.0 is technically ready for client integration launch. The MCP server implementation is mature (27 tools, 7 categories, protocol 2024-11-05), and the `setup-mcp --global` command works for the top 3 clients (Claude Code, Cursor, TRAE). However, critical gaps exist: PyPI version lag (0.1.6 vs 0.2.0), missing client support in setup-mcp (Windsurf, Cline, OpenClaw, etc.), and no automated PyPI publishing. This document captures the multi-role consensus on feasibility, priority, and action plan.
+CarryMem v0.2.0 is technically ready for client integration launch. The MCP server implementation is mature (27 tools, 7 categories, protocol 2024-11-05), and the `setup-mcp --global` command works for 8 clients (Claude Code, Cursor, TRAE, Windsurf, Cline, OpenClaw, Kimi Code, Codex). PyPI 0.2.0 has been published. This document captures the multi-role consensus on feasibility, priority, and action plan.
 
 **v2.0 Update**: Merged with WorkBuddy Launch Checklist (2026-05-28). Key additions: promotion strategy (WeChat Official Account), launch cadence (T+0 to T+14), non-technical user onboarding, trial data collection, and Obsidian adapter documentation. Resolved conflicts on client config paths and launch sequencing.
 
@@ -31,7 +31,7 @@ CarryMem v0.2.0 is technically ready for client integration launch. The MCP serv
 | pack/unpack feature | Done | v1.1 format with SHA-256 + encryption |
 | Issue templates | Done | bug_report, feature_request, question exist |
 | About update | Done | Per user confirmation |
-| PyPI 0.2.0 release | Not done | Still at 0.1.6, 8 versions behind |
+| PyPI 0.2.0 release | ✅ Done | Published 2026-05-28 |
 
 **Missing P0 items identified:**
 

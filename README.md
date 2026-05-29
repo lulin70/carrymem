@@ -207,7 +207,7 @@ Then run `carrymem doctor` to check your setup.
 
 ### 5 Lines of Code
 
-> ⚠️ **Package vs Import Name**: Install with `pip install carrymem`, but import as `from carrymem import CarryMem`. You can also use `from carrymem import CarryMem`. This will be fully unified in v1.0.0.
+> ⚠️ **Package vs Import Name**: Install with `pip install carrymem` (lowercase), but import as `from carrymem import CarryMem` (CamelCase class). The package name (`carrymem`) and class name (`CarryMem`) differ in casing.
 
 ```python
 from carrymem import CarryMem

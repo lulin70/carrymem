@@ -164,6 +164,12 @@ class MemoryEncryption:
             raise EncryptionError(f"Fernet decryption failed: {e}") from e
 
     def _encrypt_stream(self, plaintext: str) -> str:
+        """HMAC-SHA256 based stream cipher with authentication.
+
+        Uses HMAC-SHA256 as a PRF to generate a keystream, then XORs with
+        plaintext. A separate HMAC tag provides integrity verification.
+        Note: This is NOT AES-CTR; it uses HMAC-SHA256 as the keystream generator.
+        """
         nonce = os.urandom(_NONCE_SIZE)
         key = self._key
         keystream = self._generate_keystream(key, nonce, len(plaintext.encode("utf-8")))
