@@ -37,15 +37,24 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]" flake8 black isort mypy
+          pip install -e ".[dev]" "flake8==7.3.0" black isort mypy
 
       - name: Lint — fatal errors only
         run: |
+          echo "=== python ===" && python --version
+          echo "=== flake8 ===" && flake8 --version
+          echo "=== lint src/ ==="
+          flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics 2>&1
+          echo "=== SRC_EXIT: $? ==="
+          echo "=== lint tests/ ==="
+          flake8 tests/ --count --select=E9,F63,F7,F82 --show-source --statistics 2>&1
+          echo "=== TESTS_EXIT: $? ==="
+          echo "=== lint combined ==="
           flake8 src/ tests/ \
             --count --select=E9,F63,F7,F82 \
             --show-source --statistics \
             2>&1 | tee /tmp/lint_output.txt
-          echo "flake8 exit code: $?"
+          echo "=== COMBINED_EXIT: $? ==="
 
       - name: Upload lint log (debug)
         if: always()
