@@ -104,6 +104,8 @@ jobs:
               'conflict_detector.py', # CJK punctuation in overlap detection
               'pattern_detector.py',  # Chinese stop words list
               'storage.py',         # Chinese docstring examples
+              'coreference.py',     # Chinese pronouns/demonstratives for NLP resolution
+              'domain.py',          # Chinese domain keywords for classification
           ]
 
           for root, dirs, files in os.walk('src'):
