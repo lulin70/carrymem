@@ -207,8 +207,8 @@ class TestErrorHandling:
         conn.row_factory = sqlite3.Row
         logger = AuditLogger(lambda: conn)
         conn.close()
-        results = logger.query()
-        assert results == []
+        with pytest.raises(sqlite3.ProgrammingError):
+            logger.query()
 
     def test_stats_with_bad_connection(self, tmp_path):
         db_path = str(tmp_path / "audit_bad3.db")
@@ -216,5 +216,5 @@ class TestErrorHandling:
         conn.row_factory = sqlite3.Row
         logger = AuditLogger(lambda: conn)
         conn.close()
-        stats = logger.get_stats()
-        assert stats["total_operations"] == 0
+        with pytest.raises(sqlite3.ProgrammingError):
+            logger.get_stats()

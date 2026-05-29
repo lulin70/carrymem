@@ -82,7 +82,7 @@ class BackupManager:
 
         self.cleanup_old_backups()
 
-        return backup_path
+        return os.path.realpath(backup_path)
 
     def restore_backup(self, backup_path: str) -> None:
         resolved = os.path.realpath(backup_path)

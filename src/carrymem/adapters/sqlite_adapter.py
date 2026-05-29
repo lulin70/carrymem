@@ -312,8 +312,11 @@ class SQLiteAdapter(StorageAdapter):
                 self._encryption = MemoryEncryption(key=encryption_key)
             except Exception as e:
                 from carrymem.utils.logger import logger
-                logger.warning(f"Encryption initialization failed, using plaintext: {e}")
-                self._encryption = None
+                logger.error(f"Encryption initialization failed: {e}")
+                raise RuntimeError(
+                    f"Encryption initialization failed with provided key. "
+                    f"Refusing to fall back to plaintext storage. Error: {e}"
+                ) from e
 
         self._audit = None
         try:

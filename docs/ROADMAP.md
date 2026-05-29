@@ -1,6 +1,6 @@
 # CarryMem Product Roadmap
 
-**Last Updated**: 2026-05-24
+**Last Updated**: 2026-05-29
 **Product Positioning**: AI Identity Layer — Memory + Rules + Knowledge
 **Version Scheme**: v0.2.x (Incremental) → v0.3.0 (GA Milestone)
 
@@ -61,7 +61,7 @@ v0.3.0 ─── Design Baseline (Memory Foundation + Rules Design Docs)
 │  │  • Cross-language semantic recall (FTS5)          │    │
 │  │  • Session-aware storage + knowledge supersession (v0.1.7)    │    │
 │  │  • Time reasoning + structured prompt injection (v0.1.7)      │    │
-│  │  • 2056 tests passing, 79% coverage              │    │
+│  │  • 3050+ tests passing, 79%+ coverage           │    │
 │  └──────────────────────────────────────────────────┘    │
 │              ↑ reads from          ↑ injects into         │
 │  Layer 1: Knowledge (WHAT you know) ← v0.3.0 PLANNED     │
@@ -363,13 +363,13 @@ See CHANGELOG.md for detailed history.
 - [x] Implicit preference inference — `_detect_implicit_preferences()` from memory patterns
 
 **MCP Tools** (27 tools):
-- Core: classify_message, get_classification_schema, batch_classify
-- Storage: classify_and_remember, recall_memories, forget_memory
-- Knowledge: index_knowledge, recall_from_knowledge, recall_all
-- Profile: declare_preference, get_memory_profile
-- Prompt: get_system_prompt
-- Rules: add_rule, list_rules, match_rules, inject_rules
-- **New**: my_rules, delete_rule, suggest_rules, promote_rules, update_rule, my_profile, onboard
+- Core (3): classify_message, get_classification_schema, batch_classify
+- Storage (3): classify_and_remember, recall_memories, forget_memory
+- Knowledge (3): index_knowledge, recall_from_knowledge, recall_all
+- Profile (2): declare_preference, get_memory_profile
+- Prompt (2): get_system_prompt, build_context
+- Consolidation (3): consolidate_memories, my_profile, onboard
+- Rules (11): add_rule, list_rules, match_rules, inject_rules, my_rules, delete_rule, suggest_rules, promote_rules, update_rule, get_rule_conflicts, get_rule_stats
 
 ### v0.1.7 — Memory Layer Enhancement (Intelligent Memory Layer) ✅
 
@@ -407,7 +407,7 @@ See CHANGELOG.md for detailed history.
 - [x] PrefEval 96.0% preference adherence (50 items, ICLR 2025 Oral)
 - [x] 27 MCP tools (added consolidate_memories)
 
-> **Note on PrefEval numbers**: Different sample sizes and seeds produce different results. The canonical result is **83.0%** (200 items, 3-condition comparison: CarryMem 83.0% > reminder 80.5% > zero-shot 69.5%), as documented in the v0.2.0 milestone. Other figures (85.0%, 87.9%, 96.0%) reflect different evaluation configurations and should not be compared directly.
+> **Note on PrefEval numbers**: Different sample sizes and seeds produce different results. The canonical result is **83.0%** (200 items, 3-condition comparison: CarryMem 83.0% > reminder 80.0% > zero-shot 71.5%), as documented in the README. Other figures (85.0%, 87.9%, 96.0%) reflect different evaluation configurations and should not be compared directly.
 - [ ] Consolidation scheduled trigger (auto dedup+decay)
 - [ ] Motive memory type (pending→activated→completed lifecycle)
 - [ ] PrefEval evaluation standardization (reproducible scripts + report template)
@@ -485,19 +485,16 @@ See CHANGELOG.md for detailed history.
 
 | Version | Total Tests | Coverage | Key Addition |
 |---------|-------------|----------|--------------|
-| v0.3.0 | 490 | 57.6% | Memory layer |
-| v0.2.1 | 600+ | ~63% | +110 rules tests |
-| v0.2.0 | 718 | ~76% | +pattern detection |
-| v0.2.5 | 746 | ~77% | +auto-promotion |
-| v0.2.6 | 793 | ~59% | +experience learning (new modules lower %) |
-| v0.2.7 | 884 | ~68% | +Q&A refinement + cleanup |
-| **v0.2.8** | **1709** | **~81%** | **+Anchored injection +DDD view +coverage 80%+ +security audit +API stability +doctor** |
-| v0.2.9 | 1800+ | ~82% | +DevSquad integration adapter |
-| **v0.3.0** | **1900+** | **~85%** | **+Knowledge CJK +relevance scoring +trigger_count activation +effectiveness metrics** |
-| **v0.4.0** | **1814** | **~77%** | **+Rule Scopes +Skill Format +Merge Protocol +VS Code Extension** |
-| **v0.4.1** | **2056** | **79%** | **+Core Loop Fix +Auto Rule Suggestion +Security +Connection Pooling** |
-| **v0.2.0** | **2761** | **80.5%** | **+Recall Purity +Scope Injection +PromptBuilder +PrefEval 0.940** |
-| **v0.2.1** | **2883** | **80.86%** | **+Coreference +Auto-redact +QA Prompt Optimization +PrefEval 0.870** |
+| v0.3.0 (pre-reset) | 490 | 57.6% | Memory layer |
+| v0.2.5 (pre-reset) | 746 | ~77% | +auto-promotion |
+| v0.2.6 (pre-reset) | 793 | ~59% | +experience learning (new modules lower %) |
+| v0.2.7 (pre-reset) | 884 | ~68% | +Q&A refinement + cleanup |
+| v0.2.8 (pre-reset) | 1709 | ~81% | +Anchored injection +DDD view +security audit |
+| v0.2.9 (pre-reset) | 1800+ | ~82% | +DevSquad integration adapter |
+| v0.3.0 (pre-reset) | 1900+ | ~85% | +Knowledge CJK +relevance scoring |
+| v0.4.0 (pre-reset) | 1814 | ~77% | +Rule Scopes +Skill Format +VS Code Extension |
+| v0.4.1 (pre-reset) | 2056 | 79% | +Core Loop Fix +Auto Rule Suggestion +Security |
+| **v0.2.0 (current)** | **3050+** | **79%+** | **+Recall Purity +Scope Injection +PrefEval 0.940 +8-client MCP** |
 
 ---
 
@@ -578,4 +575,4 @@ See CHANGELOG.md for detailed history.
 **Last Updated**: 2026-05-28
 **Maintainer**: CarryMem Team
 **Next Milestone**: v0.3.0 GA (General Availability)
-**Status**: ✅ **v0.4.1 complete (2761+ tests, Memory + Rules + Knowledge + Enterprise)**
+**Status**: ✅ **v0.2.0 complete (3050+ tests, 79%+ coverage, Memory + Rules + Knowledge + Enterprise)**

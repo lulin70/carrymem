@@ -12,7 +12,6 @@ Version: 1.0.0
 import re
 from typing import Any, Dict
 from pathlib import Path
-import html
 
 from carrymem.exceptions import ValidationError
 
@@ -26,18 +25,17 @@ class InputValidator:
 
     # SQL injection patterns
     SQL_INJECTION_PATTERNS = [
-        r"(\b(DROP\s+TABLE|DROP\s+DATABASE)\b)",
+        r"(\b(DROP\s+TABLE|DROP\s+DATABASE)\b.*;)",
         r"(;\s*(DROP|DELETE|TRUNCATE|ALTER)\b)",
-        r"(\bUNION\b\s+\bSELECT\b)",
-        r"(1\s*=\s*1\b)",
-        r"('\s*(OR|AND)\s+')",
+        r"(\bUNION\b\s+\bSELECT\b\s+\S+\s+FROM\b)",
+        r"('\s*(OR|AND)\s+\d+\s*=\s*\d+)",
     ]
 
     # XSS patterns
     XSS_PATTERNS = [
         r"<script[^>]*>.*?</script>",
-        r"javascript:",
-        r"on\w+\s*=",
+        r"javascript\s*:",
+        r"\bon(click|load|error|mouseover|focus|blur|submit|change|keyup|keydown|input|mouseout)\s*=",
         r"<iframe",
         r"<object",
         r"<embed",
@@ -384,25 +382,8 @@ class InputValidator:
         return False
 
     def _sanitize_content(self, content: str) -> str:
-        """
-        Sanitize content by escaping special characters
-
-        Args:
-            content: Content to sanitize
-
-        Returns:
-            Sanitized content
-        """
-        # Remove null bytes
         content = content.replace('\x00', '')
-
-        # Normalize whitespace
-        content = ' '.join(content.split())
-
-        # In strict mode, escape HTML
-        if self.strict_mode:
-            content = html.escape(content)
-
+        content = content.strip()
         return content
 
     def _validate_path_location(self, path: Path):
@@ -455,7 +436,7 @@ def get_validator(strict_mode: bool = True) -> InputValidator:
         InputValidator instance
     """
     global _default_validator
-    if _default_validator is None:
+    if _default_validator is None or _default_validator.strict_mode != strict_mode:
         _default_validator = InputValidator(strict_mode=strict_mode)
     return _default_validator
 

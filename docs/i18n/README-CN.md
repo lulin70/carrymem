@@ -623,10 +623,10 @@ cm.import_memories(input_path="backup.json")
 **覆盖率**：79%+
 
 **更新日志**：
-- **v0.2.0**：USB 携带加密、自动备份、并发安全、PrefEval 83.0%（200 条）
-- **v0.2.3**：定时整合（schedule/stop）、PrefEval 标准化
-- **v0.2.2**：Token 预算 + 死代码修复 + 安全加固、PrefEval 87.9%
-- **v0.2.1**：共指消解、自动脱敏、QA 提示优化、PrefEval 87.0%（首次超越简单提醒）
+- **v0.2.0**：USB 携带加密、自动备份、并发安全、PrefEval 83.0%（200 条）、8 客户端 MCP 配置
+- **v0.2.3**（重置前）：定时整合（schedule/stop）、PrefEval 标准化
+- **v0.2.2**（重置前）：Token 预算 + 死代码修复 + 安全加固、PrefEval 87.9%
+- **v0.2.1**（重置前）：共指消解、自动脱敏、QA 提示优化
 
 ---
 

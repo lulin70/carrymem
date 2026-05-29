@@ -84,7 +84,7 @@ class AuditLogger:
      )
             conn.commit()
         except sqlite3.Error as e:
-            _audit_logger.warning(f"Audit log_operation failed: {e}")
+            _audit_logger.error(f"Audit log_operation failed: {e}")
 
     def query(
         self,
@@ -136,8 +136,9 @@ class AuditLogger:
                 }
                 results.append(entry)
             return results
-        except sqlite3.Error:
-            return []
+        except sqlite3.Error as e:
+            _audit_logger.error(f"Audit query failed: {e}")
+            raise
 
     def get_stats(self) -> Dict[str, Any]:
         conn = self._get_connection()
@@ -159,5 +160,5 @@ class AuditLogger:
                 "last_activity": last_activity,
             }
         except sqlite3.Error as e:
-            _audit_logger.warning(f"Audit get_stats failed: {e}")
-            return {"total_operations": 0, "by_operation": {}, "last_activity": None}
+            _audit_logger.error(f"Audit get_stats failed: {e}")
+            raise

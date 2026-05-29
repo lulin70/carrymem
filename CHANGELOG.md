@@ -5,6 +5,11 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+> **Version Reset Notice**: In May 2026, the version was reset from v0.4.1 back to v0.2.0
+> to align Git, PyPI, and documentation versions. Entries below v0.2.0 (May-28) are
+> historical records from the pre-reset development cycle (v0.2.1–v0.4.1) and should not
+> be confused with the current v0.2.x series.
+
 ## [0.2.0] - 2026-05-28 (Auto-Backup + Encrypted Carry + Concurrent Safety + Client Integration + E2E Tests)
 
 ### Added

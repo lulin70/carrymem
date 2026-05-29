@@ -277,7 +277,7 @@ class CarryMem:
         manager = BackupManager(db_path, backup_dir=backup_dir)
         return manager.list_backups()
 
-    def restore_backup(self, backup_path: str) -> Dict[str, Any]:
+    def restore_backup(self, backup_path: str, backup_dir: Optional[str] = None) -> Dict[str, Any]:
         if not self._adapter or not isinstance(self._adapter, SQLiteAdapter):
             return {"error": "Restore only supported with SQLiteAdapter"}
 
@@ -287,7 +287,9 @@ class CarryMem:
         if db_path == ":memory:":
             return {"error": "Cannot restore to in-memory database"}
 
-        manager = BackupManager(db_path)
+        if backup_dir is None:
+            backup_dir = os.path.dirname(backup_path)
+        manager = BackupManager(db_path, backup_dir=backup_dir)
         try:
             manager.restore_backup(backup_path)
             return {"restored": True, "backup_path": backup_path}
@@ -648,8 +650,9 @@ class CarryMem:
                             "redact_reason": redact_reason,
                         },
                     }
-            except Exception:
-                pass  # Non-critical: if redaction fails, allow storage
+            except Exception as e:
+                from carrymem.utils.logger import logger
+                logger.warning(f"Auto-redaction check failed, allowing storage as precaution: {e}")
 
         # Use resolved message for classification, but keep original as raw_text
         classify_result = self.classify_message(

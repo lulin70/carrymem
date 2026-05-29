@@ -101,6 +101,7 @@ class MemoryEncryption:
         )
 
     def _make_fernet(self, raw_key: bytes):
+        """Create a Fernet cipher instance from raw key bytes."""
         from cryptography.fernet import Fernet
         fernet_key = base64.urlsafe_b64encode(raw_key)
         return Fernet(fernet_key)
@@ -115,8 +116,8 @@ class MemoryEncryption:
         try:
             with open(key_path, "rb") as f:
                 return f.read()
-        except (IOError, OSError):
-            return None
+        except (IOError, OSError) as e:
+            raise EncryptionError(f"Failed to load key from {key_path}: {e}") from e
 
     def _save_key(self, key: bytes) -> None:
         key_path = self._key_file or self._default_key_path()

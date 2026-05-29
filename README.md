@@ -737,10 +737,10 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 **Coverage**: 79%+
 
 **Changelog**:
-- **v0.2.0**: USB carry encryption, auto-backup, concurrent safety, PrefEval 83.0% (200 items)
-- **v0.2.3**: Consolidation scheduling (schedule/stop), PrefEval standardization
-- **v0.2.2**: Token budget + dead code fix + security, PrefEval 87.9%
-- **v0.2.1**: Coreference resolution, auto-redaction, QA prompt optimization, PrefEval 87.0% (first time surpassing reminder)
+- **v0.2.0**: USB carry encryption, auto-backup, concurrent safety, PrefEval 83.0% (200 items), 8-client MCP setup
+- **v0.2.3** (pre-reset): Consolidation scheduling (schedule/stop), PrefEval standardization
+- **v0.2.2** (pre-reset): Token budget + dead code fix + security, PrefEval 87.9%
+- **v0.2.1** (pre-reset): Coreference resolution, auto-redaction, QA prompt optimization
 
 ---
 

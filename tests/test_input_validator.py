@@ -50,9 +50,13 @@ class TestSQLInjectionDetection:
         with pytest.raises(ValidationError, match="SQL injection"):
             validator.validate_content("1 UNION SELECT * FROM users")
 
-    def test_one_equals_one_detected(self, validator):
+    def test_one_equals_one_in_sql_context_detected(self, validator):
         with pytest.raises(ValidationError, match="SQL injection"):
-            validator.validate_content("1=1")
+            validator.validate_content("' OR 1=1 --")
+
+    def test_one_equals_one_in_normal_text_passes(self, validator):
+        result = validator.validate_content("one equals one is a tautology")
+        assert "tautology" in result
 
     def test_sql_injection_in_query(self, validator):
         with pytest.raises(ValidationError, match="SQL injection"):
@@ -133,13 +137,18 @@ class TestContentValidation:
         result = validator.validate_content("Hello\x00World")
         assert "\x00" not in result
 
-    def test_content_whitespace_normalized(self, validator):
+    def test_content_whitespace_preserved(self, validator):
         result = validator.validate_content("Hello   World")
-        assert "  " not in result
+        assert "Hello   World" in result
 
-    def test_html_escaped_in_strict_mode(self, validator):
+    def test_content_leading_trailing_whitespace_stripped(self, validator):
+        result = validator.validate_content("  Hello World  ")
+        assert result == "Hello World"
+
+    def test_html_not_escaped_in_strict_mode(self, validator):
         result = validator.validate_content("<b>bold</b>")
-        assert "&lt;" in result or "bold" in result
+        assert "<b>" in result
+        assert "bold" in result
 
     def test_html_not_escaped_in_loose_mode(self, loose_validator):
         result = loose_validator.validate_content("<b>bold</b>")
