@@ -337,7 +337,8 @@ def cmd_search(args):
             mt = m.get("type", "")
             mc = m.get("content", "")
             mf = m.get("confidence", 0)
-            print(f"{sk}\t{mt}\t{mc}\t{mf:.2f}")  # fmt: skip
+            _row = f"{sk}\t{mt}\t{mc}\t{mf:.2f}"
+            print(_row)
     else:
         print(f"\n  {_bold('Search:')} {_cyan(parsed.query)} ({len(memories)} results)\n")
         for i, m in enumerate(memories, 1):
@@ -716,8 +717,9 @@ def cmd_import(args):
     errors = result.get("errors", 0)
     total = result.get("total_processed", 0)
 
+    _msg = _green('Import complete:')
     print(
-        f"  {_green('Import complete:')} {imported} imported, {skipped} skipped, {errors} errors ({total} total)"  # fmt: skip
+        f"  {_msg} {imported} imported, {skipped} skipped, {errors} errors ({total} total)"
     )
 
     if errors > 0:
@@ -828,8 +830,9 @@ def cmd_pack(args):
             if parsed.key:
                 print(f"  {_green('✓')} {encrypted_count} encrypted entries included")
             else:
+                _icon = _yellow('✗')
                 print(
-                    f"  {_yellow('✗')} Encrypted entries skipped ({encrypted_count}) (provide --key to include)"  # fmt: skip
+                    f"  {_icon} Encrypted entries skipped ({encrypted_count}) (provide --key to include)"
                 )
 
         # Build pack data
@@ -1135,8 +1138,9 @@ def cmd_unpack(args):
         if cm._adapter and hasattr(cm._adapter, "_embedding_model_name"):
             embedding_model = cm._adapter._embedding_model_name
         if embedding_model:
+            _model_info = _dim(f'ℹ Embedding model: {embedding_model} (vectors will be rebuilt on next recall)')
             print(
-                f"  {_dim(f'ℹ Embedding model: {embedding_model} (vectors will be rebuilt on next recall)')}"  # fmt: skip
+                f"  {_model_info}"
             )
 
         print(f"\n  → Run {_cyan('carrymem setup-mcp --all --global')} to reconnect your AI tools")
@@ -2320,8 +2324,9 @@ def cmd_rules_hub(args):
         return handler(sub_args)
 
     print(f"  {_red('Unknown rules sub-command:')} {sub}")
+    _available = _dim('Available: list, add, delete, match, edit, pause, resume, stats, check, export, import, suggest')
     print(
-        f"  {_dim('Available: list, add, delete, match, edit, pause, resume, stats, check, export, import, suggest')}"  # fmt: skip
+        f"  {_available}"
     )
     return 1
 
@@ -2548,8 +2553,9 @@ def cmd_add_rule(args):
     # Normal mode
     else:
         if not parsed.action or not parsed.trigger:
+            _usage_hint = _red('Missing required arguments. Use:')
             print(
-                f"\n  {_red('Missing required arguments. Use:')} carrymem add-rule <action> --trigger <scene>"  # fmt: skip
+                f"\n  {_usage_hint} carrymem add-rule <action> --trigger <scene>"
             )
             print(f"  {_dim('Or use:')} carrymem add-rule --interactive")
             print(f"  {_dim('Or use:')} carrymem add-rule --template <name>")
@@ -2608,15 +2614,17 @@ def cmd_list_rules(args):
         return 0
 
     if parsed.format == "table":
+        _header = f"\n  {'ID':<14} {'Type':<8} {'Scope':<10} {'Override':<8} {'Trigger':<20} {'Action':<30}"
         print(
-            f"\n  {'ID':<14} {'Type':<8} {'Scope':<10} {'Override':<8} {'Trigger':<20} {'Action':<30}"  # fmt: skip
+            _header
         )
         print(f"  {'─'*14} {'─'*8} {'─'*10} {'─'*8} {'─'*20} {'─'*30}")
         for rule in rules:
             expired = " [EXPIRED]" if rule.is_expired() else ""
             override_str = "HARD" if rule.override else "soft"
+            _row = f"  {rule.id:<14} {rule.rule_type:<8} {rule.scope:<10} {override_str:<8} {rule.trigger[:20]:<20} {rule.action[:30]:<30}{expired}"
             print(
-                f"  {rule.id:<14} {rule.rule_type:<8} {rule.scope:<10} {override_str:<8} {rule.trigger[:20]:<20} {rule.action[:30]:<30}{expired}"  # fmt: skip
+                _row
             )
         print(f"\n  Total: {len(rules)} rules")
         return 0
@@ -2635,8 +2643,9 @@ def cmd_list_rules(args):
         print(f"  {icon} {marker} {_bold(rule.id)}{status_str}{expired_str}")
         print(f"     Trigger: {rule.trigger}")
         print(f"     Action:  {rule.action}")
+        _stats = f"     Type: {rule.rule_type} | Used: {rule.trigger_count}x | Confidence: {rule.confidence:.0%}"
         print(
-            f"     Type: {rule.rule_type} | Used: {rule.trigger_count}x | Confidence: {rule.confidence:.0%}"  # fmt: skip
+            _stats
         )
         if rule.expires_at:
             print(f"     Expires: {rule.expires_at}")
@@ -2849,8 +2858,9 @@ def cmd_check_rules(args):
 
     if health["unused_rules"] > 0:
         unused_count = health["unused_rules"]
+        _hint = _dim(f'💡 {unused_count} rules have never been triggered. Consider reviewing them.')
         print(
-            f"\n  {_dim(f'💡 {unused_count} rules have never been triggered. Consider reviewing them.')}"  # fmt: skip
+            f"\n  {_hint}"
         )
 
     print()
@@ -3108,8 +3118,9 @@ def cmd_edit_rule(args):
         updates["override"] = True
 
     if not updates:
+        _no_changes = _yellow('No changes specified. Use --trigger, --action, --type, --soft, or --hard')
         print(
-            f"\n  {_yellow('No changes specified. Use --trigger, --action, --type, --soft, or --hard')}"  # fmt: skip
+            f"\n  {_no_changes}"
         )
         return 1
 
@@ -3416,8 +3427,9 @@ def cmd_promotion_log(args):
     accepted_s = stats.get("accepted", 0)
     rejected_s = stats.get("rejected", 0)
     expired_s = stats.get("expired", 0)
+    _summary = _dim(f'Total: {total_s} | Pending: {pending_s} | Accepted: {accepted_s} | Rejected: {rejected_s} | Expired: {expired_s}')
     print(
-        f"\n  {_dim(f'Total: {total_s} | Pending: {pending_s} | Accepted: {accepted_s} | Rejected: {rejected_s} | Expired: {expired_s}')}"  # fmt: skip
+        f"\n  {_summary}"
     )
     print()
     return 0
@@ -3482,8 +3494,10 @@ def cmd_refine_rule(args):
             answer_hint = f'carrymem refine-rule --session {parsed.session} --answer "your answer"'
             print(f"\n  {_dim(f'Answer: {answer_hint}')}")
         else:
+            _ready_msg = _yellow('Ready to confirm.')
+            _confirm_cmd = _dim(f'carrymem refine-rule --session {parsed.session} --confirm')
             print(
-                f"\n  {_yellow('Ready to confirm.')} {_dim(f'carrymem refine-rule --session {parsed.session} --confirm')}"  # fmt: skip
+                f"\n  {_ready_msg} {_confirm_cmd}"
             )
         print()
         return 0
@@ -3712,8 +3726,9 @@ def cmd_lesson_log(args):
     accepted_s = stats.get("accepted", 0)
     rejected_s = stats.get("rejected", 0)
     expired_s = stats.get("expired", 0)
+    _summary = _dim(f'Total: {total_s} | Pending: {pending_s} | Accepted: {accepted_s} | Rejected: {rejected_s} | Expired: {expired_s}')
     print(
-        f"\n  {_dim(f'Total: {total_s} | Pending: {pending_s} | Accepted: {accepted_s} | Rejected: {rejected_s} | Expired: {expired_s}')}"  # fmt: skip
+        f"\n  {_summary}"
     )
     print()
     return 0

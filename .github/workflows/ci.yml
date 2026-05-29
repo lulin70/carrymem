@@ -40,30 +40,20 @@ jobs:
           pip install -e ".[dev]" flake8 black isort mypy
 
       - name: Lint — fatal errors only
-        id: lint
         run: |
-          echo "=== flake8 version ===" > /tmp/lint_output.txt
-          flake8 --version >> /tmp/lint_output.txt 2>&1
-          echo "=== python version ===" >> /tmp/lint_output.txt
-          python --version >> /tmp/lint_output.txt 2>&1
-          echo "=== lint results ===" >> /tmp/lint_output.txt
           flake8 src/ tests/ \
             --count --select=E9,F63,F7,F82 \
             --show-source --statistics \
-            >> /tmp/lint_output.txt 2>&1 || true
-          echo "=== exit code: $? ===" >> /tmp/lint_output.txt
-          cat /tmp/lint_output.txt
-          # Fail if any E9/F63/F7/F82 found
-          flake8 src/ tests/ \
-            --count --select=E9,F63,F7,F82 \
-            --show-source --statistics
+            2>&1 | tee /tmp/lint_output.txt
+          echo "flake8 exit code: $?"
 
-      - name: Upload lint log
+      - name: Upload lint log (debug)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: lint-output-log
           path: /tmp/lint_output.txt
+          if-no-files-found: ignore
 
       - name: Lint — warnings (non-blocking)
         run: |
