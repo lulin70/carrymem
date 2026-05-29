@@ -291,13 +291,11 @@ def cmd_list(args):
         print(json.dumps(memories, ensure_ascii=False, indent=2))
     elif parsed.format == "plain":
         for m in memories:
-            print(
-                f"{m.get('storage_key',
-    '')}\t{m.get('type',
-    '')}\t{m.get('content',
-    '')}\t{m.get('confidence',
-     0):.2f}"
-            )
+            key = m.get("storage_key", "")
+            mtype = m.get("type", "")
+            content = m.get("content", "")
+            conf = m.get("confidence", 0)
+            print(f"{key}\t{mtype}\t{content}\t{conf:.2f}")
     else:
         print(f"\n  {_bold(f'Memories')} ({len(memories)} shown, namespace={parsed.namespace})\n")
         for i, m in enumerate(memories, 1):
@@ -767,8 +765,7 @@ def cmd_pack(args):
     parser.add_argument("--no-config", action="store_true", help="Exclude config from pack")
     parser.add_argument("--key", help="Encryption key to include encrypted entries")
     parser.add_argument(
-        "--encrypt", action="store_true",
-        help="Encrypt the .carry file with a password (prompted)"
+        "--encrypt", action="store_true", help="Encrypt the .carry file with a password (prompted)"
     )
     parser.add_argument("--db", help="Database path")
     parser.add_argument("--namespace", "-n", default="default", help="Namespace to pack")
@@ -910,6 +907,7 @@ def cmd_pack(args):
             # Encrypt the JSON payload
             try:
                 from carrymem.security.encryption import MemoryEncryption
+
                 enc = MemoryEncryption(key=encrypt_password)
                 container["payload"] = enc.encrypt(json_bytes.decode("utf-8"))
                 container["encryption_backend"] = enc.backend
@@ -921,6 +919,7 @@ def cmd_pack(args):
         else:
             # Store as base64 of gzip-compressed JSON
             import base64
+
             compressed = gzip.compress(json_bytes)
             container["payload"] = base64.b64encode(compressed).decode("ascii")
 
@@ -1020,6 +1019,7 @@ def cmd_unpack(args):
 
             try:
                 from carrymem.security.encryption import MemoryEncryption
+
                 dec = MemoryEncryption(key=password)
                 payload_json_str = dec.decrypt(payload_str)
             except Exception as e:
@@ -1029,6 +1029,7 @@ def cmd_unpack(args):
         else:
             # Decode base64 → decompress gzip → JSON
             import base64
+
             try:
                 compressed = base64.b64decode(payload_str)
                 payload_json_str = gzip.decompress(compressed).decode("utf-8")
@@ -1090,9 +1091,9 @@ def cmd_unpack(args):
                 data={
                     "memories": memories_data,
                     "source": {
-                        "namespace": (pack_data.get("data", {})
-                                      .get("config") or {})
-                                      .get("namespace", "unknown")
+                        "namespace": (pack_data.get("data", {}).get("config") or {}).get(
+                            "namespace", "unknown"
+                        )
                     },
                 },
                 namespace=parsed.namespace,
@@ -1875,7 +1876,17 @@ def cmd_setup_mcp(args):
     parser.add_argument(
         "--tool",
         "-t",
-        choices=["claude-code", "cursor", "trae", "windsurf", "cline", "openclaw", "kimi-code", "codex", "all"],
+        choices=[
+            "claude-code",
+            "cursor",
+            "trae",
+            "windsurf",
+            "cline",
+            "openclaw",
+            "kimi-code",
+            "codex",
+            "all",
+        ],
         default="all",
         help="Target tool",
     )
@@ -1888,7 +1899,9 @@ def cmd_setup_mcp(args):
         help="Write to global config (all AI tools on this machine share one CarryMem)",
     )
     parser.add_argument("--force", action="store_true", help="Overwrite existing config")
-    parser.add_argument("--uninstall", action="store_true", help="Remove CarryMem MCP config from specified tool(s)")
+    parser.add_argument(
+        "--uninstall", action="store_true", help="Remove CarryMem MCP config from specified tool(s)"
+    )
 
     parsed = parser.parse_args(args)
 
@@ -1898,6 +1911,7 @@ def cmd_setup_mcp(args):
     if not _DEFAULT_DB.parent.exists():
         print(f"  {_dim('Initializing CarryMem for first use...')}")
         from carrymem.constants import initialize_directories
+
         initialize_directories()
 
     if parsed.global_config:
@@ -2135,10 +2149,13 @@ def _setup_mcp_global(parsed):
         print(f"\n  {_dim('Verifying MCP server...')}")
         try:
             import subprocess
+
             cmd_info = _resolve_mcp_command()
             result = subprocess.run(
                 [cmd_info["command"]] + cmd_info["args"] + ["--help"],
-                capture_output=True, text=True, timeout=5
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
             if result.returncode == 0 or "carrymem" in (result.stdout + result.stderr).lower():
                 print(f"  {_green('MCP server:')} ready")
@@ -2348,8 +2365,9 @@ def cmd_rules_hub(args):
 
     print(f"  {_red('Unknown rules sub-command:')} {sub}")
     print(
-    f"  {
-        _dim('Available: list, add, delete, match, edit, pause, resume, stats, check, export, import, suggest')}" )
+        f"  {
+        _dim('Available: list, add, delete, match, edit, pause, resume, stats, check, export, import, suggest')}"
+    )
     return 1
 
 
@@ -2913,9 +2931,10 @@ def cmd_check_rules(args):
     if health["unused_rules"] > 0:
         unused_count = health["unused_rules"]
         print(
-    f"\n  {
+            f"\n  {
         _dim(
-            f'💡 {unused_count} rules have never been triggered. Consider reviewing them.')}" )
+            f'💡 {unused_count} rules have never been triggered. Consider reviewing them.')}"
+        )
 
     print()
     return 0 if health["is_healthy"] else 1

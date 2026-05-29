@@ -136,34 +136,40 @@ def detect_merge_conflicts(
 
             if inc.action.lower().strip() == ext.action.lower().strip():
                 if inc_priority > ext_priority:
-                    conflicts.append(MergeConflict(
-                        incoming_rule=inc,
-                        existing_rule=ext,
-                        conflict_type="scope_escalation",
-                        severity="low",
-                        reason=f"Incoming [{inc.scope}] rule escalates over existing [{ext.scope}] rule on trigger '{inc.trigger}'",
-                        suggestion="Accept incoming rule — higher scope priority",
-                    ))
+                    conflicts.append(
+                        MergeConflict(
+                            incoming_rule=inc,
+                            existing_rule=ext,
+                            conflict_type="scope_escalation",
+                            severity="low",
+                            reason=f"Incoming [{inc.scope}] rule escalates over existing [{ext.scope}] rule on trigger '{inc.trigger}'",
+                            suggestion="Accept incoming rule — higher scope priority",
+                        )
+                    )
                 continue
 
             if _is_contradiction(inc, ext):
-                conflicts.append(MergeConflict(
-                    incoming_rule=inc,
-                    existing_rule=ext,
-                    conflict_type="type_contradiction",
-                    severity="critical",
-                    reason=f"Contradiction: [{inc.rule_type}] vs [{ext.rule_type}] on trigger '{inc.trigger}'",
-                    suggestion=_suggest_contradiction_resolution(inc, ext),
-                ))
+                conflicts.append(
+                    MergeConflict(
+                        incoming_rule=inc,
+                        existing_rule=ext,
+                        conflict_type="type_contradiction",
+                        severity="critical",
+                        reason=f"Contradiction: [{inc.rule_type}] vs [{ext.rule_type}] on trigger '{inc.trigger}'",
+                        suggestion=_suggest_contradiction_resolution(inc, ext),
+                    )
+                )
             else:
-                conflicts.append(MergeConflict(
-                    incoming_rule=inc,
-                    existing_rule=ext,
-                    conflict_type="trigger_overlap",
-                    severity="medium",
-                    reason=f"Same trigger '{inc.trigger}', different actions",
-                    suggestion="Keep higher-scope rule or merge actions",
-                ))
+                conflicts.append(
+                    MergeConflict(
+                        incoming_rule=inc,
+                        existing_rule=ext,
+                        conflict_type="trigger_overlap",
+                        severity="medium",
+                        reason=f"Same trigger '{inc.trigger}', different actions",
+                        suggestion="Keep higher-scope rule or merge actions",
+                    )
+                )
 
     return conflicts
 
@@ -278,9 +284,13 @@ def merge_rules(
     for inc in incoming:
         if inc.id in existing_ids:
             skipped.append(inc)
-            audit_entries.append(_make_audit_entry(
-                "skip", inc.id, {"reason": "Rule ID already exists"},
-            ))
+            audit_entries.append(
+                _make_audit_entry(
+                    "skip",
+                    inc.id,
+                    {"reason": "Rule ID already exists"},
+                )
+            )
             continue
 
         if inc.id in conflict_map:
@@ -290,22 +300,29 @@ def merge_rules(
 
                 if decision == MergeDecision.KEEP_INCOMING:
                     replaced_ids.append(conflict.existing_rule.id)
-                    audit_entries.append(_make_audit_entry(
-                        "replace", inc.id,
-                        {"decision": "keep_incoming", "conflict": conflict.conflict_type,
-                         "replaced_rule_id": conflict.existing_rule.id},
-                        reason=f"Incoming [{
-    inc.scope}] overrides existing [{
-        conflict.existing_rule.scope}]",
-                    ))
+                    audit_entries.append(
+                        _make_audit_entry(
+                            "replace",
+                            inc.id,
+                            {
+                                "decision": "keep_incoming",
+                                "conflict": conflict.conflict_type,
+                                "replaced_rule_id": conflict.existing_rule.id,
+                            },
+                            reason=f"Incoming [{inc.scope}] overrides existing [{conflict.existing_rule.scope}]",
+                        )
+                    )
                 elif decision == MergeDecision.KEEP_EXISTING:
-                    audit_entries.append(_make_audit_entry(
-                        "skip", inc.id,
-                        {"decision": "keep_existing", "conflict": conflict.conflict_type},
-                        reason=f"Existing [{
+                    audit_entries.append(
+                        _make_audit_entry(
+                            "skip",
+                            inc.id,
+                            {"decision": "keep_existing", "conflict": conflict.conflict_type},
+                            reason=f"Existing [{
     conflict.existing_rule.scope}] overrides incoming [{
         inc.scope}]",
-                    ))
+                        )
+                    )
                 elif decision == MergeDecision.MODIFY_INCOMING:
                     modified_rule = Rule(
                         trigger=inc.trigger,
@@ -320,40 +337,47 @@ def merge_rules(
                     modified.append((inc, modified_rule))
                     if conflict.existing_rule.override:
                         downgrade_override_ids.append(conflict.existing_rule.id)
-                    audit_entries.append(_make_audit_entry(
-                        "modify", inc.id,
-                        {
-                            "decision": "modify_incoming",
-                            "original_action": inc.action,
-                            "modified_action": modified_rule.action,
-                            "original_scope": inc.scope,
-                            "modified_scope": "negotiated",
-                        },
-                        reason="Negotiated: adapted incoming rule to coexist with existing",
-                    ))
+                    audit_entries.append(
+                        _make_audit_entry(
+                            "modify",
+                            inc.id,
+                            {
+                                "decision": "modify_incoming",
+                                "original_action": inc.action,
+                                "modified_action": modified_rule.action,
+                                "original_scope": inc.scope,
+                                "modified_scope": "negotiated",
+                            },
+                            reason="Negotiated: adapted incoming rule to coexist with existing",
+                        )
+                    )
                 elif decision == MergeDecision.KEEP_BOTH:
-                    audit_entries.append(_make_audit_entry(
-                        "accept", inc.id,
-                        {"decision": "keep_both", "conflict": conflict.conflict_type},
-                        reason="Both rules kept — user should review",
-                    ))
+                    audit_entries.append(
+                        _make_audit_entry(
+                            "accept",
+                            inc.id,
+                            {"decision": "keep_both", "conflict": conflict.conflict_type},
+                            reason="Both rules kept — user should review",
+                        )
+                    )
                 else:
-                    audit_entries.append(_make_audit_entry(
-                        "skip", inc.id,
-                        {"decision": "skip"},
-                    ))
+                    audit_entries.append(
+                        _make_audit_entry(
+                            "skip",
+                            inc.id,
+                            {"decision": "skip"},
+                        )
+                    )
 
             has_keep_incoming = any(
-                c.decision == MergeDecision.KEEP_INCOMING
-                for c in conflict_map[inc.id]
+                c.decision == MergeDecision.KEEP_INCOMING for c in conflict_map[inc.id]
             )
             has_skip = any(
                 c.decision in (MergeDecision.KEEP_EXISTING, MergeDecision.SKIP)
                 for c in conflict_map[inc.id]
             )
             has_modified = any(
-                c.decision == MergeDecision.MODIFY_INCOMING
-                for c in conflict_map[inc.id]
+                c.decision == MergeDecision.MODIFY_INCOMING for c in conflict_map[inc.id]
             )
 
             if has_skip and not has_keep_incoming:
@@ -369,11 +393,14 @@ def merge_rules(
                 accepted.append(inc)
         else:
             accepted.append(inc)
-            audit_entries.append(_make_audit_entry(
-                "accept", inc.id,
-                {"decision": "no_conflict"},
-                reason="No conflict with existing rules",
-            ))
+            audit_entries.append(
+                _make_audit_entry(
+                    "accept",
+                    inc.id,
+                    {"decision": "no_conflict"},
+                    reason="No conflict with existing rules",
+                )
+            )
 
     return MergeResult(
         strategy=strategy,
