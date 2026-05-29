@@ -2,7 +2,7 @@
   "name": "vscode-carrymem",
   "displayName": "CarryMem - AI Memory & Rules",
   "description": "Manage AI memory rules with scope-aware context injection for LLM-assisted development",
-  "version": "0.4.0",
+  "version": "0.2.0",
   "publisher": "carrymem",
   "license": "MIT",
   "engines": {

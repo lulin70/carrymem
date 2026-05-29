@@ -131,8 +131,8 @@ carrymem.security.validator.*
 
 ## 版本管理策略
 
-- **补丁版本** (0.1.x → 0.2.2): Bug 修复、新功能（Stable API 不变）
-- **次版本** (0.1.x → 0.2.2): 新功能、Experimental→Stable 升级可能
+- **补丁版本** (0.1.x → 0.2.0): Bug 修复、新功能（Stable API 不变）
+- **次版本** (0.1.x → 0.2.0): 新功能、Experimental→Stable 升级可能
 - **主版本** (0.x → 1.0.0): 可能有破坏性变更
 
 ### 废弃流程

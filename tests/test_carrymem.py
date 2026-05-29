@@ -1,4 +1,4 @@
-"""Comprehensive test suite for CarryMem v0.3.0.
+"""Comprehensive test suite for CarryMem v0.2.0.
 
 Covers: classification, storage, recall, declare, profile, namespace,
 build_system_prompt, plugin loader, and MCP tools.

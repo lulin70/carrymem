@@ -408,7 +408,7 @@ carrymem whoami
 ### Installation
 
 1. Open VS Code
-2. Install from VSIX: `code --install-extension vscode-carrymem-0.2.2.vsix`
+2. Install from VSIX: `code --install-extension vscode-carrymem-0.2.0.vsix`
 3. Or press F5 in the extension directory to run in debug mode
 
 ### Features
