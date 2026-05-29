@@ -347,7 +347,7 @@ def cmd_search(args):
             mt = m.get("type", "")
             mc = m.get("content", "")
             mf = m.get("confidence", 0)
-            print(f"{sk}\t{mt}\t{mc}\t{mf:.2f}")
+            print(f"{sk}\t{mt}\t{mc}\t{mf:.2f}")  # fmt: skip
     else:
         print(f"\n  {_bold('Search:')} {_cyan(parsed.query)} ({len(memories)} results)\n")
         for i, m in enumerate(memories, 1):
