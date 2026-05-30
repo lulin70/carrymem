@@ -29,7 +29,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Compile all .py files
         run: |
@@ -78,7 +78,7 @@ jobs:
             -q
 
       - name: Enforce minimum coverage
-        if: matrix.python-version == '3.11'
+        if: matrix.python-version == '3.12'
         run: |
           python -c "
           import re, sys
@@ -108,7 +108,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install build tools
         run: |
@@ -152,7 +152,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install linters
         run: |
@@ -181,7 +181,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Check for Chinese in non-i18n files
         run: |
