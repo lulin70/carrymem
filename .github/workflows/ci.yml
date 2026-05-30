@@ -32,22 +32,8 @@ jobs:
 
       - name: Compile all .py files
         run: |
-          python3 -c "
-          import ast, os, glob, sys
-          errors = []
-          for fp in glob.glob('src/**/*.py', recursive=True) + glob.glob('tests/**/*.py', recursive=True):
-              if '__pycache__' in fp: continue
-              try:
-                  ast.parse(open(fp).read(), filename=fp)
-              except SyntaxError as e:
-                  errors.append(f'{fp}:{e.lineno}: {e.msg}')
-          if errors:
-              print(f'ERROR: {len(errors)} syntax error(s):')
-              for e in errors: print(f'  {e}')
-              sys.exit(1)
-          else:
-              print(f'OK: {len(list(glob.glob(\"src/**/*.py\", recursive=True)))} source files compiled')
-          "
+          python3 -m py_compile src/carrymem/__init__.py && echo "OK: core compiled"
+          find src tests -name "*.py" ! -path "*__pycache__*" -exec python3 -m py_compile {} + && echo "OK: all files compiled"
 
   # ═══════════════════════════════════════
   # GATE 1: Unit Tests (THE HARD GATE)
