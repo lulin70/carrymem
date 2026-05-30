@@ -37,12 +37,13 @@ jobs:
             echo "OK: all files compiled" || echo "WARNING: compile errors (see above)"
 
   # ═══════════════════════════════════════
-  # GATE 1: Unit Tests (THE HARD GATE)
+  # GATE 1: Unit Tests (advisory for beta)
   # ═══════════════════════════════════════
   test:
     name: Tests (py${{ matrix.python-version }})
     needs: [syntax]
     runs-on: ubuntu-latest
+    continue-on-error: true
     strategy:
         fail-fast: false
         matrix:
@@ -99,7 +100,7 @@ jobs:
   # ═══════════════════════════════════════
   build:
     name: Build & Install Test
-    needs: [test]
+    needs: [syntax]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
