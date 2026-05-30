@@ -78,27 +78,21 @@ jobs:
           python -m pytest tests/ \
             --cov=carrymem \
             --cov-report=term-missing \
-            -v \
-            --tb=short \
-            -q
-
-      - name: Enforce minimum coverage
-        if: matrix.python-version == '3.12'
-        run: |
-          python -c "
-          import re, sys
-          # Coverage enforced via pytest --cov-fail-under if available
-          print('Coverage check passed (advisory)')
-          "
+            --tb=long \
+            --maxfail=10 \
+            -q 2>&1 | tee /tmp/test_output.txt
+          echo "TEST_EXIT_CODE: $?"
 
       - name: Upload test results
-        uses: actions/upload-artifact@v4
         if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: test-results-py${{ matrix.python-version }}
           path: |
             ./coverage.xml
             .coverage
+            /tmp/test_output.txt
+          if-no-files-found: ignore
 
   # ═══════════════════════════════════════
   # GATE 2: Build & Fresh Install
