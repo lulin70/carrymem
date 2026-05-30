@@ -19,7 +19,7 @@ CarryMem fixes this. It's a lightweight, zero-dependency memory system that stor
   <img src="https://img.shields.io/badge/tests-3050%2B%20passing-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-79%25%2B-green" alt="Coverage">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval Academic Benchmark"></a>
-  <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python">
+  <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
 </p>
 
 **Topics**: `ai-memory` `mcp` `claude-code` `agent-memory` `cursor` `obsidian` `preference-injection` `sqlite` `llm-tools` `portable-memory`
@@ -180,9 +180,31 @@ User Input → Auto-Classification (7 types, 88% rule-based) → Smart Storage (
 pip install carrymem
 ```
 
+> **Requires Python 3.12+**. Check your version: `python --version`
+
 > **From PyPI**: [https://pypi.org/project/carrymem/](https://pypi.org/project/carrymem/)
 >
 > **For development**: `git clone https://github.com/lulin70/carrymem.git && cd carrymem && pip install -e ".[dev]"`
+
+### System Requirements
+
+- **Python**: ≥3.12 (64-bit)
+- **OS**: macOS 10.15+, Ubuntu 20.04+, Windows 10+
+- **Disk**: ~5MB for core, ~200MB with semantic search
+- **Memory**: ~50MB base
+
+### Dependencies
+
+| Feature | Package | Install |
+|---------|---------|---------|
+| Core | PyYAML≥5.0 | `pip install carrymem` (included) |
+| Multi-language | pycld2, langdetect | `pip install carrymem[language]` |
+| Semantic Search | sqlite-vec, sentence-transformers | `pip install carrymem[semantic]` |
+| Encryption | cryptography≥41.0 | `pip install carrymem[encryption]` |
+| Full (all features) | all above | `pip install carrymem[full]` |
+| Development | pytest, black, flake8... | `pip install -e ".[dev]"` |
+
+> **Zero LLM dependency for core features** — classification uses rule engine only.
 
 ### Verify Installation
 
@@ -194,7 +216,7 @@ carrymem version
 
 ```bash
 # macOS (add to ~/.zshrc)
-export PATH="$HOME/Library/Python/3.9/bin:$PATH"
+export PATH="$HOME/Library/Python/3.12/bin:$PATH"
 
 # Linux (add to ~/.bashrc)
 export PATH="$HOME/.local/bin:$PATH"

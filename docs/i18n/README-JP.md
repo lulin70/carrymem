@@ -13,7 +13,7 @@
   <img src="https://img.shields.io/badge/tests-3050%2B%20passing-brightgreen" alt="テスト">
   <img src="https://img.shields.io/badge/coverage-79%25%2B-green" alt="カバレッジ">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval 学術ベンチマーク"></a>
-  <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python">
+  <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
 </p>
 
 ---
@@ -186,6 +186,26 @@ pip install carrymem
 >
 > **開発モード**: `git clone https://github.com/lulin70/carrymem.git && cd carrymem && pip install -e ".[dev]"`
 
+### システム要件
+
+- **Python**: ≥3.12（64 ビット）
+- **OS**: macOS 10.15+, Ubuntu 20.04+, Windows 10+
+- **ディスク**: コア機能約 5MB、セマンティック検索約 200MB
+- **メモリ**: ベース約 50MB
+
+### 依存関係
+
+| 機能 | パッケージ | インストール |
+|------|-----------|-------------|
+| コア | PyYAML≥5.0 | `pip install carrymem` に含む |
+| 多言語 | pycld2, langdetect | `pip install carrymem[language]` |
+| セマンティック検索 | sqlite-vec, sentence-transformers | `pip install carrymem[semantic]` |
+| 暗号化 | cryptography≥41.0 | `pip install carrymem[encryption]` |
+| 全機能 | 上記すべて | `pip install carrymem[full]` |
+| 開発 | pytest, black, flake8... | `pip install -e ".[dev]"` |
+
+> **コア機能はゼロ LLM 依存** — 分類はルールエンジンのみ使用。LLM 呼び出し不要。
+
 ### インストール確認
 
 ```bash
@@ -196,7 +216,7 @@ carrymem version
 
 ```bash
 # macOS（~/.zshrc に追加）
-export PATH="$HOME/Library/Python/3.9/bin:$PATH"
+export PATH="$HOME/Library/Python/3.12/bin:$PATH"
 
 # Linux（~/.bashrc に追加）
 export PATH="$HOME/.local/bin:$PATH"

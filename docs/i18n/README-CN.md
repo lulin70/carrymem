@@ -13,7 +13,7 @@
   <img src="https://img.shields.io/badge/tests-3050%2B%20passing-brightgreen" alt="测试">
   <img src="https://img.shields.io/badge/coverage-79%25%2B-green" alt="覆盖率">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval 学术基准"></a>
-  <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python">
+  <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
 </p>
 
 ---
@@ -86,6 +86,38 @@
 ---
 
 ## 快速开始
+
+### 系统要求
+
+- **Python**: ≥3.12（64 位）
+- **操作系统**: macOS 10.15+, Ubuntu 20.04+, Windows 10+
+- **磁盘空间**: 核心功能约 5MB，语义搜索约 200MB
+- **内存**: 基础约 50MB
+
+### 安装方式
+
+```bash
+# 基础安装（仅核心功能）
+pip install carrymem
+
+# 完整安装（含多语言 + 语义搜索 + 加密）
+pip install carrymem[full]
+
+# 开发模式（含测试工具）
+git clone https://github.com/lulin70/carrymem.git
+cd carrymem && pip install -e ".[dev]"
+```
+
+### 依赖说明
+
+| 功能 | 依赖包 | 安装命令 |
+|------|--------|----------|
+| 核心功能 | PyYAML≥5.0 | 自动包含 |
+| 多语言检测 | pycld2, langdetect | `pip install carrymem[language]` |
+| 语义搜索 | sqlite-vec, sentence-transformers | `pip install carrymem[semantic]` |
+| 加密存储 | cryptography≥41.0 | `pip install carrymem[encryption]` |
+
+> **核心功能零 LLM 依赖** — 分类使用内置规则引擎，无需调用任何大模型。
 
 ### 用 Cursor / Claude Code / TRAE？
 
