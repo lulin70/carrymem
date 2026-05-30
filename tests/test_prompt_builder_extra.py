@@ -1133,9 +1133,13 @@ class TestCarryMemExtra:
         db_path = tmp.name
         tmp.close()
         cm = CarryMem(storage="sqlite", db_path=db_path)
+        backup_dir = os.path.join(os.path.dirname(db_path), "backups")
+        nonexistent_backup = os.path.join(backup_dir, "no_such_backup.db")
         # Try to restore from a nonexistent backup file
-        result = cm.restore_backup("/nonexistent/backup.bak")
+        result = cm.restore_backup(nonexistent_backup)
         assert isinstance(result, dict)
+        assert result["restored"] is False
+        assert "error" in result
         cm.close()
         try:
             os.remove(db_path)

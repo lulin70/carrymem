@@ -1489,6 +1489,7 @@ class TestBackupExtra:
         tmp = tempfile.mkdtemp()
         try:
             db_path = os.path.join(tmp, "test.db")
+            backup_dir = os.path.join(tmp, "backups")
             import sqlite3
 
             conn = sqlite3.connect(db_path)
@@ -1496,8 +1497,8 @@ class TestBackupExtra:
             conn.commit()
             conn.close()
 
-            manager = BackupManager(db_path)
-            nonexistent = os.path.join(tmp, "backups", "memories_20250101_000000.db")
+            manager = BackupManager(db_path, backup_dir=backup_dir)
+            nonexistent = os.path.join(backup_dir, "memories_20250101_000000.db")
             with pytest.raises(FileNotFoundError, match="Backup not found"):
                 manager.restore_backup(nonexistent)
         finally:
