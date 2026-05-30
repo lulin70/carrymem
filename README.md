@@ -12,6 +12,18 @@ CarryMem fixes this. It's a lightweight, zero-dependency memory system that stor
 
 **English** | [中文](docs/i18n/README-CN.md) | [日本語](docs/i18n/README-JP.md)
 
+---
+
+## 🌟 The 30-Second Version
+
+> **你每天见客户、开会、聊天，AI 问你一句你答一句，下次对话它又忘了你是谁。**
+>
+> CarryMem 让 AI **自动记住你的偏好和决策**——不用每次重复说。装一次，所有 AI 工具通用。
+
+*Technical users: see [PrefEval benchmarks](https://arxiv.org/abs/2410.01373) (83.0% ICLR 2025 Oral) and [architecture docs](#-architecture) below.*
+
+---
+
 <p align="center">
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
