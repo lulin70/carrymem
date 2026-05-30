@@ -152,7 +152,7 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
-    python_requires=">=3.9",
+    python_requires=">=3.11",
     keywords="ai memory classification mcp agent persistence portable",
     cmdclass={
         "install": PostInstallCommand,
