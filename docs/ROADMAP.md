@@ -30,7 +30,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 - Second digit changes for GA milestones (API stability guarantee)
 - No "v1.0.0 jump" — earn it through proven production usage
 
-> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. Current version is v0.2.4, including auto-backup, encrypted .carry files, concurrent safety, E2E tests, PrefEval 87.9%, state/event version chain, security hardening, preference injection optimization, context.py modularization, and consolidation scheduling. Next milestones: v0.3.0 (GA).
+> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. Current version is v0.2.4, including auto-backup, encrypted .carry files, concurrent safety, E2E tests, **PrefEval 83.0%** (200-sample, 3-condition canonical), state/event version chain, security hardening, preference injection optimization, context.py modularization, and consolidation scheduling. Next milestones: v0.3.0 (GA).
 
 ---
 
@@ -418,15 +418,16 @@ See CHANGELOG.md for detailed history.
 
 ### ✅ v0.2.2 — PrefEval Violation Optimization + Version Chain
 
-**Theme**: PrefEval 87.9% + state/event version chain + security hardening
+**Theme**: PrefEval optimization + state/event version chain + security hardening
 **Principle**: #3 PrefEval focus + #1 Lightweight
 
 **P0 — Violation Rate Optimization** (DONE):
 - [x] Analyze PrefEval 200-sample violation cases
 - [x] Fix coreference replacement text injection vulnerability (security)
 - [x] Preference token budget 40%→60%, preventing preference truncation
-- [x] PrefEval 200-sample: CarryMem 87.9% > reminder 86.0% > zero-shot 79.5%
+- [x] PrefEval 200-sample: CarryMem **87.9%** (single-condition peak)
 - [x] Update README PrefEval progress table (EN/CN/JP)
+> *Historical note: Peak single-condition result. Canonical: **83.0%** (3-condition).*
 
 **P0 — Version Chain** (DONE):
 - [x] Add `memory_nature`(state/event) + `version_chain_id` + `version_number` fields
@@ -447,9 +448,10 @@ See CHANGELOG.md for detailed history.
 
 **P0 — PrefEval Fair Benchmark** (DONE):
 - [x] 200-sample, 3-condition comparison (zero-shot/reminder/carrymem)
-- [x] CarryMem 85.0% > reminder 83.0% > zero-shot 69.5% (seed=42)
+- [x] CarryMem **85.0%** > reminder 83.0% > zero-shot 69.5% (seed=42)
 - [x] SQLite "database is locked" fix (busy_timeout + _auto_supersede commit)
 - [x] PrefEval script: force_type + no noise + include_question=True + max_tokens=500
+> *Historical note: seed=42 fair comparison result. Canonical: **83.0%** (latest run).*
 
 **P1 — Consolidation Scheduling** (DONE):
 - [x] `schedule_consolidation(interval_hours=1)` method
@@ -494,7 +496,7 @@ See CHANGELOG.md for detailed history.
 | v0.3.0 (pre-reset) | 1900+ | ~85% | +Knowledge CJK +relevance scoring |
 | v0.4.0 (pre-reset) | 1814 | ~77% | +Rule Scopes +Skill Format +VS Code Extension |
 | v0.4.1 (pre-reset) | 2056 | 79% | +Core Loop Fix +Auto Rule Suggestion +Security |
-| **v0.2.4 (current)** | **3050+** | **79%+** | **+Recall Purity +Scope Injection +PrefEval 0.940 +8-client MCP** |
+| **v0.2.4 (current)** | **3050+** | **79%+** | **+Recall Purity +Scope Injection +PrefEval **83.0%** +8-client MCP** |
 
 ---
 

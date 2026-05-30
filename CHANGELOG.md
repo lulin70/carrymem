@@ -123,10 +123,14 @@ Experience Learning: Failure → Avoidance Rules. 793 tests.
 Auto-Promotion: Memory → Rule Candidate Generation. 746 tests.
 
 ### [0.2.3] - 2026-05-25 (pre-reset)
-Consolidation Scheduling + PrefEval Standardization. PrefEval 85.0% > Reminder 83.0%.
+Consolidation Scheduling + PrefEval Standardization.
+PrefEval: CarryMem 85.0% > Reminder 83.0% > Zero-shot 69.5% (seed=42, 200-sample).
+> *Note: Historical result from optimization cycle. Canonical benchmark: [83.0%](README.md) (v0.2.4 final).*
 
 ### [0.2.2] - 2026-05-24 (pre-reset)
-PrefEval Violation Optimization + Version Chain + Security Hardening. PrefEval 87.9%.
+PrefEval Violation Optimization + Version Chain + Security Hardening.
+PrefEval: CarryMem 87.9% (single-condition, 200-sample optimization run).
+> *Note: Peak single-condition result. Canonical 3-condition benchmark: [83.0%](README.md).*
 
 ### [0.2.1] - 2026-05-22 (pre-reset)
 Coreference Resolution + Auto-redaction + QA Prompt Optimization. 2883 tests, 80.86%.
