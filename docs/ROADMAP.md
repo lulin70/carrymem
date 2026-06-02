@@ -483,6 +483,140 @@ See CHANGELOG.md for detailed history.
 
 ---
 
+## Post-Beta Roadmap — Competitive Intelligence Absorption
+
+> **Source**: DevSquad 4-role review (Architect + PM + Security + DevOps)
+> **Date**: 2026-06-02 | **Reviewed Projects**: Lum1104/Understand-Anything (v2.7.3) + rtk-ai/rtk (v0.40.0)
+> **Rule**: Beta frozen — no code changes until post-release. These items are recorded for v0.2.5+ planning.
+
+### Analysis Summary
+
+| Dimension | Understand-Anything | rtk | CarryMem Current |
+|-----------|---------------------|-----|------------------|
+| **Positioning** | Code → Knowledge Graph | Token-saving proxy | AI Memory Layer |
+| **Languages** | 8 (EN/ZH-CN/ZH-TW/JA/KO/ES/TR/RU) | 7 (EN/FR/ZH/JA/KO/ES/PT) | 3 (EN/CN/JP) |
+| **Platforms** | 14 (Plugin + install.sh) | 14 (Hook + Plugin) | 9 (MCP stdio) |
+| **Tech Stack** | TypeScript + Tree-sitter + LLM | Rust (single binary) | Python + SQLite |
+| **Key Differentiator** | Visual Dashboard + Guided Tour | `rtk gain` value metrics | Zero-LLM classification (88%) |
+
+### ✅ Consensus: ABSORB (4/4 roles agreed)
+
+#### P0-1: Multi-Language Expansion (KO + ZH-TW)
+
+| Role | Verdict | Rationale |
+|------|---------|-----------|
+| Architect | ✅ Feasible (5/5) | i18n template exists, translation-only effort |
+| PM | ✅ High Value (9/10) | Korean = Asia AI hub, ZH-TW = Taiwan/HK market |
+| Security | ✅ Zero Risk | Documentation only, no code change |
+| DevOps | ✅ Low Cost | MD files only, no CI impact |
+
+**Target**: v0.2.5 (post-Beta patch) or v0.3.0
+**Scope**: Add `README-KO.md` + `README-ZH-TW.md` + update language switcher in all READMEs
+
+---
+
+#### P1-1: `carrymem stats --value` (Value Perception Command)
+
+**Inspired by**: rtk's `rtk gain` — real-time token savings analytics
+
+| Role | Verdict | Rationale |
+|------|---------|-----------|
+| Architect | ✅ Reuse existing (4/5) | Extends `stats` command, adds value metrics |
+| PM | ✅ ROI Driver (9/10) | Users who see value → retain 3x longer |
+| Security | ✅ Low Risk | Read-only stats, no data exposure |
+| DevOps | ✅ Zero Infra | No new dependencies |
+
+**Proposed Output**:
+```
+$ carrymem stats --value
+╭─────────────────────────────────────────╮
+│ CarryMem Value Report                   │
+├─────────────────────────────────────────┤
+│ Memories Stored:        147             │
+│ Rules Active:           23              │
+│ Sessions Remembered:    12              │
+│ Repetitions Avoided:    ~340 est.       │
+│ Tokens Saved (est.):    ~17,000         │
+│ Identity Coverage:      87%             │
+│ Days Since First Use:   23              │
+╰─────────────────────────────────────────╯
+```
+
+**Target**: v0.2.5
+
+---
+
+#### P1-2: `.carry` Team Sharing Workflow Enhancement
+
+**Inspired by**: UA's "commit knowledge graph to Git" pattern
+
+| Role | Verdict | Rationale |
+|------|---------|-----------|
+| Architect | ✅ Already Works (5/5) | `.carry` files are git-friendly by design |
+| PM | ✅ Differentiator (8/10) | Competitors can't do encrypted portable memory |
+| Security | ✅ AES-128 Protected | Encryption already verified |
+| DevOps | ✅ No Change Needed | Just documentation enhancement |
+
+**Action**: Add "Team Sharing" section to README / USER_GUIDE:
+```bash
+# Share your identity with teammates (encrypted):
+carrymem pack --output team-identity.carry
+git add team-identity.carry && git commit -m "share identity"
+
+# Teammate imports:
+carrymem unpack team-identity.carry
+```
+
+**Target**: v0.2.4 (documentation only, can ship with Beta)
+
+---
+
+### ⚠️ Consensus: CONDITIONAL ABSORB (needs further discussion)
+
+#### P2-1: Web Dashboard (Optional Dependency)
+
+**Inspired by**: UA's interactive knowledge graph dashboard
+
+| Role | Verdict | Condition |
+|------|---------|-----------|
+| Architect | ⚠️ Feasible but heavy | Requires Streamlit/FastAPI as optional dep |
+| PM | ⚠️ Nice-to-have | Visual users love it; CLI purists don't care |
+| Security | ⚠️ New attack surface | Web server = new vuln vector |
+| DevOps | ⚠️ Deployment complexity | Docker already solves this |
+
+**Decision**: Defer to **v0.3.0 GA** as optional `carrymem[dashboard]` extra.
+**Condition**: Must be opt-in (`pip install carrymem[dashboard]`), never auto-enabled.
+
+---
+
+#### P2-2: Git Post-Commit Auto-Consolidation Hook
+
+**Inspired by**: UA's `--auto-update` post-commit hook
+
+| Role | Verdict | Condition |
+|------|---------|-----------|
+| Architect | ⚠️ Simple implementation | `carrymem hook install --post-commit` wrapper |
+| PM | ⚠️ Power user feature | Most Beta users won't use this |
+| Security | ⚠️ Hook execution risk | Must validate hook script integrity |
+| DevOps | ✅ Low complexity | Just a .git/hooks file template |
+
+**Decision**: Defer to **v0.3.0**, implement as opt-in hook only.
+
+---
+
+### ❌ Consensus: DO NOT ABSORB (4/4 roles agreed)
+
+| Feature | Source | Reason to Skip |
+|---------|--------|----------------|
+| **Rust rewrite** | rtk | Python ecosystem is our strength; SQLite/MCP integration is Python-native |
+| **Tree-sitter integration** | UA | Out of scope — we do memory, not code analysis |
+| **Karpathy Wiki parser** | UA | Niche feature; Obsidian adapter covers our knowledge use case |
+| **Hook-based command rewriting** | rtk | MCP protocol is our integration layer; hooks are platform-specific |
+| **Single binary distribution** | rtk | Docker image (Glama) already provides this; pip is our primary channel |
+| **Persona-adaptive UI** | UA | We serve AI agents, not humans directly; rules engine is our "persona" system |
+
+---
+
 ## Test Coverage Progress
 
 | Version | Total Tests | Coverage | Key Addition |
