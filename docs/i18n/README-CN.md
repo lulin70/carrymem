@@ -254,7 +254,7 @@ print(cm.build_system_prompt())                          # 注入任何 AI
 cm.close()
 ```
 
-### 命令行（40+ 命令）
+### 命令行（50+ 命令）
 
 ```bash
 carrymem init                           # 初始化

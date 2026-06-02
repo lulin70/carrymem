@@ -2,7 +2,7 @@
 
 ## 系统要求
 
-- **Python**: 3.9+
+- **Python**: ≥3.12（64 位）
 - **操作系统**: macOS、Linux、Windows（推荐 WSL2）
 - **磁盘**: 包体约 10MB，每个数据库约 1MB
 - **可选**: Node.js 18+（用于 VS Code 扩展）
@@ -25,7 +25,7 @@ carrymem version
 **macOS**：
 ```bash
 # 添加到 ~/.zshrc
-export PATH="$HOME/Library/Python/3.9/bin:$PATH"
+export PATH="$HOME/Library/Python/3.12/bin:$PATH"
 
 # 重新加载
 source ~/.zshrc

@@ -39,7 +39,7 @@ carrymem init
 ```
 
 This creates:
-- Config file: `~/.carrymem/config.json`
+- Config file: `~/.carrymem/config.yaml`
 - Database: `~/.carrymem/memories.db`
 
 ### 2. Connect Your AI Tools (1 minute)

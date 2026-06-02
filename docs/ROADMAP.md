@@ -366,9 +366,9 @@ See CHANGELOG.md for detailed history.
 - Storage (3): classify_and_remember, recall_memories, forget_memory
 - Knowledge (3): index_knowledge, recall_from_knowledge, recall_all
 - Profile (2): declare_preference, get_memory_profile
-- Prompt (2): get_system_prompt, build_context
-- Consolidation (3): consolidate_memories, my_profile, onboard
-- Rules (11): add_rule, list_rules, match_rules, inject_rules, my_rules, delete_rule, suggest_rules, promote_rules, update_rule, get_rule_conflicts, get_rule_stats
+- Prompt (2): get_system_prompt, summarize_and_store
+- Consolidation (3): consolidate_memories, schedule_consolidation, stop_consolidation
+- Rules (11): add_rule, list_rules, match_rules, inject_rules, my_rules, delete_rule, suggest_rules, promote_rules, update_rule, my_profile, onboard
 
 ### v0.1.7 — Memory Layer Enhancement (Intelligent Memory Layer) ✅
 

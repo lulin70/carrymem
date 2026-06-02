@@ -242,7 +242,7 @@ print(cm.build_system_prompt())                              # 任意の AI に�
 cm.close()
 ```
 
-### CLI（40+ コマンド）
+### CLI（50+ コマンド）
 
 ```bash
 carrymem init                           # 初期化

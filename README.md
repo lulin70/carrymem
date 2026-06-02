@@ -258,7 +258,7 @@ print(cm.build_system_prompt())                        # Inject into any AI
 cm.close()
 ```
 
-### CLI (40+ commands)
+### CLI (50+ commands)
 
 ```bash
 carrymem init                           # Initialize

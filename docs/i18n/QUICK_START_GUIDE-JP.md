@@ -39,7 +39,7 @@ carrymem init
 ```
 
 作成されるもの：
-- 設定ファイル：`~/.carrymem/config.json`
+- 設定ファイル：`~/.carrymem/config.yaml`
 - データベース：`~/.carrymem/memories.db`
 
 ### 2. 最初のメモリを保存（1分）

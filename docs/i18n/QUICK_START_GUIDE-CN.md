@@ -39,7 +39,7 @@ carrymem init
 ```
 
 创建：
-- 配置文件：`~/.carrymem/config.json`
+- 配置文件：`~/.carrymem/config.yaml`
 - 数据库：`~/.carrymem/memories.db`
 
 ### 2. 存储第一条记忆（1 分钟）

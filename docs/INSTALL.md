@@ -2,7 +2,7 @@
 
 ## System Requirements
 
-- **Python**: 3.9+
+- **Python**: ≥3.12 (64-bit)
 - **OS**: macOS, Linux, Windows (WSL2 recommended)
 - **Disk**: ~10MB for package, ~1MB per database
 - **Optional**: Node.js 18+ (for VS Code Extension)
@@ -28,7 +28,7 @@ carrymem version
 python3 -c "import os, sys; print(os.path.join(os.path.dirname(sys.executable), '..', 'bin'))"
 
 # Add to PATH (add this line to ~/.zshrc)
-export PATH="$HOME/Library/Python/3.9/bin:$PATH"
+export PATH="$HOME/Library/Python/3.12/bin:$PATH"
 
 # Then reload
 source ~/.zshrc

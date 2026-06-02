@@ -6,7 +6,7 @@
 
 ## 必要条件
 
-- **Python**: 3.9 以上
+- **Python**: 3.12 以上（64 ビット）
 - **OS**: macOS、Linux、Windows (WSL2)
 - **ディスク容量**: 10 MB 以上
 
@@ -100,7 +100,7 @@ pipは`carrymem`スクリプトをPythonのbinディレクトリにインスト�
 
 **macOS**:
 ```bash
-echo 'export PATH="$HOME/Library/Python/3.9/bin:$PATH"' >> ~/.zshrc
+echo 'export PATH="$HOME/Library/Python/3.12/bin:$PATH"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
