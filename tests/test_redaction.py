@@ -1,4 +1,8 @@
-"""Tests for auto-redaction module."""
+"""Tests for auto-redaction module.
+
+NOTE: All credential-like strings below are TEST FIXTURES (not real secrets).
+They follow patterns that trigger detection but use obviously-fake values.
+GitHub Secret Scanning may flag these — they are intentional test vectors."""
 
 import pytest
 from carrymem.security.redaction import (
@@ -10,17 +14,17 @@ from carrymem.security.redaction import (
 
 class TestDetectSensitiveContent:
     def test_openai_api_key(self):
-        findings = detect_sensitive_content("My API key is sk-abc123def456ghi789jkl012mno345")
+        findings = detect_sensitive_content("My API key is sk-fake000000test000key000abc123456")
         assert len(findings) >= 1
         assert any(f[0] == "openai_api_key" for f in findings)
 
     def test_github_token(self):
-        findings = detect_sensitive_content("token=ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+        findings = detect_sensitive_content("token=ghp_FakeTokenForTestingPurposesOnly12345")
         assert len(findings) >= 1
         assert any(f[0] == "github_token" for f in findings)
 
     def test_password_assignment(self):
-        findings = detect_sensitive_content("password=mysecretpassword123")
+        findings = detect_sensitive_content("password=fake-password-test-only")
         assert len(findings) >= 1
         assert any("assword" in f[2] for f in findings)
 
@@ -38,11 +42,11 @@ class TestDetectSensitiveContent:
         assert any(f[0] == "private_key" for f in findings)
 
     def test_db_connection_string(self):
-        findings = detect_sensitive_content("DATABASE_URL=postgresql://user:pass@localhost:5432/mydb")
+        findings = detect_sensitive_content("DATABASE_URL=postgresql://user:fakepass@localhost:5432/mydb")
         assert len(findings) >= 1
 
     def test_mongodb_connection(self):
-        findings = detect_sensitive_content("mongodb://admin:password123@cluster.mongodb.net/test")
+        findings = detect_sensitive_content("mongodb://fakeadmin:fakepass123@localhost:27017/testdb")
         assert len(findings) >= 1
 
     def test_aws_access_key(self):
@@ -55,7 +59,7 @@ class TestDetectSensitiveContent:
         assert len(findings) >= 1
 
     def test_env_secret(self):
-        findings = detect_sensitive_content("SECRET_KEY=my-django-secret-key-1234567890abcdef")
+        findings = detect_sensitive_content("SECRET_KEY=fake-django-secret-test-1234567890abcdef")
         assert len(findings) >= 1
 
     def test_no_sensitive_content(self):
@@ -77,7 +81,7 @@ class TestDetectSensitiveContent:
 
 class TestShouldRedact:
     def test_redact_api_key(self):
-        should, reason = should_redact("My key is sk-abc123def456ghi789jkl012mno345")
+        should, reason = should_redact("My key is sk-fake000000test000key000abc123456")
         assert should is True
         assert reason is not None
         assert "API key" in reason or "sensitive" in reason.lower()
@@ -88,34 +92,34 @@ class TestShouldRedact:
         assert reason is None
 
     def test_redact_password(self):
-        should, reason = should_redact("password=SuperSecret123!")
+        should, reason = should_redact("password=FakeSecret123!")
         assert should is True
 
     def test_redact_github_token(self):
-        should, reason = should_redact("ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+        should, reason = should_redact("ghp_FakeTokenForTestingPurposesOnly12345")
         assert should is True
 
 
 class TestRedactContent:
     def test_redact_api_key(self):
-        result = redact_content("My key is sk-abc123def456ghi789jkl012mno345")
-        assert "sk-abc123" not in result
+        result = redact_content("My key is sk-fake000000test000key000abc123456")
+        assert "sk-fake-test" not in result
         assert "[REDACTED]" in result
 
     def test_redact_password(self):
-        result = redact_content("password=mysecretpassword123")
-        assert "mysecretpassword123" not in result
+        result = redact_content("password=fake-password-test-only")
+        assert "fake-password-test-only" not in result
         assert "[REDACTED]" in result
 
     def test_preserve_non_sensitive(self):
-        result = redact_content("I prefer Python and my key is sk-abc123def456ghi789jkl012mno345")
+        result = redact_content("I prefer Python and my key is sk-fake000000test000key000abc123456")
         assert "Python" in result
-        assert "sk-abc123" not in result
+        assert "sk-fake-test" not in result
 
     def test_custom_replacement(self):
-        result = redact_content("password=secret123", replacement="***")
+        result = redact_content("password=fakesecret123", replacement="***")
         assert "***" in result
-        assert "secret123" not in result
+        assert "fakesecret123" not in result
 
     def test_no_change_for_normal_text(self):
         original = "I prefer Python for data analysis"
@@ -145,7 +149,7 @@ class TestIntegration:
 
         cm = CarryMem(db_path=str(tmp_path / "test.db"))
 
-        result = cm.classify_and_remember("My API key is sk-abc123def456ghi789jkl012mno345")
+        result = cm.classify_and_remember("My API key is sk-fake000000test000key000abc123456")
         assert result["stored"] is False
         assert result.get("type") == "auto_redacted"
 
@@ -155,7 +159,7 @@ class TestIntegration:
 
         cm = CarryMem(db_path=str(tmp_path / "test.db"))
 
-        result = cm.classify_and_remember("password=SuperSecret123!")
+        result = cm.classify_and_remember("password=FakeSecret123!")
         assert result["stored"] is False
 
     def test_normal_preference_stored(self, tmp_path):
@@ -174,7 +178,7 @@ class TestIntegration:
         cm = CarryMem(db_path=str(tmp_path / "test.db"))
 
         # force_type should bypass auto-redaction (user explicitly wants to store)
-        result = cm.classify_and_remember("password=SuperSecret123!", force_type="personal_fact")
+        result = cm.classify_and_remember("password=FakeSecret123!", force_type="personal_fact")
         # With force_type, redaction is bypassed
         assert result["stored"] is True
 
@@ -184,5 +188,5 @@ class TestIntegration:
 
         cm = CarryMem(db_path=str(tmp_path / "test.db"))
 
-        result = cm.classify_and_remember("Set token=ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+        result = cm.classify_and_remember("Set token=ghp_FakeTokenForTestingPurposesOnly12345")
         assert result["stored"] is False
