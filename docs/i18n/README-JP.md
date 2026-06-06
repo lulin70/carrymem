@@ -4,7 +4,7 @@
 
 > ポータブル AI メモリ — 好み、決定、訂正がモデル、ツール、デバイスを越えてついてくる。
 
-[English](../../README.md) | [中文](README-CN.md) | **日本語**
+[English](../../README.md) | [中文](README-CN.md) | **日本語** | [한국어](README-KO.md) | [繁體中文](README-ZH-TW.md)
 
 <p align="center">
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>

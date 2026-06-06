@@ -37,12 +37,15 @@ class MCPServer:
 
     VERSION = "1.0.0"
     PROTOCOL_VERSION = "2024-11-05"
+    DEFAULT_REQUEST_TIMEOUT = 30  # seconds
+    DEFAULT_READLINE_TIMEOUT = 300  # seconds (5 min for idle stdin)
 
     def __init__(
         self,
         config_path: Optional[str] = None,
         data_path: Optional[str] = None,
         namespace: Optional[str] = None,
+        request_timeout: Optional[int] = None,
     ):
         """
         Initialize the MCP Server.
@@ -51,10 +54,14 @@ class MCPServer:
             config_path: Path to configuration file (optional)
             data_path: Path to data directory (optional)
             namespace: Default namespace for memory isolation (optional)
+            request_timeout: Timeout in seconds for each request (default: 30)
         """
         self.config_path = config_path or os.environ.get("CARRYMEM_CONFIG_PATH")
         self.data_path = data_path or os.environ.get("CARRYMEM_DATA_PATH")
         self.namespace = namespace or os.environ.get("CARRYMEM_NAMESPACE", "default")
+        self.request_timeout = request_timeout or int(
+            os.environ.get("CARRYMEM_REQUEST_TIMEOUT", self.DEFAULT_REQUEST_TIMEOUT)
+        )
         self.handlers = Handlers(self.config_path, self.data_path, namespace=self.namespace)
         self.request_id = 0
 
@@ -68,11 +75,19 @@ class MCPServer:
 
     async def start(self):
         """Start the MCP server and listen for requests."""
-        logger.info("MCP Server starting...")
+        logger.info(f"MCP Server starting (request_timeout={self.request_timeout}s)...")
 
         try:
             while True:
-                line = await asyncio.get_event_loop().run_in_executor(None, sys.stdin.readline)
+                try:
+                    line = await asyncio.wait_for(
+                        asyncio.get_event_loop().run_in_executor(None, sys.stdin.readline),
+                        timeout=self.DEFAULT_READLINE_TIMEOUT,
+                    )
+                except asyncio.TimeoutError:
+                    # Idle timeout on stdin — keep waiting (not an error)
+                    logger.debug("Stdin idle timeout, continuing...")
+                    continue
 
                 if not line:
                     logger.info("EOF received, shutting down...")
@@ -84,9 +99,15 @@ class MCPServer:
 
                 try:
                     request = json.loads(line)
-                    response = await self.handle_request(request)
+                    response = await asyncio.wait_for(
+                        self.handle_request(request),
+                        timeout=self.request_timeout,
+                    )
                     if response:
                         await self.send_response(response)
+                except asyncio.TimeoutError:
+                    logger.error(f"Request timed out after {self.request_timeout}s")
+                    await self.send_error(None, -32603, "Request timeout")
                 except json.JSONDecodeError as e:
                     logger.error(f"Invalid JSON: {e}")
                     await self.send_error(None, -32700, "Parse error")
@@ -194,13 +215,19 @@ class MCPServer:
         logger.debug(f"Arguments: {arguments}")
 
         try:
-            result = await self.handlers.handle_tool(tool_name, arguments)
+            result = await asyncio.wait_for(
+                self.handlers.handle_tool(tool_name, arguments),
+                timeout=self.request_timeout,
+            )
 
             return {
                 "jsonrpc": "2.0",
                 "id": request_id,
                 "result": {"content": [{"type": "text", "text": json.dumps(result, indent=2, ensure_ascii=False)}]},
             }
+        except asyncio.TimeoutError:
+            logger.error(f"Tool '{tool_name}' timed out after {self.request_timeout}s")
+            return await self.send_error(request_id, -32603, f"Tool '{tool_name}' timeout")
         except Exception as e:
             logger.error(f"Error calling tool {tool_name}: {e}")
             return await self.send_error(request_id, -32603, f"Tool error: {str(e)}")

@@ -4,7 +4,7 @@
 
 > 你的随身 AI 记忆 — 偏好、决策和纠正，跨模型、跨工具、跨设备随身携带。
 
-[English](../../README.md) | **中文** | [日本語](README-JP.md)
+[English](../../README.md) | **中文** | [日本語](README-JP.md) | [한국어](README-KO.md) | [繁體中文](README-ZH-TW.md)
 
 <p align="center">
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>

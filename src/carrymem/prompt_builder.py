@@ -113,10 +113,13 @@ class PromptBuilder:
 
         Returns (pref_memories, pref_keys, all_memories_updated).
 
-        NOTE: Confidence threshold is 0.9 for automatic injection. Preferences
-        classified at 0.5-0.8 (common for user_preference type) are stored and
-        searchable via recall_memories() but NOT auto-injected into prompts.
-        This is a known limitation tracked for v0.2.5.
+        Two-tier injection:
+        - Core prefs (conf >= 0.9): auto-injected everywhere (global)
+        - Contextual prefs (0.5 <= conf < 0.9): injected only when scope matches
+          the current question context via preference_matches_scope().
+
+        The contextual fetch actively pulls preferences that FTS recall may
+        have missed (FTS searches the user's question, not preference content).
         """
         # Core prefs: high-confidence preferences (auto-injected everywhere)
         core_prefs = [m for m in all_memories if m.get("type") == "user_preference" and m.get("confidence", 0) >= 0.9]
@@ -135,7 +138,7 @@ class PromptBuilder:
                     seen_keys.add(m.get("storage_key"))
                     all_memories.append(m)
 
-        # Contextual prefs: scope-filtered (lower confidence)
+        # Contextual prefs from FTS recall (scope-filtered)
         context_prefs = [
             m
             for m in all_memories
@@ -145,9 +148,34 @@ class PromptBuilder:
             and preference_matches_scope(m, context)
         ]
 
-        # Merge: core first, then contextual (dedup)
-        pref_memories = list(core_prefs)
+        # Active fetch: pull mid-confidence prefs/corrections that FTS may have missed.
+        # FTS searches the user's question, not stored preference content,
+        # so many valid preferences never appear in all_memories.
         core_keys = {m.get("storage_key") for m in core_prefs}
+        if ensure_core:
+            for mem_type in ("user_preference", "correction"):
+                contextual_extra = self._cm.recall_memories(
+                    query="",
+                    limit=10,
+                    filters={
+                        "type": mem_type,
+                        "confidence_min": 0.5,
+                    },
+                    update_access=False,
+                )
+                for m in contextual_extra:
+                    sk = m.get("storage_key")
+                    conf = m.get("confidence", 0)
+                    if (sk not in seen_keys
+                            and sk not in core_keys
+                            and conf < 0.9
+                            and preference_matches_scope(m, context)):
+                        context_prefs.append(m)
+                        seen_keys.add(sk)
+                        all_memories.append(m)
+
+        # Merge: core first, then contextual (dedup by core_keys)
+        pref_memories = list(core_prefs)
         for m in context_prefs:
             if m.get("storage_key") not in core_keys:
                 pref_memories.append(m)

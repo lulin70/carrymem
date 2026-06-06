@@ -10,7 +10,7 @@ You're not using AI. You're training it. Over and over.
 
 CarryMem fixes this. It's a lightweight, zero-dependency memory system that stores **who you are** and makes that identity available to any AI tool. Your AI remembers your preferences, your past decisions, and the corrections you've made — so you can focus on building, not repeating yourself.
 
-**English** | [中文](docs/i18n/README-CN.md) | [日本語](docs/i18n/README-JP.md)
+**English** | [中文](docs/i18n/README-CN.md) | [日本語](docs/i18n/README-JP.md) | [한국어](docs/i18n/README-KO.md) | [繁體中文](docs/i18n/README-ZH-TW.md)
 
 ---
 

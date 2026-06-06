@@ -1535,7 +1535,13 @@ class SQLiteAdapter(StorageAdapter):
             conditions.append("(superseded_at IS NULL OR superseded_at = '')")
 
         if filters.get("session_id"):
-            safe_sid = filters["session_id"].replace("%", "\\%").replace("_", "\\_")
+            # Escape LIKE wildcards (%) and (_) plus JSON double-quote
+            # to prevent pattern corruption from embedded quotes.
+            safe_sid = (filters["session_id"]
+                        .replace("\\", "\\\\")
+                        .replace("%", "\\%")
+                        .replace("_", "\\_")
+                        .replace('"', '\\"'))
             conditions.append("metadata LIKE ? ESCAPE '\\'")
             params.append(f'%session_id": "{safe_sid}%')
 
