@@ -112,8 +112,13 @@ class PromptBuilder:
         """Identify and filter preference memories.
 
         Returns (pref_memories, pref_keys, all_memories_updated).
+
+        NOTE: Confidence threshold is 0.9 for automatic injection. Preferences
+        classified at 0.5-0.8 (common for user_preference type) are stored and
+        searchable via recall_memories() but NOT auto-injected into prompts.
+        This is a known limitation tracked for v0.2.5.
         """
-        # Core prefs: high-confidence preferences
+        # Core prefs: high-confidence preferences (auto-injected everywhere)
         core_prefs = [m for m in all_memories if m.get("type") == "user_preference" and m.get("confidence", 0) >= 0.9]
 
         # If core prefs not in main recall, fetch them
@@ -130,12 +135,13 @@ class PromptBuilder:
                     seen_keys.add(m.get("storage_key"))
                     all_memories.append(m)
 
-        # Contextual prefs: scope-filtered
+        # Contextual prefs: scope-filtered (lower confidence)
         context_prefs = [
             m
             for m in all_memories
             if m.get("type") == "user_preference"
             and m.get("confidence", 0) < 0.9
+            and m.get("confidence", 0) >= 0.5
             and preference_matches_scope(m, context)
         ]
 

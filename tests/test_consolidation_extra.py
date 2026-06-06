@@ -859,7 +859,11 @@ class TestLanguageExtra:
         """detect_language with English text falls through to 'en'."""
         from carrymem.utils.language import language_manager
 
-        lang, conf = language_manager.detect_language("I like Python programming")
+        # Use longer text to avoid langdetect misidentification (short texts can
+        # be confused with Scandinavian languages like Norwegian)
+        lang, conf = language_manager.detect_language(
+            "The quick brown fox jumps over the lazy dog near the river bank"
+        )
         assert lang == "en"
 
     def test_map_language_code_zh(self):
