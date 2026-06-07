@@ -3,6 +3,12 @@
 import sqlite3
 from datetime import datetime, timezone
 
+try:
+    import pysqlite3.dbapi2 as _pysqlite3
+    _OpError = (sqlite3.OperationalError, _pysqlite3.OperationalError)
+except ImportError:
+    _OpError = (sqlite3.OperationalError,)
+
 from ...exceptions import DatabaseError
 from ...scoring import calculate_importance
 from ...utils.logger import logger
@@ -198,7 +204,7 @@ class SchemaManager:
         conn = self._conn_mgr.get_connection()
         try:
             conn.execute("SELECT namespace FROM memories LIMIT 1")
-        except sqlite3.OperationalError:
+        except _OpError:
             try:
                 conn.executescript(_MIGRATION_SQL)
                 conn.executescript(_CREATE_INDEX_SQL)
@@ -215,7 +221,7 @@ class SchemaManager:
             if row and 'unicode61' in (row[0] or ''):
                 conn.execute("INSERT INTO memories_fts(memories_fts) VALUES('rebuild')")
                 conn.commit()
-        except sqlite3.OperationalError as e:
+        except _OpError as e:
             logger.debug(f"FTS5 tokenizer migration skipped: {e}")
 
     def migrate_v050(self):
@@ -223,13 +229,13 @@ class SchemaManager:
         needs_recalculate = False
         try:
             conn.execute("SELECT importance_score FROM memories LIMIT 1")
-        except sqlite3.OperationalError:
+        except _OpError:
             needs_recalculate = True
             try:
                 for sql in _V050_MIGRATION_SQL:
                     try:
                         conn.execute(sql)
-                    except sqlite3.OperationalError:
+                    except _OpError:
                         pass
                 conn.commit()
             except sqlite3.Error as e:
@@ -238,7 +244,7 @@ class SchemaManager:
         for sql in _V050_INDEX_SQL:
             try:
                 conn.execute(sql)
-            except sqlite3.OperationalError:
+            except _OpError:
                 pass
         conn.commit()
 
@@ -283,13 +289,13 @@ class SchemaManager:
         needs_fts_rebuild = False
         try:
             conn.execute("SELECT raw_text FROM memories LIMIT 1")
-        except sqlite3.OperationalError:
+        except _OpError:
             needs_fts_rebuild = True
             try:
                 for sql in _V060_MIGRATION_SQL:
                     try:
                         conn.execute(sql)
-                    except sqlite3.OperationalError:
+                    except _OpError:
                         pass
                 conn.commit()
             except sqlite3.Error as e:
@@ -298,7 +304,7 @@ class SchemaManager:
         fts_needs_raw_text = False
         try:
             conn.execute("SELECT raw_text FROM memories_fts LIMIT 0")
-        except sqlite3.OperationalError:
+        except _OpError:
             fts_needs_raw_text = True
 
         if needs_fts_rebuild or fts_needs_raw_text:
@@ -306,7 +312,7 @@ class SchemaManager:
                 for sql in _V060_FTS_REBUILD_SQL:
                     try:
                         conn.execute(sql)
-                    except sqlite3.OperationalError:
+                    except _OpError:
                         pass
                 conn.commit()
                 logger.info("FTS5 rebuilt with raw_text column")
@@ -330,23 +336,23 @@ class SchemaManager:
         conn = self._conn_mgr.get_connection()
         try:
             conn.execute("SELECT memory_id FROM memory_vectors LIMIT 1")
-        except sqlite3.OperationalError:
+        except _OpError:
             self.init_vec_schema()
 
     def migrate_v080(self):
         conn = self._conn_mgr.get_connection()
         try:
             conn.execute("SELECT superseded_at FROM memories LIMIT 1")
-        except sqlite3.OperationalError:
+        except _OpError:
             for sql in _V080_MIGRATION_SQL:
                 try:
                     conn.execute(sql)
-                except sqlite3.OperationalError:
+                except _OpError:
                     pass
             for sql in _V080_INDEX_SQL:
                 try:
                     conn.execute(sql)
-                except sqlite3.OperationalError:
+                except _OpError:
                     pass
 
     def migrate_v090(self):
@@ -354,16 +360,16 @@ class SchemaManager:
         conn = self._conn_mgr.get_connection()
         try:
             conn.execute("SELECT memory_nature FROM memories LIMIT 1")
-        except sqlite3.OperationalError:
+        except _OpError:
             for sql in _V090_MIGRATION_SQL:
                 try:
                     conn.execute(sql)
-                except sqlite3.OperationalError:
+                except _OpError:
                     pass
             for sql in _V090_INDEX_SQL:
                 try:
                     conn.execute(sql)
-                except sqlite3.OperationalError:
+                except _OpError:
                     pass
             # Backfill: infer memory_nature from type
             conn.execute(

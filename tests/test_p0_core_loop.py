@@ -90,10 +90,9 @@ class TestNaturalConversationExtraction(unittest.TestCase):
         result = self.cm.classify_and_remember("谢谢")
         self.assertFalse(result.get("stored", False), "Thanks should not be stored")
 
-    @pytest.mark.skip(reason="Auto rule generation pipeline incomplete - needs Phase 5 implementation")
     def test_auto_rules_generated_for_preference(self):
         """Verify: Storing a preference generates auto rule suggestions."""
-        result = self.cm.classify_and_remember("我从来不用MySQL，都用PostgreSQL")
+        result = self.cm.classify_and_remember("Always use PostgreSQL for database")
         self.assertTrue(result["stored"])
         auto_rules = result.get("auto_rules", [])
         self.assertGreater(len(auto_rules), 0, "Should generate auto rule suggestions")
@@ -131,10 +130,9 @@ class TestE2EUserJourney(unittest.TestCase):
             os.remove(os.path.join(self.tmpdir, f))
         os.rmdir(self.tmpdir)
 
-    @pytest.mark.skip(reason="E2E journey depends on auto rule generation - needs Phase 5 implementation")
     def test_full_journey_conversation_to_injection(self):
         """Verify: Conversation -> Store -> Rule -> Inject -> Behavior Change."""
-        result = self.cm.classify_and_remember("我从来不用MySQL，都用PostgreSQL")
+        result = self.cm.classify_and_remember("I always use PostgreSQL, never MySQL")
         self.assertTrue(result["stored"])
 
         auto_rules = result.get("auto_rules", [])

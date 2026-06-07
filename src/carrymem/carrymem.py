@@ -26,6 +26,7 @@ import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
+import warnings
 
 from carrymem.engine import MemoryClassificationEngine
 from carrymem.adapters.base import MemoryEntry, StorageAdapter
@@ -959,6 +960,12 @@ class CarryMem:
         language: str = "en",
         store: bool = True,
     ) -> Optional[Dict[str, Any]]:
+        warnings.warn(
+            "summarize_session() is experimental and requires LLM client. "
+            "It will be integrated into CLI/MCP in a future version.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if not self._adapter:
             raise StorageNotConfiguredError()
 
@@ -999,6 +1006,12 @@ class CarryMem:
         language: str = "en",
         store: bool = True,
     ) -> List[Dict[str, Any]]:
+        warnings.warn(
+            "aggregate_memories() is experimental and requires LLM client. "
+            "It will be integrated into CLI/MCP in a future version.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if not self._adapter:
             raise StorageNotConfiguredError()
 
