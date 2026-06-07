@@ -34,6 +34,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - InputValidator: strict_mode now respected, no HTML escaping, whitespace preserved via strip()
 - EncryptionError raised on key load failure (not silent None return)
 
+## [0.2.5] - 2026-06-07 (Post-Beta Improvement Sprint)
+
+### Fixed
+- **Preference injection confidence gap**: Added active contextual fetch for
+  mid-confidence preferences (0.5-0.9) that FTS recall misses. Covers both
+  user_preference and correction types. All 14 E2E tests now pass (7 were xfail).
+- **session_id SQL hardening**: LIKE pattern now escapes double-quote and backslash
+  to prevent metadata corruption from embedded special characters.
+
+### Added
+- **`carrymem stats --value` command**: 7-metric value perception report
+  (memories stored, rules active, sessions remembered, repetitions avoided,
+  tokens saved estimate, identity coverage %, days since first use) with
+  box-drawing text output and JSON format support.
+- **Multi-language support**: Korean (README-KO.md) and Traditional Chinese
+  (README-ZH-TW.md) documentation. All 5 language switchers updated.
+- **MCP server timeout mechanism**: 3-layer timeout protection (stdin read 300s,
+  request processing 30s, tool call 30s). Configurable via CARRYMEM_REQUEST_TIMEOUT env var.
+- **Security test suite expansion**: 83 new test cases covering encryption,
+  redaction, input_validator, and audit modules. Coverage improved from ~22% to 80%+.
+
+### Changed
+- **cli.py modularization**: Split 4031-line monolith into 8 focused modules
+  (_base/_memory/_io/_stats/_mcp/_backup/_rules/__init__) plus a 17-line facade.
+  Zero behavioral change, full backward compatibility preserved.
+
 ## [0.2.0] - 2026-05-28
 
 ### Added

@@ -1,12 +1,12 @@
-# CarryMem Product Roadmap
+# CarryMem 제품 로드맵
 
-**Last Updated**: 2026-05-29
-**Product Positioning**: AI Identity Layer — Memory + Rules + Knowledge
-**Version Scheme**: v0.2.x (Incremental) → v0.3.0 (GA Milestone)
+**최종 업데이트**: 2026-05-29
+**제품 포지셔닝**: AI 신원 레이어 — 기억 + 규칙 + 지식
+**버전 체계**: v0.2.x (증분) → v0.3.0 (GA 마일스톤)
 
 ---
 
-## Version Strategy
+## 버전 전략
 
 ```
 v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoning) ✅
@@ -25,25 +25,25 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
   └── v0.4.1  Core Loop Fix        (Auto Rule Suggestion + Security)      ✅
 ```
 
-**Versioning Rules**:
-- Third digit changes for incremental updates within a phase
-- Second digit changes for GA milestones (API stability guarantee)
-- No "v1.0.0 jump" — earn it through proven production usage
+**버전 관리 규칙**:
+- 세 번째 자리: 단계 내 증분 업데이트
+- 두 번째 자리: GA 마일스톤 (API 안정성 보장)
+- "v1.0.0 점프" 없음 — 실제 프로덕션 사용으로 획득
 
-> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. Current version is v0.2.5, including auto-backup, encrypted .carry files, concurrent safety, E2E tests, **PrefEval 83.0%** (200-sample, 3-condition canonical), state/event version chain, security hardening, preference injection optimization, context.py modularization, and consolidation scheduling. Next milestones: v0.3.0 (GA).
+> **참고**: 위에 나열된 v0.3.0–v0.4.1 버전은 프로젝트의 개발 이력을 나타냅니다. 현재 버전은 v0.2.5이며, 자동 백업, 암호화 .carry 파일, 동시성 안전, E2E 테스트, **PrefEval 83.0%** (200샘플, 3조건 정식), 상태/이벤트 버전 체인, 보안 강화, 선호 주입 최적화, context.py 모듈화, 통합 스케줄링 등을 포함합니다. 다음 마일스톤: v0.3.0 (GA).
 
 ---
 
-## Product Vision
+## 제품 비전
 
-### Three-Layer Identity Architecture
+### 3계층 신원 아키텍처
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                    CarryMem Identity Layer                │
+│                    CarryMem 신원 레이어                      │
 ├──────────────────────────────────────────────────────────┤
 │                                                          │
-│  Layer 3: Rules (HOW to act)        ← v0.2.x DONE       │
+│  Layer 3: Rules (HOW to act)        ← v0.2.x 완료         │
 │  ┌──────────────────────────────────────────────────┐    │
 │  │  "When X happens, do Y"                          │    │
 │  │  • Manual rules (v0.2.1)                         │    │
@@ -53,17 +53,17 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 │  │  • Context-anchored injection (v0.2.8)           │    │
 │  └──────────────────────────────────────────────────┘    │
 │              ↑ reads from          ↑ injects into         │
-│  Layer 2: Memory (WHO you are)     ← v0.3.0 STABLE       │
+│  Layer 2: Memory (WHO you are)     ← v0.3.0 안정          │
 │  ┌──────────────────────────────────────────────────┐    │
 │  │  "You prefer X, decided Y, corrected Z"          │    │
 │  │  • 7 memory types + 4-tier hierarchy             │    │
 │  │  • Cross-language semantic recall (FTS5)          │    │
-│  │  • Session-aware storage + knowledge supersession (v0.1.7)    │    │
-│  │  • Time reasoning + structured prompt injection (v0.1.7)      │    │
+│  │  • Session-aware storage + knowledge supersession (v0.1.7)   │    │
+│  │  • Time reasoning + structured prompt injection (v0.1.7)     │    │
 │  │|  •  3097 tests passing, 79%+ coverage           |│    │
 │  └──────────────────────────────────────────────────┘    │
 │              ↑ reads from          ↑ injects into         │
-│  Layer 1: Knowledge (WHAT you know) ← v0.3.0 PLANNED     │
+│  Layer 1: Knowledge (WHAT you know) ← v0.3.0 계획         │
 │  ┌──────────────────────────────────────────────────┐    │
 │  │  "Your Obsidian vault, your docs, your notes"    │    │
 │  │  • Obsidian Markdown adapter (existing)          │    │
@@ -75,32 +75,32 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 └──────────────────────────────────────────────────────────┘
 ```
 
-### The Key Distinction
+### 핵심 차이점
 
-| Layer | Answers | Form | Trigger | Example |
-|-------|---------|------|---------|---------|
-| **Memory** | "Who are you?" | Declarative | Passive (context-relevant) | "I prefer PostgreSQL" |
-| **Rules** | "How do you act?" | Conditional → Action | Active (scene-matched) | "When choosing DB, use PostgreSQL" |
-| **Knowledge** | "What do you know?" | Reference | On-demand (retrieved) | "PostgreSQL vs MySQL comparison" |
+| 레이어 | 답변 | 형태 | 트리거 | 예시 |
+|-------|------|------|--------|------|
+| **Memory** | "Who are you?" | 선언적 | 수동 (context-relevant) | "I prefer PostgreSQL" |
+| **Rules** | "How do you act?" | 조건 → 행동 | 능동 (scene-matched) | "When choosing DB, use PostgreSQL" |
+| **Knowledge** | "What do you know?" | 참조 | 요청 시 (retrieved) | "PostgreSQL vs MySQL comparison" |
 
 ---
 
-## Context Engineering Insights (NEW — v0.2.8)
+## 컨텍스트 엔지니어링 인사이트 (신규 — v0.2.8)
 
-### Lost-in-the-Middle Effect on Rule Injection
+### Lost-in-the-Middle 효과와 규칙 주입
 
-LLM attention follows a U-curve: **high at start and end, low in the middle** (10-40% recall drop). This directly impacts rule injection reliability.
+LLM 주의력은 U자형 곡선을 따름: **시작과 끝에서 높고, 중간에서 낮음** (10-40% 리콜 하락). 이는 규칙 주입 신뢰도에 직접적인 영향.
 
-**Current Problem** (v0.2.1-v0.2.7):
+**현재 문제** (v0.2.1-v0.2.7):
 ```
 ## Personal Rules (from CarryMem)
-Rule A (relevance=0.92, override=true)   ← Start: high attention
-Rule B (relevance=0.88, override=false)  ← Middle: attention collapse
-Rule C (relevance=0.85, override=true)   ← Middle: MOST IMPORTANT rule ignored!
-Rule D (relevance=0.80, avoid)           ← End: secondary attention
+Rule A (relevance=0.92, override=true)   ← 시작: 높은 주의력
+Rule B (relevance=0.88, override=false)  ← 중간: 주의력 붕괴
+Rule C (relevance=0.85, override=true)   ← 중간: 가장 중요한 규칙 무시!
+Rule D (relevance=0.80, avoid)           ← 끝: 2차적 주의력
 ```
 
-**v0.2.8 Solution**: Anchored layout mode
+**v0.2.8 해결책**: 앵커링 레이아웃 모드
 ```
 ## Personal Rules (from CarryMem)
 
@@ -115,143 +115,143 @@ Rule D (relevance=0.80, avoid)           ← End: secondary attention
 - [always] All external quotes must include validity period     ← TAIL ANCHOR
 ```
 
-### Context Budget Monitoring
+### 컨텍스트 예산 모니터링
 
-When rule injection exceeds 70% of context window, auto-compress:
-- Priority: keep override=true rules, compress avoid rules to summaries
-- Over threshold: one-line summaries per rule, no source attribution
+규칙 주입이 컨텍스트 윈도우의 70%를 초과하면 자동 압축:
+- 우선순위: override=true 규칙 유지, avoid 규칙을 요약으로 압축
+- 임계값 초과: 규칙당 한 줄 요약, 출처 정보 없음
 
-### DDD Language View
+### DDD 언어 뷰
 
-CarryMem concepts map to DDD concepts, enabling enterprise architect dialogue:
+CarryMem 개념을 DDD 개념에 매핑하여 엔터프라이즈 아키텍트 대화 지원:
 
-| CarryMem | DDD | Relationship |
-|----------|-----|-------------|
-| trigger | Bounded Context | Scope definition |
+| CarryMem | DDD | 관계 |
+|----------|-----|------|
+| trigger | Bounded Context | 범위 정의 |
 | rule_type (forbid/avoid/always) | Aggregate Consistency Constraint | Invariant ≈ forbid, Guarantee ≈ always |
-| override | Invariant | Cannot be overridden by higher priority |
-| source_memories | Event Sourcing Chain | Rule traceable to originating experience |
-| refine process | Ubiquitous Language Refinement | Specific → General abstraction |
+| override | Invariant | 더 높은 우선순위로 재정의 불가 |
+| source_memories | Event Sourcing Chain | 규칙을 원래 경험까지 추적 가능 |
+| refine process | Ubiquitous Language Refinement | 구체 → 일반 추상화 |
 
-Implementation: `style="ddd"` parameter in `format_rules_as_prompt()`, display-only, no storage change.
-
----
-
-## Milestone Plan
-
-### ✅ v0.2.0 (DONE)
-
-See CHANGELOG.md for detailed history.
+구현: `format_rules_as_prompt()` 내 `style="ddd"` 파라미터, 표시 전용, 저장소 변경 없음.
 
 ---
 
-### ✅ v0.2.5 — Auto-Promotion (DONE)
+## 마일스톤 계획
 
-**Implemented Features**:
-- [x] PromotionPipeline: 5-stage pipeline (Collect→Detect→Generate→Queue→Confirm)
-- [x] Audit trail: `promotion_audit` table with full action logging
+### ✅ v0.2.0 (완료)
+
+상세 이력은 CHANGELOG.md 참조.
+
+---
+
+### ✅ v0.2.5 — Auto-Promotion (완료)
+
+**구현된 기능**:
+- [x] PromotionPipeline: 5단계 파이프라인 (Collect→Detect→Generate→Queue→Confirm)
+- [x] 감사 추적: `promotion_audit` 테이블에 전체 작업 로깅
 - [x] CLI: `promote-rules`, `review-promotions`, `promotion-log`
-- [x] Queue size limit (50), configurable expiry (7 days)
-- [x] `_count_pending()` efficient COUNT query
+- [x] 큐 크기 제한 (50), 설정 가능한 만료 (7일)
+- [x] `_count_pending()` 효율적 COUNT 쿼리
 
 ---
 
-### ✅ v0.2.6 — Experience Learning (DONE)
+### ✅ v0.2.6 — Experience Learning (완료)
 
-**Implemented Features**:
-- [x] FailureExperienceExtractor: 5 signal types (mistake/regret/negative_outcome/lesson_learned/correction_from_failure)
-- [x] Bilingual pattern matching (EN + ZH)
-- [x] ExperienceRuleBridge: confirmation workflow with `experience_audit` table
-- [x] Domain inference: 7 domains
+**구현된 기능**:
+- [x] FailureExperienceExtractor: 5가지 신호 유형 (mistake/regret/negative_outcome/lesson_learned/correction_from_failure)
+- [x] 이중언어 패턴 매칭 (EN + ZH)
+- [x] ExperienceRuleBridge: 확인 워크플로우 + `experience_audit` 테이블
+- [x] 도메인 추론: 7개 도메인
 - [x] CLI: `learn-experience`, `review-lessons`, `lesson-log`
 
 ---
 
-### ✅ v0.2.7 — Q&A Refinement (DONE)
+### ✅ v0.2.7 — Q&A Refinement (완료)
 
-**Implemented Features**:
-- [x] RuleRefiner: 4-phase refinement (Scope→Generality→Exception→Confirm)
-- [x] Specificity analysis: detect project/tool/time-specific rules
-- [x] RefinementSessionManager: session persistence + conversation tracking
+**구현된 기능**:
+- [x] RuleRefiner: 4단계 정제 (Scope→Generality→Exception→Confirm)
+- [x] 특이성 분석: 프로젝트/도구/시간별 규칙 탐지
+- [x] RefinementSessionManager: 세션 지속성 + 대화 추적
 - [x] CLI: `refine-rule`, `refinement-sessions`
-- [x] Max 5 rounds, auto-forced confirm
+- [x] 최대 5라운드, 자동 강제 확인
 
 ---
 
 ### ✅ v0.2.8 — Rules Engine Beta (Context Engineering + Hardened)
 
-**Theme**: Production hardening + Context engineering optimization
-**LLM Dependency**: None (core features work without)
+**테마**: 프로덕션 강화 + 컨텍스트 엔지니어링 최적화
+**LLM 의존성**: 없음 (핵심 기능 LLM 없이 작동)
 
-**P0 — Context Engineering (from optimization memo)**:
-- [x] `format_rules_as_prompt()` anchored layout mode
-  - Head anchor: override=true + forbid rules
-  - Middle: normal rules by relevance
-  - Tail anchor: override=true + always rules
-- [x] `format_rules_as_prompt()` style="ddd" output
-  - DDD terminology: "Personal Context → Invariant/Consistency/Soft Constraint"
-  - Display-only, no storage layer change
+**P0 — Context Engineering (최적화 메모에서)**:
+- [x] `format_rules_as_prompt()` 앵커링 레이아웃 모드
+  - 헤드 앵커: override=true + forbid 규칙
+  - 중간: 관련성 순 일반 규칙
+  - 테일 앵커: override=true + always 규칙
+- [x] `format_rules_as_prompt()` style="ddd" 출력
+  - DDD 용어: "Personal Context → Invariant/Consistency/Soft Constraint"
+  - 표시 전용, 저장소 레이어 변경 없음
 
 **P1 — Production Hardening**:
-- [x] Context budget monitoring (token-aware compression)
-- [x] Test coverage ≥ 80% (current: 80.70%, up from 68.61%)
-- [x] CLI coverage ≥ 70% (current: ~77%)
-- [x] Security audit: review all input paths (InputValidator integrated into CLI/MCP/import)
-- [x] API stability guarantee (no breaking changes in v0.3.x) — see API_STABILITY.md
-- [x] `carrymem doctor` comprehensive health check (14 checks + JSON output + --fix)
-- [x] Documentation complete (API_REFERENCE synchronized to v0.2.8)
+- [x] 컨텍스트 예산 모니터링 (token 인식 압축)
+- [x] 테스트 커버리지 ≥ 80% (현재: 80.70%, 68.61%에서 상승)
+- [x] CLI 커버리지 ≥ 70% (현재: ~77%)
+- [x] 보안 감사: 모든 입력 경로 검토 (InputValidator가 CLI/MCP/import에 통합)
+- [x] API 안정성 보장 (v0.3.x에서 호환성 깨짐 없음) — API_STABILITY.md 참조
+- [x] `carrymem doctor` 종합 건강 검사 (14항목 + JSON 출력 + --fix)
+- [x] 문서 완료 (API_REFERENCE가 v0.2.8과 동기화됨)
 
 **P2 — Quality Improvements**:
-- [ ] source_memories confidence status (active/overridden/superseded)
+- [ ] source_memories confidence 상태 (active/overridden/superseded)
 - [ ] Rule effectiveness metrics (trigger count, user satisfaction)
 
 ---
 
 ### 🎉 v0.3.0 — GA Release (Production Ready) ✅ **DONE**
 
-**Theme**: First production-ready release with Knowledge Adapter
-**LLM Dependency**: Optional (core works without)
+**테마**: 최초 프로덕션 준비 릴리스 + Knowledge Adapter
+**LLM 의존성**: 선택 사항 (핵심 기능 LLM 없이 작동)
 
 **P0 — Knowledge Adapter Enhancement**:
-- [x] ObsidianAdapter CJK full-text search upgrade
-  - Replace `unicode61` tokenizer with `trigram` for CJK character-level matching
-  - Content truncation: 500 → configurable (default 2000 chars, full via `full_content=True`)
-  - Auto-migration from `unicode61` → `trigram` on existing databases
+- [x] ObsidianAdapter CJK 전문 검색 업그레이드
+  - `unicode61` 토크나이저를 `trigram`으로 교체하여 CJK 문자 수준 매칭
+  - 콘텐츠 잘라내기: 500 → 설정 가능 (기본값 2000 문자, `full_content=True`로 전체)
+  - 기존 데이터베이스의 `unicode61` → `trigram` 자동 마이그레이션
 - [x] Knowledge relevance scoring
-  - Score based on: FTS5 rank (60%) + tag overlap (25%) + wiki-link proximity (15%)
-  - `relevance_score` field in recall results
-- [x] Knowledge + Rules + Memory three-layer retrieval orchestration
-  - Retrieval priority: Rules(override) > Memory > Knowledge
-  - `build_context()` unified budget allocation: Rules 30% / Memory 45% / Knowledge 25%
-  - `build_system_prompt()` structured output: Rules → Memory → Knowledge
-  - `recall_all()` now includes `rules` layer with `include_rules=True`
+  - 점수 기준: FTS5 rank (60%) + tag overlap (25%) + wiki-link proximity (15%)
+  - `relevance_score` 필드를 recall 결과에 포함
+- [x] Knowledge + Rules + Memory 3계층 검색 오케스트레이션
+  - 검색 우선순위: Rules(override) > Memory > Knowledge
+  - `build_context()` 통합 예산 배분: Rules 30% / Memory 45% / Knowledge 25%
+  - `build_system_prompt()` 구조화 출력: Rules → Memory → Knowledge
+  - `recall_all()`에 `rules` 레이어 포함 (`include_rules=True` 사용)
 
-**P1 — Production Hardening (from v0.2.8 P2)**:
-- [x] `trigger_count` activation — wire `increment_trigger_count()` into `RuleEngine.match()`
-  - `RuleStorage.increment_trigger_count(rule_id)` for atomic DB update
-  - `batch_increment_trigger_counts()` for multi-rule efficiency
-  - Frequency bonus in matcher now functional
+**P1 — Production Hardening (v0.2.8 P2에서)**:
+- [x] `trigger_count` 활성화 — `increment_trigger_count()`를 `RuleEngine.match()`에 연결
+  - `RuleStorage.increment_trigger_count(rule_id)` 원자적 DB 업데이트
+  - `batch_increment_trigger_counts()` 다중 규칙 효율화
+  - matcher의 빈도 보너스 이제 동작
 - [x] Rule effectiveness metrics
-  - `engine.get_effectiveness_report()` — trigger stats, confidence distribution, override usage
-  - Type breakdown, derivation sources, top-triggered/never-triggered lists
-- [x] source_memories confidence status
-  - `validate_source_memories(rule_id)` — check if source memories still exist
-  - Status tracking: active / deleted / superseded
-  - Auto-calculated confidence adjustment penalty
+  - `engine.get_effectiveness_report()` — trigger 통계, confidence 분포, override 사용량
+  - 유형별 분할, 유출 출처, top-triggered/never-triggered 목록
+- [x] source_memories confidence 상태
+  - `validate_source_memories(rule_id)` — 소스 기억이 여전히 존재하는지 확인
+  - 상태 추적: active / deleted / superseded
+  - 자동 계산 confidence 조정 페널티
 
 **P2 — API Stability & Governance**:
-- [x] Promote Rules Engine API from Experimental → Stable
+- [x] Rules Engine API를 Experimental → Stable로 승격
   - `RuleEngine` CRUD + match + inject: `@stable`
-  - Promotion/Refinement/Experience: remain `@experimental`
-- [x] TypedDict return types for Stable APIs (dict-compatible)
+  - Promotion/Refinement/Experience: `@experimental` 유지
+- [x] Stable API용 TypedDict 반환 타입 (dict 호환)
 - [x] Community governance: CONTRIBUTING.md, issue templates, PR checklist
 
-**Existing Foundation** (already working):
-- ObsidianAdapter: read-only FTS5 index + search + wiki-link + frontmatter ✅
-- `recall_all()`: memory + knowledge unified retrieval ✅
-- `build_context()` / `build_system_prompt()`: knowledge injection ✅
+**Existing Foundation** (이미 작동 중):
+- ObsidianAdapter: 읽기 전용 FTS5 인덱스 + 검색 + wiki-link + frontmatter ✅
+- `recall_all()`: memory + knowledge 통합 검색 ✅
+- `build_context()` / `build_system_prompt()`: knowledge 주입 ✅
 - DevSquadAdapter: Protocol-based integration ✅
-- API_STABILITY.md: Stable/Experimental/Internal tiers ✅
+- API_STABILITY.md: Stable/Experimental/Internal 계층 ✅
 
 ---
 
@@ -259,48 +259,48 @@ See CHANGELOG.md for detailed history.
 
 ### v0.4.0 — Enterprise Features
 
-**Theme**: Multi-scope rules, portable Skill format, editor integration
-**Prerequisite**: v0.3.0 GA release
+**테마**: 멀티 스코프 규칙, 휴대 가능 Skill 형식, 에디터 통합
+**선행 조건**: v0.3.0 GA 릴리스
 
 **P0 — Rule Scope Dimension**:
-- [x] Rule model: add `scope` field (`personal` / `company` / `negotiated`)
-  - `RuleScope` enum: personal (user-created), company (org-mandated), negotiated (user-adapted from company)
-  - Default: `personal` (backward-compatible)
-  - Storage: new `scope` column in SQLite rules table
-  - Migration: existing rules default to `personal`
+- [x] Rule model: `scope` 필드 추가 (`personal` / `company` / `negotiated`)
+  - `RuleScope` enum: personal (사용자 생성), company (조직 강제), negotiated (회사에서 적응)
+  - 기본값: `personal` (하위 호환)
+  - 저장소: SQLite rules 테이블에 새 `scope` 컬럼
+  - 마이그레이션: 기존 규칙 기본값 `personal`
 - [x] Scope-aware matching and injection
-  - `RuleEngine.match()` accepts `scopes` filter (default: all)
-  - `RuleInjector` annotates output with scope labels
-  - Priority: `company(override) > negotiated > personal` when conflicts arise
+  - `RuleEngine.match()`에 `scopes` 필터 수용 (기본값: all)
+  - `RuleInjector` 출력에 scope 라벨 주석
+  - 우선순위: 충돌 시 `company(override) > negotiated > personal`
 - [x] Scope-aware CRUD
-  - `add_rule(scope="personal")` — default
-  - `list_rules(scope="company")` — filter by scope
-  - Company rules: immutable by non-admin users (enforced at adapter layer)
+  - `add_rule(scope="personal")` — 기본값
+  - `list_rules(scope="company")` — scope로 필터
+  - Company 규칙: 비관리자 사용자 변경 불가 (adapter 레이어에서 강제)
 
 **P1 — Rule Skill Format**:
 - [x] Skill manifest specification (`carrymem-skill-v1`)
-  - Metadata: name, author, version, description, dependencies, scope
-  - Structure: rules + templates + config in single JSON bundle
-  - Signature: content hash for integrity verification
-- [x] Skill CLI commands
-  - `carrymem skill-pack <path>` — export rules as Skill bundle
-  - `carrymem skill-install <path>` — import Skill with scope assignment
-  - `carrymem skill-verify <path>` — verify Skill integrity
-- [x] Skill export/import upgrade
-  - Extend existing `export_rules()` / `import_rules()` to Skill format
-  - Backward-compatible: `carrymem-rules-v1` still supported for import
+  - 메타데이터: name, author, version, description, dependencies, scope
+  - 구조: rules + templates + config 단일 JSON 번들
+  - 서명: 무결성 검증용 콘텐츠 해시
+- [x] Skill CLI 명령어
+  - `carrymem skill-pack <path>` — 규칙을 Skill 번들로 내보내기
+  - `carrymem skill-install <path>` — Skill import 및 scope 할당
+  - `carrymem skill-verify <path>` — Skill 무결성 검증
+- [x] Skill export/import 업그레이드
+  - 기존 `export_rules()` / `import_rules()`를 Skill 형식으로 확장
+  - 하위 호환: `carrymem-rules-v1` import 지원
 
 **P2 — Rule Merge Protocol ("Customs Clearance")**:
 - [x] Scope-aware merge engine
   - `RuleMergeEngine` with strategies: `company_overrides`, `negotiate`, `keep_both`
-  - Conflict detection: company rule vs personal rule on same trigger
-  - Auto-negotiation: personal rule adjusted to not violate company constraints
+  - 충돌 탐지: company rule vs personal rule on same trigger
+  - 자동 협상: personal rule을 company 제약 위반하지 않도록 조정
 - [x] "Customs clearance" flow
-  - When company rules enter personal space: review → adapt → confirm
-  - `engine.review_incoming_rules(rules, scope="company")` — preview conflicts
-  - `engine.accept_rules(rule_ids, merge_strategy="negotiate")` — accept with adaptation
+  - Company 규치이 personal 공간 진입 시: review → adapt → confirm
+  - `engine.review_incoming_rules(rules, scope="company")` — 충돌 미리보기
+  - `engine.accept_rules(rule_ids, merge_strategy="negotiate")` — 적응 후 수락
 - [x] Merge audit trail
-  - All merge decisions logged with reason, timestamp, original values
+  - 모든 병합 결정에 이유, 타임스탬프, 원본 값 기록
 
 **P3 — VS Code Extension (stretch goal)**:
 - [x] Extension scaffold (TypeScript)
@@ -314,7 +314,7 @@ See CHANGELOG.md for detailed history.
   - On command: match rules to current file type/context
   - QuickPick with matched rules and scores
 
-**Existing Foundation** (already working):
+**Existing Foundation** (이미 작동 중):
 - `export_rules()` / `import_rules()` with 3 conflict modes ✅
 - Rule templates (10 predefined) ✅
 - Memory namespace isolation (reusable pattern) ✅
@@ -324,8 +324,8 @@ See CHANGELOG.md for detailed history.
 
 ### v0.4.1 — Core Loop Fix (Product初心 Review)
 
-**Theme**: Fix the broken core loop — memory→rule→injection pipeline
-**Prerequisite**: v0.4.0 enterprise features
+**테마**: 깨진 핵심 루프 수정 — memory→rule→injection 파이프라인
+**선행 조건**: v0.4.0 enterprise features
 
 **P0 — Core Loop Repair** (product from unusable → usable):
 - [x] `_auto_suggest_rules()` implementation — memory→rule candidate generation
@@ -372,24 +372,24 @@ See CHANGELOG.md for detailed history.
 
 ### v0.1.7 — Memory Layer Enhancement (Intelligent Memory Layer) ✅
 
-**Theme**: From retrieval system to intelligent memory layer
-**LLM Dependency**: None (all features work without LLM)
+**테마**: 검색 시스템에서 지능형 기억 레이어로
+**LLM 의존성**: 없음 (모든 기능 LLM 없이 작동)
 
 **Phase 1: Session-Aware Storage + Knowledge Supersession**:
-- [x] `classify_and_remember(session_id=...)` — session identifier for cross-session awareness
-- [x] Auto-supersession — `superseded_at`/`supersedes` fields, contradiction detection, update markers
-- [x] `recall_aggregated()` — aggregate memories by type across all sessions
-- [x] `recall_timeline(topic)` — recall memories about a topic ordered by time
+- [x] `classify_and_remember(session_id=...)` — 세션 식별자로 cross-session 인식
+- [x] Auto-supersession — `superseded_at`/`supersedes` 필드, 모순 탐지, 업데이트 마커
+- [x] `recall_aggregated()` — 모든 세션에서 유형별 기억 집계
+- [x] `recall_timeline(topic)` — 주제별 시간순 기억 리콜
 - [x] New filter keys: `session_id`, `created_before`, `include_superseded`, `_order_oldest`
 
 **Phase 2: Time Reasoning + Context Rebuild**:
-- [x] `_parse_time_expressions()` — extract time constraints from queries (zero LLM)
-- [x] `_rebuild_context()` — extend FTS5 queries with related words from user profile
-- [x] `_order_oldest` filter — support "first/earliest" queries
+- [x] `_parse_time_expressions()` — 쿼리에서 시간 제약 추출 (zero LLM)
+- [x] `_rebuild_context()` — 사용자 프로필의 관련 단어로 FTS5 쿼리 확장
+- [x] `_order_oldest` filter — "first/earliest" 쿼리 지원
 
 **Phase 3: Structured Prompt + Knowledge Updates**:
 - [x] Priority labels: `[MANDATORY]`, `[IMPORTANT]`, `[OUTDATED]`
-- [x] `_build_superseded_notes()` — knowledge update tracking
+- [x] `_build_superseded_notes()` — 지식 업데이트 추적
 - [x] Structured prompt sections: Mandatory → Important → Context → Outdated → Knowledge Updates
 - [x] `build_context()` safe access for `__new__()` created objects
 
@@ -402,27 +402,27 @@ See CHANGELOG.md for detailed history.
 **Next**: Phase 4 — Session Summary + Semantic Aggregation (requires LLM)
 
 ### v0.5.0 — Intelligence Enhancement (Partially Complete)
-> **Status**: Partially complete — Consolidation Engine and PrefEval achieved in pre-reset cycle. Remaining items deferred to v0.6.0+.
+> **상태**: 부분 완료 — Consolidation Engine과 PrefEval은 pre-reset 주기에서 달성됨. 나머지 항목은 v0.6.0+로 연기.
 - [x] Consolidation Engine (P0: dedup+decay, P1: pattern→rules, P2: semantic merge)
 - [x] PrefEval 96.0% preference adherence (50 items, ICLR 2025 Oral)
 - [x] 27 MCP tools (added consolidate_memories)
 
-> **Note on PrefEval numbers**: Different sample sizes and seeds produce different results. The canonical result is **83.0%** (200 items, 3-condition comparison: CarryMem 83.0% > reminder 80.0% > zero-shot 71.5%), as documented in the README. Other figures (85.0%, 87.9%, 96.0%) reflect different evaluation configurations and should not be compared directly.
+> **PrefEval 수치 참고**: 샘플 크기와 seed에 따라 결과가 다릅니다. 정식 결과는 **83.0%** (200 items, 3-condition comparison: CarryMem 83.0% > reminder 80.0% > zero-shot 71.5%)이며, README에 문서화되어 있습니다. 그 외 수치(85.0%, 87.9%, 96.0%)는 다른 평가 설정을 반영하며 직접 비교해서는 안 됩니다.
 - [ ] Consolidation scheduled trigger (auto dedup+decay)
 - [ ] Motive memory type (pending→activated→completed lifecycle)
 - [ ] PrefEval evaluation standardization (reproducible scripts + report template)
-- Vector-based semantic matching (optional embedding model)
-- Rule recommendation engine
-- Cross-user rule sharing (with anonymization)
-- Ontology-based trigger matching
+- [ ] Vector-based semantic matching (optional embedding model)
+- [ ] Rule recommendation engine
+- [ ] Cross-user rule sharing (with anonymization)
+- [ ] Ontology-based trigger matching
 
 ### ✅ v0.2.2 — PrefEval Violation Optimization + Version Chain
 
-**Theme**: PrefEval optimization + state/event version chain + security hardening
-**Principle**: #3 PrefEval focus + #1 Lightweight
+**테마**: PrefEval 최적화 + 상태/이벤트 버전 체인 + 보안 강화
+**원칙**: #3 PrefEval focus + #1 Lightweight
 
 **P0 — Violation Rate Optimization** (DONE):
-- [x] Analyze PrefEval 200-sample violation cases
+- [x] PrefEval 200-sample violation case 분석
 - [x] Fix coreference replacement text injection vulnerability (security)
 - [x] Preference token budget 40%→60%, preventing preference truncation
 - [x] PrefEval 200-sample: CarryMem **87.9%** (single-condition peak)
@@ -443,8 +443,8 @@ See CHANGELOG.md for detailed history.
 
 ### v0.2.0 — Auto-Maintenance + Evaluation Standardization ✅
 
-**Theme**: Consolidation scheduling + reproducible PrefEval + non-technical user reach
-**Principle**: #1 Lightweight — auto-maintenance reduces manual burden
+**테마**: Consolidation scheduling + reproducible PrefEval + non-technical user reach
+**원칙**: #1 Lightweight — auto-maintenance reduces manual burden
 
 **P0 — PrefEval Fair Benchmark** (DONE):
 - [x] 200-sample, 3-condition comparison (zero-shot/reminder/carrymem)
@@ -485,14 +485,14 @@ See CHANGELOG.md for detailed history.
 
 ## Post-Beta Roadmap — Competitive Intelligence Absorption
 
-> **Source**: DevSquad 4-role review (Architect + PM + Security + DevOps)
-> **Date**: 2026-06-02 | **Reviewed Projects**: Lum1104/Understand-Anything (v2.7.3) + rtk-ai/rtk (v0.40.0)
-> **Rule**: Beta frozen — no code changes until post-release. These items are recorded for v0.2.5+ planning.
+> **출처**: DevSquad 4-role review (Architect + PM + Security + DevOps)
+> **날짜**: 2026-06-02 | **검토 프로젝트**: Lum1104/Understand-Anything (v2.7.3) + rtk-ai/rtk (v0.40.0)
+> **규칙**: Beta frozen — release 전 코드 변경 없음. 이 항목들은 v0.2.5+ 계획용으로 기록.
 
 ### Analysis Summary
 
-| Dimension | Understand-Anything | rtk | CarryMem Current |
-|-----------|---------------------|-----|------------------|
+| 차원 | Understand-Anything | rtk | CarryMem Current |
+|------|---------------------|-----|------------------|
 | **Positioning** | Code → Knowledge Graph | Token-saving proxy | AI Memory Layer |
 | **Languages** | 8 (EN/ZH-CN/ZH-TW/JA/KO/ES/TR/RU) | 7 (EN/FR/ZH/JA/KO/ES/PT) | 3 (EN/CN/JP) |
 | **Platforms** | 14 (Plugin + install.sh) | 14 (Hook + Plugin) | 9 (MCP stdio) |

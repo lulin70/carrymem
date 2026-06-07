@@ -46,7 +46,7 @@ jobs:
     strategy:
         fail-fast: false
         matrix:
-          python-version: ['3.12']
+          python-version: ['3.9', '3.10', '3.11', '3.12']
 
     steps:
       - uses: actions/checkout@v4
@@ -142,9 +142,9 @@ jobs:
   # ADVISORY: Code Quality (non-blocking)
   # ═══════════════════════════════════════
   lint:
-    name: Lint (Advisory)
+    name: Lint (Quality Gate)
     runs-on: ubuntu-latest
-    continue-on-error: true
+    continue-on-error: false
     steps:
       - uses: actions/checkout@v4
 
@@ -159,13 +159,13 @@ jobs:
           pip install flake8 black isort mypy
 
       - name: flake8
-        run: flake8 src/ tests/ --count --exit-zero --max-line-length=127 --statistics
+        run: flake8 src/ tests/ --count --max-line-length=120 --statistics
 
       - name: Black
-        run: black --check --diff --color src/ tests/ || true
+        run: black --check --diff --color src/ tests/
 
       - name: isort
-        run: isort --check-only --diff src/ tests/ || true
+        run: isort --check-only --diff src/ tests/
 
   # ═══════════════════════════════════════
   # ADVISORY: i18n Compliance (non-blocking)

@@ -575,23 +575,29 @@ class CarryMem:
             },
         }
 
-    def classify_and_remember(
+    def _validate_and_resolve(
         self,
         message: str,
-        context: Optional[Dict[str, Any]] = None,
-        language: Optional[str] = None,
-        session_id: Optional[str] = None,
-        force_type: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        if not self._adapter:
-            raise StorageNotConfiguredError()
+        context: Optional[Dict[str, Any]],
+        force_type: Optional[str],
+        session_id: Optional[str],
+    ) -> tuple:
+        """Validate input, inject session_id, resolve coreferences, check redaction.
 
+        Returns:
+            (resolved_message, should_continue, redact_result, coreference_resolved)
+            - resolved_message: message after coreference resolution
+            - should_continue: False if auto-redaction blocked storage
+            - redact_result: full result dict if blocked, else None
+            - coreference_resolved: whether coreference resolution modified the message
+        """
         if not message or not message.strip():
             raise ValueError("Message cannot be empty")
 
         if len(message) > 50000:
             raise ValueError(f"Message too long: {len(message)} chars (max 50000)")
 
+        # Inject session_id into context
         if session_id and context is None:
             context = {}
         if session_id and isinstance(context, dict):
@@ -600,28 +606,37 @@ class CarryMem:
         # Coreference resolution: resolve pronouns before classification
         resolved_message = message
         coreference_resolved = False
-        try:
-            from carrymem.coreference import resolve_coreference
 
-            context_str = ""
-            if context and isinstance(context, dict):
-                context_str = context.get("ai_reply", "") or context.get("previous_message", "")
-            recent_mems = []
+        # Skip expensive recall+coreference for messages without pronouns.
+        _PRONOUNS = {"it", "this", "that", "these", "those",
+                      "he", "she", "they", "him", "her", "them",
+                      "his", "its", "their", "my", "your", "our"}
+        _has_pronoun = bool(
+            set(message.lower().split()) & _PRONOUNS
+            or any(p in message.lower() for p in ("it's", "that's", "he's", "she's"))
+        )
+
+        if _has_pronoun:
             try:
-                recent_mems = self.recall_memories(query="", limit=5, update_access=False)
-            except Exception:
-                pass
-            resolved_message, coreference_resolved = resolve_coreference(
-                message,
-                context=context_str,
-                recent_memories=recent_mems,
-            )
-            if coreference_resolved:
-                from carrymem.utils.logger import logger
+                from carrymem.coreference import resolve_coreference
 
-                logger.debug(f"Coreference resolved: '{message}' → '{resolved_message}'")
-        except Exception:
-            pass  # Non-critical: fall back to original message
+                context_str = ""
+                if context and isinstance(context, dict):
+                    context_str = context.get("ai_reply", "") or context.get("previous_message", "")
+                recent_mems = []
+                try:
+                    recent_mems = self.recall_memories(query="", limit=5, update_access=False)
+                except Exception as e:
+                    logger.debug(f"Coreference recall skipped (non-critical): {e}")
+                resolved_message, coreference_resolved = resolve_coreference(
+                    message,
+                    context=context_str,
+                    recent_memories=recent_mems,
+                )
+                if coreference_resolved:
+                    logger.debug(f"Coreference resolved: '{message}' → '{resolved_message}'")
+            except Exception as e:
+                logger.debug(f"Coreference resolution failed (non-critical), using original message: {e}")
 
         # Auto-redaction: block sensitive content from storage
         if not force_type:  # force_type allows user to override redaction
@@ -630,10 +645,8 @@ class CarryMem:
 
                 should_block, redact_reason = should_redact(resolved_message)
                 if should_block:
-                    from carrymem.utils.logger import logger
-
                     logger.warning(f"Auto-redact blocked memory storage: {redact_reason}")
-                    return {
+                    redact_result = {
                         "should_remember": False,
                         "type": "auto_redacted",
                         "content": resolved_message,
@@ -650,21 +663,33 @@ class CarryMem:
                             "redact_reason": redact_reason,
                         },
                     }
+                    return (resolved_message, False, redact_result, coreference_resolved)
             except Exception as e:
-                from carrymem.utils.logger import logger
                 logger.warning(f"Auto-redaction check failed, allowing storage as precaution: {e}")
 
+        return (resolved_message, True, None, coreference_resolved)
+
+    def _classify_message(
+        self,
+        resolved_message: str,
+        context: Optional[Dict[str, Any]],
+        language: Optional[str],
+        force_type: Optional[str],
+        message: str,
+    ) -> List[Dict[str, Any]]:
+        """Classify the message and apply force_type override.
+
+        Returns:
+            entries list (may be empty for noise), or None if should not remember
+            (without force_type). The caller should check classify_result structure.
+        """
         # Use resolved message for classification, but keep original as raw_text
         classify_result = self.classify_message(
             resolved_message, context=context, language=language
         )
 
         if not classify_result["should_remember"] and not force_type:
-            return {
-                **classify_result,
-                "stored": False,
-                "storage_keys": [],
-            }
+            return []  # Signal: noise, no entries to store
 
         # force_type overrides classification: ensure entry exists and action is store
         if force_type and not classify_result["should_remember"]:
@@ -679,6 +704,23 @@ class CarryMem:
                     }
                 ]
 
+        return classify_result
+
+    def _store_entries(
+        self,
+        classify_result: Dict[str, Any],
+        resolved_message: str,
+        message: str,
+        context: Optional[Dict[str, Any]],
+        coreference_resolved: bool,
+        force_type: Optional[str],
+        session_id: Optional[str],
+    ) -> Dict[str, Any]:
+        """Store classified entries, handle corrections, suggest rules, backup.
+
+        Returns:
+            Final result dict with stored memories metadata.
+        """
         stored_memories = []
         storage_keys = []
         updated_memories = []
@@ -704,8 +746,6 @@ class CarryMem:
                     stored_memories.append(stored.to_dict())
                     storage_keys.append(stored.storage_key)
                 except Exception as e:
-                    from carrymem.utils.logger import logger
-
                     logger.warning(f"Failed to store memory: {e}")
                     continue
 
@@ -729,6 +769,50 @@ class CarryMem:
             "updated_memories": updated_memories,
             "summary": classify_result["summary"],
         }
+
+    def classify_and_remember(
+        self,
+        message: str,
+        context: Optional[Dict[str, Any]] = None,
+        language: Optional[str] = None,
+        session_id: Optional[str] = None,
+        force_type: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        if not self._adapter:
+            raise StorageNotConfiguredError()
+
+        # 1. Validate & resolve (coreference + redaction check)
+        resolved_message, should_continue, redact_result, coreference_resolved = self._validate_and_resolve(
+            message, context, force_type, session_id
+        )
+        if not should_continue:
+            return redact_result  # type: ignore[return-value]
+
+        # 2. Classify
+        classify_result = self._classify_message(
+            resolved_message, context, language, force_type, message
+        )
+        if isinstance(classify_result, list) and len(classify_result) == 0:
+            # Noise path: _classify_message returns empty list for non-rememberable
+            base_result = self.classify_message(resolved_message, context=context, language=language)
+            return {
+                **base_result,
+                "stored": False,
+                "storage_keys": [],
+            }
+
+        # 3. Store & post-process
+        result = self._store_entries(
+            classify_result,  # type: ignore[arg-type]
+            resolved_message,
+            message,
+            context,
+            coreference_resolved,
+            force_type,
+            session_id,
+        )
+
+        return result
 
     def _handle_correction(self, correction_entry: MemoryEntry) -> Optional[Dict[str, Any]]:
         if not self._adapter:
