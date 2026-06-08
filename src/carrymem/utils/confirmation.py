@@ -3,7 +3,9 @@ import re
 
 _CONFIRMATION_PATTERNS = {
     "en": [
-        r"^(ok|okay|sure|yes|yeah|yep|got it|sounds good|go ahead|let\'?s do it|agreed|fine|right|exactly|will do|make it so)$",
+        r"^(ok|okay|sure|yes|yeah|yep|got it|sounds good"
+        r"|go ahead|let\'?s do it|agreed|fine|right|exactly"
+        r"|will do|make it so)$",
         r"^(good|great|perfect|nice|cool|alright|absolutely|definitely|roger)$",
         r"^(ok|okay|sure|yes|yeah|yep|sounds good|go ahead|agreed|fine|alright)[,\s]",
         r"^(sounds?\s+good)[,\s]",

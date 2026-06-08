@@ -174,7 +174,11 @@ def cmd_list_rules(args):
         for rule in rules:
             expired = " [EXPIRED]" if rule.is_expired() else ""
             override_str = "HARD" if rule.override else "soft"
-            _row = f"  {rule.id:<14} {rule.rule_type:<8} {rule.scope:<10} {override_str:<8} {rule.trigger[:20]:<20} {rule.action[:30]:<30}{expired}"
+            _row = (
+                f"  {rule.id:<14} {rule.rule_type:<8} {rule.scope:<10} "
+                f"{override_str:<8} {rule.trigger[:20]:<20} "
+                f"{rule.action[:30]:<30}{expired}"
+            )
             print(
                 _row
             )
@@ -962,7 +966,11 @@ def cmd_promotion_log(args):
     accepted_s = stats.get("accepted", 0)
     rejected_s = stats.get("rejected", 0)
     expired_s = stats.get("expired", 0)
-    _summary = _dim(f'Total: {total_s} | Pending: {pending_s} | Accepted: {accepted_s} | Rejected: {rejected_s} | Expired: {expired_s}')
+    _summary = _dim(
+        f'Total: {total_s} | Pending: {pending_s} | '
+        f'Accepted: {accepted_s} | Rejected: {rejected_s} | '
+        f'Expired: {expired_s}'
+    )
     print(
         f"\n  {_summary}"
     )
@@ -1249,7 +1257,10 @@ def cmd_lesson_log(args):
     print(f"\n  {_bold('Experience Learning Log')}")
     print(f"  {'─' * 60}")
     for entry in entries:
-        status_icon = {"pending": "\u23f3", "accepted": "\u2705", "rejected": "\u274c", "expired": "\u231b"}.get(entry.status, "?")
+        status_icon = {
+            "pending": "\u23f3", "accepted": "\u2705",
+            "rejected": "\u274c", "expired": "\u231b",
+        }.get(entry.status, "?")
         lesson_preview = entry.lesson[:60] + ("..." if len(entry.lesson) > 60 else "")
         rule_info = f" \u2192 {entry.resulting_rule_id}" if entry.resulting_rule_id else ""
         print(f"  {status_icon} {_dim(entry.id)} {lesson_preview}{rule_info}")
@@ -1261,7 +1272,11 @@ def cmd_lesson_log(args):
     accepted_s = stats.get("accepted", 0)
     rejected_s = stats.get("rejected", 0)
     expired_s = stats.get("expired", 0)
-    _summary = _dim(f'Total: {total_s} | Pending: {pending_s} | Accepted: {accepted_s} | Rejected: {rejected_s} | Expired: {expired_s}')
+    _summary = _dim(
+        f'Total: {total_s} | Pending: {pending_s} | '
+        f'Accepted: {accepted_s} | Rejected: {rejected_s} | '
+        f'Expired: {expired_s}'
+    )
     print(
         f"\n  {_summary}"
     )

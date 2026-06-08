@@ -71,17 +71,19 @@ class AuditLogger:
         try:
             details_json = json.dumps(details) if details else None
             conn.execute(
-    """INSERT INTO audit_log (operation, namespace, storage_key, memory_type, success, details, source)
+                """INSERT INTO audit_log (operation, namespace, storage_key,
+                   memory_type, success, details, source)
                    VALUES (?, ?, ?, ?, ?, ?, ?)""",
-    ( operation,
-    namespace or self._namespace,
-    storage_key,
-    memory_type,
-    1 if success else 0,
-    details_json,
-    source,
-    ),
-     )
+                (
+                    operation,
+                    namespace or self._namespace,
+                    storage_key,
+                    memory_type,
+                    1 if success else 0,
+                    details_json,
+                    source,
+                ),
+            )
             conn.commit()
         except sqlite3.Error as e:
             _audit_logger.error(f"Audit log_operation failed: {e}")

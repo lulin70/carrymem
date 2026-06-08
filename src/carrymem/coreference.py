@@ -97,7 +97,9 @@ def _extract_entities_en(text: str) -> List[Tuple[str, str]]:
 
     # Pattern: my/our + relationship noun
     for m in re.finditer(
-        r"(?:my|our)\s+(mom|mother|dad|father|sister|brother|wife|husband|son|daughter|friend|boss|colleague|teacher|student|project|team|company|app|product)",
+        r"(?:my|our)\s+(mom|mother|dad|father|sister|brother|wife"
+        r"|husband|son|daughter|friend|boss|colleague|teacher|student"
+        r"|project|team|company|app|product)",
         text,
         re.IGNORECASE,
     ):

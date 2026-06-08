@@ -247,7 +247,11 @@ class TestRedactSpecialPatterns:
         assert "private_key" in names
 
     def test_detect_jwt_token(self):
-        jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"
+        jwt = (
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+            ".eyJzdWIiOiIxMjM0NTY3ODkwIn0"
+            ".dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"
+        )
         findings = detect_sensitive_content(jwt)
         names = [f[0] for f in findings]
         assert "jwt_token" in names

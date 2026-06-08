@@ -337,8 +337,10 @@ class SQLiteAdapter(StorageAdapter):
     def forget_expired(self) -> int:
         return self._crud.forget_expired()
 
-    def update_memory(self, storage_key: str, new_content: str,
-                     reason: Optional[str] = None) -> Optional[StoredMemory]:
+    def update_memory(
+        self, storage_key: str, new_content: str,
+        reason: Optional[str] = None,
+    ) -> Optional[StoredMemory]:
         return self._crud.update_memory(storage_key, new_content, reason)
 
     def get_by_key(self, storage_key: str):

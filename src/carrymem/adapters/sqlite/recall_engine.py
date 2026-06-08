@@ -309,7 +309,9 @@ class RecallEngine:
                     results.append(stored)
             if update_access and batch_updates:
                 conn.executemany(
-                    "UPDATE memories SET access_count = ?, importance_score = ?, last_accessed_at = ? WHERE storage_key = ?",
+                    "UPDATE memories SET access_count = ?, "
+                    "importance_score = ?, last_accessed_at = ? "
+                    "WHERE storage_key = ?",
                     batch_updates,
                 )
         else:
@@ -332,7 +334,9 @@ class RecallEngine:
                     results.append(stored)
             if update_access and batch_updates:
                 conn.executemany(
-                    "UPDATE memories SET access_count = access_count + 1, importance_score = ?, last_accessed_at = ? WHERE storage_key = ?",
+                    "UPDATE memories SET access_count = access_count + 1, "
+                    "importance_score = ?, last_accessed_at = ? "
+                    "WHERE storage_key = ?",
                     [(score, ts, key) for (_, score, ts, key) in batch_updates],
                 )
 
@@ -487,7 +491,10 @@ class RecallEngine:
     def _like_search(self, query, where_clause, params, limit):
         conn = self._adapter._conn_mgr.get_connection()
         escaped = escape_like(query)
-        like_clause = " AND (content LIKE ? ESCAPE '\\' OR raw_text LIKE ? ESCAPE '\\' OR original_message LIKE ? ESCAPE '\\')"
+        like_clause = (
+            " AND (content LIKE ? ESCAPE '\\' OR raw_text LIKE ? "
+            "ESCAPE '\\' OR original_message LIKE ? ESCAPE '\\')"
+        )
         like_params = [f"%{escaped}%", f"%{escaped}%", f"%{escaped}%"]
         sql = f"""
             SELECT * FROM memories

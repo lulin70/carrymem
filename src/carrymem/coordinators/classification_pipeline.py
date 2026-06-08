@@ -128,7 +128,8 @@ class ClassificationPipeline:
                 self._filter_counts["low_info_assistant"] += 1
                 if self._filter_counts["low_info_assistant"] % 100 == 1:
                     logger.info(
-                        f"Low-info assistant filter: {self._filter_counts['low_info_assistant']} messages filtered total"
+                        f"Low-info assistant filter: "
+                        f"{self._filter_counts['low_info_assistant']} messages filtered total"
                     )
                 return []
 
@@ -144,8 +145,9 @@ class ClassificationPipeline:
                     self._filter_counts["fail_closed"] += 1
                     if self._filter_counts["fail_closed"] % 100 == 1:
                         logger.info(
-                            f"Fail-closed filter: {self._filter_counts['fail_closed']} low-confidence defaults filtered total"
-                        )
+                        f"Fail-closed filter: "
+                        f"{self._filter_counts['fail_closed']} low-confidence defaults filtered total"
+                    )
                     if self.pattern_analyzer.noise_filter_mode == "soft":
                         default_match["confidence"] = self.MIN_DEFAULT_CONFIDENCE
                         default_match["source"] = "default:soft_fallback"
@@ -225,8 +227,11 @@ class ClassificationPipeline:
 
         # 1. Generic confirmation patterns
         generic_confirmations = [
-            r"^(i\s+)?(understand|see|got\s+it|gotcha|sure|ok|okay|alright|right|exactly|absolutely|correct|indeed|of\s+course|certainly|definitely|surely)\b",
-            r"^(that\'?s?\s+)?(right|correct|true|accurate|makes?\s+sense|sounds?\s+good|looks?\s+good)",
+            r"^(i\s+)?(understand|see|got\s+it|gotcha|sure|ok|okay"
+            r"|alright|right|exactly|absolutely|correct|indeed|of\s+course"
+            r"|certainly|definitely|surely)\b",
+            r"^(that\'?s?\s+)?(right|correct|true|accurate|makes?\s+sense"
+            r"|sounds?\s+good|looks?\s+good)",
             r"^(yes|yeah|yep|no\s+problem|not\s+at\s+all|not\s+really)",
             r"^(let\s+me\s+)?(help|assist|check|look|try|work\s+on)\s+(you|that|this|it)",
             r"^(here\'?s?\s+)?(what|i\s+can|the\s+result|the\s+answer)",

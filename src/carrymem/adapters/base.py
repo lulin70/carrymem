@@ -325,7 +325,10 @@ class StorageAdapter(ABC):
                 )
                 return StoredMemory.from_memory_entry(entry, storage_key=entry.id)
 
-            def recall(self, query: str, filters: Dict = None, limit: int = 20, update_access: bool = True) -> List[StoredMemory]:
+            def recall(
+                self, query: str, filters: Dict = None, limit: int = 20,
+                update_access: bool = True,
+            ) -> List[StoredMemory]:
                 # FTS5 search implementation
                 ...
 

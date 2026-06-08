@@ -142,7 +142,11 @@ def detect_merge_conflicts(
                             existing_rule=ext,
                             conflict_type="scope_escalation",
                             severity="low",
-                            reason=f"Incoming [{inc.scope}] rule escalates over existing [{ext.scope}] rule on trigger '{inc.trigger}'",
+                            reason=(
+                                f"Incoming [{inc.scope}] rule escalates over "
+                                f"existing [{ext.scope}] rule on trigger "
+                                f"'{inc.trigger}'"
+                            ),
                             suggestion="Accept incoming rule — higher scope priority",
                         )
                     )
@@ -318,7 +322,10 @@ def merge_rules(
                             "skip",
                             inc.id,
                             {"decision": "keep_existing", "conflict": conflict.conflict_type},
-                            reason=f"Existing [{conflict.existing_rule.scope}] overrides incoming [{inc.scope}]",  # fmt: skip
+                            reason=(  # fmt: skip
+                                f"Existing [{conflict.existing_rule.scope}] "
+                                f"overrides incoming [{inc.scope}]"
+                            ),
                         )
                     )
                 elif decision == MergeDecision.MODIFY_INCOMING:

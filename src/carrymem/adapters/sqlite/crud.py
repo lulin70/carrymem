@@ -270,7 +270,8 @@ class CRUDOperations:
         version_id = f"v_{storage_key}_{new_version}"
         now = datetime.now(timezone.utc)
         conn.execute(
-            """INSERT INTO memory_versions (version_id, memory_id, version, content, confidence, changed_at, change_reason, namespace)
+            """INSERT INTO memory_versions (version_id, memory_id, version,
+               content, confidence, changed_at, change_reason, namespace)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 version_id,

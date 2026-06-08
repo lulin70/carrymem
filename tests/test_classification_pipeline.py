@@ -550,7 +550,8 @@ class TestResolveTypePriority(unittest.TestCase):
         self.assertEqual(result[0]["memory_type"], "decision")
 
     def test_full_priority_order(self):
-        """Verify the full priority chain: correction > decision > preference > task > fact > sentiment > relationship > location."""
+        """Verify the full priority chain: correction > decision >
+        preference > task > fact > sentiment > relationship > location."""
         matches = [
             {"memory_type": "location", "confidence": 0.7},
             {"memory_type": "relationship", "confidence": 0.7},

@@ -160,16 +160,22 @@ class TestE2ESecurityPipeline(unittest.TestCase):
         self.assertEqual(result.get("type"), "auto_redacted",
                          "Result type should indicate auto-redaction")
         summary = result.get("summary", {})
-        self.assertTrue(summary.get("redacted", False),
-                        "Summary should indicate redaction occurred")
-        self.assertIsNotNone(summary.get("redact_reason"),
-                            "Summary should include redaction reason")
+        self.assertTrue(
+            summary.get("redacted", False),
+            "Summary should indicate redaction occurred",
+        )
+        self.assertIsNotNone(
+            summary.get("redact_reason"),
+            "Summary should include redaction reason",
+        )
 
     def test_normal_message_stored_successfully(self):
         """Verify: Normal messages without sensitive content are stored normally."""
         result = self.cm.classify_and_remember("I prefer dark mode for my IDE")
-        self.assertTrue(result.get("stored") or result.get("should_remember"),
-                        "Normal preference should be stored successfully")
+        self.assertTrue(
+            result.get("stored") or result.get("should_remember"),
+            "Normal preference should be stored successfully",
+        )
 
     def test_force_type_overrides_redaction(self):
         """Verify: force_type parameter bypasses auto-redaction check."""
@@ -237,8 +243,10 @@ class TestE2ESecurityPipeline(unittest.TestCase):
 
             # Recall should work transparently
             memories = cm_enc.recall_memories(query="Rust", limit=5)
-            self.assertGreaterEqual(len(memories), 0,
-                                   "Should be able to recall from encrypted storage")
+            self.assertGreaterEqual(
+                len(memories), 0,
+                "Should be able to recall from encrypted storage",
+            )
         finally:
             cm_enc.close()
 
@@ -269,10 +277,14 @@ class TestE2ESecurityPipeline(unittest.TestCase):
                     content = row["content"]
                     # Encrypted content should be base64-like, not plain readable text
                     # The raw DB should NOT contain the exact plaintext
-                    self.assertNotIn("banking PIN", content,
-                                    "Raw DB should not contain plaintext 'banking PIN'")
-                    self.assertNotIn("9876", content,
-                                    "Raw DB should not contain plaintext PIN digits")
+                    self.assertNotIn(
+                        "banking PIN", content,
+                        "Raw DB should not contain plaintext 'banking PIN'",
+                    )
+                    self.assertNotIn(
+                        "9876", content,
+                        "Raw DB should not contain plaintext PIN digits",
+                    )
             finally:
                 conn.close()
         finally:
@@ -417,10 +429,15 @@ class TestE2ESecurityPipeline(unittest.TestCase):
 
             # Each original message should be recoverable
             for orig in original_messages:
-                found = any(orig.lower() in rc.lower() or rc.lower() in orig.lower()
-                           for rc in recalled_contents)
-                self.assertTrue(found,
-                                f"Original message '{orig[:40]}...' should be recoverable after encrypt/recall cycle")
+                found = any(
+                    orig.lower() in rc.lower() or rc.lower() in orig.lower()
+                    for rc in recalled_contents
+                )
+                self.assertTrue(
+                    found,
+                    f"Original message '{orig[:40]}...' should be recoverable "
+                    f"after encrypt/recall cycle",
+                )
         finally:
             cm_e.close()
 

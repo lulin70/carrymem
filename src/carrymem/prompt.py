@@ -12,10 +12,16 @@ PROMPT_TEMPLATES = {
     "en": {
         "header": "You are an AI assistant with access to the user's memory and knowledge base.",
         "priority": [
-            "1. **User Memories** (highest priority) — Personal preferences, corrections, and decisions the user has shared.",
-            "2. **Knowledge Base** — Notes and documents from the user's personal vault.",
-            "3. **General Knowledge** (lowest priority) — Use only when memories and knowledge base don't cover the topic.",
-        ],
+                (
+                    "1. **User Memories** (highest priority) — Personal "
+                    "preferences, corrections, and decisions the user has shared."
+                ),
+                "2. **Knowledge Base** — Notes and documents from the user's personal vault.",
+                (
+                    "3. **General Knowledge** (lowest priority) — Use only when "
+                    "memories and knowledge base don't cover the topic."
+                ),
+            ],
         "memories_header": "## User Memories",
         "knowledge_header": "## Knowledge Base",
         "guidelines_header": "## Guidelines",
@@ -26,7 +32,9 @@ PROMPT_TEMPLATES = {
         ],
         "answer_guidelines": [
             "When answering questions about the user based on their memories:",
-            "1. Answer with ONLY the specific fact or detail asked for — no explanations, no context, no full sentences unless necessary.",
+            "1. Answer with ONLY the specific fact or detail asked for "
+            "— no explanations, no context, no full sentences unless "
+            "necessary.",
             "2. Match the brevity of these examples:",
         ],
         "answer_examples": [
@@ -37,11 +45,30 @@ PROMPT_TEMPLATES = {
             ("How many days passed between the two events?", "7 days"),
             ("How many projects has the user led?", "2"),
         ],
-        "answer_conflict_rule": "3. If memories conflict, prefer [MANDATORY] over others, and non-[OUTDATED] over [OUTDATED].",
-        "answer_preference_rule": "8. For preference/recommendation questions (what does the user prefer, can you recommend, what would the user like), describe the user's preferences AND aversions based on their memories. Include what they prefer and what they might NOT prefer. Write a descriptive sentence, not just a keyword.",
-        "answer_temporal_rule": "5. For temporal questions (which happened first, how many days between), use the dates in memories to determine order and calculate intervals.",
-        "answer_aggregation_rule": "6. For counting questions (how many, total), carefully count ALL matching items across all memories before answering.",
-        "answer_cot_rule": "7. For reasoning questions, think step-by-step internally, then output ONLY the final answer.",
+        "answer_conflict_rule": (
+            "3. If memories conflict, prefer [MANDATORY] over others, "
+            "and non-[OUTDATED] over [OUTDATED]."
+        ),
+        "answer_preference_rule": (
+            "8. For preference/recommendation questions (what does the user "
+            "prefer, can you recommend, what would the user like), describe "
+            "the user's preferences AND aversions based on their memories. "
+            "Include what they prefer and what they might NOT prefer. Write a "
+            "descriptive sentence, not just a keyword."
+        ),
+        "answer_temporal_rule": (
+            "5. For temporal questions (which happened first, how many days "
+            "between), use the dates in memories to determine order and "
+            "calculate intervals."
+        ),
+        "answer_aggregation_rule": (
+            "6. For counting questions (how many, total), carefully count ALL "
+            "matching items across all memories before answering."
+        ),
+        "answer_cot_rule": (
+            "7. For reasoning questions, think step-by-step internally, then "
+            "output ONLY the final answer."
+        ),
         "answer_fallback": "4. If you cannot find the answer in the memories, respond with: Information not available.",
         "preference_qa_header": "You are a helpful assistant.",
         "preference_qa_guidelines": [],
@@ -110,8 +137,16 @@ PROMPT_TEMPLATES = {
             ("2つのイベントの間は何日ありましたか？", "7日"),
             ("ユーザーはいくつのプロジェクトを主導しましたか？", "2"),
         ],
-        "answer_conflict_rule": "3. 記憶が矛盾する場合、[MANDATORY]を優先し、[OUTDATED]以外を[OUTDATED]より優先する。",
-        "answer_preference_rule": "8. 好み/推奨の質問（ユーザーの好み、推奨できるもの）については、記憶に基づいてユーザーの好みと嫌いなことを説明する。好みと好まないものの両方を含める。キーワードだけでなく説明的な文で書く。",
+        "answer_conflict_rule": (
+            "3. 記憶が矛盾する場合、[MANDATORY]を優先し、[OUTDATED]以外を"
+            "[OUTDATED]より優先する。"
+        ),
+        "answer_preference_rule": (
+            "8. 好み/推奨の質問（ユーザーの好み、推奨できるもの）について"
+            "は、記憶に基づいてユーザーの好みと嫌いなことを説明する。"
+            "好みと好まないものの両方を含める。キーワードだけでなく説明的"
+            "な文で書く。"
+        ),
         "answer_temporal_rule": "5. 時系列の質問（どちらが先、何日間隔）については、記憶内の日付を使用して順序を決定し間隔を計算する。",
         "answer_aggregation_rule": "6. カウントの質問（いくつ、合計）については、すべての記憶にわたって一致する項目を慎重に数えてから回答する。",
         "answer_fallback": "4. 記憶に答えが見つからない場合、次のように返答する：情報は利用できません。",

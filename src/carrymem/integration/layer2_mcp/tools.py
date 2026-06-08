@@ -16,7 +16,13 @@ from carrymem.__version__ import __version__ as _version
 CORE_TOOLS: List[Dict[str, Any]] = [
     {
         "name": "classify_message",
-        "description": "Analyze a message and determine if it contains memorable information. Returns a standardized MemoryEntry JSON with type, tier, confidence, and suggested_action. CarryMem is a CarryMem memory system with optional storage — it tells you WHAT to remember, and can optionally store it too.",
+        "description": (
+            "Analyze a message and determine if it contains memorable "
+            "information. Returns a standardized MemoryEntry JSON with type, "
+            "tier, confidence, and suggested_action. CarryMem is a CarryMem "
+            "memory system with optional storage — it tells you WHAT to "
+            "remember, and can optionally store it too."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -26,7 +32,12 @@ CORE_TOOLS: List[Dict[str, Any]] = [
                 },
                 "context": {
                     "type": "string",
-                    "description": "Conversation context (optional). When user confirms/accepts AI suggestion, pass the previous AI reply to improve decision/correction classification quality.",
+                    "description": (
+                        "Conversation context (optional). When user "
+                        "confirms/accepts AI suggestion, pass the previous "
+                        "AI reply to improve decision/correction "
+                        "classification quality."
+                    ),
                 },
             },
             "required": ["message"],
@@ -34,7 +45,11 @@ CORE_TOOLS: List[Dict[str, Any]] = [
     },
     {
         "name": "get_classification_schema",
-        "description": "Return CarryMem's complete classification schema definition including 7 memory types, 4 storage tiers, confidence thresholds, and downstream mapping tables.",
+        "description": (
+            "Return CarryMem's complete classification schema definition "
+            "including 7 memory types, 4 storage tiers, confidence "
+            "thresholds, and downstream mapping tables."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -77,7 +92,11 @@ CORE_TOOLS: List[Dict[str, Any]] = [
 OPTIONAL_TOOLS: List[Dict[str, Any]] = [
     {
         "name": "classify_and_remember",
-        "description": "Classify a message AND store it if worth remembering. One-step operation: classify → store → return. Requires storage adapter to be configured.",
+        "description": (
+            "Classify a message AND store it if worth remembering. "
+            "One-step operation: classify → store → return. Requires "
+            "storage adapter to be configured."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -92,7 +111,11 @@ OPTIONAL_TOOLS: List[Dict[str, Any]] = [
     },
     {
         "name": "recall_memories",
-        "description": "Retrieve stored memories. Supports filtering by type, tier, and confidence. Supports full-text search. Requires storage adapter.",
+        "description": (
+            "Retrieve stored memories. Supports filtering by type, tier, "
+            "and confidence. Supports full-text search. "
+            "Requires storage adapter."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -105,7 +128,11 @@ OPTIONAL_TOOLS: List[Dict[str, Any]] = [
                     "properties": {
                         "type": {
                             "type": "string",
-                            "description": "Memory type filter (user_preference, correction, fact_declaration, decision, relationship, task_pattern, sentiment_marker)",
+                            "description": (
+                                "Memory type filter (user_preference, "
+                                "correction, fact_declaration, decision, "
+                                "relationship, task_pattern, sentiment_marker)"
+                            ),
                         },
                         "tier": {
                             "type": "integer",
@@ -145,12 +172,21 @@ OPTIONAL_TOOLS: List[Dict[str, Any]] = [
 KNOWLEDGE_TOOLS: List[Dict[str, Any]] = [
     {
         "name": "index_knowledge",
-        "description": "Index an Obsidian vault or knowledge base for full-text search. Scans Markdown files, extracts YAML frontmatter tags and wiki-links, builds FTS5 index. Requires knowledge adapter (ObsidianAdapter).",
+        "description": (
+            "Index an Obsidian vault or knowledge base for full-text search. "
+            "Scans Markdown files, extracts YAML frontmatter tags and "
+            "wiki-links, builds FTS5 index. Requires knowledge adapter "
+            "(ObsidianAdapter)."
+        ),
         "inputSchema": {"type": "object", "properties": {}, "required": []},
     },
     {
         "name": "recall_from_knowledge",
-        "description": "Search knowledge base (e.g., Obsidian vault) using full-text search. Returns matching notes with title, content preview, tags, and wiki-links. Requires knowledge adapter.",
+        "description": (
+            "Search knowledge base (e.g., Obsidian vault) using full-text "
+            "search. Returns matching notes with title, content preview, tags, "
+            "and wiki-links. Requires knowledge adapter."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -184,7 +220,12 @@ KNOWLEDGE_TOOLS: List[Dict[str, Any]] = [
     },
     {
         "name": "recall_all",
-        "description": "Unified retrieval across both memories (SQLite) and knowledge base (Obsidian). Returns results from both sources with priority: memories first, then knowledge. Requires at least one adapter configured.",
+        "description": (
+            "Unified retrieval across both memories (SQLite) and knowledge "
+            "base (Obsidian). Returns results from both sources with "
+            "priority: memories first, then knowledge. Requires at least one "
+            "adapter configured."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -221,13 +262,21 @@ KNOWLEDGE_TOOLS: List[Dict[str, Any]] = [
 PROFILE_TOOLS: List[Dict[str, Any]] = [
     {
         "name": "declare_preference",
-        "description": "Let the user proactively tell the AI about themselves. User declarations are classified by the engine but always stored with confidence=1.0 and source_layer='declaration'. Active declaration + passive classification = complete memory coverage.",
+        "description": (
+            "Let the user proactively tell the AI about themselves. User "
+            "declarations are classified by the engine but always stored "
+            "with confidence=1.0 and source_layer='declaration'. Active "
+            "declaration + passive classification = complete memory coverage."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "message": {
                     "type": "string",
-                    "description": "What the user wants to declare (e.g., 'I prefer dark mode', 'We use PostgreSQL', 'My timezone is UTC+8')",
+                    "description": (
+                        "What the user wants to declare (e.g., 'I prefer dark "
+                        "mode', 'We use PostgreSQL', 'My timezone is UTC+8')"
+                    ),
                 }
             },
             "required": ["message"],
@@ -235,7 +284,13 @@ PROFILE_TOOLS: List[Dict[str, Any]] = [
     },
     {
         "name": "get_memory_profile",
-        "description": "Get a structured summary of what the AI remembers about the user. Returns highlights (top preferences, decisions, corrections), statistics (by type, by tier, avg confidence), and a human-readable summary. Lets users see and audit what AI remembers.",
+        "description": (
+            "Get a structured summary of what the AI remembers about the "
+            "user. Returns highlights (top preferences, decisions, "
+            "corrections), statistics (by type, by tier, avg confidence), "
+            "and a human-readable summary. Lets users see and audit what AI "
+            "remembers."
+        ),
         "inputSchema": {"type": "object", "properties": {}},
     },
 ]
@@ -243,13 +298,23 @@ PROFILE_TOOLS: List[Dict[str, Any]] = [
 PROMPT_TOOLS: List[Dict[str, Any]] = [
     {
         "name": "get_system_prompt",
-        "description": "Generate a system prompt with user memories and knowledge base context injected. The prompt follows the 'memory-first' retrieval priority: User Memories > Knowledge Base > General Knowledge. Use this to inject CarryMem context into any AI agent's system prompt.",
+        "description": (
+            "Generate a system prompt with user memories and knowledge base "
+            "context injected. The prompt follows the 'memory-first' "
+            "retrieval priority: User Memories > Knowledge Base > General "
+            "Knowledge. Use this to inject CarryMem context into any AI "
+            "agent's system prompt."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "context": {
                     "type": "string",
-                    "description": "Optional context/topic to filter relevant memories (e.g., 'database setup', 'coding style'). If empty, returns all memories.",
+                    "description": (
+                        "Optional context/topic to filter relevant memories "
+                        "(e.g., 'database setup', 'coding style'). If empty, "
+                        "returns all memories."
+                    ),
                 },
                 "max_memories": {
                     "type": "integer",
@@ -267,7 +332,10 @@ PROMPT_TOOLS: List[Dict[str, Any]] = [
                 },
                 "language": {
                     "type": "string",
-                    "description": "Language for the prompt template: en, zh, or ja (default en)",
+                    "description": (
+                        "Language for the prompt template: en, zh, or ja "
+                        "(default en)"
+                    ),
                     "default": "en",
                     "enum": ["en", "zh", "ja"],
                 },
@@ -276,7 +344,15 @@ PROMPT_TOOLS: List[Dict[str, Any]] = [
     },
     {
         "name": "summarize_and_store",
-        "description": "Request the host AI to summarize conversation content, then store the summary as a session_summary memory. This implements the 'borrow host LLM' pattern: CarryMem returns the content that needs summarizing, the host AI generates a concise summary focusing on user preferences, decisions, and key facts, then calls classify_and_remember or declare_preference to store it. No external LLM API key needed.",
+        "description": (
+            "Request the host AI to summarize conversation content, then store "
+            "the summary as a session_summary memory. This implements the "
+            "'borrow host LLM' pattern: CarryMem returns the content that "
+            "needs summarizing, the host AI generates a concise summary "
+            "focusing on user preferences, decisions, and key facts, then "
+            "calls classify_and_remember or declare_preference to store it. "
+            "No external LLM API key needed."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -302,7 +378,15 @@ PROMPT_TOOLS: List[Dict[str, Any]] = [
 CONSOLIDATION_TOOLS: List[Dict[str, Any]] = [
     {
         "name": "consolidate_memories",
-        "description": "Run memory consolidation: deduplicate similar memories, apply time-based decay, clean up low-value entries, and detect patterns for rule promotion. Preferences are always preserved. P0 handles dedup+decay, P1 detects repeated patterns and generates rule candidates. Run periodically (e.g., daily) to keep memory store healthy. Use dry_run=true first to preview changes.",
+        "description": (
+            "Run memory consolidation: deduplicate similar memories, apply "
+            "time-based decay, clean up low-value entries, and detect "
+            "patterns for rule promotion. Preferences are always preserved. "
+            "P0 handles dedup+decay, P1 detects repeated patterns and "
+            "generates rule candidates. Run periodically (e.g., daily) to "
+            "keep memory store healthy. Use dry_run=true first to preview "
+            "changes."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -313,7 +397,10 @@ CONSOLIDATION_TOOLS: List[Dict[str, Any]] = [
                 },
                 "run_p1": {
                     "type": "boolean",
-                    "description": "If true, also run P1 pattern recognition and rule candidate generation (default true)",
+                    "description": (
+                        "If true, also run P1 pattern recognition and "
+                        "rule candidate generation (default true)"
+                    ),
                     "default": True,
                 },
                 "run_p2": {
@@ -368,7 +455,13 @@ CONSOLIDATION_TOOLS: List[Dict[str, Any]] = [
 RULE_TOOLS: List[Dict[str, Any]] = [
     {
         "name": "add_rule",
-        "description": "Add a behavioral rule to CarryMem's rule engine. Rules guide AI behavior for specific topics. Use 'company' scope for organization-mandated rules (highest priority), 'negotiated' for team-adapted rules, or 'personal' for individual preferences (lowest priority).",
+        "description": (
+            "Add a behavioral rule to CarryMem's rule engine. Rules guide "
+            "AI behavior for specific topics. Use 'company' scope for "
+            "organization-mandated rules (highest priority), 'negotiated' "
+            "for team-adapted rules, or 'personal' for individual "
+            "preferences (lowest priority)."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -384,13 +477,21 @@ RULE_TOOLS: List[Dict[str, Any]] = [
                     "type": "string",
                     "enum": ["personal", "company", "negotiated"],
                     "default": "personal",
-                    "description": "Rule scope: company (org-mandated, cannot be overridden), negotiated (team-adapted), personal (individual preference)",
+                    "description": (
+                        "Rule scope: company (org-mandated, cannot be "
+                        "overridden), negotiated (team-adapted), personal "
+                        "(individual preference)"
+                    ),
                 },
                 "rule_type": {
                     "type": "string",
                     "enum": ["always", "avoid", "forbid", "prefer", "recommend"],
                     "default": "always",
-                    "description": "Rule type: always (mandatory), avoid (discouraged), forbid (prohibited), prefer (recommended), recommend (suggested)",
+                    "description": (
+                        "Rule type: always (mandatory), avoid (discouraged), "
+                        "forbid (prohibited), prefer (recommended), "
+                        "recommend (suggested)"
+                    ),
                 },
                 "override": {
                     "type": "boolean",
@@ -424,13 +525,20 @@ RULE_TOOLS: List[Dict[str, Any]] = [
     },
     {
         "name": "match_rules",
-        "description": "Match rules against a scene/topic and return applicable rules with scores. Use this to find which rules apply to a given context before generating a response.",
+        "description": (
+            "Match rules against a scene/topic and return applicable rules "
+            "with scores. Use this to find which rules apply to a given "
+            "context before generating a response."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "scene": {
                     "type": "string",
-                    "description": "The scene/topic to match rules against (e.g., 'database design', 'code review process')",
+                    "description": (
+                        "The scene/topic to match rules against (e.g., "
+                        "'database design', 'code review process')"
+                    ),
                 },
                 "scopes": {
                     "type": "array",
@@ -443,7 +551,11 @@ RULE_TOOLS: List[Dict[str, Any]] = [
     },
     {
         "name": "inject_rules",
-        "description": "Generate a formatted rules section for injection into AI prompts. Returns structured text with applicable rules for a given context, including scope labels and priority markers.",
+        "description": (
+            "Generate a formatted rules section for injection into AI "
+            "prompts. Returns structured text with applicable rules for a "
+            "given context, including scope labels and priority markers."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -455,7 +567,10 @@ RULE_TOOLS: List[Dict[str, Any]] = [
                     "type": "string",
                     "enum": ["structured", "compact", "json", "anchored"],
                     "default": "structured",
-                    "description": "Output format: structured (markdown), compact (single line), json, anchored (by type)",
+                    "description": (
+                        "Output format: structured (markdown), compact "
+                        "(single line), json, anchored (by type)"
+                    ),
                 },
                 "max_rules": {"type": "integer", "default": 10, "minimum": 1, "maximum": 50},
             },
@@ -464,7 +579,12 @@ RULE_TOOLS: List[Dict[str, Any]] = [
     },
     {
         "name": "my_rules",
-        "description": "View all your saved rules in a readable summary format. Shows rule triggers, actions, scope, type, and override status. Use this to review what CarryMem remembers about your preferences and behavioral rules.",
+        "description": (
+            "View all your saved rules in a readable summary format. Shows "
+            "rule triggers, actions, scope, type, and override status. Use "
+            "this to review what CarryMem remembers about your preferences "
+            "and behavioral rules."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -484,7 +604,11 @@ RULE_TOOLS: List[Dict[str, Any]] = [
     },
     {
         "name": "delete_rule",
-        "description": "Delete a rule by its ID. Use my_rules first to find the rule ID you want to remove. Returns confirmation with the deleted rule's details.",
+        "description": (
+            "Delete a rule by its ID. Use my_rules first to find the "
+            "rule ID you want to remove. Returns confirmation with the "
+            "deleted rule's details."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -498,7 +622,11 @@ RULE_TOOLS: List[Dict[str, Any]] = [
     },
     {
         "name": "suggest_rules",
-        "description": "Analyze your stored memories and suggest rule candidates based on detected patterns. Useful for discovering preferences you've expressed multiple times that could become formal rules.",
+        "description": (
+            "Analyze your stored memories and suggest rule candidates "
+            "based on detected patterns. Useful for discovering preferences "
+            "you've expressed multiple times that could become formal rules."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -519,7 +647,12 @@ RULE_TOOLS: List[Dict[str, Any]] = [
     },
     {
         "name": "promote_rules",
-        "description": "Run the full promotion pipeline: analyze memories, detect patterns, generate rule candidates, and optionally auto-accept them. Use this to convert accumulated preferences into active rules.",
+        "description": (
+            "Run the full promotion pipeline: analyze memories, detect "
+            "patterns, generate rule candidates, and optionally auto-accept "
+            "them. Use this to convert accumulated preferences into active "
+            "rules."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -537,14 +670,21 @@ RULE_TOOLS: List[Dict[str, Any]] = [
                 "auto_accept": {
                     "type": "boolean",
                     "default": False,
-                    "description": "If true, automatically accept all suggested rules. If false, rules are queued for your review.",
+                    "description": (
+                        "If true, automatically accept all suggested rules. "
+                        "If false, rules are queued for your review."
+                    ),
                 },
             },
         },
     },
     {
         "name": "update_rule",
-        "description": "Update an existing rule's trigger, action, scope, or type. Use my_rules first to find the rule ID. Returns the updated rule details.",
+        "description": (
+            "Update an existing rule's trigger, action, scope, or type. "
+            "Use my_rules first to find the rule ID. Returns the updated "
+            "rule details."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -568,7 +708,12 @@ RULE_TOOLS: List[Dict[str, Any]] = [
     },
     {
         "name": "my_profile",
-        "description": "Get a complete view of your CarryMem identity: memory statistics, rule summary, recent activity, and preference distribution. Use this to understand what CarryMem knows about you.",
+        "description": (
+            "Get a complete view of your CarryMem identity: memory "
+            "statistics, rule summary, recent activity, and preference "
+            "distribution. Use this to understand what CarryMem knows "
+            "about you."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -587,7 +732,11 @@ RULE_TOOLS: List[Dict[str, Any]] = [
     },
     {
         "name": "onboard",
-        "description": "First-time user onboarding. Returns a welcome message and asks key preference questions to initialize your CarryMem profile. Call this when a new user starts their first conversation.",
+        "description": (
+            "First-time user onboarding. Returns a welcome message and asks "
+            "key preference questions to initialize your CarryMem profile. "
+            "Call this when a new user starts their first conversation."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {

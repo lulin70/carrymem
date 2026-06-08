@@ -1540,7 +1540,9 @@ class TestPerformanceBenchmark(unittest.TestCase):
         # Pre-populate with 500 memories
         for i in range(500):
             cls.cm.classify_and_remember(
-                f"Memory {i}: I prefer using {'PostgreSQL' if i % 3 == 0 else 'MySQL' if i % 3 == 1 else 'SQLite'} for project data"
+                f"Memory {i}: I prefer using "
+                f"{'PostgreSQL' if i % 3 == 0 else 'MySQL' if i % 3 == 1 else 'SQLite'} "
+                f"for project data"
             )
 
     @classmethod

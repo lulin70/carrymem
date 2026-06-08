@@ -49,26 +49,33 @@ SENSITIVE_PATTERNS: List[Tuple[str, re.Pattern, str]] = [
     # Tokens
     ("bearer_token", re.compile(r'(?i)bearer\s+[a-zA-Z0-9\-_.~+/]+=*'), "Bearer token"),
     ("jwt_token", re.compile(
-        r'\beyJ[a-zA-Z0-9\-_.~+/]+=*\.eyJ[a-zA-Z0-9\-_.~+/]+=*\.[a-zA-Z0-9\-_.~+/]+=*'), "JWT token"),
+        r'\beyJ[a-zA-Z0-9\-_.~+/]+=*\.eyJ[a-zA-Z0-9\-_.~+/]+=*\.'
+        r'[a-zA-Z0-9\-_.~+/]+=*'), "JWT token"),
     ("generic_token", re.compile(
-        r'(?i)(?:token|access_token|refresh_token|auth_token)\s*[=:]\s*["\']?[a-zA-Z0-9\-_.~+/]{20,}["\']?'), "Generic token"),
+        r'(?i)(?:token|access_token|refresh_token|auth_token)\s*[=:]\s*'
+        r'["\']?[a-zA-Z0-9\-_.~+/]{20,}["\']?'), "Generic token"),
 
     # Private keys
     ("private_key", re.compile(r'-----BEGIN\s+(?:RSA\s+)?PRIVATE\s+KEY-----'), "Private key"),
 
     # Connection strings
     ("db_connection_string", re.compile(
-        r'(?i)(?:mongodb|postgres(?:ql)?|mysql|redis|amqp)://[^\s]+'), "Database connection string"),
+        r'(?i)(?:mongodb|postgres(?:ql)?|mysql|redis|amqp)://[^\s]+'),
+        "Database connection string"),
     ("db_connection_string_with_creds", re.compile(
-        r'(?i)(?:mongodb|postgres(?:ql)?|mysql|redis|amqp)://[^/\s:]+:[^/\s@]+@[^\s]+'), "Database connection string with credentials"),
+        r'(?i)(?:mongodb|postgres(?:ql)?|mysql|redis|amqp)://'
+        r'[^/\s:]+:[^/\s@]+@[^\s]+'),
+        "Database connection string with credentials"),
 
     # Secrets
     ("generic_secret", re.compile(
-        r'(?i)(?:secret|credential|private_key)\s*[=:]\s*["\']?[a-zA-Z0-9\-_.~+/]{20,}["\']?'), "Generic secret"),
+        r'(?i)(?:secret|credential|private_key)\s*[=:]\s*'
+        r'["\']?[a-zA-Z0-9\-_.~+/]{20,}["\']?'), "Generic secret"),
 
     # .env patterns
     ("env_sensitive", re.compile(
-        r'(?i)(?:SECRET_KEY|PRIVATE_KEY|ENCRYPTION_KEY|AUTH_SECRET)\s*=\s*["\']?[^\s"\']{8,}["\']?'), "Sensitive env variable"),
+        r'(?i)(?:SECRET_KEY|PRIVATE_KEY|ENCRYPTION_KEY|AUTH_SECRET)\s*=\s*'
+        r'["\']?[^\s"\']{8,}["\']?'), "Sensitive env variable"),
 ]
 
 
