@@ -54,7 +54,7 @@ class TestE2ESecurityPipeline(unittest.TestCase):
     def test_github_token_detected(self):
         """Verify: GitHub personal access tokens are detected."""
         # Pattern requires exactly 40 chars: 'ghp_' prefix + 36 alphanumeric
-        token_msg = "Use this GitHub token ghp_aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890 for auth"
+        token_msg = "Use this GitHub token ghp_FAKE0000000000000000000000000000000 for auth"
         findings = detect_sensitive_content(token_msg)
         pattern_names = [f[0] for f in findings]
         self.assertTrue(
@@ -383,7 +383,7 @@ class TestE2ESecurityPipeline(unittest.TestCase):
 
         Flow: classify_and_remember → [REDACTED] → NOT stored → NO audit for store
         """
-        message = "My Stripe key is sk_test_FAKE1234567890abcdefghijklmnop"
+        message = "My Stripe key is stripe_live_thisisafakekeyfortestingonly0000"
         result = self.cm.classify_and_remember(message)
 
         # Should be blocked
@@ -430,7 +430,7 @@ class TestE2ESecurityPipeline(unittest.TestCase):
         """Verify: Multiple distinct sensitive patterns are all detected."""
         msg = (
             "OpenAI key: sk-abc123def45678901234567890123456 "
-            "GitHub: ghp_aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890 "
+            "GitHub: ghp_FAKE0000000000000000000000000000000 "
             "DB: postgresql://admin:secret@localhost/db"
         )
         findings = detect_sensitive_content(msg)

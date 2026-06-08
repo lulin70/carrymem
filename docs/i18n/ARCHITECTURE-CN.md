@@ -186,6 +186,24 @@ class CarryMem:
 
 基于 NLP 的模式分析。近零成本，覆盖约 30% 的输入。
 
+**架构**：使用分层模式管理系统（`carrymem.patterns`）：
+
+- **Pattern**（基类）：单个编译正则表达式及其元数据（语言、类型、置信度、匹配方法）。子类：`NoisePattern`、`PreferencePattern`、`CorrectionPattern`、`FactPattern`、`TaskPattern`、`DecisionPattern`、`RelationshipPattern`、`SentimentPattern`、`LocationPattern`。
+- **PatternGroup**：相关模式的命名集合，支持语言索引查找（如 `noise_ack`、`preference_strong`、`correction_explicit`）。
+- **PatternRegistry**：中央注册表，管理所有模式组，提供按语言索引的快速匹配。
+- **PatternBuilder**：流式 API，用于构建和注册模式组。
+- **Definitions**：模式定义按类别拆分（`definitions_noise.py`、`definitions_preference.py` 等），支持 EN/ZH/JA 语言。
+
+```
+PatternAnalyzer
+  └── PatternRegistry
+        ├── PatternGroup "noise_ack"     → [NoisePattern(en), NoisePattern(zh), NoisePattern(ja)]
+        ├── PatternGroup "noise_chat"    → [NoisePattern(en), NoisePattern(zh), NoisePattern(ja)]
+        ├── PatternGroup "preference_strong" → [PreferencePattern(en), PreferencePattern(zh), ...]
+        ├── PatternGroup "correction_explicit" → [CorrectionPattern(en), CorrectionPattern(zh), ...]
+        └── ... (共 29 个组)
+```
+
 #### 3.3 语义分类器 (SemanticClassifier)
 
 基于 LLM 的模糊分类。Token 成本，覆盖 <10% 的输入。

@@ -60,7 +60,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 │  │  • Cross-language semantic recall (FTS5)          │    │
 │  │  • Session-aware storage + knowledge supersession (v0.1.7)   │    │
 │  │  • Time reasoning + structured prompt injection (v0.1.7)     │    │
-│  │|  •  3097 tests passing, 79%+ coverage           |│    │
+│  │|  •  3244 tests passing, 80%+ coverage           ││    │
 │  └──────────────────────────────────────────────────┘    │
 │              ↑ reads from          ↑ injects into         │
 │  Layer 1: Knowledge (WHAT you know) ← v0.3.0 계획         │
@@ -569,7 +569,7 @@ git add team-identity.carry && git commit -m "share identity"
 carrymem unpack team-identity.carry
 ```
 
-**Target**: v0.2.4 (documentation only, can ship with Beta)
+**Target**: v0.2.5 (released)
 
 ---
 
@@ -662,7 +662,7 @@ carrymem unpack team-identity.carry
 | v0.3.0 (pre-reset) | 1900+ | ~85% | +Knowledge CJK +relevance scoring |
 | v0.4.0 (pre-reset) | 1814 | ~77% | +Rule Scopes +Skill Format +VS Code Extension |
 | v0.4.1 (pre-reset) | 2056 | 79% | +Core Loop Fix +Auto Rule Suggestion +Security |
-| **v0.2.4 (current)** | **3097 tests** | **79%+** | **+Recall Purity +Scope Injection +PrefEval **83.0%** +8-client MCP** |
+| **v0.2.5 (current)** | **3244 tests** | **79%+** | **+Recall Purity +Scope Injection +PrefEval **83.0%** +8-client MCP** |
 
 ---
 
@@ -741,4 +741,4 @@ carrymem unpack team-identity.carry
 ---
 
 **Next Milestone**: v0.3.0 GA (General Availability)
-**Status**: ✅ **v0.2.5 complete (3097 tests, 79%+ coverage, Memory + Rules + Knowledge + Enterprise)**
+**Status**: ✅ **v0.2.5 complete (3244 tests, 80%+ coverage, Memory + Rules + Knowledge + Enterprise)**

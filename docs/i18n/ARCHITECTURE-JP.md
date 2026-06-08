@@ -184,7 +184,25 @@ Pattern-based classification using regex and keywords. Zero cost, covers ~60% of
 
 #### 3.2 Pattern Analyzer (PatternAnalyzer)
 
-NLP-based pattern analysis. Near-zero cost, covers ~30% of inputs.
+NLPベースのパターン分析。ほぼゼロコスト、入力の約30%をカバー。
+
+**アーキテクチャ**：階層型パターン管理システム（`carrymem.patterns`）を使用：
+
+- **Pattern**（基底クラス）：コンパイル済み正規表現とメタデータ（言語、タイプ、信頼度、マッチ方法）。サブクラス：`NoisePattern`、`PreferencePattern`、`CorrectionPattern`、`FactPattern`、`TaskPattern`、`DecisionPattern`、`RelationshipPattern`、`SentimentPattern`、`LocationPattern`。
+- **PatternGroup**：関連パターンの名前付きコレクション、言語インデックス付きルックアップ（例：`noise_ack`、`preference_strong`、`correction_explicit`）。
+- **PatternRegistry**：全グループを管理する中央レジストリ、言語別インデックスによる高速マッチング。
+- **PatternBuilder**：パターングループの構築と登録のためのFluent API。
+- **Definitions**：パターン定義をカテゴリ別に分割（`definitions_noise.py`、`definitions_preference.py`など）、EN/ZH/JA言語をサポート。
+
+```
+PatternAnalyzer
+  └── PatternRegistry
+        ├── PatternGroup "noise_ack"     → [NoisePattern(en), NoisePattern(zh), NoisePattern(ja)]
+        ├── PatternGroup "noise_chat"    → [NoisePattern(en), NoisePattern(zh), NoisePattern(ja)]
+        ├── PatternGroup "preference_strong" → [PreferencePattern(en), PreferencePattern(zh), ...]
+        ├── PatternGroup "correction_explicit" → [CorrectionPattern(en), CorrectionPattern(zh), ...]
+        └── ... (全29グループ)
+```
 
 #### 3.3 Semantic Classifier (SemanticClassifier)
 

@@ -10,8 +10,8 @@
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI バージョン"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-3097-brightgreen" alt="テスト">
-  <img src="https://img.shields.io/badge/coverage-79%25%2B-green" alt="カバレッジ">
+  <img src="https://img.shields.io/badge/tests-3244-brightgreen" alt="テスト">
+  <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="カバレッジ">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval 学術ベンチマーク"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
 </p>
@@ -639,8 +639,8 @@ AI にはメモリが必要だと知っている。プロンプトファイル�
 ## プロジェクトステータス
 
 **現在のバージョン**: v0.2.5 (Beta)
-**テスト**: 3097 passing
-**カバレッジ**: 79%+
+**テスト**: 3244 passing
+**カバレッジ**: 80%+
 
 **チェンジログ**:
 - **v0.2.0**: USB 携帯暗号化、自動バックアップ、並行安全性、PrefEval 83.0%（200項目）、8クライアントMCP設定

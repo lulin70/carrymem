@@ -10,8 +10,8 @@
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI 版本"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-3097-brightgreen" alt="測試">
-  <img src="https://img.shields.io/badge/coverage-79%25%2B-green" alt="覆蓋率">
+  <img src="https://img.shields.io/badge/tests-3244-brightgreen" alt="測試">
+  <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="覆蓋率">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval 學術基準"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
 </p>
@@ -651,8 +651,8 @@ cm.import_memories(input_path="backup.json")
 ## 專案狀態
 
 **目前版本**：v0.2.5 (Beta)
-**測試**：3097 passing
-**覆蓋率**：79%+
+**測試**：3244 passing
+**覆蓋率**：80%+
 
 **更新日誌**：
 - **v0.2.0**：USB 攜帶加密、自動備份、並行安全、PrefEval 83.0%（200 條）、8 用戶端 MCP 設定

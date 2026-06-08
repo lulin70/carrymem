@@ -188,6 +188,24 @@ Pattern-based classification using regex and keywords. Zero cost, covers ~60% of
 
 NLP-based pattern analysis. Near-zero cost, covers ~30% of inputs.
 
+**Architecture**: Uses a layered pattern management system (`carrymem.patterns`):
+
+- **Pattern** (base class): Single compiled regex with metadata (language, type, confidence, match method). Subclasses: `NoisePattern`, `PreferencePattern`, `CorrectionPattern`, `FactPattern`, `TaskPattern`, `DecisionPattern`, `RelationshipPattern`, `SentimentPattern`, `LocationPattern`.
+- **PatternGroup**: Named collection of related patterns with language-indexed lookup (e.g. `noise_ack`, `preference_strong`, `correction_explicit`).
+- **PatternRegistry**: Central registry managing all groups, with per-language indexing for fast matching.
+- **PatternBuilder**: Fluent API for constructing and registering pattern groups.
+- **Definitions**: Pattern definitions split by category (`definitions_noise.py`, `definitions_preference.py`, etc.), supporting EN/ZH/JA languages.
+
+```
+PatternAnalyzer
+  └── PatternRegistry
+        ├── PatternGroup "noise_ack"     → [NoisePattern(en), NoisePattern(zh), NoisePattern(ja)]
+        ├── PatternGroup "noise_chat"    → [NoisePattern(en), NoisePattern(zh), NoisePattern(ja)]
+        ├── PatternGroup "preference_strong" → [PreferencePattern(en), PreferencePattern(zh), ...]
+        ├── PatternGroup "correction_explicit" → [CorrectionPattern(en), CorrectionPattern(zh), ...]
+        └── ... (29 groups total)
+```
+
 #### 3.3 Semantic Classifier (SemanticClassifier)
 
 LLM-based classification for ambiguous cases. Token cost, covers <10% of inputs.
