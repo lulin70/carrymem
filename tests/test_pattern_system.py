@@ -4,10 +4,8 @@ import re
 import pytest
 
 from carrymem.patterns.base import (
-    Pattern, PatternType, NoiseCategory, PatternMatch,
+    PatternType, NoiseCategory, PatternMatch,
     NoisePattern, PreferencePattern, CorrectionPattern,
-    FactPattern, TaskPattern, DecisionPattern,
-    RelationshipPattern, SentimentPattern, LocationPattern,
 )
 from carrymem.patterns.group import PatternGroup
 from carrymem.patterns.registry import PatternRegistry
@@ -225,11 +223,13 @@ class TestPatternBuilder:
     def test_build_returns_registry(self):
         reg = PatternRegistry()
         b = PatternBuilder(reg)
-        result = (b
+        result = (
+            b
             .create_group("test", PatternType.NOISE)
             .set_language("en")
             .add_noise("ok", r"^ok$", NoiseCategory.ACKNOWLEDGMENT)
-            .build())
+            .build()
+        )
         assert result is reg
 
 

@@ -15,7 +15,8 @@ def register_relationship_patterns(registry: PatternRegistry) -> None:
     b.add_relationship_batch(
         [
             ("owns_leads", r"^(\w+)\s+(?:owns?|leads?|manages?|heads?|runs?)\s+(?:the\s+)?(.+)", "role"),
-            ("is_role", r"(\w+)\s+(?:is|was)\s+(?:our|the|my)\s+(dba|pm|lead|architect|owner|maintainer|contact|expert|specialist)", "role"),
+            ("is_role", r"(\w+)\s+(?:is|was)\s+(?:our|the|my)\s+(dba|pm|lead|architect|owner|"
+             r"maintainer|contact|expert|specialist)", "role"),
             ("handles", r"(\w+)\s+(?:does|handles?|takes?\s+care\s+of|works?\s+on)\s+(.+)", "role"),
             ("reports_to", r"(\w+)\s+(?:reports?\s+to|answers?\s+to)\s+(\w+)", "role"),
             ("on_team", r"(\w+)\s+(?:is\s+(?:on|in)|belongs?\s+to)\s+(?:the\s+)?(.+)\s+team", "role"),
@@ -52,7 +53,8 @@ def register_relationship_patterns(registry: PatternRegistry) -> None:
     b.add_relationship_batch(
         [
             ("depends_on", r"(.+)\s+(?:depends?\s+on|relies?\s+on|uses?|imports?|calls?|invokes?)\s+(.+)", "dep"),
-            ("routes_to", r"(.+)\s+(?:which|that)\s+(?:routes?\s+to|calls?|triggers?|publishes?\s+events?\s+(?:to|that))\s+(.+)", "dep"),
+            ("routes_to", r"(.+)\s+(?:which|that)\s+(?:routes?\s+to|calls?|triggers?|"
+             r"publishes?\s+events?\s+(?:to|that))\s+(.+)", "dep"),
             ("subscribes", r"(.+)\s+(?:subscribes?\s+to|listens?\s+to|consumes?|reads?\s+from)\s+(.+)", "dep"),
             ("bridges", r"(.+)\s+(?:sits?\s+between|connects?\s+|bridges?|links?)\s+(.+)", "dep"),
             ("triggers_after", r"(.+)\s+(?:triggers?\s+after|runs?\s+after|starts?\s+when|fires?\s+on)\s+(.+)", "dep"),

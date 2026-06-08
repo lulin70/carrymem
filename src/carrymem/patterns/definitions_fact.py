@@ -38,9 +38,12 @@ def register_fact_patterns(registry: PatternRegistry) -> None:
     b.set_language("en")
     b.add_fact_batch(
         [
-            ("protocol", r"\b(api|sdk|http|https|tcp|udp|ip|dns|sql|nosql|graphql|rest|grpc|json|xml|csv)\b", "tech_term"),
-            ("language", r"\b(python|javascript|typescript|java|kotlin|go|rust|c\+\+|ruby|php|bash|shell)\b", "tech_term"),
-            ("database", r"\b(postgresql|mysql|mongodb|redis|elasticsearch|dynamodb|sqlite|supabase|firebase)\b", "tech_term"),
+            ("protocol", r"\b(api|sdk|http|https|tcp|udp|ip|dns|sql|nosql|graphql|rest|grpc|"
+             r"json|xml|csv)\b", "tech_term"),
+            ("language", r"\b(python|javascript|typescript|java|kotlin|go|rust|c\+\+|ruby|php|"
+             r"bash|shell)\b", "tech_term"),
+            ("database", r"\b(postgresql|mysql|mongodb|redis|elasticsearch|dynamodb|sqlite|"
+             r"supabase|firebase)\b", "tech_term"),
             ("infra", r"\b(docker|kubernetes|aws|gcp|azure|linux|nginx|git|github|ci|cd)\b", "tech_term"),
             ("ai", r"\b(llm|gpt|claude|gemini|llama|rag|vector|embedding|pytorch|tensorflow|mcp)\b", "tech_term"),
             ("security", r"\b(oauth|jwt|encryption|2fa|mfa|rbac|sso|ssl|tls|api\s+key)\b", "tech_term"),
@@ -56,11 +59,13 @@ def register_fact_patterns(registry: PatternRegistry) -> None:
     b.set_language("en")
     b.add_fact_batch(
         [
-            ("is_minimum", r"(.+)\s+(?:is|are|was|were|runs?|operates?)\s+(?:the\s+)?(?:minimum|required|default|located|hosted|running|deployed|based)", "tech_struct"),
+            ("is_minimum", r"(.+)\s+(?:is|are|was|were|runs?|operates?)\s+(?:the\s+)?"
+             r"(?:minimum|required|default|located|hosted|running|deployed|based)", "tech_struct"),
             ("runs_on", r"(.+)\s+(?:runs?|operates?|works?)\s+(?:on|in|at|with|using|via)\s+(.+)", "tech_struct"),
             ("supports", r"(.+)\s+(?:supports?|provides?|includes?|contains?|features?)\s+(.+)", "tech_struct"),
             ("requires", r"(.+)\s+(?:requires?|needs?|uses?|utilizes?)\s+(.+)", "tech_struct"),
-            ("config_is", r"(?:the|our|my|this)\s+(?:api|database|server|system|service|app|endpoint|port|limit|version|config)\s+.+(?:is|are|=)", "tech_struct"),
+            ("config_is", r"(?:the|our|my|this)\s+(?:api|database|server|system|service|app|"
+             r"endpoint|port|limit|version|config)\s+.+(?:is|are|=)", "tech_struct"),
             ("people_count", r"\b\d+\s*(?:employees?|users?|members?|people|teams?|instances?|pods?)\b", "tech_struct"),
             ("is_are", r"(.+)\s+(?:is|are|has|was|were)\s+(.+)", "tech_struct"),
             ("status_is", r"(.+)\s+(?:status)\s+\d+\s+(?:is|means|for)\s+(.+)", "tech_struct"),
@@ -78,14 +83,16 @@ def register_fact_patterns(registry: PatternRegistry) -> None:
     b.add_fact_batch(
         [
             ("unit", r"\b\d+\s*(?:%|percent|mb|gb|tb|ms|sec|min|hour|day|week|month|year|am|pm|jst|utc)\b", "quant"),
-            ("people_unit", r"\b\d+[.,]?\d*\s*(?:employees?|users?|members?|people|teams?|servers?|nodes?|pods?)\b", "quant"),
+            ("people_unit", r"\b\d+[.,]?\d*\s*(?:employees?|users?|members?|people|teams?|"
+             r"servers?|nodes?|pods?)\b", "quant"),
             ("weekday", r"\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?\b", "quant"),
             ("time", r"\b\d{1,2}(?:am|pm|:)\b", "quant"),
             ("city", r"\b(?:shanghai|beijing|tokyo|london|singapore|seoul|bangalore|berlin)\b", "quant"),
             ("aws_region", r"\bus-east-\d|us-west-\d|ap-southeast-\d|eu-west-\d\b", "quant"),
             ("money", r"\$[\d,]+|\d+\s*k\s*\$|\$\d+k\b", "quant"),
             ("version_tag", r"\bv\d+[\.\w]*\b", "quant"),
-            ("month", r"\b(january|february|march|april|may|june|july|august|september|october|november|december)\b", "quant"),
+            ("month", r"\b(january|february|march|april|may|june|july|august|september|"
+             r"october|november|december)\b", "quant"),
         ],
         confidence=0.7,
     )
@@ -98,9 +105,13 @@ def register_fact_patterns(registry: PatternRegistry) -> None:
         [
             ("is_are", r"(.+)\s+(?:is|are|has|have|was|were)\s+(.+)", "quant_struct"),
             ("ends_on", r"(.+)\s+(?:ends?|starts?|runs?|lasts?)\s+(?:on|at|in|by|every|each)\s*(.+)?", "quant_struct"),
-            ("office_schedule", r"(?:my|our|the|this)\s+(?:office|work|team|standup|sync|meeting|budget|approval)\s+.+", "quant_struct"),
-            ("schedule_keyword", r".*\b(?:hours?|schedule|time|deadline|budget|limit|rate|cost|price|version)\b.*", "quant_struct"),
-            ("past_action", r"^(?:i|we|my|our)\s+.+\s+(?:got|had|went|took|bought|visited|attended|started|finished|completed|moved|joined|left|received|found|built|created)\b", "quant_struct"),
+            ("office_schedule", r"(?:my|our|the|this)\s+(?:office|work|team|standup|sync|meeting|"
+             r"budget|approval)\s+.+", "quant_struct"),
+            ("schedule_keyword", r".*\b(?:hours?|schedule|time|deadline|budget|limit|rate|cost|price|"
+             r"version)\b.*", "quant_struct"),
+            ("past_action", r"^(?:i|we|my|our)\s+.+\s+(?:got|had|went|took|bought|visited|attended|"
+             r"started|finished|completed|moved|joined|left|received|found|built|created)\b",
+             "quant_struct"),
         ],
         confidence=0.7,
     )
@@ -111,9 +122,17 @@ def register_fact_patterns(registry: PatternRegistry) -> None:
     b.set_language("en")
     b.add_fact_batch(
         [
-            ("we_is", r"^(?:we|i|our|my|the|this)\s+.+\s+(?:is|are|has|have|supports?|uses?|runs?|requires?)\s+.+", "general"),
-            ("live_work", r".+\s+(?:live[s]?\s+in|work[s]?\s+(?:for|at|on|with)|based?\s+(?:in|on|at)|located?\s+(?:in|at))\s+.+", "general"),
-            ("past_tense", r"^(?:i|we)\s+(?:got|had|went|took|bought|visited|attended|started|finished|completed|moved|joined|left|received|found|built|created|gave|sent|called|met|saw|heard|read|wrote|drove|flew|stayed|lived|worked|studied|played|watched|ate|drank|cooked|cleaned|fixed|repaired|broke|lost|kept|sold|brought|put|set|turned|made|ran|fell|grew|became|felt|thought|knew|believed|decided|chose|preferred|loved|hated|enjoyed|avoided|tried|wanted|needed|learned|discovered|realized|remembered|forgot)\b", "general"),
+            ("we_is", r"^(?:we|i|our|my|the|this)\s+.+\s+(?:is|are|has|have|supports?|uses?|"
+             r"runs?|requires?)\s+.+", "general"),
+            ("live_work", r".+\s+(?:live[s]?\s+in|work[s]?\s+(?:for|at|on|with)|based?\s+"
+             r"(?:in|on|at)|located?\s+(?:in|at))\s+.+", "general"),
+            ("past_tense", r"^(?:i|we)\s+(?:got|had|went|took|bought|visited|attended|started|"
+             r"finished|completed|moved|joined|left|received|found|built|created|gave|sent|called|"
+             r"met|saw|heard|read|wrote|drove|flew|stayed|lived|worked|studied|played|watched|"
+             r"ate|drank|cooked|cleaned|fixed|repaired|broke|lost|kept|sold|brought|put|set|"
+             r"turned|made|ran|fell|grew|became|felt|thought|knew|believed|decided|chose|"
+             r"preferred|loved|hated|enjoyed|avoided|tried|wanted|needed|learned|discovered|"
+             r"realized|remembered|forgot)\b", "general"),
         ],
         confidence=0.6,
     )
