@@ -8,9 +8,10 @@ Validates:
 - Thread safety
 """
 
-import pytest
-import tempfile
 import os
+import tempfile
+
+import pytest
 
 from carrymem.rules.storage import RuleStorage
 

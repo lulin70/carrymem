@@ -13,12 +13,11 @@ Configuration:
     Set CARRYMEM_DATA_PATH environment variable to point to your data directory.
 """
 
+import threading as _threading
+
+from .handlers import Handlers
 from .server import MCPServer
 from .tools import TOOLS
-from .handlers import Handlers
-
-
-import threading as _threading
 
 _cm_instance = None
 _cm_lock = _threading.Lock()

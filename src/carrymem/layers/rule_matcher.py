@@ -1,5 +1,6 @@
 import re
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
+
 from carrymem.utils.helpers import extract_content
 from carrymem.utils.language import language_manager
 

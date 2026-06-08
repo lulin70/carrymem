@@ -1,13 +1,14 @@
 """Base classes and enums for the pattern management system."""
 
+import re
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Optional, Dict, Any
-import re
+from typing import Any, Dict, Optional
 
 
 class PatternType(Enum):
     """Top-level pattern category."""
+
     NOISE = "noise"
     PREFERENCE = "preference"
     CORRECTION = "correction"
@@ -21,6 +22,7 @@ class PatternType(Enum):
 
 class NoiseCategory(Enum):
     """Sub-category for noise patterns."""
+
     ACKNOWLEDGMENT = "acknowledgment"
     CHITCHAT = "chitchat"
     COMMAND = "command"
@@ -34,8 +36,16 @@ class NoiseCategory(Enum):
 class PatternMatch:
     """Result of a successful pattern match."""
 
-    __slots__ = ("pattern_name", "group_name", "pattern_type", "language",
-                 "confidence", "matched_text", "match_obj", "extra")
+    __slots__ = (
+        "pattern_name",
+        "group_name",
+        "pattern_type",
+        "language",
+        "confidence",
+        "matched_text",
+        "match_obj",
+        "extra",
+    )
 
     def __init__(
         self,
@@ -145,8 +155,7 @@ class NoisePattern(Pattern):
         flags: int = 0,
         match_method: str = "match",
     ):
-        super().__init__(name, regex_pattern, language, PatternType.NOISE,
-                         confidence, flags, match_method)
+        super().__init__(name, regex_pattern, language, PatternType.NOISE, confidence, flags, match_method)
         self.category = category
 
     def get_description(self) -> str:
@@ -165,8 +174,7 @@ class PreferencePattern(Pattern):
         confidence: float = 0.75,
         flags: int = 0,
     ):
-        super().__init__(name, regex_pattern, language, PatternType.PREFERENCE,
-                         confidence, flags, "search")
+        super().__init__(name, regex_pattern, language, PatternType.PREFERENCE, confidence, flags, "search")
         self.strength = strength
 
     def get_description(self) -> str:
@@ -185,8 +193,7 @@ class CorrectionPattern(Pattern):
         confidence: float = 0.85,
         flags: int = 0,
     ):
-        super().__init__(name, regex_pattern, language, PatternType.CORRECTION,
-                         confidence, flags, "search")
+        super().__init__(name, regex_pattern, language, PatternType.CORRECTION, confidence, flags, "search")
         self.tier = tier
 
     def get_description(self) -> str:
@@ -205,8 +212,7 @@ class FactPattern(Pattern):
         confidence: float = 0.7,
         flags: int = 0,
     ):
-        super().__init__(name, regex_pattern, language, PatternType.FACT,
-                         confidence, flags, "search")
+        super().__init__(name, regex_pattern, language, PatternType.FACT, confidence, flags, "search")
         self.sub_type = sub_type
 
     def get_description(self) -> str:
@@ -226,8 +232,7 @@ class TaskPattern(Pattern):
         flags: int = 0,
         match_method: str = "search",
     ):
-        super().__init__(name, regex_pattern, language, PatternType.TASK,
-                         confidence, flags, match_method)
+        super().__init__(name, regex_pattern, language, PatternType.TASK, confidence, flags, match_method)
         self.sub_type = sub_type
 
     def get_description(self) -> str:
@@ -246,8 +251,7 @@ class DecisionPattern(Pattern):
         confidence: float = 0.75,
         flags: int = 0,
     ):
-        super().__init__(name, regex_pattern, language, PatternType.DECISION,
-                         confidence, flags, "search")
+        super().__init__(name, regex_pattern, language, PatternType.DECISION, confidence, flags, "search")
         self.strength = strength
 
     def get_description(self) -> str:
@@ -266,8 +270,7 @@ class RelationshipPattern(Pattern):
         confidence: float = 0.75,
         flags: int = 0,
     ):
-        super().__init__(name, regex_pattern, language, PatternType.RELATIONSHIP,
-                         confidence, flags, "search")
+        super().__init__(name, regex_pattern, language, PatternType.RELATIONSHIP, confidence, flags, "search")
         self.sub_type = sub_type
 
     def get_description(self) -> str:
@@ -286,8 +289,7 @@ class SentimentPattern(Pattern):
         confidence: float = 0.8,
         flags: int = 0,
     ):
-        super().__init__(name, regex_pattern, language, PatternType.SENTIMENT,
-                         confidence, flags, "search")
+        super().__init__(name, regex_pattern, language, PatternType.SENTIMENT, confidence, flags, "search")
         self.sub_type = sub_type
 
     def get_description(self) -> str:
@@ -305,8 +307,7 @@ class LocationPattern(Pattern):
         confidence: float = 0.7,
         flags: int = 0,
     ):
-        super().__init__(name, regex_pattern, language, PatternType.LOCATION,
-                         confidence, flags, "search")
+        super().__init__(name, regex_pattern, language, PatternType.LOCATION, confidence, flags, "search")
         self.sub_type = "location"
 
     def get_description(self) -> str:

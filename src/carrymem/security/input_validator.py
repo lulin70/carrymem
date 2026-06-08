@@ -10,8 +10,8 @@ Version: 1.0.0
 """
 
 import re
-from typing import Any, Dict
 from pathlib import Path
+from typing import Any, Dict
 
 from carrymem.exceptions import ValidationError
 
@@ -103,9 +103,7 @@ class InputValidator:
 
         # Check length
         if len(content) > self.MAX_CONTENT_LENGTH:
-            raise ValidationError(
-                f"{field_name} exceeds maximum length of {self.MAX_CONTENT_LENGTH} characters"
-            )
+            raise ValidationError(f"{field_name} exceeds maximum length of {self.MAX_CONTENT_LENGTH} characters")
 
         # Check for empty content
         if not content.strip():
@@ -144,9 +142,7 @@ class InputValidator:
 
         # Check length
         if len(query) > self.MAX_QUERY_LENGTH:
-            raise ValidationError(
-                f"Query exceeds maximum length of {self.MAX_QUERY_LENGTH} characters"
-            )
+            raise ValidationError(f"Query exceeds maximum length of {self.MAX_QUERY_LENGTH} characters")
 
         # Allow empty queries (returns all)
         if not query.strip():
@@ -180,15 +176,11 @@ class InputValidator:
 
         # Check length
         if len(namespace) > self.MAX_NAMESPACE_LENGTH:
-            raise ValidationError(
-                f"Namespace exceeds maximum length of {self.MAX_NAMESPACE_LENGTH} characters"
-            )
+            raise ValidationError(f"Namespace exceeds maximum length of {self.MAX_NAMESPACE_LENGTH} characters")
 
         # Check format (alphanumeric, dash, underscore only)
-        if not re.match(r'^[a-zA-Z0-9_-]+$', namespace):
-            raise ValidationError(
-                "Namespace can only contain letters, numbers, dashes, and underscores"
-            )
+        if not re.match(r"^[a-zA-Z0-9_-]+$", namespace):
+            raise ValidationError("Namespace can only contain letters, numbers, dashes, and underscores")
 
         return namespace.lower()
 
@@ -211,9 +203,7 @@ class InputValidator:
 
         # Check length
         if len(path) > self.MAX_PATH_LENGTH:
-            raise ValidationError(
-                f"Path exceeds maximum length of {self.MAX_PATH_LENGTH} characters"
-            )
+            raise ValidationError(f"Path exceeds maximum length of {self.MAX_PATH_LENGTH} characters")
 
         # Check for path traversal
         if self._contains_path_traversal(path):
@@ -260,9 +250,7 @@ class InputValidator:
         ]
 
         if memory_type not in valid_types:
-            raise ValidationError(
-                f"Invalid memory type. Must be one of: {', '.join(valid_types)}"
-            )
+            raise ValidationError(f"Invalid memory type. Must be one of: {', '.join(valid_types)}")
 
         return memory_type
 
@@ -382,7 +370,7 @@ class InputValidator:
         return False
 
     def _sanitize_content(self, content: str) -> str:
-        content = content.replace('\x00', '')
+        content = content.replace("\x00", "")
         content = content.strip()
         return content
 
@@ -408,6 +396,7 @@ class InputValidator:
 
         # Check if path is within temp directory
         import tempfile
+
         temp_dir = Path(tempfile.gettempdir())
         try:
             path.relative_to(temp_dir)
@@ -416,9 +405,7 @@ class InputValidator:
             pass
 
         # Path is outside allowed directories
-        raise ValidationError(
-            f"Path is outside allowed directories: {path}"
-        )
+        raise ValidationError(f"Path is outside allowed directories: {path}")
 
 
 # Global validator instance
@@ -442,6 +429,7 @@ def get_validator(strict_mode: bool = True) -> InputValidator:
 
 
 # Convenience functions
+
 
 def validate_content(content: str) -> str:
     """Validate memory content"""

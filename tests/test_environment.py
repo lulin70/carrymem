@@ -5,12 +5,12 @@
 测试系统环境、依赖、配置等是否正常
 """
 
-import os
-import sys
-import subprocess
 import importlib
+import os
 import sqlite3
-from typing import Dict, Any
+import subprocess
+import sys
+from typing import Any, Dict
 
 
 def test_system_dependencies():
@@ -118,8 +118,8 @@ def test_mcp_service():
         )
 
         # 等待服务启动
-        import time
         import select
+        import time
 
         start_time = time.time()
         max_wait_time = 15  # 15秒超时

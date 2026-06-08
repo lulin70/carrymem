@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 try:
     import pysqlite3.dbapi2 as _pysqlite3
+
     _OpError = (sqlite3.OperationalError, _pysqlite3.OperationalError)
 except ImportError:
     _OpError = (sqlite3.OperationalError,)
@@ -215,10 +216,8 @@ class SchemaManager:
     def _migrate_fts_tokenizer(self):
         conn = self._conn_mgr.get_connection()
         try:
-            row = conn.execute(
-                "SELECT sql FROM sqlite_master WHERE type='table' AND name='memories_fts'"
-            ).fetchone()
-            if row and 'unicode61' in (row[0] or ''):
+            row = conn.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='memories_fts'").fetchone()
+            if row and "unicode61" in (row[0] or ""):
                 conn.execute("INSERT INTO memories_fts(memories_fts) VALUES('rebuild')")
                 conn.commit()
         except _OpError as e:
@@ -261,8 +260,7 @@ class SchemaManager:
             updates = []
             for row in rows:
                 try:
-                    created_at = datetime.fromisoformat(
-                        row["created_at"]) if row["created_at"] else now
+                    created_at = datetime.fromisoformat(row["created_at"]) if row["created_at"] else now
                     score = calculate_importance(
                         confidence=row["confidence"],
                         memory_type=row["type"],
@@ -373,7 +371,6 @@ class SchemaManager:
                     pass
             # Backfill: infer memory_nature from type
             conn.execute(
-                "UPDATE memories SET memory_nature = 'event' "
-                "WHERE type IN ('session_summary', 'task_pattern')"
+                "UPDATE memories SET memory_nature = 'event' " "WHERE type IN ('session_summary', 'task_pattern')"
             )
             conn.commit()

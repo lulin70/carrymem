@@ -13,12 +13,14 @@ _db_write_locks_guard = threading.Lock()
 
 try:
     import pysqlite3 as _pysqlite3
+
     PYSQLITE3_AVAILABLE = True
 except ImportError:
     PYSQLITE3_AVAILABLE = False
 
 try:
     import sqlite_vec
+
     SQLITE_VEC_AVAILABLE = True
 except ImportError:
     SQLITE_VEC_AVAILABLE = False
@@ -70,7 +72,7 @@ class ConnectionManager:
         is_memory = self._db_path == ":memory:"
 
         if is_memory:
-            if not hasattr(self, '_memory_conn') or self._memory_conn is None:
+            if not hasattr(self, "_memory_conn") or self._memory_conn is None:
                 conn = sqlite3.connect(self._db_path)
                 conn.row_factory = sqlite3.Row
                 conn.execute("PRAGMA foreign_keys=ON")
@@ -79,7 +81,7 @@ class ConnectionManager:
                     self._all_connections[id(conn)] = conn
             return self._memory_conn
 
-        if not hasattr(self._local, 'conn') or self._local.conn is None:
+        if not hasattr(self._local, "conn") or self._local.conn is None:
             max_retries = 5
             for attempt in range(max_retries):
                 try:
@@ -99,6 +101,7 @@ class ConnectionManager:
                             sqlite_vec.load(conn)
                         except Exception as e:
                             import logging
+
                             logging.getLogger(__name__).debug(f"sqlite_vec extension loading failed: {e}")
                     self._local.conn = conn
                     with self._conn_lock:
@@ -107,6 +110,7 @@ class ConnectionManager:
                 except sqlite3.OperationalError as e:
                     if "database is locked" in str(e).lower() and attempt < max_retries - 1:
                         import time as _time
+
                         _time.sleep(0.5 * (attempt + 1))
                         continue
                     raise DBConnectionError(f"Failed to connect to database: {e}") from e
@@ -117,7 +121,7 @@ class ConnectionManager:
 
     def close(self):
         self._closed = True
-        logger = __import__('logging').getLogger(__name__)
+        logger = __import__("logging").getLogger(__name__)
         with self._conn_lock:
             for conn_id, conn in self._all_connections.items():
                 try:
@@ -125,13 +129,13 @@ class ConnectionManager:
                 except Exception as e:
                     logger.debug(f"Failed to close connection {conn_id}: {e}")
             self._all_connections.clear()
-        if hasattr(self._local, 'conn'):
+        if hasattr(self._local, "conn"):
             self._local.conn = None
 
     def close_memory_conn_for_vector_switch(self):
         """Close existing connection before switching to pysqlite3 for vector support."""
-        logger = __import__('logging').getLogger(__name__)
-        if hasattr(self._local, 'conn') and self._local.conn is not None:
+        logger = __import__("logging").getLogger(__name__)
+        if hasattr(self._local, "conn") and self._local.conn is not None:
             try:
                 self._local.conn.close()
             except Exception as e:

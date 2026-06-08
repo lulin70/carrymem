@@ -3,7 +3,7 @@ from typing import List, Tuple
 from carrymem.utils.logger import logger
 
 try:
-    from langdetect import detect, LangDetectException
+    from langdetect import LangDetectException, detect
 
     _LANGDETECT_AVAILABLE = True
 except ImportError:

@@ -1,7 +1,8 @@
 """Tests for automatic domain sensing."""
 
 import pytest
-from carrymem.domain import infer_domain, infer_domains_from_memories, get_domain_description
+
+from carrymem.domain import get_domain_description, infer_domain, infer_domains_from_memories
 
 
 class TestInferDomain:

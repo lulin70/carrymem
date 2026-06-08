@@ -16,9 +16,9 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 
-from carrymem import CarryMem, JSONAdapter, AsyncCarryMem
+from carrymem import AsyncCarryMem, CarryMem, JSONAdapter
 from carrymem.adapters.json_adapter import JSONAdapter as JSONAdapterDirect
-from carrymem.adapters.loader import load_adapter, list_available_adapters
+from carrymem.adapters.loader import list_available_adapters, load_adapter
 from carrymem.integration.layer2_mcp.http_server import MCPHTTPServer
 
 

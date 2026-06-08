@@ -31,10 +31,8 @@ def cmd_rules_hub(args):
         return handler(sub_args)
 
     print(f"  {_red('Unknown rules sub-command:')} {sub}")
-    _available = _dim('Available: list, add, delete, match, edit, pause, resume, stats, check, export, import, suggest')
-    print(
-        f"  {_available}"
-    )
+    _available = _dim("Available: list, add, delete, match, edit, pause, resume, stats, check, export, import, suggest")
+    print(f"  {_available}")
     return 1
 
 
@@ -105,10 +103,8 @@ def cmd_add_rule(args):
     # Normal mode
     else:
         if not parsed.action or not parsed.trigger:
-            _usage_hint = _red('Missing required arguments. Use:')
-            print(
-                f"\n  {_usage_hint} carrymem add-rule <action> --trigger <scene>"
-            )
+            _usage_hint = _red("Missing required arguments. Use:")
+            print(f"\n  {_usage_hint} carrymem add-rule <action> --trigger <scene>")
             print(f"  {_dim('Or use:')} carrymem add-rule --interactive")
             print(f"  {_dim('Or use:')} carrymem add-rule --template <name>")
             return 1
@@ -167,9 +163,7 @@ def cmd_list_rules(args):
 
     if parsed.format == "table":
         _header = f"\n  {'ID':<14} {'Type':<8} {'Scope':<10} {'Override':<8} {'Trigger':<20} {'Action':<30}"
-        print(
-            _header
-        )
+        print(_header)
         print(f"  {'─'*14} {'─'*8} {'─'*10} {'─'*8} {'─'*20} {'─'*30}")
         for rule in rules:
             expired = " [EXPIRED]" if rule.is_expired() else ""
@@ -179,9 +173,7 @@ def cmd_list_rules(args):
                 f"{override_str:<8} {rule.trigger[:20]:<20} "
                 f"{rule.action[:30]:<30}{expired}"
             )
-            print(
-                _row
-            )
+            print(_row)
         print(f"\n  Total: {len(rules)} rules")
         return 0
 
@@ -200,9 +192,7 @@ def cmd_list_rules(args):
         print(f"     Trigger: {rule.trigger}")
         print(f"     Action:  {rule.action}")
         _stats = f"     Type: {rule.rule_type} | Used: {rule.trigger_count}x | Confidence: {rule.confidence:.0%}"
-        print(
-            _stats
-        )
+        print(_stats)
         if rule.expires_at:
             print(f"     Expires: {rule.expires_at}")
         print()
@@ -405,10 +395,8 @@ def cmd_check_rules(args):
 
     if health["unused_rules"] > 0:
         unused_count = health["unused_rules"]
-        _hint = _dim(f'💡 {unused_count} rules have never been triggered. Consider reviewing them.')
-        print(
-            f"\n  {_hint}"
-        )
+        _hint = _dim(f"💡 {unused_count} rules have never been triggered. Consider reviewing them.")
+        print(f"\n  {_hint}")
 
     print()
     return 0 if health["is_healthy"] else 1
@@ -657,10 +645,8 @@ def cmd_edit_rule(args):
         updates["override"] = True
 
     if not updates:
-        _no_changes = _yellow('No changes specified. Use --trigger, --action, --type, --soft, or --hard')
-        print(
-            f"\n  {_no_changes}"
-        )
+        _no_changes = _yellow("No changes specified. Use --trigger, --action, --type, --soft, or --hard")
+        print(f"\n  {_no_changes}")
         return 1
 
     updated = engine.update_rule(parsed.rule_id, **updates)
@@ -967,13 +953,11 @@ def cmd_promotion_log(args):
     rejected_s = stats.get("rejected", 0)
     expired_s = stats.get("expired", 0)
     _summary = _dim(
-        f'Total: {total_s} | Pending: {pending_s} | '
-        f'Accepted: {accepted_s} | Rejected: {rejected_s} | '
-        f'Expired: {expired_s}'
+        f"Total: {total_s} | Pending: {pending_s} | "
+        f"Accepted: {accepted_s} | Rejected: {rejected_s} | "
+        f"Expired: {expired_s}"
     )
-    print(
-        f"\n  {_summary}"
-    )
+    print(f"\n  {_summary}")
     print()
     return 0
 
@@ -1037,11 +1021,9 @@ def cmd_refine_rule(args):
             answer_hint = f'carrymem refine-rule --session {parsed.session} --answer "your answer"'
             print(f"\n  {_dim(f'Answer: {answer_hint}')}")
         else:
-            _ready_msg = _yellow('Ready to confirm.')
-            _confirm_cmd = _dim(f'carrymem refine-rule --session {parsed.session} --confirm')
-            print(
-                f"\n  {_ready_msg} {_confirm_cmd}"
-            )
+            _ready_msg = _yellow("Ready to confirm.")
+            _confirm_cmd = _dim(f"carrymem refine-rule --session {parsed.session} --confirm")
+            print(f"\n  {_ready_msg} {_confirm_cmd}")
         print()
         return 0
 
@@ -1258,8 +1240,10 @@ def cmd_lesson_log(args):
     print(f"  {'─' * 60}")
     for entry in entries:
         status_icon = {
-            "pending": "\u23f3", "accepted": "\u2705",
-            "rejected": "\u274c", "expired": "\u231b",
+            "pending": "\u23f3",
+            "accepted": "\u2705",
+            "rejected": "\u274c",
+            "expired": "\u231b",
         }.get(entry.status, "?")
         lesson_preview = entry.lesson[:60] + ("..." if len(entry.lesson) > 60 else "")
         rule_info = f" \u2192 {entry.resulting_rule_id}" if entry.resulting_rule_id else ""
@@ -1273,12 +1257,10 @@ def cmd_lesson_log(args):
     rejected_s = stats.get("rejected", 0)
     expired_s = stats.get("expired", 0)
     _summary = _dim(
-        f'Total: {total_s} | Pending: {pending_s} | '
-        f'Accepted: {accepted_s} | Rejected: {rejected_s} | '
-        f'Expired: {expired_s}'
+        f"Total: {total_s} | Pending: {pending_s} | "
+        f"Accepted: {accepted_s} | Rejected: {rejected_s} | "
+        f"Expired: {expired_s}"
     )
-    print(
-        f"\n  {_summary}"
-    )
+    print(f"\n  {_summary}")
     print()
     return 0

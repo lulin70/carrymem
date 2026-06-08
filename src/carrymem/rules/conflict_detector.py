@@ -12,8 +12,8 @@ Users should be informed of potential conflicts but retain full control.
 """
 
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
 from enum import Enum
+from typing import List, Optional, Tuple
 
 from .models import Rule
 

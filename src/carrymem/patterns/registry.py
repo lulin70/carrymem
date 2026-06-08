@@ -1,6 +1,7 @@
 """PatternRegistry: central registry for all pattern groups."""
 
 from typing import Dict, List, Optional
+
 from carrymem.patterns.base import Pattern, PatternMatch
 from carrymem.patterns.group import PatternGroup
 

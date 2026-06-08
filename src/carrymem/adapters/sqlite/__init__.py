@@ -20,31 +20,34 @@ from typing import Any, Dict, Optional
 
 from ..base import MemoryEntry, StorageAdapter, StoredMemory
 from .connection import ConnectionManager
-from .schema import SchemaManager
 from .crud import CRUDOperations
+from .query_builder import QueryBuilderWithContext
 from .recall_engine import RecallEngine
+from .schema import SchemaManager
+from .security import SecurityOps
 from .serializer import RowSerializer
+from .stats import StatsManager
 from .supersede import SupersedeManager
 from .versioning import VersionManager
-from .stats import StatsManager
-from .query_builder import QueryBuilderWithContext
-from .security import SecurityOps
 
 # Module-level capability flags (re-exported for backward compatibility)
 try:
     import sqlite_vec
+
     SQLITE_VEC_AVAILABLE = True
 except ImportError:
     SQLITE_VEC_AVAILABLE = False
 
 try:
     import pysqlite3
+
     PYSQLITE3_AVAILABLE = True
 except ImportError:
     PYSQLITE3_AVAILABLE = False
 
 try:
     from sentence_transformers import SentenceTransformer
+
     SENTENCE_TRANSFORMERS_AVAILABLE = True
 except ImportError:
     SENTENCE_TRANSFORMERS_AVAILABLE = False
@@ -93,9 +96,11 @@ class SQLiteAdapter(StorageAdapter):
         if encryption_key is not None:
             try:
                 from ...security.encryption import MemoryEncryption
+
                 self._security.set_encryption(MemoryEncryption(key=encryption_key))
             except Exception as e:
                 from ...utils.logger import logger
+
                 logger.error(f"Encryption initialization failed: {e}")
                 raise RuntimeError(
                     f"Encryption initialization failed with provided key. "
@@ -127,27 +132,30 @@ class SQLiteAdapter(StorageAdapter):
         self._audit = None
         try:
             from ...security.audit import AuditLogger
+
             self._audit = AuditLogger(self._conn_mgr.get_connection, namespace=namespace)
         except Exception as e:
             from ...utils.logger import logger
+
             logger.warning(f"Audit logger initialization failed: {e}")
 
         # --- RRF configuration ---
         _rc = rrf_config or {}
-        self._rrf_k = int(os.environ.get('CARRYMEM_RRF_K', _rc.get('k', 60)))
-        self._rrf_fts_weight = float(os.environ.get(
-            'CARRYMEM_RRF_FTS_WEIGHT', _rc.get('fts_weight', 0.6)))
-        self._rrf_vec_weight = float(os.environ.get(
-            'CARRYMEM_RRF_VEC_WEIGHT', _rc.get('vec_weight', 0.4)))
-        self._rrf_type_boosts = _rc.get('type_boosts', {
-            "fact_declaration": 1.2,
-            "decision": 1.2,
-            "user_preference": 1.1,
-            "task_pattern": 1.05,
-            "relationship": 1.0,
-            "correction": 1.15,
-            "sentiment_marker": 0.5,
-        })
+        self._rrf_k = int(os.environ.get("CARRYMEM_RRF_K", _rc.get("k", 60)))
+        self._rrf_fts_weight = float(os.environ.get("CARRYMEM_RRF_FTS_WEIGHT", _rc.get("fts_weight", 0.6)))
+        self._rrf_vec_weight = float(os.environ.get("CARRYMEM_RRF_VEC_WEIGHT", _rc.get("vec_weight", 0.4)))
+        self._rrf_type_boosts = _rc.get(
+            "type_boosts",
+            {
+                "fact_declaration": 1.2,
+                "decision": 1.2,
+                "user_preference": 1.1,
+                "task_pattern": 1.05,
+                "relationship": 1.0,
+                "correction": 1.15,
+                "sentiment_marker": 0.5,
+            },
+        )
 
         # --- Initialize schema ---
         self._conn_mgr.get_connection()
@@ -160,10 +168,7 @@ class SQLiteAdapter(StorageAdapter):
         self._embedding_model_name = embedding_model
 
         self._enable_vector = (
-            enable_vector_search
-            and SQLITE_VEC_AVAILABLE
-            and PYSQLITE3_AVAILABLE
-            and SENTENCE_TRANSFORMERS_AVAILABLE
+            enable_vector_search and SQLITE_VEC_AVAILABLE and PYSQLITE3_AVAILABLE and SENTENCE_TRANSFORMERS_AVAILABLE
         )
 
         if self._enable_vector:
@@ -171,7 +176,7 @@ class SQLiteAdapter(StorageAdapter):
                 if _external_embedding_model is not None:
                     self._embedding_model = _external_embedding_model
                 else:
-                    os.environ.setdefault('TRANSFORMERS_OFFLINE', '1')
+                    os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
                     self._embedding_model = SentenceTransformer(embedding_model)
                 self._embedding_dim = self._embedding_model.get_embedding_dimension()
                 # Close existing connection and switch to pysqlite3 with vec0
@@ -180,11 +185,11 @@ class SQLiteAdapter(StorageAdapter):
                 # Now get_connection will create a pysqlite3 connection with vec0
                 self._schema.init_vec_schema(self._embedding_dim)
                 from ...utils.logger import logger
-                logger.info(
-                    f"Vector search enabled: model={embedding_model}, dim={self._embedding_dim}"
-                )
+
+                logger.info(f"Vector search enabled: model={embedding_model}, dim={self._embedding_dim}")
             except Exception as e:
                 from ...utils.logger import logger
+
                 self._enable_vector = False
                 logger.warning(f"Vector search initialization failed: {e}")
 
@@ -199,6 +204,7 @@ class SQLiteAdapter(StorageAdapter):
         try:
             from ...semantic.expander import SemanticExpander
             from ...semantic.merger import ResultMerger
+
             SEMANTIC_AVAILABLE = True
         except ImportError:
             SEMANTIC_AVAILABLE = False
@@ -219,6 +225,7 @@ class SQLiteAdapter(StorageAdapter):
                 )
             except Exception as e:
                 from ...utils.logger import logger
+
                 self._enable_semantic = False
                 logger.warning(f"Semantic recall initialization failed: {e}")
 
@@ -228,6 +235,7 @@ class SQLiteAdapter(StorageAdapter):
         if enable_cache:
             try:
                 from ...cache import RecallCache
+
                 cc = cache_config or {}
                 self._cache = RecallCache(
                     max_size=cc.get("max_size", 256),
@@ -278,6 +286,7 @@ class SQLiteAdapter(StorageAdapter):
         try:
             from ...semantic.expander import SemanticExpander
             from ...semantic.merger import ResultMerger
+
             SEMANTIC_AVAIL = True
         except ImportError:
             SEMANTIC_AVAIL = False
@@ -285,19 +294,17 @@ class SQLiteAdapter(StorageAdapter):
 
     def enable_vector_search(self, enabled: bool = True):
         try:
-            import sqlite_vec
             import pysqlite3
+            import sqlite_vec
             from sentence_transformers import SentenceTransformer
+
             deps_ok = True
         except ImportError:
             deps_ok = False
-        if enabled and not (
-            deps_ok and self._embedding_model is not None
-        ):
+        if enabled and not (deps_ok and self._embedding_model is not None):
             from ...utils.logger import logger
-            logger.warning(
-                "Cannot enable vector search: dependencies not available or model not loaded"
-            )
+
+            logger.warning("Cannot enable vector search: dependencies not available or model not loaded")
             return
         self._enable_vector = enabled
 
@@ -321,6 +328,7 @@ class SQLiteAdapter(StorageAdapter):
             self.close()
         except Exception as e:
             from ...utils.logger import logger
+
             logger.debug(f"SQLiteAdapter.__del__ close failed: {e}")
 
     # ── CRUD operations ─────────────────────────────────────────
@@ -338,7 +346,9 @@ class SQLiteAdapter(StorageAdapter):
         return self._crud.forget_expired()
 
     def update_memory(
-        self, storage_key: str, new_content: str,
+        self,
+        storage_key: str,
+        new_content: str,
         reason: Optional[str] = None,
     ) -> Optional[StoredMemory]:
         return self._crud.update_memory(storage_key, new_content, reason)
@@ -348,18 +358,22 @@ class SQLiteAdapter(StorageAdapter):
 
     # ── Recall operations ───────────────────────────────────────
 
-    def recall(self, query: str, filters: Optional[Dict[str, Any]] = None,
-               limit: int = 20, namespaces: Optional[list] = None,
-               update_access: bool = True) -> list:
+    def recall(
+        self,
+        query: str,
+        filters: Optional[Dict[str, Any]] = None,
+        limit: int = 20,
+        namespaces: Optional[list] = None,
+        update_access: bool = True,
+    ) -> list:
         return self._recall_engine.recall(query, filters, limit, namespaces, update_access)
 
-    def recall_aggregated(self, memory_type: Optional[str] = None,
-                          namespaces: Optional[list] = None,
-                          limit_per_type: int = 50) -> Dict[str, list]:
+    def recall_aggregated(
+        self, memory_type: Optional[str] = None, namespaces: Optional[list] = None, limit_per_type: int = 50
+    ) -> Dict[str, list]:
         return self._stats.recall_aggregated(memory_type, namespaces, limit_per_type)
 
-    def recall_timeline(self, topic: str, namespaces: Optional[list] = None,
-                        limit: int = 20) -> list:
+    def recall_timeline(self, topic: str, namespaces: Optional[list] = None, limit: int = 20) -> list:
         return self._stats.recall_timeline(topic, namespaces, limit)
 
     # ── Version management ──────────────────────────────────────

@@ -8,10 +8,11 @@ Also tests user management: view rules, delete rules.
 """
 
 import os
-import pytest
 import sys
 import tempfile
 import unittest
+
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 

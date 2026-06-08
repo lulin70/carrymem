@@ -1,15 +1,15 @@
 import os
 import sys
 import unittest
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, PropertyMock, patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from carrymem.layers.semantic_classifier import SemanticClassifier
-from carrymem.layers.rule_matcher import RuleMatcher
-from carrymem.layers.session_summarizer import SessionSummarizer
-from carrymem.layers.semantic_aggregator import SemanticAggregator
 from carrymem.layers.pattern_analyzer import PatternAnalyzer
+from carrymem.layers.rule_matcher import RuleMatcher
+from carrymem.layers.semantic_aggregator import SemanticAggregator
+from carrymem.layers.semantic_classifier import SemanticClassifier
+from carrymem.layers.session_summarizer import SessionSummarizer
 
 
 def _make_config(**overrides):

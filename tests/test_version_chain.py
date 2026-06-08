@@ -2,7 +2,9 @@
 
 import os
 import tempfile
+
 import pytest
+
 from carrymem.adapters.base import MemoryEntry, StoredMemory
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 

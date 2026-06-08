@@ -13,66 +13,66 @@ Covers: cmd_doctor, cmd_init, cmd_setup_mcp, cmd_serve, cmd_tui,
 
 import json
 import os
-import sys
 import sqlite3
+import sys
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from carrymem import CarryMem
 from carrymem.cli import (
-    cmd_add,
-    cmd_list,
-    cmd_search,
-    cmd_show,
-    cmd_edit,
-    cmd_forget,
-    cmd_clean,
-    cmd_export,
-    cmd_import,
-    cmd_stats,
-    cmd_whoami,
-    cmd_profile,
-    cmd_check,
-    cmd_doctor,
-    cmd_init,
-    cmd_version,
-    cmd_setup_mcp,
-    cmd_serve,
-    cmd_tui,
-    cmd_add_rule,
-    cmd_list_rules,
-    cmd_match_rules,
-    cmd_edit_rule,
-    cmd_delete_rule,
-    cmd_pause_rule,
-    cmd_resume_rule,
-    cmd_rules_stats,
-    cmd_check_rules,
-    cmd_export_rules,
-    cmd_import_rules,
-    cmd_list_templates,
-    cmd_suggest_rules,
-    cmd_promote_rules,
-    cmd_review_promotions,
-    cmd_promotion_log,
-    cmd_learn_experience,
-    cmd_review_lessons,
-    cmd_lesson_log,
-    cmd_refine_rule,
-    cmd_refinement_sessions,
-    _format_time,
-    _truncate,
-    _find_memory,
-    _print_memory_card,
+    _bold,
     _c,
-    _green,
-    _red,
-    _yellow,
     _cyan,
     _dim,
-    _bold,
+    _find_memory,
+    _format_time,
+    _green,
+    _print_memory_card,
+    _red,
+    _truncate,
+    _yellow,
+    cmd_add,
+    cmd_add_rule,
+    cmd_check,
+    cmd_check_rules,
+    cmd_clean,
+    cmd_delete_rule,
+    cmd_doctor,
+    cmd_edit,
+    cmd_edit_rule,
+    cmd_export,
+    cmd_export_rules,
+    cmd_forget,
+    cmd_import,
+    cmd_import_rules,
+    cmd_init,
+    cmd_learn_experience,
+    cmd_lesson_log,
+    cmd_list,
+    cmd_list_rules,
+    cmd_list_templates,
+    cmd_match_rules,
+    cmd_pause_rule,
+    cmd_profile,
+    cmd_promote_rules,
+    cmd_promotion_log,
+    cmd_refine_rule,
+    cmd_refinement_sessions,
+    cmd_resume_rule,
+    cmd_review_lessons,
+    cmd_review_promotions,
+    cmd_rules_stats,
+    cmd_search,
+    cmd_serve,
+    cmd_setup_mcp,
+    cmd_show,
+    cmd_stats,
+    cmd_suggest_rules,
+    cmd_tui,
+    cmd_version,
+    cmd_whoami,
     main,
     show_help,
 )
@@ -99,7 +99,7 @@ class TestHelperFunctions:
         assert _format_time("") == "N/A"
 
     def test_format_time_recent(self):
-        from datetime import datetime, timezone, timedelta
+        from datetime import datetime, timedelta, timezone
 
         now = datetime.now(timezone.utc)
         recent = now - timedelta(minutes=30)
@@ -107,7 +107,7 @@ class TestHelperFunctions:
         assert "m ago" in result or "h ago" in result
 
     def test_format_time_hours_ago(self):
-        from datetime import datetime, timezone, timedelta
+        from datetime import datetime, timedelta, timezone
 
         now = datetime.now(timezone.utc)
         hours_ago = now - timedelta(hours=5)
@@ -115,7 +115,7 @@ class TestHelperFunctions:
         assert "h ago" in result
 
     def test_format_time_yesterday(self):
-        from datetime import datetime, timezone, timedelta
+        from datetime import datetime, timedelta, timezone
 
         now = datetime.now(timezone.utc)
         yesterday = now - timedelta(days=1)
@@ -123,7 +123,7 @@ class TestHelperFunctions:
         assert "yesterday" in result
 
     def test_format_time_days_ago(self):
-        from datetime import datetime, timezone, timedelta
+        from datetime import datetime, timedelta, timezone
 
         now = datetime.now(timezone.utc)
         days_ago = now - timedelta(days=10)

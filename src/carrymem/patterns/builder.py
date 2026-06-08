@@ -1,19 +1,20 @@
 """PatternBuilder: fluent API for constructing and registering pattern groups."""
 
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
+
 from carrymem.patterns.base import (
-    Pattern,
-    PatternType,
+    CorrectionPattern,
+    DecisionPattern,
+    FactPattern,
+    LocationPattern,
     NoiseCategory,
     NoisePattern,
+    Pattern,
+    PatternType,
     PreferencePattern,
-    CorrectionPattern,
-    FactPattern,
-    TaskPattern,
-    DecisionPattern,
     RelationshipPattern,
     SentimentPattern,
-    LocationPattern,
+    TaskPattern,
 )
 from carrymem.patterns.group import PatternGroup
 from carrymem.patterns.registry import PatternRegistry
@@ -71,11 +72,17 @@ class PatternBuilder:
         match_method: str = "match",
     ) -> "PatternBuilder":
         group = self._require_group()
-        group.add_pattern(NoisePattern(
-            name=name, regex_pattern=regex, language=self._current_language,
-            category=category, confidence=confidence, flags=flags,
-            match_method=match_method,
-        ))
+        group.add_pattern(
+            NoisePattern(
+                name=name,
+                regex_pattern=regex,
+                language=self._current_language,
+                category=category,
+                confidence=confidence,
+                flags=flags,
+                match_method=match_method,
+            )
+        )
         return self
 
     def add_noise_batch(
@@ -102,10 +109,16 @@ class PatternBuilder:
         flags: int = 0,
     ) -> "PatternBuilder":
         group = self._require_group()
-        group.add_pattern(PreferencePattern(
-            name=name, regex_pattern=regex, language=self._current_language,
-            strength=strength, confidence=confidence, flags=flags,
-        ))
+        group.add_pattern(
+            PreferencePattern(
+                name=name,
+                regex_pattern=regex,
+                language=self._current_language,
+                strength=strength,
+                confidence=confidence,
+                flags=flags,
+            )
+        )
         return self
 
     def add_preference_batch(
@@ -130,10 +143,16 @@ class PatternBuilder:
         flags: int = 0,
     ) -> "PatternBuilder":
         group = self._require_group()
-        group.add_pattern(CorrectionPattern(
-            name=name, regex_pattern=regex, language=self._current_language,
-            tier=tier, confidence=confidence, flags=flags,
-        ))
+        group.add_pattern(
+            CorrectionPattern(
+                name=name,
+                regex_pattern=regex,
+                language=self._current_language,
+                tier=tier,
+                confidence=confidence,
+                flags=flags,
+            )
+        )
         return self
 
     def add_correction_batch(
@@ -158,10 +177,16 @@ class PatternBuilder:
         flags: int = 0,
     ) -> "PatternBuilder":
         group = self._require_group()
-        group.add_pattern(FactPattern(
-            name=name, regex_pattern=regex, language=self._current_language,
-            sub_type=sub_type, confidence=confidence, flags=flags,
-        ))
+        group.add_pattern(
+            FactPattern(
+                name=name,
+                regex_pattern=regex,
+                language=self._current_language,
+                sub_type=sub_type,
+                confidence=confidence,
+                flags=flags,
+            )
+        )
         return self
 
     def add_fact_batch(
@@ -187,11 +212,17 @@ class PatternBuilder:
         match_method: str = "search",
     ) -> "PatternBuilder":
         group = self._require_group()
-        group.add_pattern(TaskPattern(
-            name=name, regex_pattern=regex, language=self._current_language,
-            sub_type=sub_type, confidence=confidence, flags=flags,
-            match_method=match_method,
-        ))
+        group.add_pattern(
+            TaskPattern(
+                name=name,
+                regex_pattern=regex,
+                language=self._current_language,
+                sub_type=sub_type,
+                confidence=confidence,
+                flags=flags,
+                match_method=match_method,
+            )
+        )
         return self
 
     def add_task_batch(
@@ -217,10 +248,16 @@ class PatternBuilder:
         flags: int = 0,
     ) -> "PatternBuilder":
         group = self._require_group()
-        group.add_pattern(DecisionPattern(
-            name=name, regex_pattern=regex, language=self._current_language,
-            strength=strength, confidence=confidence, flags=flags,
-        ))
+        group.add_pattern(
+            DecisionPattern(
+                name=name,
+                regex_pattern=regex,
+                language=self._current_language,
+                strength=strength,
+                confidence=confidence,
+                flags=flags,
+            )
+        )
         return self
 
     def add_decision_batch(
@@ -245,10 +282,16 @@ class PatternBuilder:
         flags: int = 0,
     ) -> "PatternBuilder":
         group = self._require_group()
-        group.add_pattern(RelationshipPattern(
-            name=name, regex_pattern=regex, language=self._current_language,
-            sub_type=sub_type, confidence=confidence, flags=flags,
-        ))
+        group.add_pattern(
+            RelationshipPattern(
+                name=name,
+                regex_pattern=regex,
+                language=self._current_language,
+                sub_type=sub_type,
+                confidence=confidence,
+                flags=flags,
+            )
+        )
         return self
 
     def add_relationship_batch(
@@ -273,10 +316,16 @@ class PatternBuilder:
         flags: int = 0,
     ) -> "PatternBuilder":
         group = self._require_group()
-        group.add_pattern(SentimentPattern(
-            name=name, regex_pattern=regex, language=self._current_language,
-            sub_type=sub_type, confidence=confidence, flags=flags,
-        ))
+        group.add_pattern(
+            SentimentPattern(
+                name=name,
+                regex_pattern=regex,
+                language=self._current_language,
+                sub_type=sub_type,
+                confidence=confidence,
+                flags=flags,
+            )
+        )
         return self
 
     def add_sentiment_batch(
@@ -300,10 +349,15 @@ class PatternBuilder:
         flags: int = 0,
     ) -> "PatternBuilder":
         group = self._require_group()
-        group.add_pattern(LocationPattern(
-            name=name, regex_pattern=regex, language=self._current_language,
-            confidence=confidence, flags=flags,
-        ))
+        group.add_pattern(
+            LocationPattern(
+                name=name,
+                regex_pattern=regex,
+                language=self._current_language,
+                confidence=confidence,
+                flags=flags,
+            )
+        )
         return self
 
     # ---- Generic pattern ----

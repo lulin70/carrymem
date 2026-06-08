@@ -12,23 +12,24 @@ Covers:
 """
 
 import json
+
 import pytest
 
-from carrymem.rules.rule_refiner import (
-    RuleRefiner,
-    RefinementPhase,
-    RefinementQuestion,
-    RefinementAnswer,
-    RefinedRuleDraft,
-    QuestionType,
-)
 from carrymem.rules.refinement_session import (
+    SESSION_STATUS_ACTIVE,
+    SESSION_STATUS_CANCELLED,
+    SESSION_STATUS_COMPLETED,
+    SESSION_STATUS_EXPIRED,
     RefinementSessionManager,
     SessionEntry,
-    SESSION_STATUS_ACTIVE,
-    SESSION_STATUS_COMPLETED,
-    SESSION_STATUS_CANCELLED,
-    SESSION_STATUS_EXPIRED,
+)
+from carrymem.rules.rule_refiner import (
+    QuestionType,
+    RefinedRuleDraft,
+    RefinementAnswer,
+    RefinementPhase,
+    RefinementQuestion,
+    RuleRefiner,
 )
 from carrymem.rules.storage import RuleStorage
 

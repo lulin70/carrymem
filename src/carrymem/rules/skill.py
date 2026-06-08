@@ -34,7 +34,7 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from .models import Rule, VALID_RULE_SCOPES
+from .models import VALID_RULE_SCOPES, Rule
 
 SKILL_FORMAT = "carrymem-skill-v1"
 SKILL_MAX_RULES = 500

@@ -1,18 +1,20 @@
 """Tests for CarryMem consolidation engine."""
 
-import pytest
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
+
+import pytest
+
 from carrymem.consolidation import (
+    _content_hash,
+    _find_semantic_clusters,
+    _similarity,
     compute_decay_factor,
-    find_duplicates,
-    find_superseded_pairs,
     consolidate,
     consolidate_p1,
     consolidate_p2,
-    _content_hash,
-    _similarity,
-    _find_semantic_clusters,
+    find_duplicates,
+    find_superseded_pairs,
 )
 
 

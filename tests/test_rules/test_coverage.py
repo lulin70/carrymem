@@ -10,15 +10,16 @@ Coverage improvement tests for low-coverage modules:
 
 import json
 import os
-import pytest
 import tempfile
 
+import pytest
+
+from carrymem.rules.models import Rule
+from carrymem.rules.skill import SKILL_MAX_RULES, skill_install, skill_pack, skill_verify
+from carrymem.rules.storage import RuleStorage
+from carrymem.security.encryption import EncryptionError, MemoryEncryption, NoEncryption
 from carrymem.utils.config import ConfigManager
 from carrymem.utils.language import LanguageManager
-from carrymem.security.encryption import MemoryEncryption, NoEncryption, EncryptionError
-from carrymem.rules.skill import skill_pack, skill_verify, skill_install, SKILL_MAX_RULES
-from carrymem.rules.models import Rule
-from carrymem.rules.storage import RuleStorage
 
 
 class TestConfigManager:

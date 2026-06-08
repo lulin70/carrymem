@@ -15,27 +15,27 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 from carrymem import CarryMem
-from carrymem.scoring import (
-    calculate_importance,
-    recency_factor,
-    access_factor,
-    type_weight,
-    TYPE_WEIGHTS,
-    HALF_LIFE_DAYS,
-)
 from carrymem.cache import RecallCache
 from carrymem.context import (
-    select_memories,
-    context_relevance,
     build_prompt,
+    context_relevance,
     format_memory_entry,
+    select_memories,
 )
-from carrymem.selection import _estimate_tokens
 from carrymem.merge import (
+    _similarity,
     detect_conflicts,
     merge_memories,
-    _similarity,
 )
+from carrymem.scoring import (
+    HALF_LIFE_DAYS,
+    TYPE_WEIGHTS,
+    access_factor,
+    calculate_importance,
+    recency_factor,
+    type_weight,
+)
+from carrymem.selection import _estimate_tokens
 
 
 class TestScoring(unittest.TestCase):

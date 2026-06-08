@@ -6,32 +6,33 @@ _clamp, _format_memory_entry, _build_summary.
 """
 
 import asyncio
-import pytest
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from carrymem import CarryMem
 from carrymem.integration.layer2_mcp.handlers import (
-    handle_classify_message,
-    handle_get_classification_schema,
-    handle_batch_classify,
-    handle_mce_status,
-    handle_classify_and_remember,
-    handle_recall_memories,
-    handle_forget_memory,
-    handle_index_knowledge,
-    handle_recall_from_knowledge,
-    handle_recall_all,
-    handle_declare_preference,
-    handle_get_memory_profile,
-    handle_get_system_prompt,
-    handle_summarize_and_store,
-    handle_consolidate_memories,
     Handlers,
-    _safe_error,
+    _build_summary,
     _clamp,
     _format_memory_entry,
-    _build_summary,
+    _safe_error,
+    handle_batch_classify,
+    handle_classify_and_remember,
+    handle_classify_message,
+    handle_consolidate_memories,
+    handle_declare_preference,
+    handle_forget_memory,
+    handle_get_classification_schema,
+    handle_get_memory_profile,
+    handle_get_system_prompt,
+    handle_index_knowledge,
+    handle_mce_status,
+    handle_recall_all,
+    handle_recall_from_knowledge,
+    handle_recall_memories,
+    handle_summarize_and_store,
     handler_map,
 )
 

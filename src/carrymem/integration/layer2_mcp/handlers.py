@@ -17,16 +17,17 @@ from functools import wraps
 from typing import Any, Dict, List, Optional
 
 from carrymem.__version__ import __version__ as _version
+
 from .tools import (
     CLASSIFICATION_SCHEMA,
-    TOOL_NAMES,
+    CONSOLIDATION_TOOL_NAMES,
     CORE_TOOL_NAMES,
-    OPTIONAL_TOOL_NAMES,
     KNOWLEDGE_TOOL_NAMES,
+    OPTIONAL_TOOL_NAMES,
     PROFILE_TOOL_NAMES,
     PROMPT_TOOL_NAMES,
-    CONSOLIDATION_TOOL_NAMES,
     RULE_TOOL_NAMES,
+    TOOL_NAMES,
 )
 
 _validator: Any = None
@@ -81,12 +82,14 @@ def mcp_tool_handler(func):
     On exception: wraps as {"success": False, "error": ...}.
     On success: returns the handler's result unchanged (preserves original format).
     """
+
     @wraps(func)
     def wrapper(target, arguments: Dict[str, Any]) -> Dict[str, Any]:
         try:
             return func(target, arguments)
         except Exception as e:
             return {"success": False, "error": _safe_error(e)}
+
     return wrapper
 
 
@@ -858,8 +861,8 @@ class Handlers:
         vault_path: Optional[str] = None,
         namespace: str = "default",
     ):
-        from carrymem.carrymem import CarryMem
         from carrymem.adapters.obsidian_adapter import ObsidianAdapter
+        from carrymem.carrymem import CarryMem
 
         knowledge_adapter = None
         if vault_path:

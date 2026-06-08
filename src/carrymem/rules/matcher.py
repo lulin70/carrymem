@@ -11,8 +11,8 @@ Business logic for matching scenes to rules using:
 from __future__ import annotations
 
 import logging
-from typing import List, Tuple
 from dataclasses import dataclass
+from typing import List, Tuple
 
 from ..utils.language import has_cjk
 

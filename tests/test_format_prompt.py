@@ -1,7 +1,8 @@
 """Tests for format.py and prompt.py modules."""
 
 import pytest
-from carrymem.format import format_memory_entry, format_knowledge_entry, _extract_event_dates
+
+from carrymem.format import _extract_event_dates, format_knowledge_entry, format_memory_entry
 from carrymem.prompt import build_prompt, build_qa_prompt
 
 

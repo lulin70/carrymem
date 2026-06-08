@@ -7,7 +7,6 @@ memories, enabling domain-aware preference injection and scope matching.
 import re
 from typing import List, Optional
 
-
 DOMAIN_VOCABULARY = {
     "coding": {
         "keywords": [

@@ -8,9 +8,9 @@ from pathlib import Path
 
 from carrymem.adapters.coding_context_adapter import (
     CodingContextAdapter,
-    _infer_memory_type,
-    _infer_language,
     _infer_framework,
+    _infer_language,
+    _infer_memory_type,
     _parse_file,
 )
 

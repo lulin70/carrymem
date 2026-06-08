@@ -8,22 +8,23 @@ Covers:
 """
 
 import os
-import pytest
 import shutil
 import sqlite3
 import tempfile
 import unittest
 from datetime import datetime, timezone
 
+import pytest
+
 from carrymem import CarryMem
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
-from carrymem.security.encryption import (
-    MemoryEncryption,
-    NoEncryption,
-    EncryptionError,
-)
 from carrymem.backup import BackupManager
 from carrymem.security.audit import AuditLogger
+from carrymem.security.encryption import (
+    EncryptionError,
+    MemoryEncryption,
+    NoEncryption,
+)
 
 
 class TestNoEncryption(unittest.TestCase):

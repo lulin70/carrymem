@@ -11,29 +11,27 @@ compatibility. The actual implementations live in:
 - carrymem.prompt: Prompt template construction (build_prompt, build_qa_prompt)
 """
 
-# Re-export all public APIs for backward compatibility
-from carrymem.selection import (
-    context_relevance,
-    select_memories,
-    select_knowledge,
+from carrymem.format import (
+    TYPE_LABELS,
+    format_knowledge_entry,
+    format_memory_entry,
 )
-
+from carrymem.prompt import (
+    PROMPT_TEMPLATES,
+    build_prompt,
+    build_qa_prompt,
+)
 from carrymem.scope import (
     SCOPE_VOCABULARY,
     infer_scopes,
     preference_matches_scope,
 )
 
-from carrymem.format import (
-    TYPE_LABELS,
-    format_memory_entry,
-    format_knowledge_entry,
-)
-
-from carrymem.prompt import (
-    PROMPT_TEMPLATES,
-    build_prompt,
-    build_qa_prompt,
+# Re-export all public APIs for backward compatibility
+from carrymem.selection import (
+    context_relevance,
+    select_knowledge,
+    select_memories,
 )
 
 __all__ = [

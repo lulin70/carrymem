@@ -7,7 +7,6 @@ for benchmark consistency.
 import re
 from typing import Any, Dict, List
 
-
 SCOPE_VOCABULARY = {
     "education": {
         "en": [

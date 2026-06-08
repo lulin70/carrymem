@@ -16,8 +16,8 @@ Usage:
 import asyncio
 from typing import Any, Dict, List, Optional
 
-from .carrymem import CarryMem
 from .adapters.base import StorageAdapter
+from .carrymem import CarryMem
 
 
 class AsyncCarryMem:

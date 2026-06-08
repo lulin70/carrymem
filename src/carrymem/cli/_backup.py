@@ -1,8 +1,8 @@
 """CarryMem CLI - Backup and initialization commands: backup, init, version."""
 
-import sys
-import os
 import json
+import os
+import sys
 
 from carrymem.cli._base import *
 

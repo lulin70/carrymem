@@ -7,19 +7,20 @@ log_experience, audit logging.
 """
 
 import sqlite3
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from carrymem.integration.devsquad import (
+    CARRYMEM_TO_DEVOPSQUAD_RULE_TYPE,
+    DEVSQUAD_TO_CARRYMEM_RULE_TYPE,
+    CarryMemAdapter,
     DevSquadAdapter,
     MemoryProvider,
-    CarryMemAdapter,
-    DEVSQUAD_TO_CARRYMEM_RULE_TYPE,
-    CARRYMEM_TO_DEVOPSQUAD_RULE_TYPE,
-    devsquad_to_carrymem_type,
-    carrymem_to_devsquad_type,
     carrymem_rule_to_devsquad_dict,
+    carrymem_to_devsquad_type,
     devsquad_rule_to_carrymem_params,
+    devsquad_to_carrymem_type,
 )
 from carrymem.rules import RuleEngine
 

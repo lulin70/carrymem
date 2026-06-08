@@ -12,11 +12,11 @@ Additions:
 """
 
 import re
-from typing import List, Optional, Tuple
 from datetime import datetime, timezone
+from typing import List, Optional, Tuple
 
-from .models import Rule
 from .matcher import MatchResult
+from .models import Rule
 
 
 class ContextBudget:

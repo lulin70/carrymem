@@ -20,9 +20,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
+from ..utils.helpers import content_hash, escape_like
 from .base import StorageAdapter
-from ..utils.helpers import escape_like, content_hash
-
 
 _OBSIDIAN_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS notes (
@@ -177,12 +176,10 @@ class ObsidianAdapter(StorageAdapter):
         if row and "unicode61" in (row["sql"] or ""):
             conn.execute("INSERT INTO notes_fts(notes_fts) VALUES('rebuild')")
             conn.execute("DROP TABLE IF EXISTS notes_fts")
-            conn.execute(
-                """CREATE VIRTUAL TABLE notes_fts USING fts5(
+            conn.execute("""CREATE VIRTUAL TABLE notes_fts USING fts5(
                     title, content,
                     content='notes', content_rowid='rowid', tokenize='trigram'
-                )"""
-            )
+                )""")
             conn.execute("INSERT INTO notes_fts(notes_fts) VALUES('rebuild')")
             conn.commit()
 

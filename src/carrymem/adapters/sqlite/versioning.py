@@ -34,24 +34,28 @@ class VersionManager:
 
         history = []
         if current:
-            history.append({
-                "version": current.version,
-                "content": current.content,
-                "confidence": current.confidence,
-                "changed_at": current.updated_at.isoformat() if current.updated_at else None,
-                "change_reason": "Current version",
-                "is_current": True,
-            })
+            history.append(
+                {
+                    "version": current.version,
+                    "content": current.content,
+                    "confidence": current.confidence,
+                    "changed_at": current.updated_at.isoformat() if current.updated_at else None,
+                    "change_reason": "Current version",
+                    "is_current": True,
+                }
+            )
 
         for v in versions:
-            history.append({
-                "version": v["version"],
-                "content": v["content"],
-                "confidence": v["confidence"],
-                "changed_at": v["changed_at"],
-                "change_reason": v["change_reason"],
-                "is_current": False,
-            })
+            history.append(
+                {
+                    "version": v["version"],
+                    "content": v["content"],
+                    "confidence": v["confidence"],
+                    "changed_at": v["changed_at"],
+                    "change_reason": v["change_reason"],
+                    "is_current": False,
+                }
+            )
 
         return history
 

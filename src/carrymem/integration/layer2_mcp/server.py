@@ -13,9 +13,9 @@ import sys
 from typing import Any, Dict, Optional
 
 from carrymem.__version__ import __version__ as _version
+
 from .handlers import Handlers
 from .tools import TOOLS
-
 
 logging.basicConfig(
     level=logging.INFO,

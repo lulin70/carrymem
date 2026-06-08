@@ -5,15 +5,16 @@ import struct
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from ..base import StoredMemory
 from ...scoring import calculate_importance
 from ...utils.helpers import escape_like
-from ...utils.language import has_cjk, _STOP_WORDS
+from ...utils.language import _STOP_WORDS, has_cjk
 from ...utils.logger import logger
+from ..base import StoredMemory
 
 try:
     from ...semantic.expander import SemanticExpander
     from ...semantic.merger import ResultMerger
+
     SEMANTIC_AVAILABLE = True
 except ImportError:
     SEMANTIC_AVAILABLE = False
@@ -39,12 +40,14 @@ class RecallEngine:
                 return [self._adapter._serializer.dict_to_stored(d) or StoredMemory() for d in cached]
 
         with self._adapter._conn_mgr.lock:
-            results = self._recall_impl(query, filters, limit, namespaces,
-                                        update_access=update_access)
+            results = self._recall_impl(query, filters, limit, namespaces, update_access=update_access)
 
         if self._adapter._enable_cache and self._adapter._cache and results:
             self._adapter._cache.put(
-                self._adapter.namespace, query, filters, limit,
+                self._adapter.namespace,
+                query,
+                filters,
+                limit,
                 [r.to_dict() for r in results],
             )
 
@@ -58,22 +61,16 @@ class RecallEngine:
         namespaces: Optional[List[str]] = None,
         update_access: bool = True,
     ):
-        from .query_builder import QueryBuilder, _ALLOWED_FILTER_KEYS, _VALID_MEMORY_TYPES
+        from .query_builder import _ALLOWED_FILTER_KEYS, _VALID_MEMORY_TYPES, QueryBuilder
 
         filters = filters or {}
 
         for key in filters:
             if key not in _ALLOWED_FILTER_KEYS:
-                raise ValueError(
-                    f"Invalid filter key: '{key}'. "
-                    f"Allowed keys: {_ALLOWED_FILTER_KEYS}"
-                )
+                raise ValueError(f"Invalid filter key: '{key}'. " f"Allowed keys: {_ALLOWED_FILTER_KEYS}")
 
         if filters.get("type") and filters["type"] not in _VALID_MEMORY_TYPES:
-            raise ValueError(
-                f"Invalid memory type: '{filters['type']}'. "
-                f"Valid types: {_VALID_MEMORY_TYPES}"
-            )
+            raise ValueError(f"Invalid memory type: '{filters['type']}'. " f"Valid types: {_VALID_MEMORY_TYPES}")
 
         if limit < 0 or limit > 100000:
             raise ValueError(f"Limit must be between 0 and 100000, got {limit}")
@@ -81,10 +78,7 @@ class RecallEngine:
         if namespaces:
             for ns in namespaces:
                 if not ns or not isinstance(ns, str) or len(ns) > 128:
-                    raise ValueError(
-                        f"Invalid namespace: '{ns}'. "
-                        "Must be non-empty string, max 128 chars."
-                    )
+                    raise ValueError(f"Invalid namespace: '{ns}'. " "Must be non-empty string, max 128 chars.")
 
         if query and len(query) > 10000:
             raise ValueError(f"Query too long: {len(query)} chars (max 10000)")
@@ -130,11 +124,9 @@ class RecallEngine:
             conditions.append("(superseded_at IS NULL OR superseded_at = '')")
 
         if filters.get("session_id"):
-            safe_sid = (filters["session_id"]
-                        .replace("\\", "\\\\")
-                        .replace("%", "\\%")
-                        .replace("_", "\\_")
-                        .replace('"', '\\"'))
+            safe_sid = (
+                filters["session_id"].replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_").replace('"', '\\"')
+            )
             conditions.append("metadata LIKE ? ESCAPE '\\'")
             params.append(f'%session_id": "{safe_sid}%')
 
@@ -152,8 +144,7 @@ class RecallEngine:
 
             if is_final:
                 # Semantic expansion succeeded — update access and return
-                return self.recall_update_access(
-                    rows, update_access, filters, limit, is_stored=True)
+                return self.recall_update_access(rows, update_access, filters, limit, is_stored=True)
         else:
             conn = self._adapter._conn_mgr.get_connection()
             sql = f"""
@@ -170,10 +161,7 @@ class RecallEngine:
 
     def _recall_fts_phase(self, query, where_clause, params, limit):
         """FTS search + context reconstruction."""
-        keywords = " ".join(
-            w for w in query.lower().split()
-            if w not in _STOP_WORDS and len(w) > 1
-        )
+        keywords = " ".join(w for w in query.lower().split() if w not in _STOP_WORDS and len(w) > 1)
 
         from .query_builder import QueryBuilderWithContext
 
@@ -286,8 +274,7 @@ class RecallEngine:
         stored.importance_score = new_score
         stored.last_accessed_at = datetime.fromisoformat(now_iso)
 
-    def recall_update_access(self, rows, update_access=True,
-                             filters=None, limit=20, is_stored=False):
+    def recall_update_access(self, rows, update_access=True, filters=None, limit=20, is_stored=False):
         """Batch access count update.
 
         If is_stored=True: rows are StoredMemory objects (from semantic expansion).
@@ -417,7 +404,7 @@ class RecallEngine:
                 ORDER BY v.distance
             """.format(where_clause=where_clause)
             vec_params = params + [
-                struct.pack(f'{self._adapter._embedding_dim}f', *query_embedding.tolist()),
+                struct.pack(f"{self._adapter._embedding_dim}f", *query_embedding.tolist()),
                 limit,
             ]
             return conn.execute(vec_sql, vec_params).fetchall()
@@ -467,6 +454,7 @@ class RecallEngine:
 
     def _fts_search(self, query, where_clause, params, limit):
         from .query_builder import QueryBuilder
+
         try:
             conn = self._adapter._conn_mgr.get_connection()
             safe_query = QueryBuilder.sanitize_fts_query(query)
@@ -492,8 +480,7 @@ class RecallEngine:
         conn = self._adapter._conn_mgr.get_connection()
         escaped = escape_like(query)
         like_clause = (
-            " AND (content LIKE ? ESCAPE '\\' OR raw_text LIKE ? "
-            "ESCAPE '\\' OR original_message LIKE ? ESCAPE '\\')"
+            " AND (content LIKE ? ESCAPE '\\' OR raw_text LIKE ? " "ESCAPE '\\' OR original_message LIKE ? ESCAPE '\\')"
         )
         like_params = [f"%{escaped}%", f"%{escaped}%", f"%{escaped}%"]
         sql = f"""

@@ -26,9 +26,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .base import StorageAdapter
 from ..utils.helpers import escape_like
-
+from .base import StorageAdapter
 
 _CODING_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS coding_entries (
@@ -483,10 +482,8 @@ class CodingContextAdapter(StorageAdapter):
         return self.recall(query="", limit=50, filters=filters)
 
     def get_tech_stack(self) -> Dict[str, Any]:
-        cursor = self._get_connection().execute(
-            """SELECT DISTINCT language, framework FROM coding_entries
-               WHERE source_type = 'project_meta'"""
-        )
+        cursor = self._get_connection().execute("""SELECT DISTINCT language, framework FROM coding_entries
+               WHERE source_type = 'project_meta'""")
         stack = {}
         for row in cursor:
             lang = row["language"]

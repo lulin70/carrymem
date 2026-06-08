@@ -6,6 +6,7 @@ recall/search operations.
 """
 
 import os
+
 import pytest
 
 from carrymem.adapters.obsidian_adapter import ObsidianAdapter

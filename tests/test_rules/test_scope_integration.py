@@ -11,21 +11,22 @@ Extended end-to-end tests covering:
 """
 
 import json
-import pytest
-import tempfile
 import os
+import tempfile
+
+import pytest
 
 from carrymem.rules import RuleEngine
-from carrymem.rules.models import Rule, SCOPE_PRIORITY
-from carrymem.rules.skill import skill_pack, skill_verify, skill_install
 from carrymem.rules.merge_protocol import (
-    MergeStrategy,
-    MergeDecision,
     MergeConflict,
+    MergeDecision,
     MergeResult,
+    MergeStrategy,
     merge_rules,
     review_incoming_rules,
 )
+from carrymem.rules.models import SCOPE_PRIORITY, Rule
+from carrymem.rules.skill import skill_install, skill_pack, skill_verify
 from carrymem.rules.storage import RuleStorage
 
 

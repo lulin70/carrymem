@@ -8,14 +8,13 @@ Covers: TYPE_SELECTION_BOOST, mandatory type ordering,
 import pytest
 
 from carrymem.context import (
-    context_relevance,
-    select_memories,
-    select_knowledge,
-    build_qa_prompt,
     build_prompt,
+    build_qa_prompt,
+    context_relevance,
+    select_knowledge,
+    select_memories,
 )
 from carrymem.selection import _estimate_tokens, _tokenize_text
-
 
 # ── TYPE_SELECTION_BOOST tests ──────────────────────────────────────
 

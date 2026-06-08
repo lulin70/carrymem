@@ -5,10 +5,11 @@ They follow patterns that trigger detection but use obviously-fake values.
 GitHub Secret Scanning may flag these — they are intentional test vectors."""
 
 import pytest
+
 from carrymem.security.redaction import (
     detect_sensitive_content,
-    should_redact,
     redact_content,
+    should_redact,
 )
 
 

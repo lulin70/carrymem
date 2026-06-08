@@ -6,19 +6,18 @@ build_system_prompt, plugin loader, and MCP tools.
 Test matrix: 3 user types × 3 languages × 7 memory types + noise rejection
 """
 
+import json
 import os
 import sys
 import tempfile
 import unittest
-import json
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from carrymem import CarryMem, SQLiteAdapter, ObsidianAdapter
+from carrymem import CarryMem, ObsidianAdapter, SQLiteAdapter
 from carrymem.adapters.base import MemoryEntry, StorageAdapter, StoredMemory
-from carrymem.adapters.loader import load_adapter, list_available_adapters
+from carrymem.adapters.loader import list_available_adapters, load_adapter
 from carrymem.engine import MemoryClassificationEngine
-
 
 # ============================================================
 # Part 1: Core Classification Tests (EN/CN/JP × 7 types)
@@ -1565,8 +1564,9 @@ class TestPerformanceBenchmark(unittest.TestCase):
 
     def test_expand_performance(self):
         """SemanticExpander.expand() should be fast."""
-        from carrymem.semantic.expander import SemanticExpander
         import time
+
+        from carrymem.semantic.expander import SemanticExpander
 
         expander = SemanticExpander()
 
@@ -1580,8 +1580,9 @@ class TestPerformanceBenchmark(unittest.TestCase):
 
     def test_merge_performance(self):
         """ResultMerger.merge() should handle large result sets efficiently."""
-        from carrymem.semantic.merger import ResultMerger
         import time
+
+        from carrymem.semantic.merger import ResultMerger
 
         merger = ResultMerger()
 

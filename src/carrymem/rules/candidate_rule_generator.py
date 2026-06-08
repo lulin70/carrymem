@@ -16,8 +16,8 @@ from typing import List, Optional
 
 from .pattern_detector import (
     MemoryPattern,
-    PatternType,
     PatternConfidence,
+    PatternType,
 )
 from .sanitizer import RuleSanitizer
 

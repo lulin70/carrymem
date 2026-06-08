@@ -1,15 +1,15 @@
 """CarryMem CLI - Import/export/pack commands: consolidate, export, import, pack, unpack."""
 
+import base64
+import getpass
 import gzip
 import hashlib
-import base64
 import json
-import socket
-import getpass
 import os
+import socket
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 from carrymem.cli._base import *
 
@@ -146,10 +146,8 @@ def cmd_import(args):
     errors = result.get("errors", 0)
     total = result.get("total_processed", 0)
 
-    _msg = _green('Import complete:')
-    print(
-        f"  {_msg} {imported} imported, {skipped} skipped, {errors} errors ({total} total)"
-    )
+    _msg = _green("Import complete:")
+    print(f"  {_msg} {imported} imported, {skipped} skipped, {errors} errors ({total} total)")
 
     if errors > 0:
         cm.close()
@@ -261,10 +259,8 @@ def cmd_pack(args):
             if parsed.key:
                 print(f"  {_green('\u2713')} {encrypted_count} encrypted entries included")
             else:
-                _icon = _yellow('\u2717')
-                print(
-                    f"  {_icon} Encrypted entries skipped ({encrypted_count}) (provide --key to include)"
-                )
+                _icon = _yellow("\u2717")
+                print(f"  {_icon} Encrypted entries skipped ({encrypted_count}) (provide --key to include)")
 
         # Build pack data
         source_machine = socket.gethostname().lower().replace(" ", "-")
@@ -567,10 +563,8 @@ def cmd_unpack(args):
         if cm._adapter and hasattr(cm._adapter, "_embedding_model_name"):
             embedding_model = cm._adapter._embedding_model_name
         if embedding_model:
-            _model_info = _dim(f'\u2139 Embedding model: {embedding_model} (vectors will be rebuilt on next recall)')
-            print(
-                f"  {_model_info}"
-            )
+            _model_info = _dim(f"\u2139 Embedding model: {embedding_model} (vectors will be rebuilt on next recall)")
+            print(f"  {_model_info}")
 
         print(f"\n  \u2192 Run {_cyan('carrymem setup-mcp --all --global')} to reconnect your AI tools")
 

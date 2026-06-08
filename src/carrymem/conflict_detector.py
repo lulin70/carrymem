@@ -10,8 +10,8 @@ Initial implementation
 """
 
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional, List
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 from .adapters.base import StoredMemory
 

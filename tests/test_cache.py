@@ -1,7 +1,9 @@
 """Tests for cache.py module - LRU cache with TTL"""
 
 import time
+
 import pytest
+
 from carrymem.cache import RecallCache
 
 

@@ -1,6 +1,7 @@
 """Noise pattern definitions (acknowledgment, chitchat, command, question, etc.)."""
 
 import re
+
 from carrymem.patterns.base import NoiseCategory
 from carrymem.patterns.builder import PatternBuilder
 from carrymem.patterns.registry import PatternRegistry
@@ -47,8 +48,10 @@ def register_noise_patterns(registry: PatternRegistry) -> None:
     )
     # Extended acknowledgment with context
     b.add_noise(
-        "ext_with_context", r"^(ok|okay|sure|alright|got\s+it)[,\s]+",
-        NoiseCategory.ACKNOWLEDGMENT, flags=re.IGNORECASE,
+        "ext_with_context",
+        r"^(ok|okay|sure|alright|got\s+it)[,\s]+",
+        NoiseCategory.ACKNOWLEDGMENT,
+        flags=re.IGNORECASE,
     )
 
     # ===== Acknowledgment (ZH) =====
@@ -185,14 +188,16 @@ def register_noise_patterns(registry: PatternRegistry) -> None:
     # ===== Question (ZH) =====
     b.set_language("zh")
     b.add_noise(
-        "question", r"^(怎么|如何|为什么|什么|哪里|谁|多少|是不是|能不能|可以吗)",
+        "question",
+        r"^(怎么|如何|为什么|什么|哪里|谁|多少|是不是|能不能|可以吗)",
         NoiseCategory.QUESTION,
     )
 
     # ===== Question (JA) =====
     b.set_language("ja")
     b.add_noise(
-        "question", r"^(どう|なぜ|何|どこ|誰|いくら|どうやって)",
+        "question",
+        r"^(どう|なぜ|何|どこ|誰|いくら|どうやって)",
         NoiseCategory.QUESTION,
     )
     b.register()

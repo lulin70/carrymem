@@ -11,24 +11,25 @@ Validates InputValidator class including:
 - Strict vs non-strict mode
 """
 
-import pytest
-import tempfile
 import os
+import tempfile
 from pathlib import Path
 
+import pytest
+
+from carrymem.exceptions import ValidationError
 from carrymem.security.input_validator import (
     InputValidator,
     get_validator,
+    validate_confidence,
     validate_content,
-    validate_query,
+    validate_filters,
+    validate_limit,
+    validate_memory_type,
     validate_namespace,
     validate_path,
-    validate_memory_type,
-    validate_confidence,
-    validate_limit,
-    validate_filters,
+    validate_query,
 )
-from carrymem.exceptions import ValidationError
 
 
 @pytest.fixture
@@ -86,7 +87,7 @@ class TestXSSDetection:
 
     def test_iframe_detected(self, validator):
         with pytest.raises(ValidationError, match="XSS"):
-            validator.validate_content("<iframe src=\"evil.com\">")
+            validator.validate_content('<iframe src="evil.com">')
 
     def test_xss_not_checked_in_loose_mode(self, loose_validator):
         result = loose_validator.validate_content("<script>alert('xss')</script>")
@@ -198,8 +199,13 @@ class TestNamespaceValidation:
 class TestMemoryTypeValidation:
     def test_valid_types_pass(self, validator):
         for t in [
-            "user_preference", "correction", "fact_declaration",
-            "decision", "relationship", "task_pattern", "sentiment_marker",
+            "user_preference",
+            "correction",
+            "fact_declaration",
+            "decision",
+            "relationship",
+            "task_pattern",
+            "sentiment_marker",
         ]:
             result = validator.validate_memory_type(t)
             assert result == t
@@ -260,12 +266,14 @@ class TestLimitValidation:
 
 class TestFiltersValidation:
     def test_valid_filters(self, validator):
-        result = validator.validate_filters({
-            "type": "user_preference",
-            "namespace": "test",
-            "min_confidence": 0.5,
-            "max_age_days": 30,
-        })
+        result = validator.validate_filters(
+            {
+                "type": "user_preference",
+                "namespace": "test",
+                "min_confidence": 0.5,
+                "max_age_days": 30,
+            }
+        )
         assert result["type"] == "user_preference"
         assert result["namespace"] == "test"
         assert result["min_confidence"] == 0.5
@@ -357,15 +365,18 @@ class TestConvenienceFunctions:
 class TestCommandInjection:
     def test_command_substitution_detected(self, validator):
         from carrymem.security.input_validator import InputValidator
+
         v = InputValidator(strict_mode=False)
         assert v._contains_command_injection("$(whoami)")
 
     def test_backtick_detected(self, validator):
         from carrymem.security.input_validator import InputValidator
+
         v = InputValidator(strict_mode=False)
         assert v._contains_command_injection("`rm -rf /`")
 
     def test_safe_content_no_command_injection(self, validator):
         from carrymem.security.input_validator import InputValidator
+
         v = InputValidator(strict_mode=False)
         assert not v._contains_command_injection("Normal text content")

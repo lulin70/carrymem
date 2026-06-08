@@ -1,17 +1,18 @@
 import os
 import sys
 import tempfile
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from carrymem import CarryMem
-from carrymem.llm import LLMClient
-from carrymem.layers.session_summarizer import SessionSummarizer
-from carrymem.layers.semantic_aggregator import SemanticAggregator
-from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.adapters.base import MemoryEntry
+from carrymem.adapters.sqlite_adapter import SQLiteAdapter
+from carrymem.layers.semantic_aggregator import SemanticAggregator
+from carrymem.layers.session_summarizer import SessionSummarizer
+from carrymem.llm import LLMClient
 
 
 @pytest.fixture

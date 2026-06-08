@@ -8,12 +8,13 @@ Validates:
 - Priority ordering
 """
 
-import pytest
-import tempfile
 import os
+import tempfile
 
-from carrymem.rules.storage import RuleStorage
+import pytest
+
 from carrymem.rules.matcher import RuleMatcher
+from carrymem.rules.storage import RuleStorage
 
 
 @pytest.fixture

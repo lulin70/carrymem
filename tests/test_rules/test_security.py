@@ -11,12 +11,12 @@ Validates:
 
 import pytest
 
+from carrymem.rules.limiter import RuleLimiter
+from carrymem.rules.models import Rule
 from carrymem.rules.sanitizer import (
     RuleSanitizer,
     SecurityEvent,
 )
-from carrymem.rules.limiter import RuleLimiter
-from carrymem.rules.models import Rule
 
 
 class TestRuleSanitizerTriggerValidation:

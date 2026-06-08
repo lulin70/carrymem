@@ -5,14 +5,14 @@ grouping, and matching with language-aware indexing.
 """
 
 from carrymem.patterns.base import (
-    Pattern,
-    PatternType,
     NoiseCategory,
+    Pattern,
     PatternMatch,
+    PatternType,
 )
+from carrymem.patterns.builder import PatternBuilder
 from carrymem.patterns.group import PatternGroup
 from carrymem.patterns.registry import PatternRegistry
-from carrymem.patterns.builder import PatternBuilder
 
 __all__ = [
     "Pattern",

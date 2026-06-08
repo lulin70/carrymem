@@ -2,16 +2,17 @@
 
 import os
 import tempfile
+
 import pytest
 
 from carrymem import CarryMem
 from carrymem.utils.validators import (
-    validate_message,
-    validate_limit,
-    validate_namespace,
-    validate_storage_key,
-    validate_query,
     ValidationError,
+    validate_limit,
+    validate_message,
+    validate_namespace,
+    validate_query,
+    validate_storage_key,
 )
 
 
@@ -90,8 +91,8 @@ class TestMCPHandlerSafety:
         assert "database" not in result
 
     def test_safe_error_known_type(self):
-        from carrymem.integration.layer2_mcp.handlers import _safe_error
         from carrymem.carrymem import StorageNotConfiguredError
+        from carrymem.integration.layer2_mcp.handlers import _safe_error
 
         e = StorageNotConfiguredError()
         result = _safe_error(e)

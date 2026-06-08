@@ -9,15 +9,15 @@ Validates:
 
 import pytest
 
-from carrymem.rules.pattern_detector import (
-    PatternDetector,
-    MemoryPattern,
-    PatternType,
-    PatternConfidence,
-)
 from carrymem.rules.candidate_rule_generator import (
     CandidateRuleGenerator,
     RuleCandidate,
+)
+from carrymem.rules.pattern_detector import (
+    MemoryPattern,
+    PatternConfidence,
+    PatternDetector,
+    PatternType,
 )
 
 

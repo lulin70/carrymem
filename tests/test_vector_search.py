@@ -8,15 +8,16 @@ runtime toggle.
 """
 
 import os
+
 import pytest
 
+from carrymem.adapters.base import MemoryEntry
 from carrymem.adapters.sqlite_adapter import (
-    SQLiteAdapter,
-    SQLITE_VEC_AVAILABLE,
     PYSQLITE3_AVAILABLE,
     SENTENCE_TRANSFORMERS_AVAILABLE,
+    SQLITE_VEC_AVAILABLE,
+    SQLiteAdapter,
 )
-from carrymem.adapters.base import MemoryEntry
 
 VECTOR_AVAILABLE = SQLITE_VEC_AVAILABLE and PYSQLITE3_AVAILABLE and SENTENCE_TRANSFORMERS_AVAILABLE
 

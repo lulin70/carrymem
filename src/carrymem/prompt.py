@@ -5,23 +5,22 @@ Extracted from context.py for modularity.
 
 from typing import Any, Dict, List
 
-from carrymem.format import format_memory_entry, format_knowledge_entry, _build_superseded_notes
-
+from carrymem.format import _build_superseded_notes, format_knowledge_entry, format_memory_entry
 
 PROMPT_TEMPLATES = {
     "en": {
         "header": "You are an AI assistant with access to the user's memory and knowledge base.",
         "priority": [
-                (
-                    "1. **User Memories** (highest priority) — Personal "
-                    "preferences, corrections, and decisions the user has shared."
-                ),
-                "2. **Knowledge Base** — Notes and documents from the user's personal vault.",
-                (
-                    "3. **General Knowledge** (lowest priority) — Use only when "
-                    "memories and knowledge base don't cover the topic."
-                ),
-            ],
+            (
+                "1. **User Memories** (highest priority) — Personal "
+                "preferences, corrections, and decisions the user has shared."
+            ),
+            "2. **Knowledge Base** — Notes and documents from the user's personal vault.",
+            (
+                "3. **General Knowledge** (lowest priority) — Use only when "
+                "memories and knowledge base don't cover the topic."
+            ),
+        ],
         "memories_header": "## User Memories",
         "knowledge_header": "## Knowledge Base",
         "guidelines_header": "## Guidelines",
@@ -46,8 +45,7 @@ PROMPT_TEMPLATES = {
             ("How many projects has the user led?", "2"),
         ],
         "answer_conflict_rule": (
-            "3. If memories conflict, prefer [MANDATORY] over others, "
-            "and non-[OUTDATED] over [OUTDATED]."
+            "3. If memories conflict, prefer [MANDATORY] over others, " "and non-[OUTDATED] over [OUTDATED]."
         ),
         "answer_preference_rule": (
             "8. For preference/recommendation questions (what does the user "
@@ -66,8 +64,7 @@ PROMPT_TEMPLATES = {
             "matching items across all memories before answering."
         ),
         "answer_cot_rule": (
-            "7. For reasoning questions, think step-by-step internally, then "
-            "output ONLY the final answer."
+            "7. For reasoning questions, think step-by-step internally, then " "output ONLY the final answer."
         ),
         "answer_fallback": "4. If you cannot find the answer in the memories, respond with: Information not available.",
         "preference_qa_header": "You are a helpful assistant.",
@@ -138,8 +135,7 @@ PROMPT_TEMPLATES = {
             ("ユーザーはいくつのプロジェクトを主導しましたか？", "2"),
         ],
         "answer_conflict_rule": (
-            "3. 記憶が矛盾する場合、[MANDATORY]を優先し、[OUTDATED]以外を"
-            "[OUTDATED]より優先する。"
+            "3. 記憶が矛盾する場合、[MANDATORY]を優先し、[OUTDATED]以外を" "[OUTDATED]より優先する。"
         ),
         "answer_preference_rule": (
             "8. 好み/推奨の質問（ユーザーの好み、推奨できるもの）について"

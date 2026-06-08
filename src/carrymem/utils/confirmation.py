@@ -1,5 +1,5 @@
-from typing import Dict, Optional
 import re
+from typing import Dict, Optional
 
 _CONFIRMATION_PATTERNS = {
     "en": [

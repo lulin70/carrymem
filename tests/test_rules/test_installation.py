@@ -12,12 +12,13 @@ Validates:
 - CLI command integration tests
 """
 
-import pytest
+import importlib
+import os
 import subprocess
 import sys
-import os
-import importlib
 import tempfile
+
+import pytest
 
 from carrymem.__version__ import __version__
 
@@ -37,16 +38,16 @@ class TestPackageImports:
 
     def test_import_scope_types(self):
         from carrymem.rules import (
-            RuleScope,
-            VALID_RULE_SCOPES,
             SCOPE_PRIORITY,
+            VALID_RULE_SCOPES,
+            RuleScope,
         )
 
         assert VALID_RULE_SCOPES == {"personal", "company", "negotiated"}
         assert SCOPE_PRIORITY["company"] == 3
 
     def test_import_skill_functions(self):
-        from carrymem.rules import skill_pack, skill_verify, skill_install
+        from carrymem.rules import skill_install, skill_pack, skill_verify
 
         assert callable(skill_pack)
         assert callable(skill_verify)
@@ -54,10 +55,10 @@ class TestPackageImports:
 
     def test_import_merge_types(self):
         from carrymem.rules import (
-            MergeStrategy,
-            MergeDecision,
             MergeConflict,
+            MergeDecision,
             MergeResult,
+            MergeStrategy,
         )
 
         assert MergeStrategy.COMPANY_OVERRIDES is not None
@@ -75,7 +76,7 @@ class TestPackageImports:
         assert RuleInjector is not None
 
     def test_import_matcher(self):
-        from carrymem.rules.matcher import RuleMatcher, MatchResult
+        from carrymem.rules.matcher import MatchResult, RuleMatcher
 
         assert RuleMatcher is not None
         assert MatchResult is not None
@@ -266,7 +267,7 @@ class TestCLIEntryPoints:
         assert hasattr(cli, "cmd_skill_verify"), "cmd_skill_verify not found in CLI module"
 
     def test_skill_commands_in_dispatch_table(self):
-        from carrymem.cli import cmd_skill_pack, cmd_skill_install, cmd_skill_verify
+        from carrymem.cli import cmd_skill_install, cmd_skill_pack, cmd_skill_verify
 
         assert callable(cmd_skill_pack)
         assert callable(cmd_skill_install)
@@ -362,6 +363,7 @@ class TestCLIEntryPoints:
 
     def test_cli_skill_verify_execution(self):
         import json as json_mod
+
         from carrymem.cli import cmd_skill_pack, cmd_skill_verify
 
         tmpdir = tempfile.mkdtemp()

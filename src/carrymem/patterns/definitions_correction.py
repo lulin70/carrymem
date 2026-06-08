@@ -76,22 +76,42 @@ def register_correction_patterns(registry: PatternRegistry) -> None:
     b.add_correction_batch(
         [
             ("negation_start", r"^(?:no[,\.]?|not\s+|wait[,\.]?\s+|hold\s+on)", 2),
-            ("wrong_statement", r"(?:that\'s|it\'s|this\s+is)\s+(?:all\s+wrong|wrong|incorrect|"
-             r"not\s+right|not\s+correct|mistaken)", 2),
-            ("actually_clarify", r"^(?:actually|in\s+fact|let\s+me\s+clarify|to\s+be\s+clear|"
-             r"let\s+me\s+be\s+clear)[,\s:]", 2),
+            (
+                "wrong_statement",
+                r"(?:that\'s|it\'s|this\s+is)\s+(?:all\s+wrong|wrong|incorrect|" r"not\s+right|not\s+correct|mistaken)",
+                2,
+            ),
+            (
+                "actually_clarify",
+                r"^(?:actually|in\s+fact|let\s+me\s+clarify|to\s+be\s+clear|" r"let\s+me\s+be\s+clear)[,\s:]",
+                2,
+            ),
             ("actually_is", r"\bactually\s+(is|was)\b", 2),
             ("is_actually", r"\bis\s+actually\b", 2),
-            ("switch_to", r"(?:use|try|go\s+with|switch\s+to|change\s+to)\s+(?:this|that|the)\s+"
-             r"(?:one|instead|approach|way|method)", 2),
+            (
+                "switch_to",
+                r"(?:use|try|go\s+with|switch\s+to|change\s+to)\s+(?:this|that|the)\s+"
+                r"(?:one|instead|approach|way|method)",
+                2,
+            ),
             ("undo_revert", r"(?:undo|revert|rollback|cancel|discard|scrap|remove)\s+(?:that|this|the|it)\s", 2),
-            ("prefer_instead", r"(?:\w+\s+is\s+better|prefer\s+\w+\s+instead|rather\s+(?:have|use|go)\s+with)"
-             r"\b.*\b(?:than|over|instead\s+of)\b", 2),
-            ("error_fix", r"(?:there\'?s?\s+an?\s+|(?:i\s+)?made\s+a\s+)(?:error|mistake|bug|issue|problem|typo)"
-             r".*\bfix\b", 2),
+            (
+                "prefer_instead",
+                r"(?:\w+\s+is\s+better|prefer\s+\w+\s+instead|rather\s+(?:have|use|go)\s+with)"
+                r"\b.*\b(?:than|over|instead\s+of)\b",
+                2,
+            ),
+            (
+                "error_fix",
+                r"(?:there\'?s?\s+an?\s+|(?:i\s+)?made\s+a\s+)(?:error|mistake|bug|issue|problem|typo)" r".*\bfix\b",
+                2,
+            ),
             ("not_but", r"\bnot\s+.+,\s*(?:but\s+)?(instead|rather|use|try)\b", 2),
-            ("nope_wrong", r"^(?:nope|no)[,.\s]+(that|it|this)\s+(?:\'?s\s+)?(not\s+)?"
-             r"(right|correct|wrong|what\s+i\s+meant)", 2),
+            (
+                "nope_wrong",
+                r"^(?:nope|no)[,.\s]+(that|it|this)\s+(?:\'?s\s+)?(not\s+)?" r"(right|correct|wrong|what\s+i\s+meant)",
+                2,
+            ),
         ],
         confidence=0.75,
     )

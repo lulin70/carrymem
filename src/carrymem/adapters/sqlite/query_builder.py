@@ -36,27 +36,38 @@ _QUERY_EXPANSIONS = {
 }
 
 _ALLOWED_FILTER_KEYS = {
-    "type", "tier", "confidence_min", "created_after",
-    "created_before", "session_id", "include_superseded",
-    "_order_oldest", "include_session_summary",
+    "type",
+    "tier",
+    "confidence_min",
+    "created_after",
+    "created_before",
+    "session_id",
+    "include_superseded",
+    "_order_oldest",
+    "include_session_summary",
 }
 
 _TIME_EXPRESSIONS = [
-    (r'\b(recently|lately|just)\b', 7, False),
-    (r'\b(this\s+week|past\s+week|last\s+week)\b', 7, False),
-    (r'\b(this\s+month|past\s+month|last\s+month)\b', 30, False),
-    (r'\b(recent|latest|newest|current)\b', 14, False),
-    (r'\b(today|yesterday)\b', 2, False),
-    (r'\b(first|initial|earliest|original)\b', None, True),
-    (r'\b(before|prior\s+to|earlier)\b', None, False),
-    (r'\b(after|since|following)\b', None, False),
-    (r'\b(last\s+year|previous\s+year)\b', 365, False),
-    (r'\b(\d+)\s+(days?|weeks?|months?)\s+ago\b', None, False),
+    (r"\b(recently|lately|just)\b", 7, False),
+    (r"\b(this\s+week|past\s+week|last\s+week)\b", 7, False),
+    (r"\b(this\s+month|past\s+month|last\s+month)\b", 30, False),
+    (r"\b(recent|latest|newest|current)\b", 14, False),
+    (r"\b(today|yesterday)\b", 2, False),
+    (r"\b(first|initial|earliest|original)\b", None, True),
+    (r"\b(before|prior\s+to|earlier)\b", None, False),
+    (r"\b(after|since|following)\b", None, False),
+    (r"\b(last\s+year|previous\s+year)\b", 365, False),
+    (r"\b(\d+)\s+(days?|weeks?|months?)\s+ago\b", None, False),
 ]
 
 _VALID_MEMORY_TYPES = {
-    "user_preference", "correction", "fact_declaration",
-    "decision", "relationship", "task_pattern", "sentiment_marker",
+    "user_preference",
+    "correction",
+    "fact_declaration",
+    "decision",
+    "relationship",
+    "task_pattern",
+    "sentiment_marker",
     "session_summary",
 }
 
@@ -101,26 +112,22 @@ class QueryBuilder:
                 continue
 
             if days is not None:
-                result["created_after"] = (
-                    datetime.now(timezone.utc) - timedelta(days=days)
-                ).isoformat()
+                result["created_after"] = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
                 continue
 
-            ago_match = re.search(r'(\d+)\s+(days?|weeks?|months?)\s+ago', query_lower)
+            ago_match = re.search(r"(\d+)\s+(days?|weeks?|months?)\s+ago", query_lower)
             if ago_match:
                 n = int(ago_match.group(1))
                 unit = ago_match.group(2)
-                if 'day' in unit:
+                if "day" in unit:
                     delta = timedelta(days=n)
-                elif 'week' in unit:
+                elif "week" in unit:
                     delta = timedelta(weeks=n)
-                elif 'month' in unit:
+                elif "month" in unit:
                     delta = timedelta(days=n * 30)
                 else:
                     delta = timedelta(days=n)
-                result["created_after"] = (
-                    datetime.now(timezone.utc) - delta
-                ).isoformat()
+                result["created_after"] = (datetime.now(timezone.utc) - delta).isoformat()
                 continue
 
         return result
@@ -129,10 +136,11 @@ class QueryBuilder:
     def sanitize_fts_query(query: str) -> str:
         """Sanitize a query string for FTS5 MATCH."""
         from ...utils.language import has_cjk
+
         tokens = query.strip().split()
         sanitized = []
         for token in tokens:
-            clean = token.replace('"', '').strip()
+            clean = token.replace('"', "").strip()
             if not clean:
                 continue
             if has_cjk(clean):
@@ -158,10 +166,11 @@ class QueryBuilderWithContext(QueryBuilder):
                 "SELECT content, type FROM memories "
                 "WHERE namespace = ? AND type IN ('user_preference', 'decision', 'fact_declaration') "
                 "AND (superseded_at IS NULL OR superseded_at = '') "
-                "ORDER BY importance_score DESC LIMIT 5", (self._adapter.namespace,),
+                "ORDER BY importance_score DESC LIMIT 5",
+                (self._adapter.namespace,),
             ).fetchall()
         except Exception as e:
-            logger = __import__('logging').getLogger(__name__)
+            logger = __import__("logging").getLogger(__name__)
             logger.debug(f"_rebuild_context query failed: {e}")
             return original_query
 

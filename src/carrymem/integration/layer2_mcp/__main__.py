@@ -6,8 +6,8 @@ Usage:
 """
 
 import asyncio
-import sys
 import os
+import sys
 
 # Add project root to path if needed
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))

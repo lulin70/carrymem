@@ -19,8 +19,8 @@ from unittest.mock import patch
 
 import pytest
 
-from carrymem.cli import cmd_pack, cmd_unpack
 from carrymem import CarryMem
+from carrymem.cli import cmd_pack, cmd_unpack
 
 
 @pytest.fixture

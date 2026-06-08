@@ -1,7 +1,8 @@
 """PatternGroup: manages a named collection of related patterns."""
 
-from typing import List, Dict, Optional
-from carrymem.patterns.base import Pattern, PatternType, PatternMatch
+from typing import Dict, List, Optional
+
+from carrymem.patterns.base import Pattern, PatternMatch, PatternType
 
 
 class PatternGroup:
@@ -59,15 +60,17 @@ class PatternGroup:
         for pattern in self.get_patterns(language):
             m = pattern.try_match(message)
             if m:
-                results.append(PatternMatch(
-                    pattern_name=pattern.full_name,
-                    group_name=self.name,
-                    pattern_type=pattern.pattern_type,
-                    language=pattern.language,
-                    confidence=pattern.confidence,
-                    matched_text=m.group(0),
-                    match_obj=m,
-                ))
+                results.append(
+                    PatternMatch(
+                        pattern_name=pattern.full_name,
+                        group_name=self.name,
+                        pattern_type=pattern.pattern_type,
+                        language=pattern.language,
+                        confidence=pattern.confidence,
+                        matched_text=m.group(0),
+                        match_obj=m,
+                    )
+                )
         return results
 
     def any_match(self, message: str, language: Optional[str] = None) -> bool:
@@ -86,5 +89,7 @@ class PatternGroup:
         return list(self._lang_index.keys())
 
     def __repr__(self) -> str:
-        return (f"PatternGroup(name={self.name!r}, type={self.pattern_type.value}, "
-                f"patterns={self.pattern_count}, langs={self.languages})")
+        return (
+            f"PatternGroup(name={self.name!r}, type={self.pattern_type.value}, "
+            f"patterns={self.pattern_count}, langs={self.languages})"
+        )

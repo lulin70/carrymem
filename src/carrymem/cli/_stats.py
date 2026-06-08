@@ -1,10 +1,10 @@
 """CarryMem CLI - Stats/identity/diagnostic commands: stats, whoami, profile, check, doctor."""
 
-import sys
-import os
-import sqlite3
-import shutil
 import json
+import os
+import shutil
+import sqlite3
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -106,8 +106,9 @@ def cmd_stats(args):
     parser.add_argument("--namespace", "-n", default="default", help="Namespace")
     parser.add_argument("--db", help="Database path")
     parser.add_argument("--format", "-f", choices=["text", "json"], default="text", help="Output format")
-    parser.add_argument("--value", "-v", action="store_true",
-                        help="Show value perception report (memories, rules, tokens saved, etc.)")
+    parser.add_argument(
+        "--value", "-v", action="store_true", help="Show value perception report (memories, rules, tokens saved, etc.)"
+    )
 
     parsed = parser.parse_args(args)
     cm = _get_carrymem(parsed.db, parsed.namespace)

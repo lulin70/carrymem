@@ -101,9 +101,9 @@ class TestE2EVersionRollbackJourney:
         assert rollback_result.get("rolled_back") is True, f"Rollback failed: {rollback_result}"
 
         # Verify content matches original
-        assert rollback_result["content"] == original_content, (
-            f"Expected '{original_content}', got '{rollback_result['content']}'"
-        )
+        assert (
+            rollback_result["content"] == original_content
+        ), f"Expected '{original_content}', got '{rollback_result['content']}'"
 
         # Also verify via recall that content is restored
         recalled = cm.recall_memories(query="PostgreSQL")
@@ -170,18 +170,13 @@ class TestE2EVersionRollbackJourney:
         count_after = len(history_after)
 
         # Rollback calls update_memory internally, so it creates a new version
-        assert count_after >= count_before, (
-            f"History should grow after rollback: before={count_before}, after={count_after}"
-        )
+        assert (
+            count_after >= count_before
+        ), f"History should grow after rollback: before={count_before}, after={count_after}"
 
         # Find the rollback entry - it should contain "Rollback" in change_reason
-        rollback_entries = [
-            h for h in history_after
-            if "Rollback" in h.get("change_reason", "")
-        ]
-        assert len(rollback_entries) >= 1, (
-            "History should contain an entry with 'Rollback' in change_reason"
-        )
+        rollback_entries = [h for h in history_after if "Rollback" in h.get("change_reason", "")]
+        assert len(rollback_entries) >= 1, "History should contain an entry with 'Rollback' in change_reason"
 
     def test_rollback_nonexistent_key_returns_none(self, fresh_carrymem):
         """Verify: Rolling back a non-existent storage_key returns rolled_back=False."""

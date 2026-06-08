@@ -6,7 +6,7 @@ Users can instantiate these templates via CLI:
     carrymem add-rule --template code-review
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
 
 RULE_TEMPLATES: Dict[str, Dict[str, Any]] = {
     "code-review": {

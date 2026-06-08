@@ -12,17 +12,12 @@ import tempfile
 
 import pytest
 
+from carrymem.security.audit import _AUDIT_SCHEMA_SQL, AuditLogger
 from carrymem.security.encryption import (
     EncryptionError,
     MemoryEncryption,
     NoEncryption,
     SecurityWarning,
-)
-from carrymem.security.redaction import (
-    SENSITIVE_PATTERNS,
-    detect_sensitive_content,
-    redact_content,
-    should_redact,
 )
 from carrymem.security.input_validator import (
     InputValidator,
@@ -37,8 +32,12 @@ from carrymem.security.input_validator import (
     validate_path,
     validate_query,
 )
-from carrymem.security.audit import AuditLogger, _AUDIT_SCHEMA_SQL
-
+from carrymem.security.redaction import (
+    SENSITIVE_PATTERNS,
+    detect_sensitive_content,
+    redact_content,
+    should_redact,
+)
 
 # ===========================================================================
 # encryption.py tests
@@ -208,11 +207,7 @@ class TestRedactRedaction:
         assert "for auth" in redacted
 
     def test_multiple_patterns_one_text(self):
-        text = (
-            "key=sk-abcdefghijklmnopqrst "
-            "ghp_aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789 "
-            "AKIAIOSFODNN7EXAMPLE"
-        )
+        text = "key=sk-abcdefghijklmnopqrst " "ghp_aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789 " "AKIAIOSFODNN7EXAMPLE"
         findings = detect_sensitive_content(text)
         assert len(findings) >= 3
 
@@ -457,6 +452,7 @@ class TestInputValidatorPathTraversal:
     def test_safe_characters_pass(self, tmp_path):
         v = InputValidator(strict_mode=False)  # skip location check; focus on traversal
         from pathlib import Path
+
         safe_path = str(tmp_path / "safe_file.txt")
         # Create the file so must_exist works
         open(safe_path, "w").close()

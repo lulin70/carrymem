@@ -1,19 +1,21 @@
 """Tests for scoring.py module - memory importance scoring system"""
 
 import math
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
+
 import pytest
+
 from carrymem.scoring import (
-    type_weight,
-    recency_factor,
-    access_factor,
-    calculate_importance,
-    recalculate_importance,
-    TYPE_WEIGHTS,
+    ACCESS_SCALE,
     DEFAULT_TYPE_WEIGHT,
     HALF_LIFE_DAYS,
     RECENCY_FLOOR,
-    ACCESS_SCALE,
+    TYPE_WEIGHTS,
+    access_factor,
+    calculate_importance,
+    recalculate_importance,
+    recency_factor,
+    type_weight,
 )
 
 

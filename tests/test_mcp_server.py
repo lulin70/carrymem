@@ -7,8 +7,9 @@ request handling, SSE, auth, CORS, tools/list, tools/call.
 
 import asyncio
 import json
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
 
 from carrymem.integration.layer2_mcp.http_server import (
     MCPHTTPServer,

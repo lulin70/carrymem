@@ -6,6 +6,7 @@ recall_memories, classify_and_remember with various types.
 """
 
 import os
+
 import pytest
 
 from carrymem import CarryMem

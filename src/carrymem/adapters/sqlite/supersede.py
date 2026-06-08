@@ -3,8 +3,8 @@
 import re
 from datetime import datetime, timezone
 
-from ..base import MemoryEntry
 from ...utils.logger import logger
+from ..base import MemoryEntry
 
 
 class SupersedeManager:
@@ -12,17 +12,40 @@ class SupersedeManager:
 
     _SUPERSEDE_TYPES = {"user_preference", "decision", "fact_declaration", "correction"}
     _CONTRADICTION_PAIRS = [
-        ("like", "dislike"), ("prefer", "avoid"), ("love", "hate"),
-        ("use", "stop using"), ("switched", "no longer"), ("moved", "left"),
-        ("changed", "previous"), ("updated", "old"), ("now", "previously"),
-        ("currently", "formerly"), ("new", "old"), ("current", "previous"),
-        ("dark", "light"), ("yes", "no"), ("true", "false"),
-        ("enabled", "disabled"), ("always", "never"),
+        ("like", "dislike"),
+        ("prefer", "avoid"),
+        ("love", "hate"),
+        ("use", "stop using"),
+        ("switched", "no longer"),
+        ("moved", "left"),
+        ("changed", "previous"),
+        ("updated", "old"),
+        ("now", "previously"),
+        ("currently", "formerly"),
+        ("new", "old"),
+        ("current", "previous"),
+        ("dark", "light"),
+        ("yes", "no"),
+        ("true", "false"),
+        ("enabled", "disabled"),
+        ("always", "never"),
     ]
     _UPDATE_MARKERS = [
-        "now", "currently", "switched", "changed", "moved", "updated",
-        "no longer", "instead", "replaced", "new", "currently prefer",
-        "now prefer", "now use", "now live", "now work",
+        "now",
+        "currently",
+        "switched",
+        "changed",
+        "moved",
+        "updated",
+        "no longer",
+        "instead",
+        "replaced",
+        "new",
+        "currently prefer",
+        "now prefer",
+        "now use",
+        "now live",
+        "now work",
     ]
 
     def __init__(self, adapter):
@@ -50,13 +73,28 @@ class SupersedeManager:
 
         entry_words = set(entry.content.lower().split())
         entry_lower = entry.content.lower()
-        has_update_marker = any(f" {m} " in f" {entry_lower} " or entry_lower.startswith(
-            f"{m} ") for m in self._UPDATE_MARKERS)
+        has_update_marker = any(
+            f" {m} " in f" {entry_lower} " or entry_lower.startswith(f"{m} ") for m in self._UPDATE_MARKERS
+        )
 
         _PREFERENCE_KEYWORDS = {
-            "prefer", "偏好", "喜欢", "选用", "recommend", "avoid",
-            "不用", "别用", "不要用", "dislike", "hate", "never",
-            "always", "switched", "changed", "replaced", "instead",
+            "prefer",
+            "偏好",
+            "喜欢",
+            "选用",
+            "recommend",
+            "avoid",
+            "不用",
+            "别用",
+            "不要用",
+            "dislike",
+            "hate",
+            "never",
+            "always",
+            "switched",
+            "changed",
+            "replaced",
+            "instead",
         }
         entry_has_pref_kw = any(kw in entry_lower for kw in _PREFERENCE_KEYWORDS)
 
@@ -77,10 +115,7 @@ class SupersedeManager:
                 should_supersede = True
             elif has_update_marker and jaccard >= 0.40:
                 should_supersede = True
-            elif (
-                entry.type == "user_preference"
-                and entry_has_pref_kw
-            ):
+            elif entry.type == "user_preference" and entry_has_pref_kw:
                 old_lower = old_content.lower()
                 old_has_pref_kw = any(kw in old_lower for kw in _PREFERENCE_KEYWORDS)
                 if old_has_pref_kw:
@@ -118,15 +153,13 @@ class SupersedeManager:
 
                 # Mark old memory as superseded and link to chain
                 conn.execute(
-                    "UPDATE memories SET superseded_at = ?, supersedes = ?, "
-                    "version_chain_id = ? WHERE id = ?",
+                    "UPDATE memories SET superseded_at = ?, supersedes = ?, " "version_chain_id = ? WHERE id = ?",
                     (now_iso, new_storage_key, chain_id, row["id"]),
                 )
 
                 # Update new memory's version chain info
                 conn.execute(
-                    "UPDATE memories SET version_chain_id = ?, version_number = ? "
-                    "WHERE storage_key = ?",
+                    "UPDATE memories SET version_chain_id = ?, version_number = ? " "WHERE storage_key = ?",
                     (chain_id, new_version, new_storage_key),
                 )
             except sqlite3.Error as e:
@@ -142,9 +175,10 @@ class SupersedeManager:
         new_lower = new_content.lower()
         old_lower = old_content.lower()
         for pos_word, neg_word in SupersedeManager._CONTRADICTION_PAIRS:
-            pos_pat = rf'\b{re.escape(pos_word)}\b'
-            neg_pat = rf'\b{re.escape(neg_word)}\b'
-            if (re.search(pos_pat, new_lower) and re.search(neg_pat, old_lower)) or \
-               (re.search(neg_pat, new_lower) and re.search(pos_pat, old_lower)):
+            pos_pat = rf"\b{re.escape(pos_word)}\b"
+            neg_pat = rf"\b{re.escape(neg_word)}\b"
+            if (re.search(pos_pat, new_lower) and re.search(neg_pat, old_lower)) or (
+                re.search(neg_pat, new_lower) and re.search(pos_pat, old_lower)
+            ):
                 return True
         return False

@@ -6,10 +6,10 @@ Defines the core data structures for the rules system:
 - RuleType, RuleStatus, DerivationSource: Type enumerations
 """
 
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import List, Dict, Any
-import uuid
+from typing import Any, Dict, List
 
 
 def _to_bool(value, default: bool = True) -> bool:

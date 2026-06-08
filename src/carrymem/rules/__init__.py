@@ -23,71 +23,70 @@ Usage:
     prompt_section = engine.inject("帮我做Q2销售报告")
 """
 
-from typing import List, Optional
 import logging
-
 from datetime import datetime, timezone
+from typing import List, Optional
 
 _logger = logging.getLogger(__name__)
 
 from ..__version__ import __version__
-from .models import (
-    Rule,
-    RuleScope,
-    VALID_RULE_TYPES,
-    VALID_RULE_STATUSES,
-    VALID_DERIVATION_SOURCES,
-    VALID_RULE_SCOPES,
-    SCOPE_PRIORITY,
-)
-from .sanitizer import RuleSanitizer
-from .limiter import RuleLimiter
-from .storage import RuleStorage
-from .matcher import RuleMatcher, MatchResult
-from .injector import RuleInjector
-from .conflict_detector import RuleConflictDetector, RuleConflict, ConflictType, ConflictSeverity
-from .pattern_detector import PatternDetector, MemoryPattern, PatternType, PatternConfidence
 from .candidate_rule_generator import CandidateRuleGenerator, RuleCandidate
-from .promotion_pipeline import (
-    PromotionPipeline,
-    PromotionAuditEntry,
-    PROMOTION_STATUS_PENDING,
-    PROMOTION_STATUS_ACCEPTED,
-    PROMOTION_STATUS_REJECTED,
-    PROMOTION_STATUS_EXPIRED,
+from .conflict_detector import ConflictSeverity, ConflictType, RuleConflict, RuleConflictDetector
+from .experience_bridge import (
+    EXPERIENCE_STATUS_ACCEPTED,
+    EXPERIENCE_STATUS_EXPIRED,
+    EXPERIENCE_STATUS_PENDING,
+    EXPERIENCE_STATUS_REJECTED,
+    ExperienceAuditEntry,
+    ExperienceRuleBridge,
 )
 from .failure_experience import (
-    FailureExperienceExtractor,
     ExtractedLesson,
-    FailureSignal,
     FailureConfidence,
+    FailureExperienceExtractor,
+    FailureSignal,
 )
-from .experience_bridge import (
-    ExperienceRuleBridge,
-    ExperienceAuditEntry,
-    EXPERIENCE_STATUS_PENDING,
-    EXPERIENCE_STATUS_ACCEPTED,
-    EXPERIENCE_STATUS_REJECTED,
-    EXPERIENCE_STATUS_EXPIRED,
+from .injector import RuleInjector
+from .limiter import RuleLimiter
+from .matcher import MatchResult, RuleMatcher
+from .merge_protocol import MergeConflict, MergeDecision, MergeResult, MergeStrategy
+from .models import (
+    SCOPE_PRIORITY,
+    VALID_DERIVATION_SOURCES,
+    VALID_RULE_SCOPES,
+    VALID_RULE_STATUSES,
+    VALID_RULE_TYPES,
+    Rule,
+    RuleScope,
 )
-from .rule_refiner import (
-    RuleRefiner,
-    RefinementPhase,
-    RefinementQuestion,
-    RefinementAnswer,
-    RefinedRuleDraft,
-    QuestionType,
+from .pattern_detector import MemoryPattern, PatternConfidence, PatternDetector, PatternType
+from .promotion_pipeline import (
+    PROMOTION_STATUS_ACCEPTED,
+    PROMOTION_STATUS_EXPIRED,
+    PROMOTION_STATUS_PENDING,
+    PROMOTION_STATUS_REJECTED,
+    PromotionAuditEntry,
+    PromotionPipeline,
 )
 from .refinement_session import (
+    SESSION_STATUS_ACTIVE,
+    SESSION_STATUS_CANCELLED,
+    SESSION_STATUS_COMPLETED,
+    SESSION_STATUS_EXPIRED,
     RefinementSessionManager,
     SessionEntry,
-    SESSION_STATUS_ACTIVE,
-    SESSION_STATUS_COMPLETED,
-    SESSION_STATUS_CANCELLED,
-    SESSION_STATUS_EXPIRED,
 )
-from .skill import skill_pack, skill_verify, skill_install
-from .merge_protocol import MergeStrategy, MergeDecision, MergeConflict, MergeResult
+from .rule_refiner import (
+    QuestionType,
+    RefinedRuleDraft,
+    RefinementAnswer,
+    RefinementPhase,
+    RefinementQuestion,
+    RuleRefiner,
+)
+from .sanitizer import RuleSanitizer
+from .skill import skill_install, skill_pack, skill_verify
+from .storage import RuleStorage
 
 
 class ImportModeError(ValueError):
@@ -132,7 +131,7 @@ class RuleEngine:
             db_path: Path to SQLite database file. Defaults to ~/.carrymem/memories.db
         """
         if db_path is None:
-            from ..constants import DEFAULT_CONFIG_DIR, DB_PATH
+            from ..constants import DB_PATH, DEFAULT_CONFIG_DIR
 
             DEFAULT_CONFIG_DIR.mkdir(exist_ok=True)
             db_path = str(DB_PATH)

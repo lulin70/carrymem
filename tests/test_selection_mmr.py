@@ -1,6 +1,7 @@
 """Tests for MMR selection algorithm in selection.py."""
 
 import pytest
+
 from carrymem.selection import _mmr_select, _tokenize_text, select_memories
 
 

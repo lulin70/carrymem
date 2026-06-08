@@ -11,9 +11,10 @@ Validates MemoryQualityScorer and QualityAnalyzer classes including:
 - Low quality identification
 """
 
-import pytest
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
+
+import pytest
 
 from carrymem.quality_scorer import (
     MemoryQualityScorer,

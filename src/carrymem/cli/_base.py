@@ -1,29 +1,49 @@
 """CarryMem CLI - Shared infrastructure: constants, color functions, utilities, factories."""
 
-import sys
-import os
 import json
 import logging
+import os
 import sqlite3
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 __all__ = [
     # Logger & validator
-    "_cli_logger", "_cli_validator",
+    "_cli_logger",
+    "_cli_validator",
     # Defaults
-    "_DEFAULT_DB", "_DEFAULT_CONFIG_DIR",
+    "_DEFAULT_DB",
+    "_DEFAULT_CONFIG_DIR",
     # Constants
-    "_TYPE_ICONS", "_TIER_LABELS", "_HAS_COLOR",
+    "_TYPE_ICONS",
+    "_TIER_LABELS",
+    "_HAS_COLOR",
     # Color functions
-    "_c", "_green", "_red", "_yellow", "_cyan", "_dim", "_bold",
+    "_c",
+    "_green",
+    "_red",
+    "_yellow",
+    "_cyan",
+    "_dim",
+    "_bold",
     # Utility functions
-    "_get_carrymem", "_format_time", "_truncate", "_find_memory", "_print_memory_card",
+    "_get_carrymem",
+    "_format_time",
+    "_truncate",
+    "_find_memory",
+    "_print_memory_card",
     # Factory functions
-    "_make_parser", "_get_rule_engine", "_validate_cli_path",
+    "_make_parser",
+    "_get_rule_engine",
+    "_validate_cli_path",
     # Re-exported from carrymem
-    "CarryMem", "__version__", "DEFAULT_CONFIG_DIR", "DB_PATH", "DANGEROUS_SYSTEM_DIRS",
+    "CarryMem",
+    "__version__",
+    "DEFAULT_CONFIG_DIR",
+    "DB_PATH",
+    "DANGEROUS_SYSTEM_DIRS",
 ]
 
 _cli_logger = logging.getLogger(__name__)
@@ -32,9 +52,9 @@ try:
     from carrymem import CarryMem
     from carrymem.__version__ import __version__
     from carrymem.constants import (
-        DEFAULT_CONFIG_DIR,
-        DB_PATH,
         DANGEROUS_SYSTEM_DIRS,
+        DB_PATH,
+        DEFAULT_CONFIG_DIR,
     )
 except ImportError:
     print("Error: CarryMem not properly installed")

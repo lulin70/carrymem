@@ -13,18 +13,19 @@ Simulates real user scenarios to validate the product works as expected:
 """
 
 import json
-import pytest
-import tempfile
 import os
+import tempfile
+
+import pytest
 
 from carrymem.rules import RuleEngine
-from carrymem.rules.models import Rule
-from carrymem.rules.skill import skill_pack, skill_verify, skill_install
 from carrymem.rules.merge_protocol import (
     MergeStrategy,
     merge_rules,
     review_incoming_rules,
 )
+from carrymem.rules.models import Rule
+from carrymem.rules.skill import skill_install, skill_pack, skill_verify
 
 
 class TestNewUserOnboarding:

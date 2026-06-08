@@ -8,15 +8,16 @@ Validates performance requirements:
 - CRUD latency: < 10ms per operation
 """
 
-import pytest
-import tempfile
 import os
-import time
 import statistics
+import tempfile
+import time
 
-from carrymem.rules.storage import RuleStorage
-from carrymem.rules.matcher import RuleMatcher
+import pytest
+
 from carrymem.rules.injector import RuleInjector
+from carrymem.rules.matcher import RuleMatcher
+from carrymem.rules.storage import RuleStorage
 
 
 @pytest.fixture

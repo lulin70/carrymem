@@ -13,7 +13,6 @@ from carrymem.context import (
     preference_matches_scope,
 )
 
-
 # ── SCOPE_VOCABULARY structure tests ────────────────────────────────
 
 

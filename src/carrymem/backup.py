@@ -126,9 +126,9 @@ class BackupManager:
 
         backups = []
         for filename in os.listdir(self._backup_dir):
-            if (
-                filename.startswith("memories_") or filename.startswith("memories_backup_")
-            ) and filename.endswith(".db"):
+            if (filename.startswith("memories_") or filename.startswith("memories_backup_")) and filename.endswith(
+                ".db"
+            ):
                 filepath = os.path.join(self._backup_dir, filename)
                 try:
                     stat = os.stat(filepath)
@@ -136,9 +136,7 @@ class BackupManager:
 
                     try:
                         conn = sqlite3.connect(filepath)
-                        count = conn.execute(f"SELECT COUNT(*) FROM {self.TABLE_NAME}").fetchone()[
-                            0
-                        ]
+                        count = conn.execute(f"SELECT COUNT(*) FROM {self.TABLE_NAME}").fetchone()[0]
                         conn.close()
                         memory_count = count
                     except Exception as e:
@@ -150,9 +148,7 @@ class BackupManager:
                             "filename": filename,
                             "path": filepath,
                             "size_kb": round(size_kb, 1),
-                            "created_at": datetime.fromtimestamp(
-                                stat.st_mtime, tz=timezone.utc
-                            ).isoformat(),
+                            "created_at": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
                             "memory_count": memory_count,
                         }
                     )

@@ -9,16 +9,16 @@ Validates:
 - Health check functionality
 """
 
-import tempfile
 import os
+import tempfile
 
-from carrymem.rules.models import Rule
 from carrymem.rules.conflict_detector import (
-    RuleConflictDetector,
-    RuleConflict,
-    ConflictType,
     ConflictSeverity,
+    ConflictType,
+    RuleConflict,
+    RuleConflictDetector,
 )
+from carrymem.rules.models import Rule
 from carrymem.rules.storage import RuleStorage
 
 

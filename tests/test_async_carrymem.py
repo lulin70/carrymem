@@ -1,7 +1,9 @@
 """Tests for async_carrymem.py - Async API wrapper"""
 
-import pytest
 from unittest.mock import patch
+
+import pytest
+
 from carrymem.async_carrymem import AsyncCarryMem
 
 

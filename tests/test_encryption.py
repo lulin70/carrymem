@@ -7,9 +7,9 @@ Covers: MemoryEncryption, NoEncryption, encrypt/decrypt operations.
 import pytest
 
 from carrymem.security.encryption import (
+    EncryptionError,
     MemoryEncryption,
     NoEncryption,
-    EncryptionError,
 )
 
 

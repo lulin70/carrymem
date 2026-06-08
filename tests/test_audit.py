@@ -7,8 +7,9 @@ get_stats, error handling, namespace defaults.
 
 import json
 import sqlite3
-import pytest
 from datetime import datetime, timezone
+
+import pytest
 
 from carrymem.security.audit import AuditLogger
 

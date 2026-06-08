@@ -8,14 +8,15 @@ Validates:
 - Lifecycle methods (activate, pause, deprecate)
 """
 
-import pytest
 from datetime import datetime, timezone
 
+import pytest
+
 from carrymem.rules.models import (
-    Rule,
-    VALID_RULE_TYPES,
-    VALID_RULE_STATUSES,
     VALID_DERIVATION_SOURCES,
+    VALID_RULE_STATUSES,
+    VALID_RULE_TYPES,
+    Rule,
 )
 
 

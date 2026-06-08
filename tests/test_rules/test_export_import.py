@@ -9,12 +9,12 @@ Validates:
 - Status filtering on export
 """
 
-import pytest
-import tempfile
 import os
+import tempfile
 
-from carrymem.rules import RuleEngine
-from carrymem.rules import ImportModeError
+import pytest
+
+from carrymem.rules import ImportModeError, RuleEngine
 
 
 @pytest.fixture

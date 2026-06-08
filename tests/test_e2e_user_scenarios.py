@@ -5,6 +5,7 @@ These tests verify end-to-end behavior that a real user would experience,
 not just unit-level correctness. They test the full pipeline:
   classify_and_remember → recall → build_context/build_qa_prompt → prompt output
 """
+
 import pytest
 
 from carrymem import CarryMem

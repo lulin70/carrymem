@@ -332,10 +332,7 @@ PROMPT_TOOLS: List[Dict[str, Any]] = [
                 },
                 "language": {
                     "type": "string",
-                    "description": (
-                        "Language for the prompt template: en, zh, or ja "
-                        "(default en)"
-                    ),
+                    "description": ("Language for the prompt template: en, zh, or ja " "(default en)"),
                     "default": "en",
                     "enum": ["en", "zh", "ja"],
                 },
@@ -398,8 +395,7 @@ CONSOLIDATION_TOOLS: List[Dict[str, Any]] = [
                 "run_p1": {
                     "type": "boolean",
                     "description": (
-                        "If true, also run P1 pattern recognition and "
-                        "rule candidate generation (default true)"
+                        "If true, also run P1 pattern recognition and " "rule candidate generation (default true)"
                     ),
                     "default": True,
                 },
@@ -536,8 +532,7 @@ RULE_TOOLS: List[Dict[str, Any]] = [
                 "scene": {
                     "type": "string",
                     "description": (
-                        "The scene/topic to match rules against (e.g., "
-                        "'database design', 'code review process')"
+                        "The scene/topic to match rules against (e.g., " "'database design', 'code review process')"
                     ),
                 },
                 "scopes": {
@@ -568,8 +563,7 @@ RULE_TOOLS: List[Dict[str, Any]] = [
                     "enum": ["structured", "compact", "json", "anchored"],
                     "default": "structured",
                     "description": (
-                        "Output format: structured (markdown), compact "
-                        "(single line), json, anchored (by type)"
+                        "Output format: structured (markdown), compact " "(single line), json, anchored (by type)"
                     ),
                 },
                 "max_rules": {"type": "integer", "default": 10, "minimum": 1, "maximum": 50},
@@ -921,4 +915,3 @@ CLASSIFICATION_SCHEMA = {
         ],
     },
 }
-

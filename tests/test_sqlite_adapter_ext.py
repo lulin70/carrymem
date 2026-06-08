@@ -7,10 +7,11 @@ get_memory_history.
 """
 
 import os
+
 import pytest
 
-from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.adapters.base import MemoryEntry
+from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 
 
 @pytest.fixture

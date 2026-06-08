@@ -10,38 +10,39 @@ Validates:
 - Edge cases (empty rules, same-scope conflicts, dependency checks)
 """
 
-import json
 import copy
-import pytest
-import tempfile
+import json
 import os
+import tempfile
 
+import pytest
+
+from carrymem.rules import RuleEngine
+from carrymem.rules.merge_protocol import (
+    MergeConflict,
+    MergeDecision,
+    MergeResult,
+    MergeStrategy,
+    detect_merge_conflicts,
+    merge_rules,
+    resolve_conflict,
+    review_incoming_rules,
+)
 from carrymem.rules.models import (
+    SCOPE_PRIORITY,
+    VALID_RULE_SCOPES,
     Rule,
     RuleScope,
-    VALID_RULE_SCOPES,
-    SCOPE_PRIORITY,
     _to_bool,
 )
 from carrymem.rules.skill import (
-    skill_pack,
-    skill_verify,
-    skill_install,
     SKILL_FORMAT,
     SKILL_MAX_RULES,
-)
-from carrymem.rules.merge_protocol import (
-    MergeStrategy,
-    MergeDecision,
-    MergeConflict,
-    MergeResult,
-    detect_merge_conflicts,
-    resolve_conflict,
-    merge_rules,
-    review_incoming_rules,
+    skill_install,
+    skill_pack,
+    skill_verify,
 )
 from carrymem.rules.storage import RuleStorage
-from carrymem.rules import RuleEngine
 
 
 class TestScopeBasics:

@@ -20,7 +20,6 @@ from carrymem import CarryMem
 from carrymem.prompt_builder import PromptBuilder
 from carrymem.scoring import RecallBudget
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------

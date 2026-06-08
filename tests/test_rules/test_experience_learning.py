@@ -12,24 +12,25 @@ Covers:
 - Edge cases
 """
 
-import pytest
-import tempfile
 import os
-from datetime import datetime, timezone, timedelta
+import tempfile
+from datetime import datetime, timedelta, timezone
 
-from carrymem.rules.failure_experience import (
-    FailureExperienceExtractor,
-    ExtractedLesson,
-    FailureSignal,
-    FailureConfidence,
-)
+import pytest
+
 from carrymem.rules.experience_bridge import (
-    ExperienceRuleBridge,
-    ExperienceAuditEntry,
-    EXPERIENCE_STATUS_PENDING,
     EXPERIENCE_STATUS_ACCEPTED,
-    EXPERIENCE_STATUS_REJECTED,
     EXPERIENCE_STATUS_EXPIRED,
+    EXPERIENCE_STATUS_PENDING,
+    EXPERIENCE_STATUS_REJECTED,
+    ExperienceAuditEntry,
+    ExperienceRuleBridge,
+)
+from carrymem.rules.failure_experience import (
+    ExtractedLesson,
+    FailureConfidence,
+    FailureExperienceExtractor,
+    FailureSignal,
 )
 from carrymem.rules.storage import RuleStorage
 

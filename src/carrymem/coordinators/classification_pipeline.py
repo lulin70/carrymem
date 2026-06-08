@@ -1,12 +1,13 @@
 """Classification pipeline for coordinating classification layers."""
 
 import re
-from typing import Dict, List, Optional, Any
-from carrymem.layers.rule_matcher import RuleMatcher
+from typing import Any, Dict, List, Optional
+
 from carrymem.layers.pattern_analyzer import PatternAnalyzer
+from carrymem.layers.rule_matcher import RuleMatcher
 from carrymem.layers.semantic_classifier import SemanticClassifier
-from carrymem.utils.logger import logger
 from carrymem.utils.confirmation import is_confirmation, summarize_context
+from carrymem.utils.logger import logger
 
 
 class ClassificationPipeline:
@@ -145,9 +146,9 @@ class ClassificationPipeline:
                     self._filter_counts["fail_closed"] += 1
                     if self._filter_counts["fail_closed"] % 100 == 1:
                         logger.info(
-                        f"Fail-closed filter: "
-                        f"{self._filter_counts['fail_closed']} low-confidence defaults filtered total"
-                    )
+                            f"Fail-closed filter: "
+                            f"{self._filter_counts['fail_closed']} low-confidence defaults filtered total"
+                        )
                     if self.pattern_analyzer.noise_filter_mode == "soft":
                         default_match["confidence"] = self.MIN_DEFAULT_CONFIDENCE
                         default_match["source"] = "default:soft_fallback"
@@ -230,8 +231,7 @@ class ClassificationPipeline:
             r"^(i\s+)?(understand|see|got\s+it|gotcha|sure|ok|okay"
             r"|alright|right|exactly|absolutely|correct|indeed|of\s+course"
             r"|certainly|definitely|surely)\b",
-            r"^(that\'?s?\s+)?(right|correct|true|accurate|makes?\s+sense"
-            r"|sounds?\s+good|looks?\s+good)",
+            r"^(that\'?s?\s+)?(right|correct|true|accurate|makes?\s+sense" r"|sounds?\s+good|looks?\s+good)",
             r"^(yes|yeah|yep|no\s+problem|not\s+at\s+all|not\s+really)",
             r"^(let\s+me\s+)?(help|assist|check|look|try|work\s+on)\s+(you|that|this|it)",
             r"^(here\'?s?\s+)?(what|i\s+can|the\s+result|the\s+answer)",

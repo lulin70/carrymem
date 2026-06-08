@@ -6,10 +6,10 @@ import struct
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from ..base import MemoryEntry, StoredMemory
 from ...scoring import calculate_importance
-from ...utils.helpers import content_hash, TIER_TTL
+from ...utils.helpers import TIER_TTL, content_hash
 from ...utils.logger import logger
+from ..base import MemoryEntry, StoredMemory
 
 
 class CRUDOperations:
@@ -117,7 +117,7 @@ class CRUDOperations:
                     memory_id = entry.id or storage_key
                     conn.execute(
                         "INSERT OR REPLACE INTO memory_vectors(memory_id, embedding) VALUES(?, ?)",
-                        (memory_id, struct.pack(f'{self._adapter._embedding_dim}f', *embedding.tolist())),
+                        (memory_id, struct.pack(f"{self._adapter._embedding_dim}f", *embedding.tolist())),
                     )
                     if not _skip_commit:
                         conn.commit()
@@ -299,8 +299,15 @@ class CRUDOperations:
         conn.execute(
             """UPDATE memories SET content = ?, content_hash = ?, version = ?,
                importance_score = ?, updated_at = ? WHERE storage_key = ? AND namespace = ?""",
-            (encrypted_content, new_c_hash, new_version, new_imp_score, now.isoformat(),
-             storage_key, self._adapter.namespace),
+            (
+                encrypted_content,
+                new_c_hash,
+                new_version,
+                new_imp_score,
+                now.isoformat(),
+                storage_key,
+                self._adapter.namespace,
+            ),
         )
         conn.commit()
 

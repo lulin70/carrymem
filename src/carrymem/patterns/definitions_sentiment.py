@@ -14,17 +14,33 @@ def register_sentiment_patterns(registry: PatternRegistry) -> None:
     b.set_language("en")
     b.add_sentiment_batch(
         [
-            ("i_feel", r"^(?:i\s+)?(?:\'?m|am|was|feel|feeling|get|getting)\s+(?:so\s+|really\s+|"
-             r"very\s+|super\s+)?(?:happy|excited|proud|grateful|thrilled|delighted|relieved|"
-             r"impressed|sad|angry|upset|frustrated|annoyed|worried|scared|exhausted|tired|"
-             r"bored|disappointed|confused|overwhelmed|stressed)\b", "emotion"),
-            ("love_hate", r"\b(?:i\s+)?(?:love|hate|loathe|detest|enjoy|appreciate|dislike|dread)"
-             r"\s+(?:it|this|that|the\s+\w+)", "emotion"),
-            ("this_is", r"^(?:this|the)\s+.+\s+is\s+(?:so\s+|really\s+|absolutely\s+|incredibly\s+)?"
-             r"(?:great|awesome|amazing|fantastic|wonderful|terrible|awful|horrible|"
-             r"frustrating|annoying|beautiful)", "emotion"),
-            ("amazing_work", r"\b(amazing|brilliant|outstanding|superb|marvelous|incredible|"
-             r"fantastic)\s+(work|job|effort|team|result|achievement)!", "emotion"),
+            (
+                "i_feel",
+                r"^(?:i\s+)?(?:\'?m|am|was|feel|feeling|get|getting)\s+(?:so\s+|really\s+|"
+                r"very\s+|super\s+)?(?:happy|excited|proud|grateful|thrilled|delighted|relieved|"
+                r"impressed|sad|angry|upset|frustrated|annoyed|worried|scared|exhausted|tired|"
+                r"bored|disappointed|confused|overwhelmed|stressed)\b",
+                "emotion",
+            ),
+            (
+                "love_hate",
+                r"\b(?:i\s+)?(?:love|hate|loathe|detest|enjoy|appreciate|dislike|dread)"
+                r"\s+(?:it|this|that|the\s+\w+)",
+                "emotion",
+            ),
+            (
+                "this_is",
+                r"^(?:this|the)\s+.+\s+is\s+(?:so\s+|really\s+|absolutely\s+|incredibly\s+)?"
+                r"(?:great|awesome|amazing|fantastic|wonderful|terrible|awful|horrible|"
+                r"frustrating|annoying|beautiful)",
+                "emotion",
+            ),
+            (
+                "amazing_work",
+                r"\b(amazing|brilliant|outstanding|superb|marvelous|incredible|"
+                r"fantastic)\s+(work|job|effort|team|result|achievement)!",
+                "emotion",
+            ),
             ("work_on", r"^\w+\s+work\b.*\b(?:on|for|with)\b", "emotion"),
         ],
         confidence=0.8,
@@ -36,10 +52,16 @@ def register_sentiment_patterns(registry: PatternRegistry) -> None:
     b.set_language("en")
     b.add_sentiment_batch(
         [
-            ("emotion_adj", r"\b(happy|sad|angry|frustrated|annoyed|excited|tired|exhausted|bored|"
-             r"worried|proud|glad|upset)\b", "adj"),
-            ("quality_adj", r"\b(great|good|bad|terrible|awful|nice|cool|lovely|horrible|"
-             r"amazing|fantastic|beautiful)\b", "adj"),
+            (
+                "emotion_adj",
+                r"\b(happy|sad|angry|frustrated|annoyed|excited|tired|exhausted|bored|" r"worried|proud|glad|upset)\b",
+                "adj",
+            ),
+            (
+                "quality_adj",
+                r"\b(great|good|bad|terrible|awful|nice|cool|lovely|horrible|" r"amazing|fantastic|beautiful)\b",
+                "adj",
+            ),
         ],
         confidence=0.65,
     )
@@ -63,7 +85,11 @@ def register_sentiment_patterns(registry: PatternRegistry) -> None:
     b.set_language("ja")
     b.add_sentiment_batch(
         [
-            ("intensifier", r"(とても|すごく|本当に|めちゃくちゃ)(嬉しい|悲しい|楽しい|つまらない|怖い|不安|心配)", "emotion"),
+            (
+                "intensifier",
+                r"(とても|すごく|本当に|めちゃくちゃ)(嬉しい|悲しい|楽しい|つまらない|怖い|不安|心配)",
+                "emotion",
+            ),
             ("strong", r".*(イライラ|ストレス|疲れた|うんざり|残念)", "emotion"),
             ("quality", r"(素晴らしい|最高|ひどい|最悪|すごい|やばい)", "emotion"),
         ],
@@ -80,8 +106,12 @@ def register_sentiment_patterns(registry: PatternRegistry) -> None:
             ("db_term", r"\b(postgresql|mysql|mongodb|sqlite|supabase|firebase)\b", "fact_exclusion"),
             ("version", r"\d+(\.\d+)+", "fact_exclusion"),
             ("v_version", r"\b(v?\d+\.\d+)\b", "fact_exclusion"),
-            ("is_required", r"\b(is|are|was|were|has|have)\s+(the\s+)?(?:minimum|required|default|"
-             r"located|hosted|running|deployed|based)\b", "fact_exclusion"),
+            (
+                "is_required",
+                r"\b(is|are|was|were|has|have)\s+(the\s+)?(?:minimum|required|default|"
+                r"located|hosted|running|deployed|based)\b",
+                "fact_exclusion",
+            ),
             ("runs_on", r"\b(runs?|operates?|works?)\s+(on|in|at|with|using|via)\b", "fact_exclusion"),
             ("supports", r"\b(supports?|provides?|includes?|requires?|needs?|uses?)\s+\b", "fact_exclusion"),
             ("infra_noun", r"\b(server|database|endpoint|port|config|version|limit|service)\b", "fact_exclusion"),

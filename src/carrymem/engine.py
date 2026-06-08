@@ -9,12 +9,13 @@ Fixed memory leak by using deque with maxlen for message_history.
 
 import time
 from collections import deque
-from typing import Dict, List, Optional, Any
-from carrymem.utils.config import ConfigManager
+from typing import Any, Dict, List, Optional
+
 from carrymem.__version__ import __version__ as _version
+from carrymem.coordinators.classification_pipeline import ClassificationPipeline
+from carrymem.utils.config import ConfigManager
 from carrymem.utils.helpers import generate_memory_id, get_current_time
 from carrymem.utils.language import language_manager
-from carrymem.coordinators.classification_pipeline import ClassificationPipeline
 
 
 class MemoryClassificationEngine:
@@ -139,7 +140,8 @@ class MemoryClassificationEngine:
         Output follows the standard MemoryEntry JSON format that any downstream
         storage system can consume directly.
         """
-        from datetime import datetime as dt, timezone
+        from datetime import datetime as dt
+        from datetime import timezone
         from uuid import uuid4
 
         result = self.process_message(message, context)

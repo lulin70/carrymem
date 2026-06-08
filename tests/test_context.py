@@ -8,12 +8,12 @@ format_memory_entry, format_knowledge_entry, build_prompt.
 import pytest
 
 from carrymem.context import (
-    context_relevance,
-    select_memories,
-    select_knowledge,
-    format_memory_entry,
-    format_knowledge_entry,
     build_prompt,
+    context_relevance,
+    format_knowledge_entry,
+    format_memory_entry,
+    select_knowledge,
+    select_memories,
 )
 
 

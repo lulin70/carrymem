@@ -61,10 +61,13 @@ class StatsManager:
         ).fetchall()
         by_tier = {str(row["tier"]): row["cnt"] for row in by_tier_rows}
 
-        avg_conf = conn.execute(
-            "SELECT AVG(confidence) FROM memories WHERE namespace = ?",
-            (self._adapter.namespace,),
-        ).fetchone()[0] or 0.0
+        avg_conf = (
+            conn.execute(
+                "SELECT AVG(confidence) FROM memories WHERE namespace = ?",
+                (self._adapter.namespace,),
+            ).fetchone()[0]
+            or 0.0
+        )
 
         highlight_types = [
             "user_preference",

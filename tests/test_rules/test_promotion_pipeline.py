@@ -9,17 +9,18 @@ Validates:
 - Statistics
 """
 
-import pytest
-import tempfile
 import os
+import tempfile
+
+import pytest
 
 from carrymem.rules.promotion_pipeline import (
-    PromotionPipeline,
-    PromotionAuditEntry,
-    PROMOTION_STATUS_PENDING,
     PROMOTION_STATUS_ACCEPTED,
-    PROMOTION_STATUS_REJECTED,
     PROMOTION_STATUS_EXPIRED,
+    PROMOTION_STATUS_PENDING,
+    PROMOTION_STATUS_REJECTED,
+    PromotionAuditEntry,
+    PromotionPipeline,
 )
 from carrymem.rules.storage import RuleStorage
 

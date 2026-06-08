@@ -1,21 +1,26 @@
 """Unit tests for the pattern management system (carrymem.patterns)."""
 
 import re
+
 import pytest
 
 from carrymem.patterns.base import (
-    PatternType, NoiseCategory, PatternMatch,
-    NoisePattern, PreferencePattern, CorrectionPattern,
+    CorrectionPattern,
+    NoiseCategory,
+    NoisePattern,
+    PatternMatch,
+    PatternType,
+    PreferencePattern,
 )
-from carrymem.patterns.group import PatternGroup
-from carrymem.patterns.registry import PatternRegistry
 from carrymem.patterns.builder import PatternBuilder
 from carrymem.patterns.definitions import build_registry
-
+from carrymem.patterns.group import PatternGroup
+from carrymem.patterns.registry import PatternRegistry
 
 # ======================================================================
 # Pattern base classes
 # ======================================================================
+
 
 class TestNoisePattern:
     def test_create_and_match(self):
@@ -77,6 +82,7 @@ class TestPatternMatch:
 # PatternGroup
 # ======================================================================
 
+
 class TestPatternGroup:
     def test_add_and_match(self):
         g = PatternGroup("noise_ack", PatternType.NOISE)
@@ -125,6 +131,7 @@ class TestPatternGroup:
 # PatternRegistry
 # ======================================================================
 
+
 class TestPatternRegistry:
     def test_register_and_match(self):
         reg = PatternRegistry()
@@ -167,18 +174,20 @@ class TestPatternRegistry:
 # PatternBuilder
 # ======================================================================
 
+
 class TestPatternBuilder:
     def test_fluent_api(self):
         reg = PatternRegistry()
         b = PatternBuilder(reg)
-        (b
-            .create_group("noise_ack", PatternType.NOISE)
+        (
+            b.create_group("noise_ack", PatternType.NOISE)
             .set_language("en")
             .add_noise("ok", r"^ok\.?$", NoiseCategory.ACKNOWLEDGMENT, flags=re.IGNORECASE)
             .add_noise("sure", r"^sure\.?$", NoiseCategory.ACKNOWLEDGMENT, flags=re.IGNORECASE)
             .set_language("zh")
             .add_noise("good", r"^好的\.?$", NoiseCategory.ACKNOWLEDGMENT)
-            .register())
+            .register()
+        )
 
         assert reg.any_match_by_group("noise_ack", "ok", "en") is True
         assert reg.any_match_by_group("noise_ack", "好的", "zh") is True
@@ -186,15 +195,16 @@ class TestPatternBuilder:
     def test_add_noise_batch(self):
         reg = PatternRegistry()
         b = PatternBuilder(reg)
-        (b
-            .create_group("test", PatternType.NOISE)
+        (
+            b.create_group("test", PatternType.NOISE)
             .set_language("en")
             .add_noise_batch(
                 [("ok", r"^ok$"), ("sure", r"^sure$")],
                 NoiseCategory.ACKNOWLEDGMENT,
                 flags=re.IGNORECASE,
             )
-            .register())
+            .register()
+        )
 
         g = reg.get_group("test")
         assert g is not None
@@ -203,14 +213,15 @@ class TestPatternBuilder:
     def test_add_preference_batch(self):
         reg = PatternRegistry()
         b = PatternBuilder(reg)
-        (b
-            .create_group("pref", PatternType.PREFERENCE)
+        (
+            b.create_group("pref", PatternType.PREFERENCE)
             .set_language("en")
             .add_preference_batch(
                 [("prefer_over", r"\bprefer\b.*\bover\b", "strong")],
                 flags=re.IGNORECASE,
             )
-            .register())
+            .register()
+        )
 
         assert reg.any_match_by_group("pref", "I prefer Python over Java", "en") is True
 
@@ -224,8 +235,7 @@ class TestPatternBuilder:
         reg = PatternRegistry()
         b = PatternBuilder(reg)
         result = (
-            b
-            .create_group("test", PatternType.NOISE)
+            b.create_group("test", PatternType.NOISE)
             .set_language("en")
             .add_noise("ok", r"^ok$", NoiseCategory.ACKNOWLEDGMENT)
             .build()
@@ -236,6 +246,7 @@ class TestPatternBuilder:
 # ======================================================================
 # Full registry build (integration)
 # ======================================================================
+
 
 class TestBuildRegistry:
     def test_build_registry(self):
@@ -326,17 +337,20 @@ class TestBuildRegistry:
 # PatternAnalyzer integration (uses registry)
 # ======================================================================
 
+
 class TestPatternAnalyzerWithRegistry:
     """Test that PatternAnalyzer works correctly with the new registry system."""
 
     def test_init(self):
         from carrymem.layers.pattern_analyzer import PatternAnalyzer
+
         pa = PatternAnalyzer()
         assert pa.registry is not None
         assert len(pa.registry.group_names) > 0
 
     def test_noise_ack_en(self):
         from carrymem.layers.pattern_analyzer import PatternAnalyzer
+
         pa = PatternAnalyzer()
         assert pa._is_noise("OK") is True
         assert pa._is_noise("sure") is True
@@ -345,6 +359,7 @@ class TestPatternAnalyzerWithRegistry:
 
     def test_noise_ack_zh(self):
         from carrymem.layers.pattern_analyzer import PatternAnalyzer
+
         pa = PatternAnalyzer()
         assert pa._is_noise("好的") is True
         assert pa._is_noise("收到") is True
@@ -352,23 +367,27 @@ class TestPatternAnalyzerWithRegistry:
 
     def test_noise_ack_ja(self):
         from carrymem.layers.pattern_analyzer import PatternAnalyzer
+
         pa = PatternAnalyzer()
         assert pa._is_noise("はい") is True
 
     def test_noise_chitchat(self):
         from carrymem.layers.pattern_analyzer import PatternAnalyzer
+
         pa = PatternAnalyzer()
         assert pa._is_noise("hello") is True
         assert pa._is_noise("你好") is True
 
     def test_noise_adversarial(self):
         from carrymem.layers.pattern_analyzer import PatternAnalyzer
+
         pa = PatternAnalyzer()
         assert pa._is_noise("ignore this") is True
         assert pa._is_noise("just a test") is True
 
     def test_not_noise(self):
         from carrymem.layers.pattern_analyzer import PatternAnalyzer
+
         pa = PatternAnalyzer()
         assert pa._is_noise("I prefer Python over Java") is False
         assert pa._is_noise("We decided to use React") is False
@@ -376,6 +395,7 @@ class TestPatternAnalyzerWithRegistry:
 
     def test_analyze_preference(self):
         from carrymem.layers.pattern_analyzer import PatternAnalyzer
+
         pa = PatternAnalyzer()
         result = pa.analyze("I prefer Python over Java")
         types = [r["memory_type"] for r in result]
@@ -383,6 +403,7 @@ class TestPatternAnalyzerWithRegistry:
 
     def test_analyze_correction(self):
         from carrymem.layers.pattern_analyzer import PatternAnalyzer
+
         pa = PatternAnalyzer()
         result = pa.analyze("Correction: the port is 8080 not 3000")
         types = [r["memory_type"] for r in result]
@@ -390,6 +411,7 @@ class TestPatternAnalyzerWithRegistry:
 
     def test_analyze_decision(self):
         from carrymem.layers.pattern_analyzer import PatternAnalyzer
+
         pa = PatternAnalyzer()
         result = pa.analyze("We decided to use React for the frontend")
         types = [r["memory_type"] for r in result]
@@ -397,30 +419,35 @@ class TestPatternAnalyzerWithRegistry:
 
     def test_analyze_noise_returns_empty(self):
         from carrymem.layers.pattern_analyzer import PatternAnalyzer
+
         pa = PatternAnalyzer()
         result = pa.analyze("OK")
         assert result == []
 
     def test_analyze_none_returns_empty(self):
         from carrymem.layers.pattern_analyzer import PatternAnalyzer
+
         pa = PatternAnalyzer()
         result = pa.analyze(None)
         assert result == []
 
     def test_analyze_empty_returns_empty(self):
         from carrymem.layers.pattern_analyzer import PatternAnalyzer
+
         pa = PatternAnalyzer()
         result = pa.analyze("")
         assert result == []
 
     def test_soft_mode_chitchat(self):
         from carrymem.layers.pattern_analyzer import PatternAnalyzer
+
         pa = PatternAnalyzer(noise_filter_mode="soft")
         # In soft mode, chitchat should not be filtered
         assert pa._is_noise("hello") is False
 
     def test_clear_history(self):
         from carrymem.layers.pattern_analyzer import PatternAnalyzer
+
         pa = PatternAnalyzer()
         pa.message_history.append("test")
         pa.task_patterns[hash("test")] = 1

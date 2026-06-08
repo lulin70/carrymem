@@ -1,14 +1,15 @@
 """Tests for coreference resolution module."""
 
 import pytest
+
 from carrymem.coreference import (
-    has_pronoun,
-    resolve_coreference,
+    PRONOUN_GENDER,
     _extract_entities_en,
     _extract_entities_zh,
     _find_matching_entity,
     _replace_pronoun,
-    PRONOUN_GENDER,
+    has_pronoun,
+    resolve_coreference,
 )
 
 

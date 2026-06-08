@@ -3,9 +3,10 @@ Tests for RuleEngine facade methods (skill_pack/verify/install/review/accept)
 Targets uncovered lines in rules/__init__.py
 """
 
-import pytest
-import tempfile
 import os
+import tempfile
+
+import pytest
 
 from carrymem.rules import RuleEngine
 from carrymem.rules.models import Rule

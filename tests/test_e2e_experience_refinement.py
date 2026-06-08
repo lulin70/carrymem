@@ -14,15 +14,15 @@ import pytest
 
 from carrymem import CarryMem
 from carrymem.rules import RuleEngine
+from carrymem.rules.experience_bridge import EXPERIENCE_STATUS_PENDING, ExperienceRuleBridge
 from carrymem.rules.failure_experience import FailureExperienceExtractor, FailureSignal
-from carrymem.rules.experience_bridge import ExperienceRuleBridge, EXPERIENCE_STATUS_PENDING
 from carrymem.rules.rule_refiner import (
-    RuleRefiner,
+    QuestionType,
+    RefinedRuleDraft,
+    RefinementAnswer,
     RefinementPhase,
     RefinementQuestion,
-    RefinementAnswer,
-    RefinedRuleDraft,
-    QuestionType,
+    RuleRefiner,
 )
 from carrymem.rules.storage import RuleStorage
 
@@ -85,9 +85,7 @@ class TestE2EExperienceLearningJourney:
             assert isinstance(result, dict), f"Result should be dict for: {msg}"
             # The message should either be stored or at least processed without error
             # (some messages may be classified as noise depending on classifier)
-            assert "stored" in result or "storage_keys" in result, (
-                f"Result should contain storage info for: {msg}"
-            )
+            assert "stored" in result or "storage_keys" in result, f"Result should contain storage info for: {msg}"
 
     def test_failure_signals_detectable(self, fresh_carrymem, extractor):
         """Verify: Stored failure memories contain detectable failure signals when recalled."""
@@ -102,9 +100,7 @@ class TestE2EExperienceLearningJourney:
         if len(recalled) > 0:
             content = recalled[0].get("content", "")
             is_failure = extractor.is_failure_memory(content)
-            assert is_failure, (
-                f"Recalled memory should be detected as failure: {content[:80]}"
-            )
+            assert is_failure, f"Recalled memory should be detected as failure: {content[:80]}"
 
     def test_experience_bridge_creates_lesson(self, bridge):
         """Verify: ExperienceBridge can extract lesson from failure memories and queue it."""
@@ -196,9 +192,10 @@ class TestE2ERuleRefinementJourney:
         )
         assert result["is_project_specific"] is True, "Should detect 'this project'"
         assert "MongoDB" in result["has_tool_specifics"], "Should detect tool name"
-        assert result["refinement_potential"] in ("medium", "high"), (
-            f"Should have refinement potential, got: {result['refinement_potential']}"
-        )
+        assert result["refinement_potential"] in (
+            "medium",
+            "high",
+        ), f"Should have refinement potential, got: {result['refinement_potential']}"
 
     def test_refinement_increases_specificity_score(self, refiner):
         """Verify: Refinement process increases confidence score through multi-turn Q&A."""
@@ -213,7 +210,8 @@ class TestE2ERuleRefinementJourney:
 
         # Round 1: Scope question
         question = refiner.generate_question(
-            draft.trigger, draft.action,
+            draft.trigger,
+            draft.action,
             phase=RefinementPhase.SCOPE,
             session_id="e2e_session",
             round_number=1,
@@ -232,9 +230,9 @@ class TestE2ERuleRefinementJourney:
         refined_draft = refiner.refine_from_answer(draft, question, answer)
 
         # Confidence should increase after refinement
-        assert refined_draft.confidence > initial_confidence, (
-            f"Confidence should increase: {initial_confidence} -> {refined_draft.confidence}"
-        )
+        assert (
+            refined_draft.confidence > initial_confidence
+        ), f"Confidence should increase: {initial_confidence} -> {refined_draft.confidence}"
 
     def test_full_refinement_session_flow(self, refiner):
         """Verify: Complete multi-phase refinement session produces a refined rule."""
@@ -255,7 +253,8 @@ class TestE2ERuleRefinementJourney:
                 break
 
             question = refiner.generate_question(
-                current_draft.trigger, current_draft.action,
+                current_draft.trigger,
+                current_draft.action,
                 phase=current_phase,
                 session_id=session_id,
                 round_number=round_num,
@@ -277,14 +276,12 @@ class TestE2ERuleRefinementJourney:
             current_phase = refiner.determine_next_phase(current_phase, round_num)
 
         # Should have tested at least scope + generality phases
-        assert len(phases_tested) >= 2, (
-            f"Should test multiple phases, tested: {phases_tested}"
-        )
+        assert len(phases_tested) >= 2, f"Should test multiple phases, tested: {phases_tested}"
 
         # Final draft should have higher confidence than initial
-        assert current_draft.confidence > draft.confidence, (
-            f"Final confidence ({current_draft.confidence}) should exceed initial ({draft.confidence})"
-        )
+        assert (
+            current_draft.confidence > draft.confidence
+        ), f"Final confidence ({current_draft.confidence}) should exceed initial ({draft.confidence})"
 
         # Scope notes should document the refinement process
         assert current_draft.scope_notes, "Refined draft should have scope notes"
@@ -310,20 +307,18 @@ class TestE2ERuleRefinementJourney:
             rule_type="prefer",
         )
 
-        refined_analysis = refiner.analyze_specificity(
-            refined_draft.trigger, refined_draft.action
-        )
+        refined_analysis = refiner.analyze_specificity(refined_draft.trigger, refined_draft.action)
         refined_score = refined_analysis["specificity_score"]
 
         # The refined version may not always have a higher raw specificity_score
         # (since specificity measures how specific/constrained the rule is),
         # but we can verify the structure is more detailed
-        assert len(refined_draft.trigger) >= len(vague_rule.trigger), (
-            "Refined rule trigger should be at least as descriptive as vague one"
-        )
-        assert len(refined_draft.action) >= len(vague_rule.action), (
-            "Refined rule action should be at least as descriptive as vague one"
-        )
+        assert len(refined_draft.trigger) >= len(
+            vague_rule.trigger
+        ), "Refined rule trigger should be at least as descriptive as vague one"
+        assert len(refined_draft.action) >= len(
+            vague_rule.action
+        ), "Refined rule action should be at least as descriptive as vague one"
 
     def test_rejection_prevents_rule_creation(self, bridge):
         """Verify: Rejecting an experience lesson does NOT create a rule."""
@@ -348,9 +343,7 @@ class TestE2ERuleRefinementJourney:
         # Verify no rule was created for this audit entry
         log = bridge.get_audit_log()
         rejected_entry = [e for e in log if e.id == audit_id][0]
-        assert rejected_entry.resulting_rule_id is None, (
-            "Rejected entry should not have a resulting rule ID"
-        )
+        assert rejected_entry.resulting_rule_id is None, "Rejected entry should not have a resulting rule ID"
 
         # Double-accepting should fail
         rule_id = bridge.accept_lesson(audit_id)
@@ -371,9 +364,7 @@ class TestE2ERuleRefinementJourney:
         ]
 
         for msg in en_failures + zh_failures:
-            assert extractor.is_failure_memory(msg), (
-                f"Should detect failure signal in: {msg}"
-            )
+            assert extractor.is_failure_memory(msg), f"Should detect failure signal in: {msg}"
 
         non_failures = [
             "I prefer dark mode for coding",
@@ -382,6 +373,4 @@ class TestE2ERuleRefinementJourney:
         ]
 
         for msg in non_failures:
-            assert not extractor.is_failure_memory(msg), (
-                f"Should NOT detect failure signal in: {msg}"
-            )
+            assert not extractor.is_failure_memory(msg), f"Should NOT detect failure signal in: {msg}"

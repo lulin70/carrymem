@@ -17,7 +17,6 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Dict, Optional
 
-
 TYPE_WEIGHTS: Dict[str, float] = {
     "correction": 1.3,
     "decision": 1.2,

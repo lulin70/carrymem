@@ -17,14 +17,13 @@ Targets the uncovered branches reported by coverage:
 
 import os
 import tempfile
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
 from carrymem import CarryMem
 from carrymem.prompt_builder import PromptBuilder
 from carrymem.scoring import RecallBudget
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -905,8 +904,9 @@ class TestCarryMemExtra:
 
     def test_validate_file_path_with_allowed_base(self):
         """Lines 40-42: _validate_file_path with allowed_base rejects escaping paths."""
-        from carrymem.carrymem import _validate_file_path
         import tempfile
+
+        from carrymem.carrymem import _validate_file_path
 
         tmp = tempfile.mkdtemp()
         try:
@@ -982,9 +982,10 @@ class TestCarryMemExtra:
 
     def test_carrymem_with_custom_adapter_instance(self):
         """Line 140: CarryMem with custom adapter instance."""
+        import tempfile
+
         from carrymem import CarryMem
         from carrymem.adapters.sqlite_adapter import SQLiteAdapter
-        import tempfile
 
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         db_path = tmp.name
@@ -1105,8 +1106,9 @@ class TestCarryMemExtra:
 
     def test_backup_with_invalid_dir(self):
         """Lines 192-193: backup with failing create_backup catches exception."""
-        from carrymem import CarryMem
         import tempfile
+
+        from carrymem import CarryMem
 
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         db_path = tmp.name
@@ -1126,8 +1128,9 @@ class TestCarryMemExtra:
 
     def test_restore_backup_with_exception(self):
         """Lines 217-218: restore_backup catches exception."""
-        from carrymem import CarryMem
         import tempfile
+
+        from carrymem import CarryMem
 
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         db_path = tmp.name

@@ -21,11 +21,12 @@ import hmac
 import json
 import os
 import re
-from carrymem.__version__ import __version__ as _version
 import uuid
 from typing import Any, Dict, Optional
 
+from carrymem.__version__ import __version__ as _version
 from carrymem.utils.logger import logger
+
 from .server import MCPServer
 
 _MAX_REQUEST_SIZE = 10 * 1024 * 1024

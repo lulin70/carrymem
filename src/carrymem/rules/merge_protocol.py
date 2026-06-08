@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
-from .models import Rule, SCOPE_PRIORITY, VALID_RULE_SCOPES
+from .models import SCOPE_PRIORITY, VALID_RULE_SCOPES, Rule
 
 
 class MergeStrategy(str, Enum):
@@ -325,7 +325,8 @@ def merge_rules(
                             reason=(  # fmt: skip
                                 f"Existing [{conflict.existing_rule.scope}] "
                                 f"overrides incoming [{inc.scope}]"
-                            ),
+                            )
+                            ,
                         )
                     )
                 elif decision == MergeDecision.MODIFY_INCOMING:
@@ -374,16 +375,11 @@ def merge_rules(
                         )
                     )
 
-            has_keep_incoming = any(
-                c.decision == MergeDecision.KEEP_INCOMING for c in conflict_map[inc.id]
-            )
+            has_keep_incoming = any(c.decision == MergeDecision.KEEP_INCOMING for c in conflict_map[inc.id])
             has_skip = any(
-                c.decision in (MergeDecision.KEEP_EXISTING, MergeDecision.SKIP)
-                for c in conflict_map[inc.id]
+                c.decision in (MergeDecision.KEEP_EXISTING, MergeDecision.SKIP) for c in conflict_map[inc.id]
             )
-            has_modified = any(
-                c.decision == MergeDecision.MODIFY_INCOMING for c in conflict_map[inc.id]
-            )
+            has_modified = any(c.decision == MergeDecision.MODIFY_INCOMING for c in conflict_map[inc.id])
 
             if has_skip and not has_keep_incoming:
                 skipped.append(inc)

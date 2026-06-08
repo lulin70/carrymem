@@ -1,18 +1,26 @@
 """CarryMem CLI - MCP/TUI/service commands: setup-mcp, mcp, serve, tui, tutorial."""
 
-import sys
-import subprocess
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 from carrymem.cli._base import *
 
 __all__ = [
     # Public commands
-    "cmd_setup_mcp", "cmd_mcp", "cmd_serve", "cmd_tui", "cmd_tutorial",
+    "cmd_setup_mcp",
+    "cmd_mcp",
+    "cmd_serve",
+    "cmd_tui",
+    "cmd_tutorial",
     # Private helpers (used by tests)
-    "_resolve_mcp_command", "_build_mcp_server_config", "_merge_json_file",
-    "_merge_claude_global_config", "_setup_mcp_project", "_setup_mcp_global",
+    "_resolve_mcp_command",
+    "_build_mcp_server_config",
+    "_merge_json_file",
+    "_merge_claude_global_config",
+    "_setup_mcp_project",
+    "_setup_mcp_global",
     "_uninstall_mcp_global",
 ]
 
@@ -516,6 +524,7 @@ def _uninstall_mcp_global(parsed):
 def cmd_mcp(args):
     """Start CarryMem MCP Server (stdio transport)."""
     import asyncio
+
     from carrymem.integration.layer2_mcp.server import MCPServer
 
     server = MCPServer()
@@ -545,7 +554,7 @@ def cmd_serve(args):
 
 
 def cmd_tui(args):
-    from carrymem.tui import run_tui, HAS_TEXTUAL
+    from carrymem.tui import HAS_TEXTUAL, run_tui
 
     if not HAS_TEXTUAL:
         print(f"  {_yellow('Textual is not installed.')}")
@@ -567,8 +576,7 @@ def cmd_tutorial(args):
         print("  Usage: carrymem tutorial")
         print("  Show a 5-minute quick-start guide for CarryMem.")
         return 0
-    print(
-        f"""
+    print(f"""
   {_bold('Welcome to CarryMem!')} {_dim('Learn the basics in 5 minutes.')}
 
   {_bold('[1/5] Store your first memory')}
@@ -597,6 +605,5 @@ def cmd_tutorial(args):
     carrymem          See what your AI knows about you
     carrymem doctor          Run diagnostics
     carrymem help            Full command reference
-"""
-    )
+""")
     return 0

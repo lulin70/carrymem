@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 from carrymem.rules import RuleEngine
 from carrymem.security.audit import AuditLogger
 from carrymem.utils.logger import logger
+
 from .type_mapping import (
     carrymem_rule_to_devsquad_dict,
     carrymem_to_devsquad_type,

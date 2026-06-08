@@ -13,27 +13,27 @@ from unittest.mock import patch
 import pytest
 
 from carrymem.cli import (
+    _build_mcp_server_config,
+    _format_time,
+    _merge_claude_global_config,
+    _merge_json_file,
+    _resolve_mcp_command,
+    _truncate,
     cmd_add,
+    cmd_clean,
+    cmd_doctor,
+    cmd_edit,
+    cmd_export,
+    cmd_forget,
+    cmd_import,
+    cmd_init,
     cmd_list,
     cmd_search,
-    cmd_show,
-    cmd_edit,
-    cmd_forget,
-    cmd_clean,
-    cmd_export,
-    cmd_import,
-    cmd_stats,
-    cmd_doctor,
     cmd_setup_mcp,
-    cmd_init,
+    cmd_show,
+    cmd_stats,
     cmd_version,
-    _format_time,
-    _truncate,
     main,
-    _resolve_mcp_command,
-    _build_mcp_server_config,
-    _merge_json_file,
-    _merge_claude_global_config,
 )
 
 try:
@@ -721,7 +721,7 @@ class TestHelperFunctions:
         assert _format_time("") == "N/A"
 
     def test_format_time_recent(self):
-        from datetime import datetime, timezone, timedelta
+        from datetime import datetime, timedelta, timezone
 
         now = datetime.now(timezone.utc)
         iso = now.isoformat()

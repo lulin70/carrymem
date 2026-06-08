@@ -14,22 +14,22 @@ Targets the uncovered branches reported by coverage:
 """
 
 import os
-import pytest
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
+import pytest
+
 from carrymem.consolidation import (
+    _content_hash,
+    _find_semantic_clusters,
+    _similarity,
     compute_decay_factor,
-    find_duplicates,
-    find_superseded_pairs,
     consolidate,
     consolidate_p1,
     consolidate_p2,
-    _content_hash,
-    _similarity,
-    _find_semantic_clusters,
+    find_duplicates,
+    find_superseded_pairs,
 )
-
 
 # ===================================================================
 # _similarity — uncovered branches
@@ -759,8 +759,9 @@ class TestScoringExtra:
 
     def test_recency_factor_string_created_at(self):
         """Lines 77-81: recency_factor with string created_at."""
+        from datetime import datetime, timedelta, timezone
+
         from carrymem.scoring import recency_factor
-        from datetime import datetime, timezone, timedelta
 
         now = datetime.now(timezone.utc)
         created_str = (now - timedelta(days=10)).isoformat()
@@ -783,8 +784,9 @@ class TestScoringExtra:
 
     def test_recalculate_confidence_with_created_at_string(self):
         """Lines 127-134: recalculate_confidence with string created_at."""
+        from datetime import datetime, timedelta, timezone
+
         from carrymem.scoring import recalculate_confidence
-        from datetime import datetime, timezone, timedelta
 
         now = datetime.now(timezone.utc)
         created_str = (now - timedelta(days=30)).isoformat()
@@ -800,8 +802,9 @@ class TestScoringExtra:
 
     def test_recalculate_confidence_naive_datetime(self):
         """Line 134: recalculate_confidence with naive datetime gets UTC."""
+        from datetime import datetime, timedelta, timezone
+
         from carrymem.scoring import recalculate_confidence
-        from datetime import datetime, timezone, timedelta
 
         now = datetime.now(timezone.utc)
         created = datetime(2025, 6, 1)  # naive datetime
@@ -861,9 +864,7 @@ class TestLanguageExtra:
 
         # Use longer text to avoid langdetect misidentification (short texts can
         # be confused with Scandinavian languages like Norwegian)
-        lang, conf = language_manager.detect_language(
-            "The quick brown fox jumps over the lazy dog near the river bank"
-        )
+        lang, conf = language_manager.detect_language("The quick brown fox jumps over the lazy dog near the river bank")
         assert lang == "en"
 
     def test_map_language_code_zh(self):
@@ -945,8 +946,9 @@ class TestConstants:
 
     def test_get_config_dir_default(self):
         """get_config_dir returns default path without env var."""
-        from carrymem.constants import get_config_dir, DEFAULT_CONFIG_DIR
         import os
+
+        from carrymem.constants import DEFAULT_CONFIG_DIR, get_config_dir
 
         # Remove env var if set
         old = os.environ.pop("CARRYMEM_CONFIG_DIR", None)
@@ -959,8 +961,9 @@ class TestConstants:
 
     def test_get_config_dir_env_override(self):
         """get_config_dir respects CARRYMEM_CONFIG_DIR env var."""
-        from carrymem.constants import get_config_dir
         import os
+
+        from carrymem.constants import get_config_dir
 
         os.environ["CARRYMEM_CONFIG_DIR"] = "/tmp/test_carrymem_config"
         try:
@@ -971,8 +974,9 @@ class TestConstants:
 
     def test_get_db_path_default(self):
         """get_db_path returns default path."""
-        from carrymem.constants import get_db_path
         import os
+
+        from carrymem.constants import get_db_path
 
         old = os.environ.pop("CARRYMEM_DB_PATH", None)
         try:
@@ -984,8 +988,9 @@ class TestConstants:
 
     def test_get_db_path_env_override(self):
         """get_db_path respects CARRYMEM_DB_PATH env var."""
-        from carrymem.constants import get_db_path
         import os
+
+        from carrymem.constants import get_db_path
 
         os.environ["CARRYMEM_DB_PATH"] = "/tmp/test.db"
         try:
@@ -996,8 +1001,9 @@ class TestConstants:
 
     def test_get_config_file_default(self):
         """get_config_file returns default path."""
-        from carrymem.constants import get_config_file
         import os
+
+        from carrymem.constants import get_config_file
 
         old = os.environ.pop("CARRYMEM_CONFIG_FILE", None)
         try:
@@ -1009,8 +1015,9 @@ class TestConstants:
 
     def test_get_log_dir_default(self):
         """get_log_dir returns default path."""
-        from carrymem.constants import get_log_dir
         import os
+
+        from carrymem.constants import get_log_dir
 
         old = os.environ.pop("CARRYMEM_LOG_DIR", None)
         try:
@@ -1022,8 +1029,9 @@ class TestConstants:
 
     def test_get_cache_dir_default(self):
         """get_cache_dir returns default path."""
-        from carrymem.constants import get_cache_dir
         import os
+
+        from carrymem.constants import get_cache_dir
 
         old = os.environ.pop("CARRYMEM_CACHE_DIR", None)
         try:
@@ -1035,8 +1043,9 @@ class TestConstants:
 
     def test_get_backup_dir_default(self):
         """get_backup_dir returns default path."""
-        from carrymem.constants import get_backup_dir
         import os
+
+        from carrymem.constants import get_backup_dir
 
         old = os.environ.pop("CARRYMEM_BACKUP_DIR", None)
         try:
@@ -1063,8 +1072,9 @@ class TestConstants:
 
     def test_get_mcp_config_path_env_override(self):
         """get_mcp_config_path respects env var override."""
-        from carrymem.constants import get_mcp_config_path
         import os
+
+        from carrymem.constants import get_mcp_config_path
 
         os.environ["CARRYMEM_MCP_CURSOR_CONFIG"] = "/tmp/cursor_mcp.json"
         try:
@@ -1075,8 +1085,9 @@ class TestConstants:
 
     def test_get_obsidian_vault_path_env_override(self):
         """get_obsidian_vault_path respects env var."""
-        from carrymem.constants import get_obsidian_vault_path
         import os
+
+        from carrymem.constants import get_obsidian_vault_path
 
         os.environ["CARRYMEM_OBSIDIAN_VAULT"] = "/tmp/test_vault"
         try:
@@ -1087,8 +1098,9 @@ class TestConstants:
 
     def test_get_obsidian_vault_path_default(self):
         """get_obsidian_vault_path returns None or Path without env var."""
-        from carrymem.constants import get_obsidian_vault_path
         import os
+
+        from carrymem.constants import get_obsidian_vault_path
 
         old = os.environ.pop("CARRYMEM_OBSIDIAN_VAULT", None)
         try:
@@ -1101,8 +1113,9 @@ class TestConstants:
 
     def test_get_temp_dir_default(self):
         """get_temp_dir returns a path."""
-        from carrymem.constants import get_temp_dir
         import os
+
+        from carrymem.constants import get_temp_dir
 
         old = os.environ.pop("CARRYMEM_TEMP_DIR", None)
         try:
@@ -1114,8 +1127,9 @@ class TestConstants:
 
     def test_get_temp_dir_env_override(self):
         """get_temp_dir respects env var."""
-        from carrymem.constants import get_temp_dir
         import os
+
+        from carrymem.constants import get_temp_dir
 
         os.environ["CARRYMEM_TEMP_DIR"] = "/tmp/test_carrymem_temp"
         try:
@@ -1126,8 +1140,9 @@ class TestConstants:
 
     def test_get_lock_file_default(self):
         """get_lock_file returns default path."""
-        from carrymem.constants import get_lock_file
         import os
+
+        from carrymem.constants import get_lock_file
 
         old = os.environ.pop("CARRYMEM_LOCK_FILE", None)
         try:
@@ -1139,9 +1154,10 @@ class TestConstants:
 
     def test_ensure_dir_exists(self):
         """ensure_dir_exists creates directory if needed."""
-        from carrymem.constants import ensure_dir_exists
-        import tempfile
         import shutil
+        import tempfile
+
+        from carrymem.constants import ensure_dir_exists
 
         tmp = tempfile.mkdtemp()
         try:
@@ -1153,15 +1169,17 @@ class TestConstants:
 
     def test_validate_path_safety_safe_path(self):
         """validate_path_safety returns True for safe paths."""
-        from carrymem.constants import validate_path_safety
         from pathlib import Path
+
+        from carrymem.constants import validate_path_safety
 
         assert validate_path_safety(Path("/tmp/safe_dir")) is True
 
     def test_validate_path_safety_with_allowed_base(self):
         """validate_path_safety raises for paths outside allowed base."""
-        from carrymem.constants import validate_path_safety
         from pathlib import Path
+
+        from carrymem.constants import validate_path_safety
 
         with pytest.raises(ValueError):
             validate_path_safety(Path("/tmp/outside"), allowed_base=Path("/var/log"))
@@ -1173,8 +1191,9 @@ class TestConstants:
         catches the custom ValueError too, so dangerous dirs are NOT actually
         blocked. This test verifies the current behavior.
         """
-        from carrymem.constants import validate_path_safety
         from pathlib import Path
+
+        from carrymem.constants import validate_path_safety
 
         # Due to a bug in the implementation, dangerous dirs pass validation
         result = validate_path_safety(Path("/etc/config"))
@@ -1218,8 +1237,9 @@ class TestStoredMemoryFromDictExtra:
 
     def test_from_dict_with_datetime_created_at(self):
         """Lines 177-178: datetime created_at is used directly."""
-        from carrymem.adapters.base import StoredMemory
         from datetime import datetime, timezone
+
+        from carrymem.adapters.base import StoredMemory
 
         dt = datetime(2025, 6, 15, 10, 0, 0, tzinfo=timezone.utc)
         data = {
@@ -1262,8 +1282,9 @@ class TestStoredMemoryFromDictExtra:
 
     def test_from_dict_with_datetime_updated_at(self):
         """Lines 187-188: datetime updated_at is used directly."""
-        from carrymem.adapters.base import StoredMemory
         from datetime import datetime, timezone
+
+        from carrymem.adapters.base import StoredMemory
 
         dt = datetime(2025, 6, 15, 10, 0, 0, tzinfo=timezone.utc)
         data = {
@@ -1292,8 +1313,9 @@ class TestStoredMemoryFromDictExtra:
 
     def test_from_dict_with_datetime_expires_at(self):
         """Lines 197-198: datetime expires_at is used directly."""
-        from carrymem.adapters.base import StoredMemory
         from datetime import datetime, timezone
+
+        from carrymem.adapters.base import StoredMemory
 
         dt = datetime(2026, 6, 15, 10, 0, 0, tzinfo=timezone.utc)
         data = {
@@ -1322,8 +1344,9 @@ class TestStoredMemoryFromDictExtra:
 
     def test_from_dict_with_datetime_last_accessed_at(self):
         """Lines 207-208: datetime last_accessed_at is used directly."""
-        from carrymem.adapters.base import StoredMemory
         from datetime import datetime, timezone
+
+        from carrymem.adapters.base import StoredMemory
 
         dt = datetime(2025, 6, 15, 10, 0, 0, tzinfo=timezone.utc)
         data = {
@@ -1352,8 +1375,9 @@ class TestStoredMemoryFromDictExtra:
 
     def test_from_dict_with_datetime_superseded_at(self):
         """Lines 217-218: datetime superseded_at is used directly."""
-        from carrymem.adapters.base import StoredMemory
         from datetime import datetime, timezone
+
+        from carrymem.adapters.base import StoredMemory
 
         dt = datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
         data = {
@@ -1433,9 +1457,10 @@ class TestBackupExtra:
 
     def test_backup_create_and_restore(self):
         """Integration: create and restore a backup."""
-        from carrymem.backup import BackupManager
-        import tempfile
         import shutil
+        import tempfile
+
+        from carrymem.backup import BackupManager
 
         tmp = tempfile.mkdtemp()
         try:
@@ -1464,9 +1489,10 @@ class TestBackupExtra:
 
     def test_backup_restore_path_traversal(self):
         """Line 88-89: restore_backup rejects path traversal."""
-        from carrymem.backup import BackupManager
-        import tempfile
         import shutil
+        import tempfile
+
+        from carrymem.backup import BackupManager
 
         tmp = tempfile.mkdtemp()
         try:
@@ -1486,9 +1512,10 @@ class TestBackupExtra:
 
     def test_backup_restore_not_found(self):
         """Line 91-92: restore_backup rejects nonexistent file."""
-        from carrymem.backup import BackupManager
-        import tempfile
         import shutil
+        import tempfile
+
+        from carrymem.backup import BackupManager
 
         tmp = tempfile.mkdtemp()
         try:
@@ -1518,9 +1545,10 @@ class TestBackupExtra:
 
     def test_backup_db_not_found(self):
         """Line 61-62: create_backup with nonexistent DB raises FileNotFoundError."""
-        from carrymem.backup import BackupManager
-        import tempfile
         import shutil
+        import tempfile
+
+        from carrymem.backup import BackupManager
 
         tmp = tempfile.mkdtemp()
         try:
@@ -1534,9 +1562,10 @@ class TestBackupExtra:
 
     def test_list_backups_empty_dir(self):
         """Line 122-123: list_backups with nonexistent dir returns empty."""
-        from carrymem.backup import BackupManager
-        import tempfile
         import shutil
+        import tempfile
+
+        from carrymem.backup import BackupManager
 
         tmp = tempfile.mkdtemp()
         try:
@@ -1560,9 +1589,10 @@ class TestBackupExtra:
 
     def test_cleanup_old_backups(self):
         """Lines 157-169: cleanup_old_backups removes excess backups."""
-        from carrymem.backup import BackupManager
-        import tempfile
         import shutil
+        import tempfile
+
+        from carrymem.backup import BackupManager
 
         tmp = tempfile.mkdtemp()
         try:
@@ -1601,9 +1631,10 @@ class TestConfigExtra:
 
     def test_config_load_json(self):
         """Lines 53-54: load_config with JSON file."""
-        from carrymem.utils.config import ConfigManager
-        import tempfile
         import json
+        import tempfile
+
+        from carrymem.utils.config import ConfigManager
 
         tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w")
         json.dump({"storage": {"data_path": "/tmp/data"}}, tmp)
@@ -1623,8 +1654,9 @@ class TestConfigExtra:
 
     def test_config_load_invalid_json(self):
         """Lines 61-63: load_config with invalid JSON returns empty dict."""
-        from carrymem.utils.config import ConfigManager
         import tempfile
+
+        from carrymem.utils.config import ConfigManager
 
         tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w")
         tmp.write("{invalid json")
@@ -1637,8 +1669,9 @@ class TestConfigExtra:
 
     def test_config_load_permission_error(self):
         """Lines 64-66: load_config with permission error returns empty dict."""
+        from unittest.mock import mock_open, patch
+
         from carrymem.utils.config import ConfigManager
-        from unittest.mock import patch, mock_open
 
         with patch("builtins.open", side_effect=PermissionError("denied")):
             cm = ConfigManager(config_path="/tmp/test.json")
@@ -1646,8 +1679,9 @@ class TestConfigExtra:
 
     def test_config_load_generic_error(self):
         """Lines 67-69: load_config with generic error returns empty dict."""
+        from unittest.mock import mock_open, patch
+
         from carrymem.utils.config import ConfigManager
-        from unittest.mock import patch, mock_open
 
         with patch("builtins.open", side_effect=RuntimeError("unexpected")):
             cm = ConfigManager(config_path="/tmp/test.json")
@@ -1674,9 +1708,10 @@ class TestConfigExtra:
 
     def test_config_reload(self):
         """Line 71-73: reload refreshes config from file."""
-        from carrymem.utils.config import ConfigManager
-        import tempfile
         import json
+        import tempfile
+
+        from carrymem.utils.config import ConfigManager
 
         tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w")
         json.dump({"key": "value1"}, tmp)
@@ -1694,9 +1729,10 @@ class TestConfigExtra:
 
     def test_config_get_rules_json(self):
         """Lines 79-80: get_rules with JSON rules file."""
-        from carrymem.utils.config import ConfigManager
-        import tempfile
         import json
+        import tempfile
+
+        from carrymem.utils.config import ConfigManager
 
         tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w")
         json.dump({"rules": [{"trigger": "test"}]}, tmp)

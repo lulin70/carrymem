@@ -9,20 +9,21 @@ Validates:
 - FTS5 search with scope preservation
 """
 
-import pytest
-import tempfile
 import os
+import tempfile
 import time
 
-from carrymem.rules.models import Rule
-from carrymem.rules.skill import skill_pack, skill_verify, skill_install
+import pytest
+
+from carrymem.rules import RuleEngine
 from carrymem.rules.merge_protocol import (
     MergeStrategy,
-    merge_rules,
     detect_merge_conflicts,
+    merge_rules,
 )
+from carrymem.rules.models import Rule
+from carrymem.rules.skill import skill_install, skill_pack, skill_verify
 from carrymem.rules.storage import RuleStorage
-from carrymem.rules import RuleEngine
 
 
 class TestRuleCreationPerformance:

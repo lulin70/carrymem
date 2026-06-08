@@ -21,18 +21,18 @@ Usage:
     results = cm.recall_from_knowledge("Python design patterns")
 """
 
-from typing import Any, Dict, List, Optional
 import json
 import os
+import warnings
 from datetime import datetime, timezone
 from pathlib import Path
-import warnings
+from typing import Any, Dict, List, Optional
 
-from carrymem.engine import MemoryClassificationEngine
 from carrymem.adapters.base import MemoryEntry, StorageAdapter
-from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.adapters.obsidian_adapter import ObsidianAdapter
-from carrymem.domain import infer_domains_from_memories, get_domain_description
+from carrymem.adapters.sqlite_adapter import SQLiteAdapter
+from carrymem.domain import get_domain_description, infer_domains_from_memories
+from carrymem.engine import MemoryClassificationEngine
 
 
 def _validate_file_path(path: str, allowed_base: Optional[str] = None) -> str:
@@ -50,24 +50,21 @@ def _validate_file_path(path: str, allowed_base: Optional[str] = None) -> str:
     return resolved
 
 
+from carrymem.__version__ import __version__ as _version
 from carrymem.adapters.loader import load_adapter
+from carrymem.exceptions import KnowledgeNotConfiguredError as _KnowledgeNotConfiguredError
+from carrymem.exceptions import StorageNotConfiguredError as _StorageNotConfiguredError
 from carrymem.rules.candidate_generator import RuleCandidateGenerator
+from carrymem.security.input_validator import InputValidator
 from carrymem.utils.logger import logger
 from carrymem.utils.validators import (
-    validate_message,
     validate_context,
     validate_language,
     validate_limit,
-    validate_storage_key,
+    validate_message,
     validate_query,
+    validate_storage_key,
 )
-from carrymem.__version__ import __version__ as _version
-from carrymem.exceptions import (
-    StorageNotConfiguredError as _StorageNotConfiguredError,
-    KnowledgeNotConfiguredError as _KnowledgeNotConfiguredError,
-)
-
-from carrymem.security.input_validator import InputValidator
 
 _import_validator = InputValidator(strict_mode=True)
 
@@ -122,11 +119,7 @@ class CarryMem:
                 namespace=namespace,
                 encryption_key=encryption_key,
                 enable_vector_search=config.get("enable_vector_search", True) if config else True,
-                embedding_model=(
-                    config.get("embedding_model", "all-MiniLM-L6-v2")
-                    if config
-                    else "all-MiniLM-L6-v2"
-                ),
+                embedding_model=(config.get("embedding_model", "all-MiniLM-L6-v2") if config else "all-MiniLM-L6-v2"),
             )
         elif isinstance(storage, StorageAdapter):
             self._adapter = storage
@@ -146,10 +139,7 @@ class CarryMem:
             else:
                 self._adapter = adapter_cls()
         else:
-            raise ValueError(
-                f"Invalid storage type: {storage!r}. "
-                "Use None, 'sqlite', or a StorageAdapter instance."
-            )
+            raise ValueError(f"Invalid storage type: {storage!r}. " "Use None, 'sqlite', or a StorageAdapter instance.")
 
         self._knowledge_adapter = knowledge_adapter
         self._rule_engine: Optional[Any] = None
@@ -180,11 +170,7 @@ class CarryMem:
         if self._rule_engine is None:
             from .rules import RuleEngine
 
-            db_path = (
-                self._adapter.db_path
-                if self._adapter and hasattr(self._adapter, "db_path")
-                else None
-            )
+            db_path = self._adapter.db_path if self._adapter and hasattr(self._adapter, "db_path") else None
             self._rule_engine = RuleEngine(db_path=db_path)
         return self._rule_engine
 
@@ -508,18 +494,14 @@ class CarryMem:
 
         if self._adapter:
             try:
-                memory_results = self.recall_memories(
-                    query=query, filters=filters, limit=limit, namespaces=namespaces
-                )
+                memory_results = self.recall_memories(query=query, filters=filters, limit=limit, namespaces=namespaces)
             except Exception as e:
                 logger.warning(f"Failed to recall memories for prompt: {e}")
                 memory_results = []
 
         if self._knowledge_adapter:
             try:
-                knowledge_results = self.recall_from_knowledge(
-                    query=query, filters=filters, limit=limit
-                )
+                knowledge_results = self.recall_from_knowledge(query=query, filters=filters, limit=limit)
             except Exception as e:
                 logger.warning(f"Failed to recall from knowledge base: {e}")
                 knowledge_results = []
@@ -609,9 +591,25 @@ class CarryMem:
         coreference_resolved = False
 
         # Skip expensive recall+coreference for messages without pronouns.
-        _PRONOUNS = {"it", "this", "that", "these", "those",
-                      "he", "she", "they", "him", "her", "them",
-                      "his", "its", "their", "my", "your", "our"}
+        _PRONOUNS = {
+            "it",
+            "this",
+            "that",
+            "these",
+            "those",
+            "he",
+            "she",
+            "they",
+            "him",
+            "her",
+            "them",
+            "his",
+            "its",
+            "their",
+            "my",
+            "your",
+            "our",
+        }
         _has_pronoun = bool(
             set(message.lower().split()) & _PRONOUNS
             or any(p in message.lower() for p in ("it's", "that's", "he's", "she's"))
@@ -685,9 +683,7 @@ class CarryMem:
             (without force_type). The caller should check classify_result structure.
         """
         # Use resolved message for classification, but keep original as raw_text
-        classify_result = self.classify_message(
-            resolved_message, context=context, language=language
-        )
+        classify_result = self.classify_message(resolved_message, context=context, language=language)
 
         if not classify_result["should_remember"] and not force_type:
             return []  # Signal: noise, no entries to store
@@ -790,9 +786,7 @@ class CarryMem:
             return redact_result  # type: ignore[return-value]
 
         # 2. Classify
-        classify_result = self._classify_message(
-            resolved_message, context, language, force_type, message
-        )
+        classify_result = self._classify_message(resolved_message, context, language, force_type, message)
         if isinstance(classify_result, list) and len(classify_result) == 0:
             # Noise path: _classify_message returns empty list for non-rememberable
             base_result = self.classify_message(resolved_message, context=context, language=language)
@@ -919,9 +913,7 @@ class CarryMem:
                 update_access=update_access,
             )
         else:
-            results = self._adapter.recall(
-                query or "", filters=filters, limit=limit, update_access=update_access
-            )
+            results = self._adapter.recall(query or "", filters=filters, limit=limit, update_access=update_access)
         return [r.to_dict() for r in results]
 
     def recall_aggregated(
@@ -935,9 +927,7 @@ class CarryMem:
         if not hasattr(self._adapter, "recall_aggregated"):
             raise NotImplementedError("Adapter does not support recall_aggregated")
 
-        result = self._adapter.recall_aggregated(
-            memory_type=memory_type, limit_per_type=limit_per_type
-        )
+        result = self._adapter.recall_aggregated(memory_type=memory_type, limit_per_type=limit_per_type)
         return {k: [r.to_dict() for r in v] for k, v in result.items()}
 
     def recall_timeline(
@@ -1026,9 +1016,7 @@ class CarryMem:
             embedding_fn = lambda text: self._adapter._embedding_model.encode(text).tolist()
 
         if not embedding_fn:
-            logger.warning(
-                "aggregate_memories requires vector search to be enabled (no embedding model found)"
-            )
+            logger.warning("aggregate_memories requires vector search to be enabled (no embedding model found)")
             return []
 
         aggregator = SemanticAggregator(llm_client=self._llm_client, embedding_fn=embedding_fn)
@@ -1512,8 +1500,7 @@ class CarryMem:
                         "reason": rc.reason,
                         "suggestion": rc.suggestion,
                         "rules": [
-                            {"id": r.id, "trigger": r.trigger, "action": r.action, "scope": r.scope}
-                            for r in rc.rules
+                            {"id": r.id, "trigger": r.trigger, "action": r.action, "scope": r.scope} for r in rc.rules
                         ],
                         "source": "rule_engine",
                     }
@@ -1578,9 +1565,7 @@ class CarryMem:
             )
         return result
 
-    def consolidate(
-        self, dry_run: bool = True, run_p1: bool = True, run_p2: bool = True
-    ) -> Dict[str, Any]:
+    def consolidate(self, dry_run: bool = True, run_p1: bool = True, run_p2: bool = True) -> Dict[str, Any]:
         """Run memory consolidation: dedup, decay, and cleanup.
 
         Args:

@@ -5,10 +5,10 @@ Built with Textual. Launch with: carrymem tui
 
 try:
     from textual.app import App, ComposeResult
-    from textual.widgets import Header, Footer, Static, Input
-    from textual.containers import Container, Horizontal, Vertical
     from textual.binding import Binding
+    from textual.containers import Container, Horizontal, Vertical
     from textual.reactive import reactive
+    from textual.widgets import Footer, Header, Input, Static
 
     HAS_TEXTUAL = True
 except ImportError:
@@ -23,9 +23,10 @@ if not HAS_TEXTUAL:
         print("  Then run: carrymem tui")
 
 else:
+    from typing import Any, Dict, List, Optional
+
     from carrymem import CarryMem
     from carrymem.constants import DB_PATH
-    from typing import Optional, List, Dict, Any
 
     _DEFAULT_DB = DB_PATH
 

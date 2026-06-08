@@ -6,7 +6,6 @@ Extracted from context.py for modularity.
 import re
 from typing import Any, Dict, List
 
-
 TYPE_LABELS = {
     "en": {
         "user_preference": "Preference",

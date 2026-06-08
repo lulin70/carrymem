@@ -22,7 +22,6 @@ import struct
 import warnings
 from typing import Optional
 
-
 _SALT_SIZE = 16
 _NONCE_SIZE = 16
 _AUTH_TAG_SIZE = 32
@@ -47,6 +46,7 @@ class MemoryEncryption:
 
         try:
             from cryptography.fernet import Fernet  # noqa: F401
+
             self._fernet_available = True
         except ImportError:
             self._fernet_available = False
@@ -55,7 +55,7 @@ class MemoryEncryption:
                 "For enhanced security, install cryptography: pip install 'carrymem[encryption]' "
                 "or pip install cryptography",
                 SecurityWarning,
-                stacklevel=2
+                stacklevel=2,
             )
 
         if key:
@@ -103,6 +103,7 @@ class MemoryEncryption:
     def _make_fernet(self, raw_key: bytes):
         """Create a Fernet cipher instance from raw key bytes."""
         from cryptography.fernet import Fernet
+
         fernet_key = base64.urlsafe_b64encode(raw_key)
         return Fernet(fernet_key)
 

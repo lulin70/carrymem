@@ -9,19 +9,21 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Optional, Set
 
-from carrymem.selection import (
-    _estimate_tokens,
-    _has_aggregation_signal,
-)
 from carrymem.context import (
     build_prompt,
-    build_qa_prompt as _build_qa_prompt,
+)
+from carrymem.context import build_qa_prompt as _build_qa_prompt
+from carrymem.context import (
     context_relevance,
     preference_matches_scope,
     select_knowledge,
     select_memories,
 )
 from carrymem.scoring import RecallBudget, recalculate_confidence
+from carrymem.selection import (
+    _estimate_tokens,
+    _has_aggregation_signal,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -166,10 +168,12 @@ class PromptBuilder:
                 for m in contextual_extra:
                     sk = m.get("storage_key")
                     conf = m.get("confidence", 0)
-                    if (sk not in seen_keys
-                            and sk not in core_keys
-                            and conf < 0.9
-                            and preference_matches_scope(m, context)):
+                    if (
+                        sk not in seen_keys
+                        and sk not in core_keys
+                        and conf < 0.9
+                        and preference_matches_scope(m, context)
+                    ):
                         context_prefs.append(m)
                         seen_keys.add(sk)
                         all_memories.append(m)

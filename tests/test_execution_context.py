@@ -3,9 +3,10 @@
 测试执行反馈信号接入 Layer 2
 """
 
-from carrymem import MemoryClassificationEngine
-import sys
 import os
+import sys
+
+from carrymem import MemoryClassificationEngine
 
 # 重定向 stderr 到 /dev/null 以减少错误信息
 sys.stderr = open(os.devnull, "w")

@@ -7,26 +7,28 @@ Validates the complete security chain for sensitive data handling:
 3. Audit logging for all operations (audit.py)
 4. Recall integrity — redacted/encrypted data remains protected
 """
-import os
-import sys
+
 import json
-import sqlite3
-import pytest
-import tempfile
+import os
 import shutil
+import sqlite3
+import sys
+import tempfile
 import unittest
+
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from carrymem.carrymem import CarryMem
+from carrymem.security.audit import _AUDIT_SCHEMA_SQL, AuditLogger
+from carrymem.security.encryption import EncryptionError, MemoryEncryption, NoEncryption
 from carrymem.security.redaction import (
-    detect_sensitive_content,
-    should_redact,
-    redact_content,
     SENSITIVE_PATTERNS,
+    detect_sensitive_content,
+    redact_content,
+    should_redact,
 )
-from carrymem.security.encryption import MemoryEncryption, NoEncryption, EncryptionError
-from carrymem.security.audit import AuditLogger, _AUDIT_SCHEMA_SQL
 
 
 class TestE2ESecurityPipeline(unittest.TestCase):
@@ -48,18 +50,16 @@ class TestE2ESecurityPipeline(unittest.TestCase):
         message = "My OpenAI API key is sk-abc123def4567890123456 and I use it for GPT-4"
         findings = detect_sensitive_content(message)
         pattern_names = [f[0] for f in findings]
-        self.assertIn("openai_api_key", pattern_names,
-                      "OpenAI API key pattern should be detected")
+        self.assertIn("openai_api_key", pattern_names, "OpenAI API key pattern should be detected")
 
     def test_github_token_detected(self):
         """Verify: GitHub personal access tokens are detected."""
         # Pattern requires exactly 40 chars: 'ghp_' prefix + 36 alphanumeric
-        token_msg = "Use this GitHub token ghp_FAKE0000000000000000000000000000000 for auth"
+        token_msg = "Use this GitHub token ghp_FAKE00000000000000000000000000000000 for auth"
         findings = detect_sensitive_content(token_msg)
         pattern_names = [f[0] for f in findings]
         self.assertTrue(
-            any("github" in p for p in pattern_names),
-            f"GitHub PAT should be detected, got patterns: {pattern_names}"
+            any("github" in p for p in pattern_names), f"GitHub PAT should be detected, got patterns: {pattern_names}"
         )
 
     def test_aws_access_key_detected(self):
@@ -67,52 +67,42 @@ class TestE2ESecurityPipeline(unittest.TestCase):
         msg = "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE"
         findings = detect_sensitive_content(msg)
         pattern_names = [f[0] for f in findings]
-        self.assertIn("aws_access_key", pattern_names,
-                      "AWS access key ID should be detected")
+        self.assertIn("aws_access_key", pattern_names, "AWS access key ID should be detected")
 
     def test_password_in_assignment_detected(self):
         """Verify: Password assignments (password=xxx) are detected."""
         msg = "Database config: password=SuperSecret123 host=localhost"
         findings = detect_sensitive_content(msg)
         pattern_names = [f[0] for f in findings]
-        self.assertIn("password_assignment", pattern_names,
-                      "Password assignment should be detected")
+        self.assertIn("password_assignment", pattern_names, "Password assignment should be detected")
 
     def test_bearer_token_detected(self):
         """Verify: Bearer tokens are detected."""
         msg = "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
         findings = detect_sensitive_content(msg)
         pattern_names = [f[0] for f in findings]
-        self.assertTrue(
-            any("bearer" in p or "jwt" in p for p in pattern_names),
-            "Bearer/JWT token should be detected"
-        )
+        self.assertTrue(any("bearer" in p or "jwt" in p for p in pattern_names), "Bearer/JWT token should be detected")
 
     def test_db_connection_string_detected(self):
         """Verify: Database connection strings with credentials are detected."""
         msg = "Connect via postgresql://admin:mypassword@db.example.com:5432/mydb"
         findings = detect_sensitive_content(msg)
         pattern_names = [f[0] for f in findings]
-        self.assertTrue(
-            any("db_connection" in p for p in pattern_names),
-            "DB connection string should be detected"
-        )
+        self.assertTrue(any("db_connection" in p for p in pattern_names), "DB connection string should be detected")
 
     def test_private_key_detected(self):
         """Verify: Private key blocks are detected."""
         msg = "Here is my key:\n-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA"
         findings = detect_sensitive_content(msg)
         pattern_names = [f[0] for f in findings]
-        self.assertIn("private_key", pattern_names,
-                      "Private key block should be detected")
+        self.assertIn("private_key", pattern_names, "Private key block should be detected")
 
     def test_generic_secret_detected(self):
         """Verify: Generic secret assignments are detected."""
         msg = "SECRET_KEY=abcdef1234567890abcdef12"
         findings = detect_sensitive_content(msg)
         pattern_names = [f[0] for f in findings]
-        self.assertIn("env_sensitive", pattern_names,
-                      "Sensitive env variable should be detected")
+        self.assertIn("env_sensitive", pattern_names, "Sensitive env variable should be detected")
 
     # === Redaction: Blocking Behavior ===
 
@@ -135,10 +125,10 @@ class TestE2ESecurityPipeline(unittest.TestCase):
         """Verify: redact_content replaces sensitive patterns with placeholder."""
         msg = "API key sk-abcdefghijklmnopqrstuvwxyz12345 goes here"
         redacted = redact_content(msg)
-        self.assertNotIn("sk-abcdefghijklmnopqrstuvwxyz12345", redacted,
-                         "Original API key should not appear in redacted output")
-        self.assertIn("[REDACTED]", redacted,
-                      "Redacted output should contain replacement marker")
+        self.assertNotIn(
+            "sk-abcdefghijklmnopqrstuvwxyz12345", redacted, "Original API key should not appear in redacted output"
+        )
+        self.assertIn("[REDACTED]", redacted, "Redacted output should contain replacement marker")
 
     def test_redact_content_preserves_safe_parts(self):
         """Verify: redact_content keeps non-sensitive parts intact."""
@@ -151,14 +141,10 @@ class TestE2ESecurityPipeline(unittest.TestCase):
 
     def test_classify_and_remember_blocks_api_key_storage(self):
         """Verify: classify_and_remember blocks storage of messages containing API keys."""
-        result = self.cm.classify_and_remember(
-            "My OpenAI API key is sk-abcdefghijklmnopqrstuvwx1234567890 for GPT-4"
-        )
+        result = self.cm.classify_and_remember("My OpenAI API key is sk-abcdefghijklmnopqrstuvwx1234567890 for GPT-4")
         # Should return auto_redacted result
-        self.assertFalse(result.get("stored", False),
-                         "Memory containing API key should NOT be stored")
-        self.assertEqual(result.get("type"), "auto_redacted",
-                         "Result type should indicate auto-redaction")
+        self.assertFalse(result.get("stored", False), "Memory containing API key should NOT be stored")
+        self.assertEqual(result.get("type"), "auto_redacted", "Result type should indicate auto-redaction")
         summary = result.get("summary", {})
         self.assertTrue(
             summary.get("redacted", False),
@@ -194,8 +180,7 @@ class TestE2ESecurityPipeline(unittest.TestCase):
         """Verify: MemoryEncryption is active when encryption_key is provided."""
         enc = MemoryEncryption(key="test-encryption-password-123")
         self.assertTrue(enc.is_active, "Encryption should be active with a key")
-        self.assertIn(enc.backend, ("fernet", "hmac-ctr"),
-                       f"Backend should be fernet or hmac-ctr, got {enc.backend}")
+        self.assertIn(enc.backend, ("fernet", "hmac-ctr"), f"Backend should be fernet or hmac-ctr, got {enc.backend}")
 
     def test_encryption_roundtrip(self):
         """Verify: encrypt -> decrypt produces original plaintext."""
@@ -203,10 +188,8 @@ class TestE2ESecurityPipeline(unittest.TestCase):
         original = "This is sensitive memory content about user preferences"
         encrypted = enc.encrypt(original)
         decrypted = enc.decrypt(encrypted)
-        self.assertEqual(decrypted, original,
-                         "Decrypted text must match original plaintext")
-        self.assertNotEqual(encrypted, original,
-                            "Ciphertext must differ from plaintext")
+        self.assertEqual(decrypted, original, "Decrypted text must match original plaintext")
+        self.assertNotEqual(encrypted, original, "Ciphertext must differ from plaintext")
 
     def test_encryption_different_keys_fail(self):
         """Verify: Decrypting with wrong key raises EncryptionError."""
@@ -233,18 +216,23 @@ class TestE2ESecurityPipeline(unittest.TestCase):
 
     def test_carrymem_with_encryption_stores_data(self):
         """Verify: CarryMem with encryption_key can store and recall memories."""
-        cm_enc = CarryMem(storage="sqlite",
-                          db_path=os.path.join(self.tmpdir, "test_enc.db"),
-                          encryption_key="e2e-test-encryption-key-12345")
+        cm_enc = CarryMem(
+            storage="sqlite",
+            db_path=os.path.join(self.tmpdir, "test_enc.db"),
+            encryption_key="e2e-test-encryption-key-12345",
+        )
         try:
             result = cm_enc.classify_and_remember("I prefer Rust for systems programming")
-            self.assertTrue(result.get("stored") or result.get("should_remember"),
-                            "Encrypted storage should work normally from user perspective")
+            self.assertTrue(
+                result.get("stored") or result.get("should_remember"),
+                "Encrypted storage should work normally from user perspective",
+            )
 
             # Recall should work transparently
             memories = cm_enc.recall_memories(query="Rust", limit=5)
             self.assertGreaterEqual(
-                len(memories), 0,
+                len(memories),
+                0,
                 "Should be able to recall from encrypted storage",
             )
         finally:
@@ -254,9 +242,7 @@ class TestE2ESecurityPipeline(unittest.TestCase):
         """Verify: Raw DB does not contain plaintext when encryption is enabled."""
         enc_db_path = os.path.join(self.tmpdir, "test_raw_check.db")
         secret_message = "My banking PIN is 9876 and SSN is 123-45-6789"
-        cm_enc = CarryMem(storage="sqlite",
-                          db_path=enc_db_path,
-                          encryption_key="super-secret-key-for-e2e-test")
+        cm_enc = CarryMem(storage="sqlite", db_path=enc_db_path, encryption_key="super-secret-key-for-e2e-test")
         try:
             # Store a message with sensitive-looking info
             # Note: if redaction would block it, we use force_type to bypass
@@ -278,11 +264,13 @@ class TestE2ESecurityPipeline(unittest.TestCase):
                     # Encrypted content should be base64-like, not plain readable text
                     # The raw DB should NOT contain the exact plaintext
                     self.assertNotIn(
-                        "banking PIN", content,
+                        "banking PIN",
+                        content,
                         "Raw DB should not contain plaintext 'banking PIN'",
                     )
                     self.assertNotIn(
-                        "9876", content,
+                        "9876",
+                        content,
                         "Raw DB should not contain plaintext PIN digits",
                     )
             finally:
@@ -297,11 +285,8 @@ class TestE2ESecurityPipeline(unittest.TestCase):
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         try:
-            tables = conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='audit_log'"
-            ).fetchall()
-            self.assertGreater(len(tables), 0,
-                               "audit_log table should exist after adapter init")
+            tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='audit_log'").fetchall()
+            self.assertGreater(len(tables), 0, "audit_log table should exist after adapter init")
         finally:
             conn.close()
 
@@ -310,8 +295,7 @@ class TestE2ESecurityPipeline(unittest.TestCase):
         self.cm.classify_and_remember("Audit test: I prefer vim over emacs")
 
         audit_entries = self.cm.get_audit_log(operation="remember", limit=10)
-        self.assertGreater(len(audit_entries), 0,
-                           "Audit log should have at least one 'remember' operation")
+        self.assertGreater(len(audit_entries), 0, "Audit log should have at least one 'remember' operation")
         entry = audit_entries[0]
         self.assertEqual(entry["operation"], "remember")
         self.assertTrue(entry["success"], "Operation should be logged as successful")
@@ -324,8 +308,7 @@ class TestE2ESecurityPipeline(unittest.TestCase):
 
         audit_entries = self.cm.get_audit_log(limit=20)
         # Audit log should have recorded operations (store at minimum)
-        self.assertGreater(len(audit_entries), 0,
-                           "Audit log should contain entries after store+recall")
+        self.assertGreater(len(audit_entries), 0, "Audit log should contain entries after store+recall")
 
     def test_audit_log_records_forget_operation(self):
         """Verify: Forgetting a memory is logged in audit trail."""
@@ -334,34 +317,33 @@ class TestE2ESecurityPipeline(unittest.TestCase):
         if storage_keys:
             self.cm.forget_memory(storage_keys[0])
             audit_entries = self.cm.get_audit_log(operation="forget", limit=10)
-            self.assertGreater(len(audit_entries), 0,
-                               "Forget operation should appear in audit log")
+            self.assertGreater(len(audit_entries), 0, "Forget operation should appear in audit log")
 
     def test_audit_log_stats(self):
         """Verify: get_stats returns aggregate audit information."""
         self.cm.classify_and_remember("Stats test: I like Python")
         self.cm.classify_and_remember("Stats test: We deploy to AWS")
 
-        if self.cm._adapter and hasattr(self.cm._adapter, '_audit') and self.cm._adapter._audit:
+        if self.cm._adapter and hasattr(self.cm._adapter, "_audit") and self.cm._adapter._audit:
             stats = self.cm._adapter._audit.get_stats()
             self.assertIn("total_operations", stats)
             self.assertIn("by_operation", stats)
-            self.assertGreater(stats["total_operations"], 0,
-                               "Should have some audit operations recorded")
+            self.assertGreater(stats["total_operations"], 0, "Should have some audit operations recorded")
 
     def test_audit_log_namespace_isolation(self):
         """Verify: Audit logs respect namespace isolation."""
-        ns_cm = CarryMem(storage="sqlite",
-                          db_path=os.path.join(self.tmpdir, "ns_test.db"),
-                          namespace="e2e_test_namespace")
+        ns_cm = CarryMem(
+            storage="sqlite", db_path=os.path.join(self.tmpdir, "ns_test.db"), namespace="e2e_test_namespace"
+        )
         try:
             ns_cm.classify_and_remember("Namespace isolated memory")
 
-            if ns_cm._adapter and hasattr(ns_cm._adapter, '_audit') and ns_cm._adapter._audit:
+            if ns_cm._adapter and hasattr(ns_cm._adapter, "_audit") and ns_cm._adapter._audit:
                 entries = ns_cm._adapter._audit.query(namespace="e2e_test_namespace", limit=10)
                 for entry in entries:
-                    self.assertEqual(entry["namespace"], "e2e_test_namespace",
-                                     "All entries should belong to correct namespace")
+                    self.assertEqual(
+                        entry["namespace"], "e2e_test_namespace", "All entries should belong to correct namespace"
+                    )
         finally:
             ns_cm.close()
 
@@ -387,33 +369,29 @@ class TestE2ESecurityPipeline(unittest.TestCase):
 
         # Step 4: Verify content integrity
         recalled_content = memories[0].get("content", "")
-        self.assertIn("microservices", recalled_content.lower(),
-                      "Recalled content should match stored content")
+        self.assertIn("microservices", recalled_content.lower(), "Recalled content should match stored content")
 
     def test_full_pipeline_blocked_by_redaction(self):
         """Verify: Complete pipeline for sensitive message blocked by redaction.
 
         Flow: classify_and_remember → [REDACTED] → NOT stored → NO audit for store
         """
-        message = "My Stripe key is stripe_live_thisisafakekeyfortestingonly0000"
+        message = "Database config: password=SuperSecret123ForTestingOnly456 host=localhost"
         result = self.cm.classify_and_remember(message)
 
         # Should be blocked
-        self.assertFalse(result.get("stored", False),
-                         "Sensitive message should NOT be stored")
+        self.assertFalse(result.get("stored", False), "Sensitive message should NOT be stored")
         self.assertEqual(result.get("type"), "auto_redacted")
 
         # The specific memory should not be recallable
-        memories = self.cm.recall_memories(query="Stripe", limit=5)
-        stripe_memories = [m for m in memories if "stripe" in m.get("content", "").lower()]
-        self.assertEqual(len(stripe_memories), 0,
-                          "Redacted memory should not appear in recall results")
+        memories = self.cm.recall_memories(query="password", limit=5)
+        pw_memories = [m for m in memories if "password" in m.get("content", "").lower()]
+        self.assertEqual(len(pw_memories), 0, "Redacted memory should not appear in recall results")
 
     def test_full_pipeline_encrypted_recall_integrity(self):
         """Verify: Encrypted storage preserves recall integrity through decrypt roundtrip."""
         enc_db = os.path.join(self.tmpdir, "integrity.db")
-        cm_e = CarryMem(storage="sqlite", db_path=enc_db,
-                         encryption_key="integrity-test-key-xyz-98765")
+        cm_e = CarryMem(storage="sqlite", db_path=enc_db, encryption_key="integrity-test-key-xyz-98765")
         try:
             original_messages = [
                 "I prefer functional programming paradigms",
@@ -429,14 +407,10 @@ class TestE2ESecurityPipeline(unittest.TestCase):
 
             # Each original message should be recoverable
             for orig in original_messages:
-                found = any(
-                    orig.lower() in rc.lower() or rc.lower() in orig.lower()
-                    for rc in recalled_contents
-                )
+                found = any(orig.lower() in rc.lower() or rc.lower() in orig.lower() for rc in recalled_contents)
                 self.assertTrue(
                     found,
-                    f"Original message '{orig[:40]}...' should be recoverable "
-                    f"after encrypt/recall cycle",
+                    f"Original message '{orig[:40]}...' should be recoverable " f"after encrypt/recall cycle",
                 )
         finally:
             cm_e.close()
@@ -447,16 +421,19 @@ class TestE2ESecurityPipeline(unittest.TestCase):
         """Verify: Multiple distinct sensitive patterns are all detected."""
         msg = (
             "OpenAI key: sk-abc123def45678901234567890123456 "
-            "GitHub: ghp_FAKE0000000000000000000000000000000 "
+            "GitHub: ghp_FAKE00000000000000000000000000000000 "
             "DB: postgresql://admin:secret@localhost/db"
         )
         findings = detect_sensitive_content(msg)
         pattern_names = set(f[0] for f in findings)
         self.assertIn("openai_api_key", pattern_names)
-        self.assertTrue(any("github" in p for p in pattern_names),
-                        f"GitHub token should be among detected patterns, got: {pattern_names}")
-        self.assertTrue(any("db_connection" in p for p in pattern_names),
-                        "DB connection string should be among detected patterns")
+        self.assertTrue(
+            any("github" in p for p in pattern_names),
+            f"GitHub token should be among detected patterns, got: {pattern_names}",
+        )
+        self.assertTrue(
+            any("db_connection" in p for p in pattern_names), "DB connection string should be among detected patterns"
+        )
 
     def test_redact_preserves_message_structure(self):
         """Verify: Redaction doesn't corrupt overall message structure."""
@@ -465,8 +442,7 @@ class TestE2ESecurityPipeline(unittest.TestCase):
         # Key structural elements should survive
         self.assertIn(".env", redacted, "File reference should survive redaction")
         # The actual key value should be removed
-        self.assertNotIn("sk-abc123def4567890123456", redacted,
-                         "Actual key value should be removed")
+        self.assertNotIn("sk-abc123def4567890123456", redacted, "Actual key value should be removed")
 
     def test_empty_input_to_redaction_functions(self):
         """Verify: Redaction functions handle empty/None inputs safely."""
@@ -483,8 +459,7 @@ class TestE2ESecurityPipeline(unittest.TestCase):
         unicode_text = "用户偏好：使用中文编程，偏好暗色主题 🌙"
         encrypted = enc.encrypt(unicode_text)
         decrypted = enc.decrypt(encrypted)
-        self.assertEqual(decrypted, unicode_text,
-                         "Unicode content must survive encrypt/decrypt roundtrip")
+        self.assertEqual(decrypted, unicode_text, "Unicode content must survive encrypt/decrypt roundtrip")
 
     def test_long_content_encryption(self):
         """Verify: Encryption handles long content without issues."""
@@ -492,8 +467,7 @@ class TestE2ESecurityPipeline(unittest.TestCase):
         long_text = "This is a test sentence. " * 500  # ~12500 chars
         encrypted = enc.encrypt(long_text)
         decrypted = enc.decrypt(encrypted)
-        self.assertEqual(decrypted, long_text,
-                         "Long content must survive encrypt/decrypt")
+        self.assertEqual(decrypted, long_text, "Long content must survive encrypt/decrypt")
 
 
 class TestSecurityPatternCoverage(unittest.TestCase):
@@ -502,14 +476,15 @@ class TestSecurityPatternCoverage(unittest.TestCase):
     def test_all_patterns_are_valid_regex(self):
         """Verify: Every pattern in SENSITIVE_PATTERNS compiles as valid regex."""
         import re
+
         for name, pattern, description in SENSITIVE_PATTERNS:
-            self.assertIsInstance(pattern, re.Pattern,
-                                  f"Pattern '{name}' should be a compiled regex")
+            self.assertIsInstance(pattern, re.Pattern, f"Pattern '{name}' should be a compiled regex")
 
     def test_pattern_count_sufficient(self):
         """Verify: There are enough patterns to cover common secrets."""
-        self.assertGreaterEqual(len(SENSITIVE_PATTERNS), 20,
-                                f"Expected at least 20 patterns, found {len(SENSITIVE_PATTERNS)}")
+        self.assertGreaterEqual(
+            len(SENSITIVE_PATTERNS), 20, f"Expected at least 20 patterns, found {len(SENSITIVE_PATTERNS)}"
+        )
 
     def test_pattern_categories_covered(self):
         """Verify: All expected categories of sensitive data have patterns."""
@@ -523,8 +498,7 @@ class TestSecurityPatternCoverage(unittest.TestCase):
             "generic_secret",
         }
         for cat in expected_categories:
-            self.assertIn(cat, categories,
-                          f"Missing essential pattern category: {cat}")
+            self.assertIn(cat, categories, f"Missing essential pattern category: {cat}")
 
 
 class TestAuditLogDirectOperations(unittest.TestCase):

@@ -1,16 +1,15 @@
 # Re-export everything from submodules for backward compatibility
-from carrymem.cli._base import *
-from carrymem.cli._memory import *
-from carrymem.cli._io import *
-from carrymem.cli._stats import *
-from carrymem.cli._mcp import *
 from carrymem.cli._backup import *
+from carrymem.cli._base import *
+from carrymem.cli._io import *
+from carrymem.cli._mcp import *
+from carrymem.cli._memory import *
 from carrymem.cli._rules import *
+from carrymem.cli._stats import *
 
 
 def show_help():
-    print(
-        f"""
+    print(f"""
   {_bold(f'CarryMem v{__version__}')} - Your Portable AI Memory Layer
 
   {_dim('AI remembers you. Not the other way around.')}
@@ -107,8 +106,7 @@ def show_help():
     carrymem refine-rule --session ref_xxx --confirm
 
   {_dim('Documentation: https://github.com/lulin70/carrymem')}
-"""
-    )
+""")
 
 
 def main():

@@ -1,5 +1,5 @@
-import sys
 import argparse
+import sys
 
 
 def main():
@@ -28,6 +28,7 @@ def main():
     if args.command == "mcp":
         import asyncio
         import os
+
         from carrymem.integration.layer2_mcp.server import MCPServer
 
         if args.config:

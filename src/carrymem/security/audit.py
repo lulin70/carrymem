@@ -146,14 +146,10 @@ class AuditLogger:
         conn = self._get_connection()
         try:
             total = conn.execute("SELECT COUNT(*) FROM audit_log").fetchone()[0]
-            by_op_rows = conn.execute(
-                "SELECT operation, COUNT(*) as cnt FROM audit_log GROUP BY operation"
-            ).fetchall()
+            by_op_rows = conn.execute("SELECT operation, COUNT(*) as cnt FROM audit_log GROUP BY operation").fetchall()
             by_op = {row["operation"]: row["cnt"] for row in by_op_rows}
 
-            last_row = conn.execute(
-                "SELECT timestamp FROM audit_log ORDER BY timestamp DESC LIMIT 1"
-            ).fetchone()
+            last_row = conn.execute("SELECT timestamp FROM audit_log ORDER BY timestamp DESC LIMIT 1").fetchone()
             last_activity = last_row["timestamp"] if last_row else None
 
             return {
