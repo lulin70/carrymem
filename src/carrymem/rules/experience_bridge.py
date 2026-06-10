@@ -104,8 +104,7 @@ class ExperienceRuleBridge:
         """Create experience_audit table if not exists."""
         conn = self.storage._get_connection()
         try:
-            conn.execute(
-                """
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS experience_audit (
                     id TEXT PRIMARY KEY,
                     source_memory_id TEXT NOT NULL,
@@ -123,20 +122,15 @@ class ExperienceRuleBridge:
                     review_note TEXT,
                     resulting_rule_id TEXT
                 )
-            """
-            )
-            conn.execute(
-                """
+            """)
+            conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_experience_status
                 ON experience_audit(status)
-            """
-            )
-            conn.execute(
-                """
+            """)
+            conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_experience_source
                 ON experience_audit(source_memory_id)
-            """
-            )
+            """)
             conn.commit()
         finally:
             pass
@@ -412,13 +406,11 @@ class ExperienceRuleBridge:
         """Get experience bridge statistics."""
         conn = self.storage._get_connection()
         try:
-            cursor = conn.execute(
-                """
+            cursor = conn.execute("""
                 SELECT status, COUNT(*) as count
                 FROM experience_audit
                 GROUP BY status
-                """
-            )
+                """)
             rows = cursor.fetchall()
             stats = {row[0]: row[1] for row in rows}
             stats["total"] = sum(stats.values())

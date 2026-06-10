@@ -402,9 +402,7 @@ class RecallEngine:
                 AND v.embedding MATCH ?
                 AND k = ?
                 ORDER BY v.distance
-            """.format(
-                where_clause=where_clause
-            )
+            """.format(where_clause=where_clause)
             vec_params = params + [
                 struct.pack(f"{self._adapter._embedding_dim}f", *query_embedding.tolist()),
                 limit,

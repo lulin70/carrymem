@@ -576,8 +576,7 @@ def cmd_tutorial(args):
         print("  Usage: carrymem tutorial")
         print("  Show a 5-minute quick-start guide for CarryMem.")
         return 0
-    print(
-        f"""
+    print(f"""
   {_bold('Welcome to CarryMem!')} {_dim('Learn the basics in 5 minutes.')}
 
   {_bold('[1/5] Store your first memory')}
@@ -606,6 +605,5 @@ def cmd_tutorial(args):
     carrymem          See what your AI knows about you
     carrymem doctor          Run diagnostics
     carrymem help            Full command reference
-"""
-    )
+""")
     return 0

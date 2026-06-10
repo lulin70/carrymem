@@ -484,10 +484,8 @@ class CodingContextAdapter(StorageAdapter):
         return self.recall(query="", limit=50, filters=filters)
 
     def get_tech_stack(self) -> Dict[str, Any]:
-        cursor = self._get_connection().execute(
-            """SELECT DISTINCT language, framework FROM coding_entries
-               WHERE source_type = 'project_meta'"""
-        )
+        cursor = self._get_connection().execute("""SELECT DISTINCT language, framework FROM coding_entries
+               WHERE source_type = 'project_meta'""")
         stack = {}
         for row in cursor:
             lang = row["language"]
