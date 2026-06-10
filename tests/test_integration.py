@@ -20,7 +20,8 @@ def obsidian_vault(tmp_path):
     vault = tmp_path / "vault"
     vault.mkdir()
 
-    (vault / "note1.md").write_text("""---
+    (vault / "note1.md").write_text(
+        """---
 tags: [project, carrymem]
 status: active
 ---
@@ -29,9 +30,11 @@ status: active
 
 This is the main project note. We use Python and SQLite.
 It supports MCP integration with Claude Code and Cursor.
-""")
+"""
+    )
 
-    (vault / "note2.md").write_text("""---
+    (vault / "note2.md").write_text(
+        """---
 tags: [meeting, weekly]
 ---
 
@@ -39,13 +42,16 @@ tags: [meeting, weekly]
 
 Discussed API design and security review.
 Need to fix the authentication module.
-""")
+"""
+    )
 
     (vault / "subdir").mkdir()
-    (vault / "subdir" / "deep_note.md").write_text("""# Deep Note
+    (vault / "subdir" / "deep_note.md").write_text(
+        """# Deep Note
 
 This is in a subdirectory. Contains competitive analysis data.
-""")
+"""
+    )
 
     return str(vault)
 

@@ -85,7 +85,8 @@ class RuleStorage:
         conn = self._get_connection()
         try:
             # Main rules table
-            conn.executescript("""
+            conn.executescript(
+                """
                 CREATE TABLE IF NOT EXISTS rules (
                     id TEXT PRIMARY KEY,
 
@@ -113,7 +114,8 @@ class RuleStorage:
                     -- Extension
                 metadata TEXT DEFAULT '{}'
             );
-            """)
+            """
+            )
 
             try:
                 pragma_cursor = conn.execute("PRAGMA table_info(rules)")
@@ -125,7 +127,8 @@ class RuleStorage:
             except Exception as e:
                 _logger.debug(f"[RuleStorage] Schema migration (add columns) skipped: {e}")
 
-            conn.executescript("""
+            conn.executescript(
+                """
                 CREATE INDEX IF NOT EXISTS idx_rules_status ON rules(status);
                 CREATE INDEX IF NOT EXISTS idx_rules_trigger ON rules(trigger);
                 CREATE INDEX IF NOT EXISTS idx_rules_type ON rules(rule_type);
@@ -158,7 +161,8 @@ class RuleStorage:
                     INSERT INTO rules_fts(rowid, id, trigger, action)
                     VALUES (new.rowid, new.id, new.trigger, new.action);
                 END;
-                """)
+                """
+            )
             conn.commit()
             self._migrate_fts_tokenizer()
         except Exception as e:

@@ -151,7 +151,8 @@ class TestRawTextMigration(unittest.TestCase):
         db_path = os.path.join(tempfile.mkdtemp(), "test_migration.db")
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
-        conn.execute("""CREATE TABLE IF NOT EXISTS memories (
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS memories (
             id TEXT PRIMARY KEY,
             type TEXT NOT NULL,
             content TEXT NOT NULL,
@@ -173,17 +174,22 @@ class TestRawTextMigration(unittest.TestCase):
             importance_score REAL NOT NULL DEFAULT 0.0,
             last_accessed_at TEXT,
             version INTEGER NOT NULL DEFAULT 1
-        )""")
-        conn.execute("""CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
+        )"""
+        )
+        conn.execute(
+            """CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
             content,
             original_message,
             content='memories',
             content_rowid='rowid',
             tokenize='trigram'
-        )""")
-        conn.execute("""INSERT INTO memories
+        )"""
+        )
+        conn.execute(
+            """INSERT INTO memories
             (id, type, content, storage_key, namespace, content_hash, confidence)
-            VALUES ('old-1', 'fact', 'Old memory content', 'sk_old1', 'default', 'abc123', 0.8)""")
+            VALUES ('old-1', 'fact', 'Old memory content', 'sk_old1', 'default', 'abc123', 0.8)"""
+        )
         conn.commit()
         conn.close()
 

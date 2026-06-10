@@ -27,14 +27,16 @@ def temp_db(tmp_path):
     """Create a temporary database with test data."""
     db_path = tmp_path / "test_memories.db"
     conn = sqlite3.connect(str(db_path))
-    conn.execute("""
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS memories (
             id TEXT PRIMARY KEY,
             type TEXT NOT NULL,
             content TEXT NOT NULL,
             confidence REAL DEFAULT 0.0
         )
-    """)
+    """
+    )
     for i in range(10):
         conn.execute(
             "INSERT INTO memories (id, type, content, confidence) VALUES (?, ?, ?, ?)",
@@ -355,14 +357,16 @@ class TestEdgeCases:
         """Backup of larger database works correctly."""
         db_path = str(tmp_path / "large.db")
         conn = sqlite3.connect(db_path)
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE memories (
                 id TEXT PRIMARY KEY,
                 type TEXT NOT NULL,
                 content TEXT NOT NULL,
                 confidence REAL DEFAULT 0.0
             )
-        """)
+        """
+        )
         for i in range(1000):
             conn.execute(
                 "INSERT INTO memories VALUES (?, ?, ?, ?)",
