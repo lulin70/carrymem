@@ -40,8 +40,8 @@ if not HAS_TEXTUAL:
 else:
     import pytest
     from textual.app import App
-    from textual.widgets import Input, Static
     from textual.containers import Container, Horizontal, Vertical
+    from textual.widgets import Input, Static
 
     from carrymem.tui import (
         _MORANDI,
