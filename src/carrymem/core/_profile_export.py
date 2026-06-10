@@ -6,12 +6,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from carrymem.__version__ import __version__ as _version
 from carrymem.adapters.base import MemoryEntry
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.core._lifecycle import StorageNotConfiguredError, _validate_file_path
 from carrymem.domain import get_domain_description, infer_domains_from_memories
 from carrymem.security.input_validator import InputValidator
-from carrymem.__version__ import __version__ as _version
 from carrymem.utils.logger import logger
 
 _import_validator = InputValidator(strict_mode=True)

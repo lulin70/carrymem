@@ -6,7 +6,6 @@ from typing import Any, Dict, Optional
 from carrymem.adapters.base import MemoryEntry, StorageAdapter
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.engine import MemoryClassificationEngine
-
 from carrymem.exceptions import KnowledgeNotConfiguredError as _KnowledgeNotConfiguredError
 from carrymem.exceptions import StorageNotConfiguredError as _StorageNotConfiguredError
 from carrymem.rules.candidate_generator import RuleCandidateGenerator

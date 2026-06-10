@@ -418,7 +418,7 @@ def cmd_unpack(args):
                 return 1
 
             try:
-                from carrymem.security.encryption import MemoryEncryption, EncryptionError
+                from carrymem.security.encryption import EncryptionError, MemoryEncryption
 
                 dec = MemoryEncryption(key=password)
                 payload_json_str = dec.decrypt(payload_str)
