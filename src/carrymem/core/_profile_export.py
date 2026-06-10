@@ -14,7 +14,6 @@ from carrymem.security.input_validator import InputValidator
 from carrymem.__version__ import __version__ as _version
 from carrymem.utils.logger import logger
 
-
 _import_validator = InputValidator(strict_mode=True)
 
 
