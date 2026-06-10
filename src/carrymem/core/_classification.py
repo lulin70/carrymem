@@ -44,9 +44,23 @@ class ClassificationMixin:
         coreference_resolved = False
 
         _PRONOUNS = {
-            "it", "this", "that", "these", "those",
-            "he", "she", "they", "him", "her", "them",
-            "his", "its", "their", "my", "your", "our",
+            "it",
+            "this",
+            "that",
+            "these",
+            "those",
+            "he",
+            "she",
+            "they",
+            "him",
+            "her",
+            "them",
+            "his",
+            "its",
+            "their",
+            "my",
+            "your",
+            "our",
         }
         _has_pronoun = bool(
             set(message.lower().split()) & _PRONOUNS
