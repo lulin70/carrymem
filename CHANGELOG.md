@@ -58,7 +58,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **cli.py modularization**: Split 4031-line monolith into 8 focused modules
   (_base/_memory/_io/_stats/_mcp/_backup/_rules/__init__) plus a 17-line facade.
-  Zero behavioral change, full backward compatibility preserved.
+ - Zero behavioral change, full backward compatibility preserved.
+
+## [0.3.0] - 2026-06-10 (Maturity & Architecture Sprint)
+
+### Fixed
+- **Exception handling**: `except Exception` narrowed from 173 to 15 (-91%).
+  All 158 remaining catches now use specific exception types (sqlite3.*,
+  ValueError, KeyError, TypeError, OSError, etc.). 15 intentional broad
+  catches retained for MCP handlers / top-level CLI / plugin loading.
+- **SQL regression**: Fixed broken ALTER TABLE statement in rules/storage.py
+  schema migration (`ALTER TABLE condition` → `ALTER TABLE rules ADD COLUMN
+  condition`) that silently prevented rule creation/update/delete.
+
+### Added
+- **God Class decomposition**: carrymem.py (1769 lines) split into 8 Mixin
+  modules + Facade (~100 lines): _lifecycle, _backup, _memory_crud,
+  _classification, _recall, _profile_export, _maintenance, _prompt_delegate.
+  Zero API breakage via Python Mixin pattern.
+- **TUI enhancement**: tui.py expanded from 324→777 lines with Morandi color
+  palette, memory detail modal, help screen, stats panel, search/filter
+  keyboard navigation (/ ? j k Enter 1-5 a r). 71 new tests (0→71 coverage).
+- **Runtime constants**: 28 named constants extracted to constants.py,
+  replacing 30+ magic numbers across 15+ methods.
+- **Lazy import cache**: BackupManager 5 duplicate function-level imports
+  consolidated into single module-level cached loader.
+- **Ghost feature audit**: Verified all public APIs have consumers; confirmed 8
+  rule-engine sub-modules are reserved extension points (not dead code);
+  deprecated 2 experimental methods with warnings; fixed tui.py isolation.
+
+### Changed
+- **Architecture**: New `src/carrymem/core/` package replaces monolithic
+  carrymem.py. Backward-compatible re-export at original path.
+- **Lint configuration**: `.flake8` created with project-level rules
+  (line-length=120, per-file ignores for CLI star imports and test files).
+- **CI fully green**: flake8(0) + black(ok) + isort(ok) + test matrix
+  (3.9/3.10/3.11/3.12) all passing.
 
 ## [0.2.0] - 2026-05-28
 
