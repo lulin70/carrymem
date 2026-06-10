@@ -116,7 +116,6 @@ else:
         "by_type": {},
     }
 
-
     def _make_mock_cm(
         memories: List[Dict[str, Any]] = SAMPLE_MEMORIES,
         stats: Dict[str, Any] = SAMPLE_STATS,
@@ -129,20 +128,30 @@ else:
         mock.close = MagicMock()
         return mock
 
-
     # ══════════════════════════════════════════════════════════════════
     # Test Group 1: Constants & Configuration
     # ══════════════════════════════════════════════════════════════════
-
 
     class TestMorandiPalette(unittest.TestCase):
         """Verify Morandi color palette constants."""
 
         def test_palette_has_all_required_keys(self):
             required = [
-                "primary", "secondary", "accent", "bg_dark", "bg_surface",
-                "bg_elevated", "text_primary", "text_secondary", "text_muted",
-                "success", "warning", "error", "info", "border", "border_active",
+                "primary",
+                "secondary",
+                "accent",
+                "bg_dark",
+                "bg_surface",
+                "bg_elevated",
+                "text_primary",
+                "text_secondary",
+                "text_muted",
+                "success",
+                "warning",
+                "error",
+                "info",
+                "border",
+                "border_active",
             ]
             for key in required:
                 self.assertIn(key, _MORANDI, f"Missing palette key: {key}")
@@ -161,15 +170,19 @@ else:
             for name, color in _MORANDI.items():
                 self.assertNotIn(color.lower(), harsh_greens)
 
-
     class TestTypeIconsAndLabels(unittest.TestCase):
         """Verify type icon and label mappings."""
 
         def test_all_memory_types_have_icons(self):
             expected_types = [
-                "user_preference", "fact_declaration", "correction",
-                "decision", "task_pattern", "contextual_observation",
-                "knowledge", "unknown",
+                "user_preference",
+                "fact_declaration",
+                "correction",
+                "decision",
+                "task_pattern",
+                "contextual_observation",
+                "knowledge",
+                "unknown",
             ]
             for t in expected_types:
                 self.assertIn(t, _TYPE_ICONS, f"Missing icon for type: {t}")
@@ -183,11 +196,9 @@ else:
             for t, label in _TYPE_LABELS.items():
                 self.assertTrue(len(label) > 0, f"Empty label for {t}")
 
-
     # ══════════════════════════════════════════════════════════════════
     # Test Group 2: App Lifecycle
     # ══════════════════════════════════════════════════════════════════
-
 
     class TestAppLifecycle(unittest.TestCase):
         """Test app startup, mount, and shutdown."""
@@ -228,11 +239,9 @@ else:
             app = CarryMemTUI(namespace="test_ns")
             self.assertEqual(app.namespace, "test_ns")
 
-
     # ══════════════════════════════════════════════════════════════════
     # Test Group 3: Component Rendering
     # ══════════════════════════════════════════════════════════════════
-
 
     class TestComponentRendering(unittest.TestCase):
         """Test that all UI components render correctly."""
@@ -301,6 +310,7 @@ else:
             app = CarryMemTUI()
             async with app.run_test() as pilot:
                 from textual.widgets import Footer
+
                 footer = app.query(Footer)
                 self.assertTrue(len(footer) > 0)
 
@@ -312,14 +322,13 @@ else:
             app = CarryMemTUI()
             async with app.run_test() as pilot:
                 from textual.widgets import Header
+
                 header = app.query(Header)
                 self.assertTrue(len(header) > 0)
-
 
     # ══════════════════════════════════════════════════════════════════
     # Test Group 4: Data Binding & Memory Rendering
     # ══════════════════════════════════════════════════════════════════
-
 
     class TestDataBinding(unittest.TestCase):
         """Test that data flows correctly into UI components."""
@@ -400,11 +409,9 @@ else:
                 self.assertIn(_TYPE_ICONS["correction"], text)
                 self.assertIn(_TYPE_ICONS["decision"], text)
 
-
     # ══════════════════════════════════════════════════════════════════
     # Test Group 5: Filter Functionality
     # ══════════════════════════════════════════════════════════════════
-
 
     class TestFilterFunctionality(unittest.TestCase):
         """Test filter switching via keyboard shortcuts."""
@@ -492,11 +499,9 @@ else:
                 await pilot.pause()
                 self.assertGreater(mock_cm.recall_memories.call_count, initial_call_count)
 
-
     # ══════════════════════════════════════════════════════════════════
     # Test Group 6: Search Functionality
     # ══════════════════════════════════════════════════════════════════
-
 
     class TestSearchFunctionality(unittest.TestCase):
         """Test search via keyboard shortcuts and input submission."""
@@ -556,11 +561,9 @@ else:
                 call_kwargs = mock_cm.recall_memories.call_args.kwargs
                 self.assertEqual(call_kwargs.get("query", ""), "")
 
-
     # ══════════════════════════════════════════════════════════════════
     # Test Group 7: Keyboard Navigation (j/k/Enter)
     # ══════════════════════════════════════════════════════════════════
-
 
     class TestKeyboardNavigation(unittest.TestCase):
         """Test j/k/up/down navigation and Enter for detail view."""
@@ -662,11 +665,9 @@ else:
                 # A detail screen should now be on top
                 self.assertGreater(len(app.screen_stack), initial_screen_count)
 
-
     # ══════════════════════════════════════════════════════════════════
     # Test Group 8: Help Screen
     # ══════════════════════════════════════════════════════════════════
-
 
     class TestHelpScreen(unittest.TestCase):
         """Test help screen display and dismissal."""
@@ -729,11 +730,9 @@ else:
                 await pilot.pause()
                 self.assertLess(len(app.screen_stack), screens_before)
 
-
     # ══════════════════════════════════════════════════════════════════
     # Test Group 9: Memory Detail Screen
     # ══════════════════════════════════════════════════════════════════
-
 
     class TestMemoryDetailScreen(unittest.TestCase):
         """Test memory detail overlay screen."""
@@ -777,11 +776,9 @@ else:
                 current_screen = app.screen
                 self.assertIsInstance(current_screen, MemoryDetailScreen)
 
-
     # ══════════════════════════════════════════════════════════════════
     # Test Group 10: Stats Panel
     # ══════════════════════════════════════════════════════════════════
-
 
     class TestStatsPanel(unittest.TestCase):
         """Test the statistics sidebar panel."""
@@ -827,11 +824,9 @@ else:
             # Should have header + separator + total + showing + filter + blank + up to 5 types
             self.assertLessEqual(type_entries, 12)  # reasonable upper bound
 
-
     # ══════════════════════════════════════════════════════════════════
     # Test Group 11: Add Memory Mode
     # ══════════════════════════════════════════════════════════════════
-
 
     class TestAddMemoryMode(unittest.TestCase):
         """Test add-memory workflow via 'a' key."""
@@ -902,11 +897,9 @@ else:
                 await pilot.pause()
                 mock_cm.declare.assert_not_called()
 
-
     # ══════════════════════════════════════════════════════════════════
     # Test Group 12: Refresh Action
     # ══════════════════════════════════════════════════════════════════
-
 
     class TestRefreshAction(unittest.TestCase):
         """Test refresh action via 'r' key."""
@@ -937,11 +930,9 @@ else:
                 text = str(status.content or "")
                 self.assertIn("Refreshed", text)
 
-
     # ══════════════════════════════════════════════════════════════════
     # Test Group 13: Sidebar Active State
     # ══════════════════════════════════════════════════════════════════
-
 
     class TestSidebarActiveState(unittest.TestCase):
         """Test that sidebar filter items highlight correctly."""
@@ -971,11 +962,9 @@ else:
                 filter_all = app.query_one("#filter-all", Static)
                 self.assertNotIn("active", filter_all.classes)
 
-
     # ══════════════════════════════════════════════════════════════════
     # Test Group 14: Error Handling
     # ══════════════════════════════════════════════════════════════════
-
 
     class TestErrorHandling(unittest.TestCase):
         """Test graceful error handling."""
@@ -1007,11 +996,9 @@ else:
                 await pilot.pause()
                 # Should not crash; status bar may show default value
 
-
     # ══════════════════════════════════════════════════════════════════
     # Test Group 15: run_tui Entry Point
     # ══════════════════════════════════════════════════════════════════
-
 
     class TestRunTuiEntry(unittest.TestCase):
         """Test the run_tui() entry point function."""
@@ -1031,11 +1018,9 @@ else:
             run_tui(namespace="test_ns")
             MockApp.assert_called_once_with(db_path=None, namespace="test_ns")
 
-
     # ══════════════════════════════════════════════════════════════════
     # Test Group 16: Reactive Variables
     # ══════════════════════════════════════════════════════════════════
-
 
     class TestReactiveVariables(unittest.TestCase):
         """Test reactive variable initialization and behavior."""

@@ -39,21 +39,21 @@ else:
     # All colors are low-saturation, high-readability.
 
     _MORANDI = {
-        "primary": "#8B9A9D",       # dusty blue-gray
-        "secondary": "#A8AD9F",     # sage gray
-        "accent": "#C4A882",        # warm sand
-        "bg_dark": "#1E2024",       # deep charcoal
-        "bg_surface": "#282A2F",    # surface dark
-        "bg_elevated": "#33363D",   # elevated surface
+        "primary": "#8B9A9D",  # dusty blue-gray
+        "secondary": "#A8AD9F",  # sage gray
+        "accent": "#C4A882",  # warm sand
+        "bg_dark": "#1E2024",  # deep charcoal
+        "bg_surface": "#282A2F",  # surface dark
+        "bg_elevated": "#33363D",  # elevated surface
         "text_primary": "#D4D4D4",  # soft white
-        "text_secondary": "#9CA3AF",# light gray
-        "text_muted": "#6B7280",    # medium gray
-        "success": "#7D9B8C",       # muted green
-        "warning": "#C4A35A",       # muted gold
-        "error": "#BC8F8F",         # muted rose
-        "info": "#8FAAB8",          # muted blue
-        "border": "#3D4047",        # subtle border
-        "border_active": "#8B9A9D", # active border
+        "text_secondary": "#9CA3AF",  # light gray
+        "text_muted": "#6B7280",  # medium gray
+        "success": "#7D9B8C",  # muted green
+        "warning": "#C4A35A",  # muted gold
+        "error": "#BC8F8F",  # muted rose
+        "info": "#8FAAB8",  # muted blue
+        "border": "#3D4047",  # subtle border
+        "border_active": "#8B9A9D",  # active border
     }
 
     _TYPE_ICONS = {
@@ -120,15 +120,11 @@ else:
             yield Static(f"  Content:\n{content}", id="detail-content")
             yield Static("", id="detail-sep2")
             yield Static(
-                f"  Confidence: {confidence:.0%}  |  "
-                f"Importance: {importance:.2f}",
+                f"  Confidence: {confidence:.0%}  |  " f"Importance: {importance:.2f}",
                 id="detail-meta1",
             )
             yield Static(
-                f"  Key: {key}\n"
-                f"  Namespace: {namespace}\n"
-                f"  Created: {created}\n"
-                f"  Updated: {updated}",
+                f"  Key: {key}\n" f"  Namespace: {namespace}\n" f"  Created: {created}\n" f"  Updated: {updated}",
                 id="detail-meta2",
             )
             yield Static("  \u2014 Press Esc or q to close \u2014", id="detail-hint")
@@ -609,11 +605,7 @@ else:
 
                 marker = ">" if i - 1 == self.selected_index else " "
                 header = f"{marker}{i}. {icon} [{mtype}] {content}"
-                detail = (
-                    f"      Conf: {confidence:.0%}  "
-                    f"| Imp: {importance:.2f}  "
-                    f"| {key[:30]}"
-                )
+                detail = f"      Conf: {confidence:.0%}  " f"| Imp: {importance:.2f}  " f"| {key[:30]}"
                 parts.append(header)
                 parts.append(detail)
                 parts.append("")
@@ -764,7 +756,6 @@ else:
         def on_unmount(self) -> None:
             if self.cm:
                 self.cm.close()
-
 
     def run_tui(db_path: Optional[str] = None, namespace: str = "default") -> None:
         """Launch the CarryMem TUI application."""
