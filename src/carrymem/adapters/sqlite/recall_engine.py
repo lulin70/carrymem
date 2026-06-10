@@ -384,7 +384,7 @@ class RecallEngine:
 
             return all_expanded_rows[:limit]
 
-        except Exception as e:
+        except (ValueError, TypeError, RuntimeError, ImportError) as e:
             logger.warning(f"Semantic recall search failed: {e}")
             return []
 
@@ -408,7 +408,7 @@ class RecallEngine:
                 limit,
             ]
             return conn.execute(vec_sql, vec_params).fetchall()
-        except Exception as e:
+        except (sqlite3.Error, ValueError, struct.error, TypeError) as e:
             logger.warning(f"Vector search failed: {e}")
             return []
 

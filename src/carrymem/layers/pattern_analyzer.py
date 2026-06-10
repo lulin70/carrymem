@@ -106,7 +106,7 @@ class PatternAnalyzer:
         # Detect language (with fallback)
         try:
             language, _ = language_manager.detect_language(message)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.warning(f"Failed to detect language, defaulting to 'en': {e}")
             language = "en"
 

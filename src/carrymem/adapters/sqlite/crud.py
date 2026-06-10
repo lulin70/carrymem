@@ -121,7 +121,7 @@ class CRUDOperations:
                     )
                     if not _skip_commit:
                         conn.commit()
-                except Exception as e:
+                except (sqlite3.Error, struct.error, ValueError, TypeError) as e:
                     logger.warning(f"Failed to store embedding: {e}")
 
         if self._adapter._audit:
@@ -167,7 +167,7 @@ class CRUDOperations:
                     result = self._remember_impl(entry, _skip_commit=True)
                     results.append(result)
                 conn.commit()
-            except Exception as e:
+            except (sqlite3.Error, ValueError) as e:
                 conn.rollback()
                 logger.warning(f"Batch remember failed, rolled back: {e}")
                 raise
@@ -195,7 +195,7 @@ class CRUDOperations:
                         "DELETE FROM memory_vectors WHERE memory_id = ?",
                         (memory_id,),
                     )
-                except Exception as e:
+                except sqlite3.Error as e:
                     logger.warning(f"Failed to delete vector for memory {memory_id}: {e}")
             conn.commit()
             result = cursor.rowcount > 0

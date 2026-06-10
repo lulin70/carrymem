@@ -82,7 +82,7 @@ class SemanticExpander:
                             for term, synonyms in data.items():
                                 if isinstance(synonyms, list):
                                     self._add_to_graph(term, synonyms)
-                except Exception as e:
+                except (FileNotFoundError, PermissionError, yaml.YAMLError, ValueError) as e:
                     logger.warning(f"Failed to load synonym file {yaml_file}: {e}")
 
         self._loaded = True
@@ -102,7 +102,7 @@ class SemanticExpander:
                             for term, synonyms in data.items():
                                 if isinstance(synonyms, list):
                                     self._add_to_graph(term, synonyms)
-                except Exception as e:
+                except (FileNotFoundError, PermissionError, yaml.YAMLError, ValueError) as e:
                     logger.warning(f"Failed to load custom synonym file {file_path}: {e}")
 
     def _add_to_graph(self, term: str, synonyms: List[str]):

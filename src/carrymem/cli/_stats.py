@@ -27,7 +27,7 @@ def _show_value_report(cm, parsed) -> int:
     if hasattr(cm, "rules") and cm.rules:
         try:
             rule_count = cm.rules.count_rules()
-        except Exception:
+        except (AttributeError, sqlite3.OperationalError):
             pass
 
     # Sessions remembered
@@ -55,7 +55,7 @@ def _show_value_report(cm, parsed) -> int:
             if row and row[0]:
                 first_date = datetime.fromisoformat(row[0])
                 days_since_first = (datetime.now(timezone.utc) - first_date.replace(tzinfo=timezone.utc)).days
-        except Exception:
+        except (ValueError, sqlite3.OperationalError):
             pass
 
     # Estimates (heuristics)
@@ -295,7 +295,7 @@ def cmd_check(args):
                     print(f"    {sev_color(f'[{severity.upper()}]')} {ctype}: {reason}")
                     for key in keys:
                         print(f"      {_dim(f'- {key}')}")
-        except Exception as e:
+        except (KeyError, ValueError, TypeError) as e:
             print(f"    {_red(f'Error: {e}')}")
         print()
 
@@ -314,7 +314,7 @@ def cmd_check(args):
                     print(f"    {_yellow(f'Score: {score:.3f}')} | {_truncate(content, 50)}")
                     reasons_str = ", ".join(reasons)
                     print(f"      {_dim(f'Key: {key} | Reasons: {reasons_str}')}")
-        except Exception as e:
+        except (KeyError, ValueError, TypeError) as e:
             print(f"    {_red(f'Error: {e}')}")
         print()
 
@@ -331,7 +331,7 @@ def cmd_check(args):
                     expires = item.get("expires_at", "")
                     print(f"    {_yellow('[EXPIRED]')} {_truncate(content, 50)}")
                     print(f"      {_dim(f'Key: {key} | Expired: {expires}')}")
-        except Exception as e:
+        except (KeyError, ValueError, TypeError) as e:
             print(f"    {_red(f'Error: {e}')}")
         print()
 
@@ -398,7 +398,7 @@ def cmd_doctor(args):
             try:
                 cm = CarryMem(db_path=db_path)
                 cm.close()
-            except Exception as e:
+            except (sqlite3.OperationalError, OSError) as e:
                 _cli_logger.debug(f"Doctor: failed to create database: {e}")
 
     if db.exists():
@@ -410,7 +410,7 @@ def cmd_doctor(args):
                 _record("db_integrity", "ok", "Database integrity: OK")
             else:
                 _record("db_integrity", "fail", f"Database integrity: {result[0]}")
-        except Exception as e:
+        except sqlite3.Error as e:
             _record("db_integrity", "fail", f"Database check error: {e}")
     else:
         _record("db_integrity", "skip", "Database integrity (no database)")
@@ -437,7 +437,7 @@ def cmd_doctor(args):
                 f"Disk space: {free_gb:.2f} GB free",
                 {"free_gb": round(free_gb, 2)},
             )
-    except Exception as e:
+    except OSError as e:
         _record("disk_space", "skip", f"Disk space check unavailable: {e}")
 
     if db.exists():
@@ -462,7 +462,7 @@ def cmd_doctor(args):
         test_file.touch()
         test_file.unlink()
         _record("write_permissions", "ok", "Write permissions OK")
-    except Exception as e:
+    except OSError as e:
         _record("write_permissions", "fail", f"Write permissions: {e}")
 
     optional_deps = []
@@ -501,7 +501,7 @@ def cmd_doctor(args):
         test_conn.execute("CREATE VIRTUAL TABLE t USING fts5(c)")
         test_conn.close()
         _record("fts5", "ok", "SQLite FTS5 support")
-    except Exception as e:
+    except sqlite3.OperationalError as e:
         _cli_logger.debug(f"FTS5 check failed: {e}")
         _record("fts5", "fail", "SQLite FTS5 not available")
 
@@ -516,7 +516,7 @@ def cmd_doctor(args):
             _record("security", "warn", "Security module: validation returned empty")
     except ImportError:
         _record("security", "info", "Security module not available")
-    except Exception as e:
+    except (ValueError, TypeError, RuntimeError) as e:
         _record("security", "warn", f"Security module: {e}")
 
     mcp_configs = []
@@ -540,7 +540,7 @@ def cmd_doctor(args):
             total = stats.get("total_count", 0)
             _record("memory_count", "ok", f"Memory count: {total}", {"total_count": total})
             cm.close()
-        except Exception:
+        except (sqlite3.OperationalError, KeyError, ValueError):
             _record("memory_count", "warn", "Cannot read memory count")
     else:
         _record("memory_count", "skip", "Memory count (no database)")
@@ -561,7 +561,7 @@ def cmd_doctor(args):
                 msg,
                 {"active": len(rules), "expired": expired},
             )
-        except Exception as e:
+        except (ImportError, sqlite3.OperationalError, KeyError, ValueError) as e:
             _record("rules_engine", "warn", f"Rules engine: {e}")
     else:
         _record("rules_engine", "skip", "Rules engine (no database)")
@@ -614,7 +614,7 @@ def cmd_doctor(args):
                     f"Backups: {backup_count} file(s), latest: {latest_str}",
                     {"count": backup_count, "latest": latest_backup},
                 )
-        except Exception as e:
+        except (OSError, ValueError) as e:
             _record("backup", "warn", f"Backup check: {e}")
     else:
         _record("backup", "skip", "Backup status (no database)")

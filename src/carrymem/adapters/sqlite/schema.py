@@ -327,7 +327,7 @@ class SchemaManager:
                 )
             """)
             conn.commit()
-        except Exception as e:
+        except sqlite3.Error as e:
             logger.warning(f"Failed to create memory_vectors table: {e}")
 
     def migrate_v070(self):

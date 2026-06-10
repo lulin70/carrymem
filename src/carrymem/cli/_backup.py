@@ -131,7 +131,7 @@ def cmd_init(args):
         cm.declare("CarryMem initialized successfully!")
         print(f"  {_green('[OK]')} Database initialized: {db_path}")
         cm.close()
-    except Exception as e:
+    except (sqlite3.OperationalError, OSError, ValueError) as e:
         print(f"  {_red('[FAIL]')} Database init error: {e}")
         return 1
 

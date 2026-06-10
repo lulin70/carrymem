@@ -326,7 +326,7 @@ def skill_install(
                 metadata={"_skill_name": manifest.get("name", "unknown")},
             )
             stats["installed"] += 1
-        except Exception as e:
+        except (KeyError, ValueError, TypeError, RuntimeError) as e:
             stats["errors"].append(f"Rule '{rule_data.get('trigger', '?')}': {e}")
 
     return stats

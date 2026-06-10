@@ -225,7 +225,7 @@ def _setup_mcp_project(parsed):
                     print(f"  {_dim('Claude Code: already configured')} ({claude_file})")
                     configured.append("claude-code")
                     skip_claude = True
-            except Exception:
+            except (FileNotFoundError, json.JSONDecodeError, PermissionError):
                 pass
 
         if not skip_claude:
@@ -249,7 +249,7 @@ def _setup_mcp_project(parsed):
                     print(f"  {_dim('Cursor: already configured')} ({cursor_file})")
                     configured.append("cursor")
                     skip_cursor = True
-            except Exception:
+            except (FileNotFoundError, json.JSONDecodeError, PermissionError):
                 pass
 
         if not skip_cursor:

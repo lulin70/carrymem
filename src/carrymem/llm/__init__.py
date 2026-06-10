@@ -94,13 +94,13 @@ class LLMClient:
                     base_url=self._base_url,
                     timeout=self._timeout,
                 )
-            except Exception as e:
+            except (ImportError, ValueError, OSError) as e:
                 logger.error(f"Failed to initialize OpenAI client: {e}")
                 return None
         if _BACKEND == "zhipuai" and _ZHIPUAI_CLIENT is not None:
             try:
                 return _ZHIPUAI_CLIENT(api_key=self._api_key)
-            except Exception as e:
+            except (ImportError, ValueError) as e:
                 logger.error(f"Failed to initialize ZhipuAI client: {e}")
                 return None
         logger.warning("No LLM backend available (openai/zhipuai not installed)")
@@ -145,7 +145,7 @@ class LLMClient:
                     logger.warning("LLM returned empty choices")
                     return None
                 return response.choices[0].message.content
-        except Exception as e:
+        except (RuntimeError, ValueError, TypeError, OSError) as e:
             logger.error(f"LLM chat failed: {e}")
         return None
 

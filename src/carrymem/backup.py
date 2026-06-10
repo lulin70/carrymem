@@ -97,7 +97,7 @@ class BackupManager:
             test_conn = sqlite3.connect(backup_path)
             test_conn.execute(f"SELECT COUNT(*) FROM {self.TABLE_NAME}")
             test_conn.close()
-        except Exception as e:
+        except sqlite3.Error as e:
             raise ValueError(f"Invalid backup file: {e}") from e
 
         if self._db_path == ":memory:":
@@ -109,7 +109,7 @@ class BackupManager:
 
         try:
             shutil.copy2(backup_path, self._db_path)
-        except Exception as e:
+        except OSError as e:
             if os.path.exists(pre_restore_backup):
                 shutil.copy2(pre_restore_backup, self._db_path)
             raise RuntimeError(f"Restore failed, rolled back: {e}") from e
@@ -139,7 +139,7 @@ class BackupManager:
                         count = conn.execute(f"SELECT COUNT(*) FROM {self.TABLE_NAME}").fetchone()[0]
                         conn.close()
                         memory_count = count
-                    except Exception as e:
+                    except sqlite3.Error as e:
                         logger.warning(f"Failed to get memory count from backup {filename}: {e}")
                         memory_count = None
 

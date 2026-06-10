@@ -65,7 +65,7 @@ class SemanticAggregator:
                 if emb is not None:
                     embeddings.append(emb)
                     valid_memories.append(m)
-            except Exception:
+            except (ValueError, TypeError, RuntimeError):
                 continue
 
         if len(embeddings) < self._MIN_CLUSTER_SIZE:

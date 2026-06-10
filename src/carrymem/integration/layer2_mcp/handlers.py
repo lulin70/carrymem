@@ -735,7 +735,7 @@ def handle_my_profile(carrymem, args: Dict[str, Any]) -> Dict[str, Any]:
                 "type_distribution": type_counts,
                 "recent": recent[:10],
             }
-        except Exception:
+        except (KeyError, ValueError, TypeError, RuntimeError):
             profile["memories"] = {"total": 0, "type_distribution": {}, "recent": []}
 
     if include_rules:
@@ -758,7 +758,7 @@ def handle_my_profile(carrymem, args: Dict[str, Any]) -> Dict[str, Any]:
                 "type_distribution": rule_type_counts,
                 "summary": "\n".join(rule_list[:20]) if rule_list else "No rules yet.",
             }
-        except Exception:
+        except (ImportError, KeyError, ValueError, TypeError, RuntimeError):
             profile["rules"] = {"total": 0, "summary": "Rule engine unavailable."}
 
     return profile

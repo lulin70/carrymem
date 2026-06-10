@@ -19,7 +19,7 @@ def cmd_add(args):
     if _cli_validator:
         try:
             parsed.message = _cli_validator.validate_content(parsed.message, "message")
-        except Exception as e:
+        except (ValueError, TypeError) as e:
             print(f"  {_red('Validation Error:')} {e}")
             return 1
 
@@ -139,7 +139,7 @@ def cmd_search(args):
     if _cli_validator:
         try:
             parsed.query = _cli_validator.validate_query(parsed.query)
-        except Exception as e:
+        except (ValueError, TypeError) as e:
             print(f"  {_red('Validation Error:')} {e}")
             return 1
 
@@ -245,7 +245,7 @@ def cmd_edit(args):
     if _cli_validator:
         try:
             parsed.content = _cli_validator.validate_content(parsed.content, "content")
-        except Exception as e:
+        except (ValueError, TypeError) as e:
             print(f"  {_red('Validation Error:')} {e}")
             return 1
 
@@ -299,7 +299,7 @@ def cmd_forget(args):
     if _cli_validator:
         try:
             parsed.key = _cli_validator.validate_content(parsed.key, "key")
-        except Exception as e:
+        except (ValueError, TypeError) as e:
             print(f"  {_red('Validation Error:')} {e}")
             return 1
 

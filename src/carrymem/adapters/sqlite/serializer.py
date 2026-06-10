@@ -146,6 +146,6 @@ class RowSerializer:
                 version_chain_id=d.get("version_chain_id"),
                 version_number=d.get("version_number", 1),
             )
-        except Exception as e:
+        except (KeyError, ValueError, TypeError) as e:
             logger.debug(f"Failed to convert dict to StoredMemory: {e}")
             return None

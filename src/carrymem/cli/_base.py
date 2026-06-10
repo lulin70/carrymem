@@ -147,7 +147,7 @@ def _format_time(iso_str: Optional[str]) -> str:
             elif delta.days < 30:
                 return f"{delta.days}d ago"
             return dt.strftime("%Y-%m-%d")
-    except Exception as e:
+    except (ValueError, TypeError) as e:
         _cli_logger.debug(f"Failed to format time '{iso_str}': {e}")
     return str(iso_str)[:16]
 

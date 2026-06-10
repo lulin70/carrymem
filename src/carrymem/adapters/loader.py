@@ -30,7 +30,7 @@ def load_adapter(name: str) -> Optional[Type[StorageAdapter]]:
 
         for ep in adapter_eps:
             return ep.load()
-    except Exception:
+    except (ImportError, AttributeError, OSError):
         pass
 
     if "." in name:
@@ -55,10 +55,9 @@ def list_available_adapters() -> dict:
             adapter_eps = eps.select(group="carrymem.adapters")
         else:
             adapter_eps = eps.get("carrymem.adapters", [])
-
         for ep in adapter_eps:
             result[ep.name] = f"{ep.value} (plugin)"
-    except Exception:
+    except (ImportError, AttributeError):
         pass
 
     return result

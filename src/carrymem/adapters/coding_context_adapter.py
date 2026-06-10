@@ -504,7 +504,7 @@ class CodingContextAdapter(StorageAdapter):
             for conn in self._all_connections.values():
                 try:
                     conn.close()
-                except Exception:
+                except sqlite3.Error:
                     pass
             self._all_connections.clear()
         if hasattr(self._local, "conn"):

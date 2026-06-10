@@ -136,7 +136,7 @@ def load_json_file(file_path: str) -> Dict[str, Any]:
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
         return data
-    except Exception as e:
+    except (FileNotFoundError, json.JSONDecodeError, PermissionError, OSError, ValueError, TypeError) as e:
         logger.warning("Error loading JSON file %s: %s", file_path, e)
         return {}
 
@@ -151,7 +151,7 @@ def save_json_file(file_path: str, data: Dict[str, Any]):
     try:
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-    except Exception as e:
+    except (OSError, TypeError, ValueError) as e:
         logger.warning("Error saving JSON file %s: %s", file_path, e)
 
 

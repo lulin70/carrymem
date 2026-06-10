@@ -181,12 +181,12 @@ class MCPHTTPServer:
                     # Only show details in debug mode
                     error_msg = str(e)
                 await self._send_response(writer, 500, {"error": error_msg}, "")
-            except Exception as e2:
+            except (OSError, ConnectionError, RuntimeError) as e2:
                 logger.debug(f"Failed to send error response: {e2}")
         finally:
             try:
                 writer.close()
-            except Exception as e:
+            except (OSError, ConnectionError) as e:
                 logger.debug(f"Failed to close connection: {e}")
 
     async def _handle_sse(self, writer, request_origin: str = ""):

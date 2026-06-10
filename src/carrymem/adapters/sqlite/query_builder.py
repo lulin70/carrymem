@@ -169,7 +169,7 @@ class QueryBuilderWithContext(QueryBuilder):
                 "ORDER BY importance_score DESC LIMIT 5",
                 (self._adapter.namespace,),
             ).fetchall()
-        except Exception as e:
+        except sqlite3.OperationalError as e:
             logger = __import__("logging").getLogger(__name__)
             logger.debug(f"_rebuild_context query failed: {e}")
             return original_query
