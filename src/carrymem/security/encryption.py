@@ -15,6 +15,7 @@ Key storage: ~/.carrymem/.key (file permission 600)
 """
 
 import base64
+import binascii
 import hashlib
 import hmac
 import os
@@ -183,7 +184,7 @@ class MemoryEncryption:
     def _decrypt_stream(self, ciphertext: str) -> str:
         try:
             payload = base64.b64decode(ciphertext)
-        except Exception as e:
+        except (binascii.Error, ValueError) as e:
             raise EncryptionError(f"Invalid ciphertext format: {e}") from e
 
         min_len = _NONCE_SIZE + _AUTH_TAG_SIZE

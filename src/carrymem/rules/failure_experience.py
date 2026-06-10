@@ -1,5 +1,7 @@
 """
 Failure Experience Extractor — Extract lessons from failure memories.
+[RESERVED] Rule-engine extension point — not yet integrated into main pipeline.
+Planned for v0.4.0 auto-rule-generation feature.
 
 Converts single failure experiences into actionable avoidance rules.
 Unlike pattern-based promotion (which needs 3+ similar memories),

@@ -226,7 +226,7 @@ class RuleEngine:
                                 "suggestion": "Consider updating the existing rule instead of creating a new one",
                             }
                         )
-        except Exception:
+        except (ValueError, KeyError, TypeError):
             pass
 
         created = self.storage._create_validated(
@@ -695,19 +695,19 @@ class RuleEngine:
                     confidence=rule.confidence,
                     scope=rule.scope,
                 )
-            except Exception as e:
+            except (sqlite3.IntegrityError, sqlite3.OperationalError) as e:
                 errors.append(f"create rule '{rule.trigger}': {e}")
 
         for rule_id in result.replaced_ids:
             try:
                 self.storage.delete(rule_id)
-            except Exception as e:
+            except (sqlite3.IntegrityError, sqlite3.OperationalError) as e:
                 errors.append(f"delete rule '{rule_id}': {e}")
 
         for rule_id in result.downgrade_override_ids:
             try:
                 self.storage.update(rule_id, override=False)
-            except Exception as e:
+            except (sqlite3.IntegrityError, sqlite3.OperationalError) as e:
                 errors.append(f"downgrade rule '{rule_id}': {e}")
 
         result_dict = result.to_dict()

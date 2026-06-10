@@ -1,5 +1,7 @@
 """
 Candidate Rule Generator — Convert detected patterns into rule suggestions.
+[RESERVED] Rule-engine extension point — not yet integrated into main pipeline.
+Planned for v0.4.0 auto-rule-generation feature.
 
 Takes MemoryPattern objects from PatternDetector and generates
 human-readable rule candidates with appropriate trigger/action/rule_type.

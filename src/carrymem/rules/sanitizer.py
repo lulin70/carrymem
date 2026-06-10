@@ -1,5 +1,7 @@
 """
 CarryMem Rules Engine — Input Sanitizer
+[RESERVED] Rule-engine extension point — not yet integrated into main pipeline.
+Planned for v0.4.0 rule-security hardening.
 
 Security-focused input validation for rules to prevent:
 - Prompt injection attacks

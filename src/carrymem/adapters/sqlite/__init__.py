@@ -98,7 +98,7 @@ class SQLiteAdapter(StorageAdapter):
                 from ...security.encryption import MemoryEncryption
 
                 self._security.set_encryption(MemoryEncryption(key=encryption_key))
-            except Exception as e:
+            except (ImportError, ValueError, TypeError) as e:
                 from ...utils.logger import logger
 
                 logger.error(f"Encryption initialization failed: {e}")
@@ -134,7 +134,7 @@ class SQLiteAdapter(StorageAdapter):
             from ...security.audit import AuditLogger
 
             self._audit = AuditLogger(self._conn_mgr.get_connection, namespace=namespace)
-        except Exception as e:
+        except (ImportError, OSError) as e:
             from ...utils.logger import logger
 
             logger.warning(f"Audit logger initialization failed: {e}")
@@ -187,7 +187,7 @@ class SQLiteAdapter(StorageAdapter):
                 from ...utils.logger import logger
 
                 logger.info(f"Vector search enabled: model={embedding_model}, dim={self._embedding_dim}")
-            except Exception as e:
+            except (ImportError, OSError, ValueError, RuntimeError) as e:
                 from ...utils.logger import logger
 
                 self._enable_vector = False
@@ -223,7 +223,7 @@ class SQLiteAdapter(StorageAdapter):
                 self._merger = ResultMerger(
                     min_relevance=config.get("min_relevance", 0.3),
                 )
-            except Exception as e:
+            except (ValueError, TypeError, KeyError, RuntimeError) as e:
                 from ...utils.logger import logger
 
                 self._enable_semantic = False

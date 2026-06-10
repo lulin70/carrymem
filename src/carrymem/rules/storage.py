@@ -61,7 +61,7 @@ class RuleStorage:
         else:
             try:
                 self._local.conn.execute("SELECT 1")
-            except Exception as e:
+            except (sqlite3.OperationalError, sqlite3.ProgrammingError) as e:
                 _logger.debug(f"[RuleStorage] Connection health check failed, reconnecting: {e}")
                 conn = sqlite3.connect(self.db_path, timeout=30.0)
                 conn.row_factory = sqlite3.Row
@@ -76,7 +76,7 @@ class RuleStorage:
         if hasattr(self._local, "conn") and self._local.conn is not None:
             try:
                 self._local.conn.close()
-            except Exception as e:
+            except sqlite3.Error as e:
                 _logger.debug(f"[RuleStorage] close failed: {e}")
             self._local.conn = None
 
@@ -161,7 +161,7 @@ class RuleStorage:
                 """)
             conn.commit()
             self._migrate_fts_tokenizer()
-        except sqlite3.Error as e:
+        except Exception as e:
             _logger.debug(f"[RuleStorage] _ensure_schema failed: {e}")
 
     def _migrate_fts_tokenizer(self):
@@ -328,7 +328,7 @@ class RuleStorage:
                 ),
             )
             conn.commit()
-        except sqlite3.Error as e:
+        except Exception as e:
             _logger.debug(f"[RuleStorage] create insert failed: {e}")
 
         return rule
@@ -590,7 +590,7 @@ class RuleStorage:
         try:
             conn.execute(f"UPDATE rules SET {', '.join(set_clauses)} WHERE id = ?", params)
             conn.commit()
-        except sqlite3.Error as e:
+        except Exception as e:
             _logger.debug(f"[RuleStorage] update failed: {e}")
 
         return self.get(rule_id)

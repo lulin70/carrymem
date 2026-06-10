@@ -59,8 +59,10 @@ build/
 # Sensitive: encryption keys
 config/encryption_keys.json
 .env
+.env.example.local
 *.pem
 *.key
+*.ek                          # CarryMem encryption key files
 
 # Database files (user data)
 *.db

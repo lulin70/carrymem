@@ -392,3 +392,102 @@ __all__ = [
     "validate_path_safety",
     "initialize_directories",
 ]
+
+
+# ============================================================================
+# Runtime Constants (Magic Numbers)
+# ============================================================================
+
+# --- Limits & Thresholds ---
+
+DEFAULT_AUTO_BACKUP_INTERVAL = 20
+"""Default number of writes between automatic backups"""
+
+MAX_MESSAGE_LENGTH = 50000
+"""Maximum allowed message length in characters"""
+
+DEFAULT_RECALL_LIMIT = 20
+"""Default number of memories to recall in queries"""
+
+BATCH_RECALL_LIMIT = 10000
+"""Large batch recall limit for consolidation/export/merge operations"""
+
+AUDIT_LOG_DEFAULT_LIMIT = 100
+"""Default limit for audit log queries"""
+
+SESSION_SUMMARIZER_LIMIT = 200
+"""Max memories to feed into session summarizer"""
+
+AGGREGATE_MEMORIES_LIMIT = 500
+"""Max memories to feed into semantic aggregator"""
+
+RULE_MATCH_LIMIT_CAP = 5
+"""Cap for rule matches in recall_all (to avoid overwhelming context)"""
+
+# --- Quality & Confidence ---
+
+DEFAULT_CONFIDENCE_SCORE = 0.5
+"""Default confidence score for imported/created memories"""
+
+MIN_QUALITY_THRESHOLD = 0.3
+"""Minimum quality score threshold (used in check_quality)"""
+
+DECAY_CONFIDENCE_FLOOR = 0.1
+"""Minimum confidence after decay before auto-forgetting"""
+
+DECAY_ROUNDING_PRECISION = 3
+"""Decimal places for confidence decay calculation"""
+
+# --- Display & Truncation ---
+
+WHOAMI_PREFERENCE_COUNT = 10
+"""Number of recent preferences to show in whoami()"""
+
+WHOAMI_DECISION_COUNT = 5
+"""Number of recent decisions to show in whoami()"""
+
+WHOAMI_CORRECTION_COUNT = 5
+"""Number of recent corrections to show in whoami()"""
+
+CONTENT_PREVIEW_LENGTH = 100
+"""Default content preview length (for corrections, rules)"""
+
+RULE_CONTENT_MAX_LENGTH = 200
+"""Max length for sanitized rule content"""
+
+CONTEXT_BUILD_DEFAULTS = {
+    "max_memories": 10,
+    "max_knowledge": 5,
+    "max_rules": 5,
+    "max_tokens_context": 2000,
+    "max_tokens_system_prompt": 4000,
+    "max_tokens_qa_prompt": 2000,
+}
+"""Default token and item limits for context/prompt building"""
+
+# --- Coreference Resolution ---
+
+COREFERENCE_RECALL_LIMIT = 5
+"""Number of recent memories to use for coreference resolution"""
+
+CORRECTION_RECALL_LIMIT = 10
+"""Number of memories to search when handling corrections"""
+
+CORRECTION_KEYWORD_OVERLAP = 2
+"""Minimum keyword overlap threshold for correction matching"""
+
+ACTIVE_RULES_LIST_LIMIT = 50
+"""Max active rules to check during correction handling"""
+
+# --- Consolidation Scheduling ---
+
+CONSOLIDATION_MIN_INTERVAL_HOURS = 0.1
+"""Minimum interval between scheduled consolidations (~6 minutes)"""
+
+# --- Import/Merge ---
+
+IMPORT_CONTENT_SEARCH_LENGTH = 50
+"""Content prefix length used for duplicate detection during import"""
+
+MIN_CORRECTION_CONTENT_LENGTH = 3
+"""Minimum content length to process a correction entry"""

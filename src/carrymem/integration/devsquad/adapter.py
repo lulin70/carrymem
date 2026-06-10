@@ -72,7 +72,7 @@ class DevSquadAdapter:
                 result.append(f"[{rule_type.upper()}] {getattr(rule, 'action', str(rule))}{override}")
             self._log("get_rules", user_id, success=True)
             return result
-        except Exception as e:
+        except (KeyError, ValueError, TypeError, AttributeError, RuntimeError) as e:
             self._log("get_rules", user_id, success=False, details={"error": str(e)})
             return []
 
@@ -85,7 +85,7 @@ class DevSquadAdapter:
                 params["trigger"] = rule[:100]
             self._rule_engine.add_rule(**params)
             self._log("add_rule", user_id, success=True, details={"rule": rule[:100]})
-        except Exception as e:
+        except (ValueError, TypeError, sqlite3.Error) as e:
             self._log("add_rule", user_id, success=False, details={"error": str(e)})
 
     def update_rule(self, user_id: str, rule_id: str, rule: str) -> None:
@@ -100,7 +100,7 @@ class DevSquadAdapter:
                 success=True,
                 details={"rule": rule[:100]},
             )
-        except Exception as e:
+        except (ValueError, KeyError, sqlite3.Error) as e:
             self._log(
                 "update_rule",
                 user_id,
@@ -115,7 +115,7 @@ class DevSquadAdapter:
         try:
             self._rule_engine.delete_rule(rule_id)
             self._log("delete_rule", user_id, storage_key=rule_id, success=True)
-        except Exception as e:
+        except (KeyError, sqlite3.Error) as e:
             self._log(
                 "delete_rule",
                 user_id,
@@ -137,7 +137,7 @@ class DevSquadAdapter:
             stats["available"] = True
             stats["namespace"] = self._namespace
             return stats
-        except Exception:
+        except sqlite3.Error:
             return {
                 "total_rules": 0,
                 "total_users": 0,
@@ -173,7 +173,7 @@ class DevSquadAdapter:
                 details={"task": task_description[:100], "matched": len(result)},
             )
             return result
-        except Exception as e:
+        except (KeyError, ValueError, TypeError, AttributeError, RuntimeError) as e:
             self._log(
                 "match_rules",
                 user_id,
@@ -200,7 +200,7 @@ class DevSquadAdapter:
                     rt = r.get("rule_type", "avoid").upper()
                     lines.append(f"- [{rt}] {r.get('action', r.get('trigger', ''))}")
             return "\n".join(lines)
-        except Exception:
+        except (KeyError, ValueError, TypeError):
             return ""
 
     def log_experience(
@@ -230,7 +230,7 @@ class DevSquadAdapter:
                 details=details,
             )
             return exp_id
-        except Exception as e:
+        except (ValueError, TypeError) as e:
             self._log(
                 "log_experience",
                 user_id,
@@ -257,5 +257,5 @@ class DevSquadAdapter:
                     details=details,
                     source="devsquad",
                 )
-            except Exception:
+            except (ValueError, TypeError, sqlite3.Error):
                 pass

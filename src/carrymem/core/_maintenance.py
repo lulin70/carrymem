@@ -1,0 +1,262 @@
+"""Maintenance: conflict detection, quality scoring, expiry, consolidation, scheduling."""
+
+import sqlite3
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
+
+from carrymem.adapters.sqlite_adapter import SQLiteAdapter
+from carrymem.core._lifecycle import StorageNotConfiguredError
+from carrymem.utils.logger import logger
+
+
+class MaintenanceMixin:
+    """Quality checks, conflict detection, consolidation, and scheduled maintenance."""
+
+    def check_conflicts(self) -> List[Dict[str, Any]]:
+        from carrymem.conflict_detector import ConflictDetector
+
+        if not self._adapter:
+            raise StorageNotConfiguredError()
+
+        all_conflicts: List[Dict[str, Any]] = []
+
+        all_memories = self._adapter.recall("", limit=10000)
+        if all_memories:
+            detector = ConflictDetector()
+            memory_conflicts = detector.detect_conflicts(all_memories)
+            all_conflicts.extend(c.to_dict() for c in memory_conflicts)
+
+        if self._rule_engine:
+            rule_conflicts = self._rule_engine.check_conflicts()
+            for rc in rule_conflicts:
+                all_conflicts.append(
+                    {
+                        "conflict_type": rc.conflict_type.value,
+                        "severity": rc.severity.value,
+                        "reason": rc.reason,
+                        "suggestion": rc.suggestion,
+                        "rules": [
+                            {"id": r.id, "trigger": r.trigger, "action": r.action, "scope": r.scope} for r in rc.rules
+                        ],
+                        "source": "rule_engine",
+                    }
+                )
+
+        return all_conflicts
+
+    def check_quality(self, min_score: float = 0.3) -> List[Dict[str, Any]]:
+        from carrymem.quality_scorer import QualityAnalyzer
+
+        if not self._adapter:
+            raise StorageNotConfiguredError()
+
+        all_memories = self._adapter.recall("", limit=10000)
+        if not all_memories:
+            return []
+
+        analyzer = QualityAnalyzer()
+        low_quality = analyzer.identify_low_quality(all_memories, threshold=min_score)
+        result = []
+        for item in low_quality:
+            result.append(
+                {
+                    "storage_key": item["storage_key"],
+                    "score": item["score"],
+                    "reasons": item["reasons"],
+                    "content": item["memory"].content[:80],
+                    "type": item["memory"].type,
+                }
+            )
+        return result
+
+    def list_expired(self) -> List[Dict[str, Any]]:
+        if not self._adapter:
+            raise StorageNotConfiguredError()
+
+        if not isinstance(self._adapter, SQLiteAdapter):
+            return []
+
+        conn = self._adapter._get_connection()
+        now_iso = datetime.now(timezone.utc).isoformat()
+        rows = conn.execute(
+            "SELECT storage_key, content, type, expires_at FROM memories "
+            "WHERE namespace = ? AND expires_at IS NOT NULL AND expires_at < ?",
+            (self._namespace, now_iso),
+        ).fetchall()
+
+        result = []
+        for row in rows:
+            content = row["content"]
+            if self._adapter._encryption and self._adapter._encryption.is_active:
+                content = self._adapter._decrypt_field(content)
+            result.append(
+                {
+                    "storage_key": row["storage_key"],
+                    "content": (content or "")[:80],
+                    "type": row["type"],
+                    "expires_at": row["expires_at"],
+                }
+            )
+        return result
+
+    def consolidate(self, dry_run: bool = True, run_p1: bool = True, run_p2: bool = True) -> Dict[str, Any]:
+        """Run memory consolidation: dedup, decay, and cleanup."""
+        from carrymem.consolidation import consolidate, consolidate_p1, consolidate_p2
+
+        if not self._adapter:
+            raise StorageNotConfiguredError()
+        adapter = self._adapter
+
+        all_entries = adapter.recall(
+            query="",
+            limit=10000,
+            filters={"include_superseded": True},
+        )
+        all_memories = []
+        for entry in all_entries:
+            if hasattr(entry, "__dict__"):
+                all_memories.append(
+                    {
+                        "storage_key": getattr(entry, "storage_key", ""),
+                        "type": getattr(entry, "memory_type", ""),
+                        "content": getattr(entry, "content", ""),
+                        "confidence": getattr(entry, "confidence", 0.5),
+                        "created_at": getattr(entry, "created_at", ""),
+                        "superseded_at": getattr(entry, "superseded_at", None),
+                        "access_count": getattr(entry, "access_count", 0),
+                    }
+                )
+            elif isinstance(entry, dict):
+                all_memories.append(entry)
+
+        report = consolidate(all_memories)
+
+        if dry_run:
+            report["dry_run"] = True
+            return report
+
+        superseded_count = 0
+        for item in report["to_supersede"]:
+            older_key = item.get("older_key")
+            if older_key:
+                try:
+                    if hasattr(adapter, "supersede"):
+                        adapter.supersede(older_key)
+                        superseded_count += 1
+                except (AttributeError, ValueError, KeyError, RuntimeError) as e:
+                    logger.warning(f"Failed to supersede {older_key}: {e}")
+
+        forgotten_count = 0
+        for item in report["to_forget"]:
+            key = item.get("storage_key")
+            if key:
+                try:
+                    adapter.forget(key)
+                    forgotten_count += 1
+                except (KeyError, ValueError) as e:
+                    logger.warning(f"Failed to forget {key}: {e}")
+
+        for item in report["to_decay"]:
+            key = item.get("storage_key")
+            decay = item.get("decay", 1.0)
+            current_conf = item.get("current_confidence", 0.5)
+            new_conf = round(current_conf * decay, 3)
+            if new_conf < 0.1:
+                try:
+                    adapter.forget(key)
+                    forgotten_count += 1
+                except (KeyError, ValueError) as e:
+                    logger.warning(f"Failed to forget decayed {key}: {e}")
+
+        report["dry_run"] = False
+        report["superseded_count"] = superseded_count
+        report["forgotten_count"] = forgotten_count
+
+        logger.info(
+            f"Consolidation complete: {superseded_count} superseded, "
+            f"{forgotten_count} forgotten, {len(report['to_decay'])} decayed"
+        )
+
+        if run_p1:
+            rule_storage = None
+            try:
+                from carrymem.rules.storage import RuleStorage
+
+                db_path = getattr(self._adapter, "db_path", None)
+                rule_storage = RuleStorage(db_path=db_path) if db_path else None
+            except (ImportError, sqlite3.OperationalError, ValueError) as e:
+                logger.warning(f"P1 skipped: RuleStorage init failed: {e}")
+
+            p1_result = consolidate_p1(
+                memories=all_memories,
+                rule_storage=rule_storage,
+                auto_accept=False,
+            )
+            report["p1_promotion"] = p1_result
+
+        if run_p2:
+            p2_result = consolidate_p2(
+                memories=all_memories,
+                p0_report=report,
+            )
+            report["p2_consolidation"] = p2_result
+
+        return report
+
+    def schedule_consolidation(
+        self,
+        interval_hours: float = 1.0,
+        dry_run: bool = False,
+        run_p1: bool = True,
+        run_p2: bool = False,
+    ) -> Dict[str, Any]:
+        """Start periodic memory consolidation on a background timer."""
+        import threading
+
+        min_interval = 0.1
+        if interval_hours < min_interval:
+            interval_hours = min_interval
+
+        self.stop_consolidation()
+
+        interval_sec = interval_hours * 3600
+        status = {
+            "scheduled": True,
+            "interval_hours": interval_hours,
+            "dry_run": dry_run,
+            "run_p1": run_p1,
+            "run_p2": run_p2,
+        }
+
+        def _run_consolidation():
+            try:
+                logger.info(f"Scheduled consolidation starting (interval={interval_hours}h)")
+                result = self.consolidate(dry_run=dry_run, run_p1=run_p1, run_p2=run_p2)
+                logger.info(
+                    f"Scheduled consolidation complete: "
+                    f"{result.get('superseded_count', 0)} superseded, "
+                    f"{result.get('forgotten_count', 0)} forgotten"
+                )
+            except Exception as e:
+                logger.error(f"Scheduled consolidation failed: {e}")
+            finally:
+                if self._consolidation_timer is not None:
+                    self._consolidation_timer = threading.Timer(interval_sec, _run_consolidation)
+                    self._consolidation_timer.daemon = True
+                    self._consolidation_timer.start()
+
+        self._consolidation_timer = threading.Timer(interval_sec, _run_consolidation)
+        self._consolidation_timer.daemon = True
+        self._consolidation_timer.start()
+
+        logger.info(f"Consolidation scheduled every {interval_hours}h")
+        return status
+
+    def stop_consolidation(self) -> Dict[str, Any]:
+        """Stop the scheduled consolidation timer."""
+        if self._consolidation_timer is not None:
+            self._consolidation_timer.cancel()
+            self._consolidation_timer = None
+            logger.info("Consolidation schedule stopped")
+            return {"stopped": True}
+        return {"stopped": False, "reason": "no_active_schedule"}

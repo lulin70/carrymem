@@ -99,7 +99,7 @@ class ConnectionManager:
                         try:
                             conn.enable_load_extension(True)
                             sqlite_vec.load(conn)
-                        except Exception as e:
+                        except (OSError, AttributeError, ImportError, RuntimeError) as e:
                             import logging
 
                             logging.getLogger(__name__).debug(f"sqlite_vec extension loading failed: {e}")

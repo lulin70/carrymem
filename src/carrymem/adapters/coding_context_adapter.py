@@ -1,4 +1,6 @@
 """CodingContext Adapter — CarryMem's coding convention integration.
+[RESERVED] Adapter extension point — not yet integrated into main pipeline.
+Planned for v0.4.0 IDE/Editor tooling integration.
 
 Reads coding convention files from a project directory, indexes them
 with FTS5, and provides full-text search for retrieval.

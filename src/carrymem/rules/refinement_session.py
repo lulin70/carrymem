@@ -1,5 +1,7 @@
 """
 Refinement Session — Track multi-turn rule refinement conversations.
+[RESERVED] Rule-engine extension point — not yet integrated into main pipeline.
+Planned for v0.4.0 interactive rule-refinement feature.
 
 Manages the full lifecycle of a rule refinement session:
     1. Start session from a specific rule or memory
@@ -333,7 +335,7 @@ class RefinementSessionManager:
                 source_memories=[entry.source_memory_id] if entry.source_memory_id else [],
                 confidence=0.8,
             )
-        except Exception as e:
+        except (sqlite3.IntegrityError, sqlite3.OperationalError, ValueError) as e:
             return {"error": f"Failed to create rule: {e}"}
 
         now = datetime.now(timezone.utc).isoformat()

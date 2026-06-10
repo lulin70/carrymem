@@ -1,5 +1,7 @@
 """
 RuleCandidateGenerator — Extract rule candidates from stored memories.
+[RESERVED] Rule-engine extension point — not yet integrated into main pipeline.
+Planned for v0.4.0 auto-rule-generation feature.
 
 Generates rule suggestions by analyzing memory content for triggers,
 actions, conditions, and implicit preferences. Used by CarryMem to

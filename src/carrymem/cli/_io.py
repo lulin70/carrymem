@@ -237,7 +237,7 @@ def cmd_pack(args):
                 rules = engine.list_rules(status="active", limit=10000)
                 rules_data = [r.to_dict() for r in rules]
                 print(f"  {_green('\u2713')} {len(rules_data)} rules")
-            except Exception as e:
+            except (ImportError, sqlite3.OperationalError, KeyError, ValueError) as e:
                 print(f"  {_yellow('\u26a0')} Rules export skipped: {e}")
 
         # Collect config
@@ -251,7 +251,7 @@ def cmd_pack(args):
                     print(f"  {_green('\u2713')} Config (namespace, consolidation settings)")
                 else:
                     print(f"  {_dim('\u25cb')} No config file found")
-            except Exception as e:
+            except (FileNotFoundError, json.JSONDecodeError, PermissionError, OSError) as e:
                 print(f"  {_yellow('\u26a0')} Config export skipped: {e}")
 
         # Encrypted entries info
@@ -312,7 +312,7 @@ def cmd_pack(args):
                 container["payload"] = enc.encrypt(json_bytes.decode("utf-8"))
                 container["encryption_backend"] = enc.backend
                 print(f"  {_green('\u2713')} Encrypted ({enc.backend})")
-            except Exception as e:
+            except (ValueError, TypeError, ImportError) as e:
                 print(f"  {_red('Encryption failed:')} {e}")
                 cm.close()
                 return 1
@@ -418,11 +418,11 @@ def cmd_unpack(args):
                 return 1
 
             try:
-                from carrymem.security.encryption import MemoryEncryption
+                from carrymem.security.encryption import MemoryEncryption, EncryptionError
 
                 dec = MemoryEncryption(key=password)
                 payload_json_str = dec.decrypt(payload_str)
-            except Exception as e:
+            except (ValueError, TypeError, EncryptionError) as e:
                 print(f"  {_red('Decryption failed:')} {e}")
                 print(f"  {_dim('Check your password and try again.')}")
                 return 1
@@ -431,7 +431,7 @@ def cmd_unpack(args):
             try:
                 compressed = base64.b64decode(payload_str)
                 payload_json_str = gzip.decompress(compressed).decode("utf-8")
-            except Exception as e:
+            except (binascii.Error, ValueError, OSError) as e:
                 print(f"  {_red('Payload decompression failed:')} {e}")
                 return 1
 
@@ -469,7 +469,7 @@ def cmd_unpack(args):
             packed_display = dt.strftime("%Y-%m-%d")
         else:
             packed_display = "unknown"
-    except Exception as e:
+    except ValueError as e:
         _cli_logger.debug(f"Failed to parse packed_at date '{packed_at}': {e}")
         packed_display = str(packed_at)[:10]
 
@@ -527,7 +527,7 @@ def cmd_unpack(args):
                     print(f"    {_dim(f'{overwritten_count} rules overwritten')}")
                 if errors_list:
                     print(f"    {_yellow(f'{len(errors_list)} errors during rules import')}")
-            except Exception as e:
+            except (ImportError, sqlite3.OperationalError, KeyError, ValueError) as e:
                 print(f"  {_yellow('\u26a0')} Rules import skipped: {e}")
         else:
             print(f"  {_dim('\u25cb')} No rules to restore")
@@ -553,7 +553,7 @@ def cmd_unpack(args):
                     with open(config_file, "w", encoding="utf-8") as f:
                         json.dump(config_data, f, indent=2, ensure_ascii=False)
                 print(f"  {_green('\u2713')} Config restored")
-            except Exception as e:
+            except (OSError, json.JSONDecodeError, PermissionError, ValueError) as e:
                 print(f"  {_yellow('\u26a0')} Config restore skipped: {e}")
         else:
             print(f"  {_dim('\u25cb')} No config to restore")

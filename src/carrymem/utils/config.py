@@ -83,7 +83,7 @@ class ConfigManager:
                 if YAML_AVAILABLE:
                     return yaml.safe_load(f) or {}
                 return json.load(f) or {}
-        except Exception:
+        except (FileNotFoundError, json.JSONDecodeError, PermissionError, OSError, ValueError):
             _logger.debug(f"Rules file not found: {rules_path}")
             return {}
 

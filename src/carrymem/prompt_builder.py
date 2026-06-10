@@ -209,7 +209,7 @@ class PromptBuilder:
                         else m.get("importance_score", 0)
                     )
                     _recalc_scores[key] = (new_conf, new_imp)
-                except Exception as e:
+                except (KeyError, ValueError, TypeError, ZeroDivisionError) as e:
                     logger.warning(f"Confidence recalculation failed: {e}")
         return _recalc_scores
 
@@ -287,7 +287,7 @@ class PromptBuilder:
                 MatchResult(rule=r, score=0.8, match_type="override", matched_text=r.trigger) for r in rules_to_inject
             ]
             return injector._format_structured(matches, include_metadata=False)
-        except Exception as e:
+        except (ImportError, KeyError, ValueError, TypeError, AttributeError, RuntimeError) as e:
             logger.warning(f"Rule injection failed: {e}")
             return ""
 
@@ -349,7 +349,7 @@ class PromptBuilder:
                     and m.get("storage_key") not in {s.get("storage_key") for s in memories_section}
                 ]
                 memories_section = non_pref_selected + pref_in_selected + pref_in_all
-            except Exception as e:
+            except (KeyError, ValueError, TypeError, RuntimeError) as e:
                 logger.warning(f"Failed to select memories for context: {e}")
 
         # Knowledge
@@ -362,7 +362,7 @@ class PromptBuilder:
                     max_count=max_knowledge,
                     max_tokens=knowledge_budget,
                 )
-            except Exception as e:
+            except (KeyError, ValueError, TypeError, RuntimeError) as e:
                 logger.warning(f"Failed to select knowledge for context: {e}")
 
         # Build prompt
@@ -390,7 +390,7 @@ class PromptBuilder:
                             "override": m.rule.override,
                         }
                     )
-        except Exception as e:
+        except (KeyError, ValueError, TypeError, AttributeError, RuntimeError) as e:
             logger.warning(f"Rule matching in system prompt failed: {e}")
 
         total = len(applied_rules_info) + len(memories_section) + len(knowledge_section)
@@ -524,7 +524,7 @@ class PromptBuilder:
                         max_tokens=memories_budget,
                     )
                     memories_section = pref_in_filtered + [m for m in selected if m.get("storage_key") not in pref_keys]
-            except Exception as e:
+            except (KeyError, ValueError, TypeError, RuntimeError) as e:
                 logger.warning(f"Failed to select memories for QA prompt: {e}")
 
         # Knowledge
@@ -537,7 +537,7 @@ class PromptBuilder:
                     max_count=max_knowledge,
                     max_tokens=knowledge_budget,
                 )
-            except Exception as e:
+            except (KeyError, ValueError, TypeError, RuntimeError) as e:
                 logger.warning(f"Failed to select knowledge for QA prompt: {e}")
 
         return _build_qa_prompt(

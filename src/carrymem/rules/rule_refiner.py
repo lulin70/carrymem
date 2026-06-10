@@ -1,5 +1,7 @@
 """
 Rule Refiner — Multi-turn Q&A for rule abstraction.
+[RESERVED] Rule-engine extension point — not yet integrated into main pipeline.
+Planned for v0.4.0 interactive rule-refinement feature.
 
 Enables users to refine rules through guided conversation,
 gradually abstracting from specific experiences to general rules.

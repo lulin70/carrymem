@@ -1,5 +1,7 @@
 """
 Experience Rule Bridge — Convert failure lessons into rule candidates.
+[RESERVED] Rule-engine extension point — not yet integrated into main pipeline.
+Planned for v0.4.0 auto-rule-generation feature.
 
 Bridges FailureExperienceExtractor output to the rule creation system.
 Provides a confirmation workflow where users review extracted lessons

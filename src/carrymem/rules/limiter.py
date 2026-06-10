@@ -1,5 +1,7 @@
 """
 CarryMem Rules Engine — Usage Limiter
+[RESERVED] Rule-engine extension point — not yet integrated into main pipeline.
+Planned for v0.4.0 rule-governance feature.
 
 Enforces usage limits to prevent:
 - Global rule hijacking (too many trigger="*" rules)
