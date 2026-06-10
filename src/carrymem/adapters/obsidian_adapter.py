@@ -176,10 +176,12 @@ class ObsidianAdapter(StorageAdapter):
         if row and "unicode61" in (row["sql"] or ""):
             conn.execute("INSERT INTO notes_fts(notes_fts) VALUES('rebuild')")
             conn.execute("DROP TABLE IF EXISTS notes_fts")
-            conn.execute("""CREATE VIRTUAL TABLE notes_fts USING fts5(
+            conn.execute(
+                """CREATE VIRTUAL TABLE notes_fts USING fts5(
                     title, content,
                     content='notes', content_rowid='rowid', tokenize='trigram'
-                )""")
+                )"""
+            )
             conn.execute("INSERT INTO notes_fts(notes_fts) VALUES('rebuild')")
             conn.commit()
 
