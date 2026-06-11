@@ -385,6 +385,8 @@ __all__ = [
     "CODEX_MCP_CONFIG",
     # Security
     "DANGEROUS_SYSTEM_DIRS",
+    "PBKDF2_ITERATIONS",
+    "PBKDF2_ITERATIONS_LEGACY",
     # Knowledge base paths
     "OBSIDIAN_DEFAULT_VAULT",
     # Utilities
@@ -397,6 +399,14 @@ __all__ = [
 # ============================================================================
 # Runtime Constants (Magic Numbers)
 # ============================================================================
+
+# --- Security Constants ---
+
+PBKDF2_ITERATIONS = 260000
+"""PBKDF2-HMAC-SHA256 iteration count (2026 NIST recommendation: ≥ 210000)."""
+
+PBKDF2_ITERATIONS_LEGACY = 100000
+"""Legacy PBKDF2 iteration count for backward compatibility with pre-2026 keys."""
 
 # --- Limits & Thresholds ---
 
@@ -491,3 +501,23 @@ IMPORT_CONTENT_SEARCH_LENGTH = 50
 
 MIN_CORRECTION_CONTENT_LENGTH = 3
 """Minimum content length to process a correction entry"""
+
+# --- Classification & Force-Type ---
+
+DEFAULT_FORCE_TYPE_CONFIDENCE = 0.8
+"""Default confidence score when force_type overrides classification"""
+
+# --- Maintenance Display ---
+
+MAINTENANCE_CONTENT_SNIPPET_LENGTH = 80
+"""Content snippet length for quality/expired memory display in maintenance"""
+
+# --- Time Conversions ---
+
+SECONDS_PER_HOUR = 3600
+"""Number of seconds in one hour (for scheduling calculations)"""
+
+# --- Export Format ---
+
+EXPORT_SCHEMA_VERSION = "1.0.0"
+"""Schema version string for export/import profile and memory files"""

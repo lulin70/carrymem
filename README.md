@@ -28,8 +28,8 @@ CarryMem fixes this. It's a lightweight, zero-dependency memory system that stor
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-3315-brightgreen" alt="Tests">
-  <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="Coverage">
+  <img src="https://img.shields.io/badge/tests-3387-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/coverage-82%25%2B-green" alt="Coverage">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval Academic Benchmark"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
 </p>
@@ -491,6 +491,128 @@ cm.import_memories(input_path="backup.json")
 
 ## Supporting Features
 
+### Error Code System (v0.4.0 New)
+
+Structured error handling with bilingual messages:
+
+```python
+from carrymem.errors import CarryMemError
+
+# Error code ranges:
+# CM-001~099: Configuration & Initialization
+# CM-100~199: Storage Adapter
+# CM-200~299: Memory Operations
+# CM-300~399: Classification & Rule Engine
+# CM-400~499: Security & Encryption
+# CM-500~599: Import / Export
+# CM-600~699: CLI / TUI / MCP Entry Points
+
+try:
+    cm.classify_and_remember("test")
+except CarryMemError as e:
+    print(e.code)     # "CM-001"
+    print(e.message)  # "存储适配器未配置。" (Chinese)
+    print(e.hint)     # "💡 Use CarryMem(storage='sqlite')..."
+```
+
+**Features**:
+- 37 error codes with Chinese + English messages
+- `from_cause()` factory maps low-level exceptions → friendly codes
+- Actionable hints for every error
+- 7 concrete error subclasses for programmatic handling
+
+### Monitoring Framework (v0.4.0 New)
+
+Production-ready monitoring with Prometheus export:
+
+```python
+from carrymem.monitoring import HealthChecker, MetricsCollector, AlertManager, MonitoringHTTPServer
+
+# Health checks
+health = HealthChecker()
+health.register_check("storage", lambda: cm._adapter is not None)
+status = health.check()  # {"status": "ok", "checks": {...}, "slo": [...]}
+
+# Metrics collection
+metrics = MetricsCollector()
+metrics.increment("classify_and_remember")
+metrics.record_latency("recall", 12.5)
+print(metrics.to_prometheus())  # Prometheus text format
+
+# SLO alerts
+alerts = AlertManager()
+alert_list = alerts.check_alerts(metrics.get_snapshot())
+
+# HTTP server (optional)
+server = MonitoringHTTPServer(port=8766, health_checker=health, metrics_collector=metrics)
+```
+
+**SLO Targets**:
+- `classify_and_remember` P99 < 200ms
+- `recall` P99 < 500ms
+- Startup time < 2s
+
+### Plugin System (v0.4.0 New)
+
+Extensible plugin architecture with hook points:
+
+```python
+from carrymem.plugins import PluginProtocol, PluginManager, HookPoint
+
+class MyPlugin:
+    name = "my-plugin"
+    version = "1.0.0"
+
+    def on_load(self, carrymem):
+        print(f"Loaded into CarryMem")
+
+    def on_memory_stored(self, memory):
+        print(f"Memory stored: {memory.content}")
+
+    def on_unload(self):
+        print("Plugin unloaded")
+
+manager = PluginManager(plugin_dir="./plugins")
+manager.set_carrymem(cm)
+manager.load("my-plugin")
+```
+
+**Hook Points**: `on_memory_stored` | `on_memory_recalled` | `on_classified` | `on_error`
+
+### Permission System (v0.4.0 New)
+
+Lightweight access control MVP:
+
+```python
+from carrymem.security.permissions import Permission, AccessPolicy
+
+policy = AccessPolicy(owner_id="user-123")
+
+# Check permissions
+policy.check("user-123", Permission.READ)   # True
+policy.check("other-user", Permission.WRITE)  # False
+
+# Require permission (raises SecurityError on denial)
+policy.require("user-123", Permission.DELETE, resource="memory")
+```
+
+### i18n Internationalization (v0.4.0 New)
+
+Multi-language support without gettext dependency:
+
+```python
+from carrymem.i18n import I18nManager, set_locale, _
+
+# Switch language
+set_locale("zh-CN")
+
+# Translate with variable interpolation
+print(_("memory.stored", count=3))
+# → "已记住 3 条记忆"
+
+# Available locales: en, zh-CN
+```
+
 ### MCP Integration (One-Line Setup)
 
 ```bash
@@ -661,6 +783,23 @@ Sample: 200 items, 10 inter-turns, Claude Sonnet 4
 
 ## Architecture
 
+**Three-Layer: Mixin + Facade + Protocol (v0.4.0)**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Facade Layer                          │
+│  CarryMem (unified entry point, health_check, version)  │
+├─────────────────────────────────────────────────────────┤
+│                   Mixin Layer (8 modules)                │
+│  Lifecycle │ MemoryCRUD │ Classification │ Recall       │
+│  Backup    │ ProfileExport │ Maintenance │ PromptDelegate│
+├─────────────────────────────────────────────────────────┤
+│                  Protocol Layer (10 Protocols)            │
+│  LifecycleOps │ BackupOps │ RecallOps │ ... │ CarryMemOps│
+└─────────────────────────────────────────────────────────┘
+```
+
+**Data Flow**:
 ```
 User Input
     ↓
@@ -668,7 +807,7 @@ Auto-Classification (7 types, 4 tiers)
     ↓
 Importance Scoring (confidence × type × recency × access)
     ↓
-Smart Storage (SQLite + FTS5, dedup, TTL, encryption)
+Smart Storage (SQLite + FTS5, WAL mode, thread-local pool, dedup, TTL, encryption)
     ↓
 Memory Consolidation (P0: dedup+decay → P1: pattern→rules → P2: semantic merge)
     ↓
@@ -685,6 +824,41 @@ Rule Engine (60%+) → Pattern Analysis (30%) → Semantic (10%)
      ↓                      ↓                      ↓
  Zero cost            Near-zero cost          Token cost
 ```
+
+---
+
+## Module Overview
+
+| Module | Path | Description |
+|--------|------|-------------|
+| **Core Engine** | | |
+| `_lifecycle` | `src/carrymem/core/_lifecycle.py` | Lifecycle: `__init__`, `close`, context-manager, properties |
+| `_memory_crud` | `src/carrymem/core/_memory_crud.py` | Core CRUD: `classify_and_remember`, declare, forget, update, merge |
+| `_classification` | `src/carrymem/core/_classification.py` | Classification pipeline internals + rule-delegate methods |
+| `_recall` | `src/carrymem/core/_recall.py` | Recall operations: memories, aggregated, timeline, knowledge |
+| `_backup` | `src/carrymem/core/_backup.py` | Backup & audit operations |
+| `_maintenance` | `src/carrymem/core/_maintenance.py` | Maintenance: conflict detection, quality scoring, expiry, consolidation |
+| `_profile_export` | `src/carrymem/core/_profile_export.py` | Profile, stats, export, import operations |
+| `_prompt_delegate` | `src/carrymem/core/_prompt_delegate.py` | Prompt delegation and LLM-powered features |
+| `_protocols` | `src/carrymem/core/_protocols.py` | Protocol interfaces for Mixin composition (structural typing) |
+| **Error Handling** (v0.4.0 New) | | |
+| `errors` | `src/carrymem/errors.py` | CarryMemError base class, 7 error ranges (CM-001~999), from_cause() factory |
+| `error_messages` | `src/carrymem/error_messages.py` | 37 bilingual error messages (Chinese + English) with actionable hints |
+| **Adapters** | | |
+| `base` | `src/carrymem/adapters/base.py` | StorageAdapter ABC + MemoryEntry/StoredMemory dataclasses |
+| `sqlite_adapter` | `src/carrymem/adapters/sqlite_adapter.py` | SQLite adapter (re-exports from `adapters/sqlite/`) |
+| `json_adapter` | `src/carrymem/adapters/json_adapter.py` | JSON file-based storage adapter (zero-dependency) |
+| `obsidian_adapter` | `src/carrymem/adapters/obsidian_adapter.py` | Obsidian vault knowledge-base adapter |
+| **Monitoring** (v0.4.0 New) | | |
+| `monitoring` | `src/carrymem/monitoring/__init__.py` | HealthChecker, MetricsCollector, AlertManager, MonitoringHTTPServer, LatencyTimer |
+| **Plugins** (v0.4.0 New) | | |
+| `plugins` | `src/carrymem/plugins/__init__.py` | PluginProtocol, PluginManager, HookPoint definitions, event dispatch |
+| **Security** | | |
+| `permissions` | `src/carrymem/security/permissions.py` | Permission constants & AccessPolicy (owner-based MVP) |
+| **i18n** (v0.4.0 New) | | |
+| `i18n` | `src/carrymem/i18n/__init__.py` | I18nManager dictionary-based translation, locale switching, variable interpolation |
+| **Coordinators** | | |
+| `classification_pipeline` | `src/carrymem/coordinators/classification_pipeline.py` | Multi-phase classification orchestration |
 
 ---
 
@@ -766,11 +940,12 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 
 ## Project Status
 
-**Current Version**: v0.3.0
-**Tests**: 3315+ passing
-**Coverage**: 80%+
+**Current Version**: v0.4.0
+**Tests**: 3387+ passing
+**Coverage**: 82%+
 
 **Changelog**:
+- **v0.4.0**: Protocol & Maturity Sprint — Mixin+Facade+Protocol 三层架构, 10个 Protocol 接口, 错误码体系 (CM-001~999), SQLite 连接池 (WAL+线程缓存), 加密升级 (PBKDF2 260K), E2E 测试补全 (+78), 监控框架 MVP, 插件系统 MVP, 权限系统 MVP, i18n 框架, 类型注解 ~82%, 72 new tests
 - **v0.3.0**: Maturity & Architecture Sprint — God Class→8 Mixin, exception narrowing (173→15), TUI enhancement (+453 lines, Morandi palette), constants.py (28 named), lazy import cache, ghost feature audit, 71 new tests
 - **v0.2.5**: Integration/E2E audit, ghost feature deprecation warnings, version chain validation, 83 new tests
 - **v0.2.4**: Beta release — CI root fix, 24 security fixes, Glama TDQS boost, 6-gate CI pipeline

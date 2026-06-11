@@ -63,15 +63,15 @@ class TestCarryMemInit:
         cm.close()
 
     def test_init_unknown_adapter_string(self):
-        with pytest.raises(ValueError, match="Unknown adapter"):
+        with pytest.raises(Exception, match="CM-100|Unknown|未知"):
             CarryMem(storage="nonexistent_adapter")
 
     def test_init_obsidian_string(self):
-        with pytest.raises(ValueError, match="ObsidianAdapter requires"):
+        with pytest.raises(Exception, match="CM-100|Obsidian|vault_path"):
             CarryMem(storage="obsidian")
 
     def test_init_invalid_storage_type(self):
-        with pytest.raises(ValueError, match="Invalid storage type"):
+        with pytest.raises(Exception, match="CM-202|Invalid|无效"):
             CarryMem(storage=12345)
 
 

@@ -187,7 +187,7 @@ class RefinementSessionManager:
                 ),
             )
             conn.commit()
-        except Exception:
+        except (sqlite3.IntegrityError, sqlite3.OperationalError, ValueError):
             conn.rollback()
             return {"error": "Failed to create session"}
         finally:
@@ -291,7 +291,7 @@ class RefinementSessionManager:
                 ),
             )
             conn.commit()
-        except Exception:
+        except (sqlite3.IntegrityError, sqlite3.OperationalError, ValueError):
             conn.rollback()
             return {"error": "Failed to update session"}
         finally:
@@ -350,7 +350,7 @@ class RefinementSessionManager:
                 (SESSION_STATUS_COMPLETED, now, rule.id, now, session_id),
             )
             conn.commit()
-        except Exception:
+        except (sqlite3.IntegrityError, sqlite3.OperationalError):
             conn.rollback()
         finally:
             pass
@@ -378,7 +378,7 @@ class RefinementSessionManager:
             )
             conn.commit()
             return True
-        except Exception:
+        except (sqlite3.OperationalError, sqlite3.IntegrityError):
             conn.rollback()
             return False
         finally:
@@ -445,7 +445,7 @@ class RefinementSessionManager:
                 (RefinementPhase.CONFIRM.value, now, session_id),
             )
             conn.commit()
-        except Exception:
+        except (sqlite3.OperationalError, sqlite3.IntegrityError):
             conn.rollback()
         finally:
             pass
@@ -479,7 +479,7 @@ class RefinementSessionManager:
             )
             conn.commit()
             return cursor.rowcount
-        except Exception:
+        except (sqlite3.OperationalError, sqlite3.IntegrityError):
             conn.rollback()
             return 0
         finally:

@@ -3,12 +3,71 @@
 Provides validation functions to ensure data integrity and prevent
 invalid inputs from causing errors.
 
-Initial implementation
+Includes enhanced security features:
+- Unicode safety checks (control characters, bidi override detection)
+- ReDoS protection for regex matching
+- SQL injection pattern detection (audit-only)
+- Path traversal / symlink safety
 """
 
-from typing import Any, Dict, List, Optional
+import logging
+import os
+import re
+import sys
+from pathlib import Path
+from typing import Any, Dict, List, Match, Optional, Tuple
 
 from carrymem.exceptions import ValidationError
+
+logger = logging.getLogger(__name__)
+
+# ── Constants ──────────────────────────────────────────────────────
+
+# Control character ranges (C0 + C1), excluding allowed \t (0x09) \n (0x0A) \r (0x0D)
+_CONTROL_CHAR_PATTERN = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]")
+
+# Unicode bidi override / isolation characters (Trojan Source attacks)
+_BIDI_DANGER_CHARS = {
+    "\u202a",  # LEFT-TO-RIGHT EMBEDDING
+    "\u202b",  # RIGHT-TO-LEFT EMBEDDING
+    "\u202c",  # POP DIRECTIONAL FORMATTING
+    "\u202d",  # LEFT-TO-RIGHT OVERRIDE
+    "\u202e",  # RIGHT-TO-LEFT OVERRIDE
+    "\u2066",  # LEFT-TO-RIGHT ISOLATE
+    "\u2067",  # RIGHT-TO-LEFT ISOLATE
+    "\u2068",  # FIRST STRONG ISOLATE
+    "\u2069",  # POP DIRECTIONAL ISOLATE
+}
+_BIDI_PATTERN = re.compile("[" + "".join(_BIDI_DANGER_CHARS) + "]")
+
+# Dangerous regex patterns known to cause ReDoS (nested quantifiers, etc.)
+_REDOS_WARNING_PATTERNS = [
+    re.compile(r"\([^)]*[+*][^)]*\)[+*]"),  # nested quantifiers like (a+)+
+    re.compile(r"\([^)]*\|[^\)]*\)[+*]{2,}"),  # alternation with greedy quantifier
+    re.compile(r"[+*]\?[+*]"),  # optional followed by quantifier
+]
+
+# Common SQL injection patterns (case-insensitive, audit-only)
+_SQL_INJECTION_PATTERNS = [
+    re.compile(
+        r"(\b(union|select|insert|update|delete|drop|alter|create|exec|execute)\b\s+.+\b(from|into|table|where|set)\b)",
+        re.IGNORECASE,
+    ),
+    re.compile(r"(\bor\b\s+\d+\s*=\s*\d+)", re.IGNORECASE),
+    re.compile(r"(--\s*$|#\s*$)", re.MULTILINE),
+    re.compile(r"(;\s*(drop|alter|delete|update|insert)\b)", re.IGNORECASE),
+    re.compile(r"('\s*(or|and)\s+')", re.IGNORECASE),
+    re.compile(r"(\b(waitfor|delay|benchmark|sleep)\s*\()", re.IGNORECASE),
+    re.compile(r"(0x[0-9a-f]+)", re.IGNORECASE),  # hex-encoded payloads
+]
+
+# Max text length for regex matching (ReDoS mitigation)
+_SAFE_MATCH_MAX_TEXT_LENGTH = 1_000_000
+
+
+# ══════════════════════════════════════════════════════════════════
+#  Original validators (unchanged)
+# ══════════════════════════════════════════════════════════════════
 
 
 def validate_message(message: str, max_length: int = 10000) -> None:
@@ -244,3 +303,207 @@ def validate_namespaces(namespaces: Optional[List[str]]) -> None:
 
     for ns in namespaces:
         validate_namespace(ns)
+
+
+# ══════════════════════════════════════════════════════════════════
+#  Enhanced security validators (P1-7)
+# ══════════════════════════════════════════════════════════════════
+
+
+def validate_unicode_safe(text: str) -> str:
+    """Check text for dangerous Unicode characters and return cleaned text.
+
+    Detects and rejects:
+    - Control characters (U+0000-U+001F, U+007F-U+009F) except
+      legitimate ``\\t`` (U+0009), ``\\n`` (U+000A), ``\\r`` (U+000D).
+    - Unicode bidirectional override / isolation characters (Trojan Source).
+
+    Args:
+        text: The input string to validate.
+
+    Returns:
+        The original text if safe.
+
+    Raises:
+        ValidationError: If dangerous characters are detected.
+    """
+    if not isinstance(text, str):
+        raise ValidationError(f"validate_unicode_safe expects a string, got {type(text).__name__}")
+
+    # 1. Check control characters (excluding \t \n \r)
+    ctrl_match = _CONTROL_CHAR_PATTERN.search(text)
+    if ctrl_match:
+        pos = ctrl_match.start()
+        char = text[pos]
+        char_code = ord(char)
+        raise ValidationError(
+            f"Dangerous control character U+{char_code:04X} found at position {pos}. "
+            "Control characters (except TAB/LF/CR) are not allowed."
+        )
+
+    # 2. Check bidi override / isolation characters
+    bidi_match = _BIDI_PATTERN.search(text)
+    if bidi_match:
+        pos = bidi_match.start()
+        char = text[pos]
+        char_name = _bidi_char_name(char)
+        raise ValidationError(
+            f"Unicode bidirectional override character ({char_name}, "
+            f"U+{ord(char):04X}) found at position {pos}. "
+            "These characters can be used for source-code spoofing attacks."
+        )
+
+    return text
+
+
+def _bidi_char_name(char: str) -> str:
+    """Return a human-readable name for a bidi danger character."""
+    names = {
+        "\u202a": "LEFT-TO-RIGHT EMBEDDING",
+        "\u202b": "RIGHT-TO-LEFT EMBEDDING",
+        "\u202c": "POP DIRECTIONAL FORMATTING",
+        "\u202d": "LEFT-TO-RIGHT OVERRIDE",
+        "\u202e": "RIGHT-TO-LEFT OVERRIDE",
+        "\u2066": "LEFT-TO-RIGHT ISOLATE",
+        "\u2067": "RIGHT-TO-LEFT ISOLATE",
+        "\u2068": "FIRST STRONG ISOLATE",
+        "\u2069": "POP DIRECTIONAL ISOLATE",
+    }
+    return names.get(char, "UNKNOWN")
+
+
+def safe_text_match(
+    pattern: str,
+    text: str,
+    timeout_ms: int = 1000,
+) -> Optional[Match[str]]:
+    """Safely match a regex pattern against text with ReDoS protection.
+
+    Safety measures:
+    - Warns on known-dangerous regex patterns (nested quantifiers etc.).
+    - Truncates overly long text before matching.
+    - Uses Python 3.11+ ``re.timeout`` when available; otherwise relies
+      on length truncation as primary defense.
+
+    Args:
+        pattern: The regex pattern string.
+        text: The text to search within.
+        timeout_ms: Timeout in milliseconds (Python 3.11+, default 1000ms).
+
+    Returns:
+        A :class:`re.Match` object if a match is found, else ``None``.
+    """
+    # 1. Warn on dangerous patterns
+    for idx, danger_re in enumerate(_REDOS_WARNING_PATTERNS):
+        if danger_re.search(pattern):
+            logger.warning(
+                "ReDoS warning: pattern %r matches known-dangerous pattern #%d. "
+                "Consider simplifying the regex to avoid catastrophic backtracking.",
+                pattern[:80],
+                idx,
+            )
+
+    # 2. Truncate long text
+    original_len = len(text)
+    if original_len > _SAFE_MATCH_MAX_TEXT_LENGTH:
+        logger.warning(
+            "Text truncated from %d to %d characters for safe matching.",
+            original_len,
+            _SAFE_MATCH_MAX_TEXT_LENGTH,
+        )
+        text = text[:_SAFE_MATCH_MAX_TEXT_LENGTH]
+
+    # 3. Compile with timeout (Python 3.11+) or plain compile
+    flags = re.DOTALL
+    compiled = None
+    if sys.version_info >= (3, 11):
+        try:
+            compiled = re.compile(pattern, flags, timeout=timeout_ms / 1000.0)
+        except TypeError:
+            pass  # fallback below
+        except re.error as e:
+            raise ValidationError(f"Invalid regex pattern: {e}") from e
+    if compiled is None:
+        try:
+            compiled = re.compile(pattern, flags)
+        except re.error as e:
+            raise ValidationError(f"Invalid regex pattern: {e}") from e
+
+    # 4. Execute match
+    try:
+        return compiled.search(text)
+    except TimeoutError:
+        logger.error("Regex match timed out after %d ms for pattern: %s", timeout_ms, pattern[:80])
+        raise ValidationError(f"Regex match exceeded {timeout_ms}ms timeout. Pattern may cause ReDoS.") from None
+    except RecursionError:
+        logger.error("Recursion depth exceeded during regex match for pattern: %s", pattern[:80])
+        raise ValidationError("Regex match caused recursion overflow. Simplify the pattern.") from None
+
+
+def detect_sql_injection(text: str) -> bool:
+    """Detect common SQL injection patterns in text (audit-only helper).
+
+    This function is **intended for logging / auditing only**. It does **not**
+    replace parameterized queries or ORM usage. A ``True`` result means the
+    text *looks like* it may contain SQL injection attempts — use this signal
+    to trigger additional review or audit logging, never as a sole gatekeeper.
+
+    Args:
+        text: The input text to scan.
+
+    Returns:
+        ``True`` if any known SQL injection pattern is detected, else ``False``.
+    """
+    if not isinstance(text, str) or not text.strip():
+        return False
+
+    for pat in _SQL_INJECTION_PATTERNS:
+        if pat.search(text):
+            return True
+    return False
+
+
+def validate_path_safe(path: str) -> Path:
+    """Validate that a file path is safe (no traversal, resolve symlinks).
+
+    Checks:
+    - Path traversal via ``..`` components.
+    - Resolves symbolic links to their real target.
+    - Returns the absolute, resolved path.
+
+    Args:
+        path: The path string to validate.
+
+    Returns:
+        A resolved :class:`pathlib.Path` object (absolute, no symlinks).
+
+    Raises:
+        ValidationError: If path traversal or other safety issues detected.
+    """
+    if not isinstance(path, str):
+        raise ValidationError(f"validate_path_safe expects a string, got {type(path).__name__}")
+
+    if not path.strip():
+        raise ValidationError("Path cannot be empty.")
+
+    # Check for null bytes (potential C-based injection)
+    if "\x00" in path:
+        raise ValidationError("Path contains null byte, which is not allowed.")
+
+    # Convert to Path and expand user ~
+    p = Path(path).expanduser()
+
+    # Resolve to absolute path (follows symlinks)
+    try:
+        resolved = p.resolve(strict=False)
+    except (OSError, ValueError) as exc:
+        raise ValidationError(f"Cannot resolve path '{path}': {exc}") from exc
+
+    # Check for path traversal: after resolution, detect if any component
+    # tried to escape using .. by comparing with naive expansion
+    parts = Path(path).expanduser().parts
+    for part in parts:
+        if part == "..":
+            raise ValidationError(f"Path traversal detected in '{path}': '..' component is not allowed.")
+
+    return resolved

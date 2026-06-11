@@ -245,5 +245,131 @@ class JSONAdapter(StorageAdapter):
                 "namespace": self._namespace,
             }
 
+    # ── Standardized Adapter Interface (P2-8) ─────────────────────
+
+    def initialize(self, config: dict) -> None:
+        """Initialize (re-initialize) the JSON adapter with config.
+
+        Args:
+            config: Optional config. Supported keys:
+                    - ``path`` (str): Override the JSON file path
+                    - ``namespace`` (str): Override the namespace
+        """
+        if config.get("path"):
+            self._path = config["path"]
+        if config.get("namespace"):
+            self._namespace = config["namespace"]
+        self._load()
+
+    def store(self, entry: dict) -> str:
+        """Store a memory entry from a plain dict and return its storage_key.
+
+        Args:
+            entry: Dict with ``content``, ``type`` and other MemoryEntry fields.
+
+        Returns:
+            The storage_key of the stored memory.
+        """
+        mem_entry = MemoryEntry.from_dict(entry)
+        stored = self.remember(mem_entry)
+        return stored.storage_key
+
+    def delete(self, entry_id: str) -> bool:
+        """Delete a memory by its storage_key."""
+        return self.forget(entry_id)
+
+    def count(self, filter_: Optional[dict] = None) -> int:
+        """Count stored memories with optional filtering.
+
+        Args:
+            filter_: Filter criteria. Supports ``type`` key.
+
+        Returns:
+            Number of matching memories.
+        """
+        stats = self.get_stats()
+        if filter_ and "type" in filter_:
+            by_type = stats.get("by_type", {})
+            return by_type.get(filter_["type"], 0)
+        return stats.get("total_count", 0)
+
+    def health_check(self) -> dict:
+        """Run a health check on the JSON file backend.
+
+        Returns:
+            Dict with status, latency_ms, and backend-specific metrics.
+        """
+        import time as _time
+        start = _time.monotonic()
+        status_detail = "healthy"
+        try:
+            with self._lock:
+                total = len(self._get_memories())
+                file_exists = os.path.exists(self._path)
+                file_size = os.path.getsize(self._path) if file_exists else 0
+        except Exception as e:
+            from ..utils.logger import logger
+            logger.warning(f"JSONAdapter health check failed: {e}")
+            status_detail = "unhealthy"
+            total = -1
+            file_exists = False
+            file_size = 0
+        elapsed_ms = (_time.monotonic() - start) * 1000.0
+
+        return {
+            "status": status_detail,
+            "latency_ms": round(elapsed_ms, 3),
+            "backend": "json",
+            "file_path": self._path,
+            "namespace": self._namespace,
+            "entry_count": total,
+            "file_exists": file_exists,
+            "file_size_bytes": file_size,
+        }
+
+    def export_data(self) -> str:
+        """Export all data as JSON string.
+
+        Returns:
+            JSON-serialized string of all stored memories.
+        """
+        import json as _json
+        with self._lock:
+            return _json.dumps(self._data, ensure_ascii=False, indent=2)
+
+    def import_data(self, data: str) -> int:
+        """Import data from an exported JSON string.
+
+        Args:
+            data: JSON string produced by :meth:`export_data`.
+
+        Returns:
+            Number of entries imported.
+        """
+        import json as _json
+        new_data = _json.loads(data)
+        count = 0
+        with self._lock:
+            ns_data = self._get_namespace_data()
+            memories = ns_data.setdefault("memories", {})
+            for key, entry_dict in new_data.items():
+                if isinstance(entry_dict, dict):
+                    memories[key] = entry_dict
+                    count += 1
+            self._save()
+        return count
+
+    def search_fulltext(self, query: str) -> list[dict]:
+        """Full-text search across all stored entries.
+
+        Args:
+            query: Free-text search string.
+
+        Returns:
+            List of matching entry dicts.
+        """
+        results = self.recall(query, update_access=False)
+        return [r.to_dict() for r in results]
+
     def close(self):
         pass

@@ -21,7 +21,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from carrymem.carrymem import CarryMem
-from carrymem.security.audit import _AUDIT_SCHEMA_SQL, AuditLogger
+from carrymem.security.audit import AuditFilter, AuditLogger
 from carrymem.security.encryption import EncryptionError, MemoryEncryption, NoEncryption
 from carrymem.security.redaction import (
     SENSITIVE_PATTERNS,
@@ -506,14 +506,9 @@ class TestAuditLogDirectOperations(unittest.TestCase):
 
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
-        self.db_path = os.path.join(self.tmpdir, "audit_direct.db")
-        self.conn = sqlite3.connect(self.db_path)
-        self.conn.row_factory = sqlite3.Row
-        self.conn.executescript(_AUDIT_SCHEMA_SQL)
-        self.audit = AuditLogger(lambda: self.conn, namespace="test_ns")
+        self.audit = AuditLogger()
 
     def tearDown(self):
-        self.conn.close()
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     def test_log_and_query_single_entry(self):
@@ -521,25 +516,23 @@ class TestAuditLogDirectOperations(unittest.TestCase):
         self.audit.log_operation(
             operation="test_op",
             storage_key="key_001",
-            memory_type="user_preference",
             details={"message": "test detail"},
         )
-        entries = self.audit.query(operation="test_op", limit=10)
+        entries = self.audit.query(AuditFilter(action="test_op", limit=10))
         self.assertEqual(len(entries), 1)
-        self.assertEqual(entries[0]["operation"], "test_op")
-        self.assertEqual(entries[0]["storage_key"], "key_001")
-        self.assertEqual(entries[0]["memory_type"], "user_preference")
-        self.assertTrue(entries[0]["success"])
+        self.assertEqual(entries[0].action, "test_op")
+        self.assertEqual(entries[0].resource, "key_001")
+        self.assertEqual(entries[0].result, "SUCCESS")
 
     def test_log_multiple_and_filter(self):
         """Verify: Multiple entries can be filtered by operation type."""
         for i in range(5):
             self.audit.log_operation(operation=f"op_{i % 3}", details={"idx": i})
 
-        op0_entries = self.audit.query(operation="op_0", limit=10)
+        op0_entries = self.audit.query(AuditFilter(action="op_0", limit=10))
         self.assertEqual(len(op0_entries), 2, "Should find 2 entries for op_0")
 
-        all_entries = self.audit.query(limit=100)
+        all_entries = self.audit.query(AuditFilter(limit=100))
         self.assertEqual(len(all_entries), 5, "Total should be 5 entries")
 
     def test_stats_aggregation(self):
@@ -550,8 +543,8 @@ class TestAuditLogDirectOperations(unittest.TestCase):
         self.audit.log_operation(operation="forget")
 
         stats = self.audit.get_stats()
-        self.assertEqual(stats["total_operations"], 4)
-        self.assertEqual(stats["by_operation"]["store"], 2)
-        self.assertEqual(stats["by_operation"]["recall"], 1)
-        self.assertEqual(stats["by_operation"]["forget"], 1)
-        self.assertIsNotNone(stats["last_activity"])
+        self.assertEqual(stats["total_events"], 4)
+        self.assertEqual(stats["by_action"]["store"], 2)
+        self.assertEqual(stats["by_action"]["recall"], 1)
+        self.assertEqual(stats["by_action"]["forget"], 1)
+        self.assertIsNotNone(stats["last_event"])

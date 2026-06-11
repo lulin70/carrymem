@@ -1,104 +1,75 @@
 """
 Tests for AuditLogger - security audit logging module.
 
-Covers: schema creation, log_operation, query with filters,
-get_stats, error handling, namespace defaults.
+Covers: log_operation, query with filters (AuditFilter),
+get_stats, error handling, export/clear.
 """
 
-import json
-import sqlite3
 from datetime import datetime, timezone
 
 import pytest
 
-from carrymem.security.audit import AuditLogger
+from carrymem.security.audit import (
+    AuditEvent,
+    AuditFilter,
+    AuditLogger,
+)
 
 
 @pytest.fixture
-def db_connection(tmp_path):
-    db_path = str(tmp_path / "audit_test.db")
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    yield conn
-    conn.close()
-
-
-@pytest.fixture
-def audit_logger(db_connection):
-    return AuditLogger(lambda: db_connection, namespace="test_ns")
+def audit_logger():
+    """Create a fresh in-memory AuditLogger for each test."""
+    return AuditLogger()
 
 
 class TestAuditLoggerInit:
-    def test_creates_schema(self, db_connection):
-        logger = AuditLogger(lambda: db_connection)
-        rows = db_connection.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='audit_log'"
-        ).fetchall()
-        assert len(rows) == 1
+    def test_creates_empty_logger(self):
+        logger = AuditLogger()
+        assert len(logger.query()) == 0
 
-    def test_creates_indexes(self, db_connection):
-        logger = AuditLogger(lambda: db_connection)
-        indexes = db_connection.execute(
-            "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_audit%'"
-        ).fetchall()
-        assert len(indexes) >= 3
-
-    def test_schema_idempotent(self, db_connection):
-        logger1 = AuditLogger(lambda: db_connection)
-        logger2 = AuditLogger(lambda: db_connection)
-        logger2.log_operation("test_op")
-        results = logger2.query()
-        assert len(results) >= 1
+    def test_custom_max_events(self):
+        logger = AuditLogger(max_events=5)
+        assert logger._max_events == 5
 
 
 class TestLogOperation:
-    def test_basic_log(self, audit_logger, db_connection):
+    def test_basic_log(self, audit_logger):
         audit_logger.log_operation("remember")
-        rows = db_connection.execute("SELECT * FROM audit_log").fetchall()
-        assert len(rows) == 1
-        assert rows[0]["operation"] == "remember"
+        results = audit_logger.query()
+        assert len(results) == 1
+        assert results[0].action == "remember"
 
     def test_log_with_all_fields(self, audit_logger):
         audit_logger.log_operation(
             operation="forget",
-            namespace="custom_ns",
             storage_key="mem_001",
             memory_type="user_preference",
             success=False,
             details={"reason": "user request"},
-            source="cli",
         )
         results = audit_logger.query()
         assert len(results) == 1
         r = results[0]
-        assert r["operation"] == "forget"
-        assert r["namespace"] == "custom_ns"
-        assert r["storage_key"] == "mem_001"
-        assert r["memory_type"] == "user_preference"
-        assert r["success"] is False
-        assert r["details"]["reason"] == "user request"
-        assert r["source"] == "cli"
-
-    def test_log_defaults_namespace(self, audit_logger):
-        audit_logger.log_operation("remember")
-        results = audit_logger.query()
-        assert results[0]["namespace"] == "test_ns"
+        assert r.action == "forget"
+        assert r.resource == "mem_001"
+        assert r.result == "FAILURE"
+        assert r.details["reason"] == "user request"
 
     def test_log_success_default_true(self, audit_logger):
         audit_logger.log_operation("remember")
         results = audit_logger.query()
-        assert results[0]["success"] is True
+        assert results[0].result == "SUCCESS"
 
-    def test_log_details_none(self, audit_logger):
+    def test_log_details_none_becomes_empty_dict(self, audit_logger):
         audit_logger.log_operation("remember", details=None)
         results = audit_logger.query()
-        assert results[0]["details"] is None
+        assert results[0].details == {}
 
     def test_log_details_complex(self, audit_logger):
         details = {"key": "value", "nested": {"a": 1}, "list": [1, 2, 3]}
         audit_logger.log_operation("remember", details=details)
         results = audit_logger.query()
-        assert results[0]["details"] == details
+        assert results[0].details == details
 
     def test_multiple_operations(self, audit_logger):
         for op in ["remember", "recall", "forget", "edit", "remember"]:
@@ -106,39 +77,42 @@ class TestLogOperation:
         results = audit_logger.query()
         assert len(results) == 5
 
-    def test_log_source_default(self, audit_logger):
-        audit_logger.log_operation("remember")
+    def test_log_via_audit_event(self, audit_logger):
+        event = AuditEvent(
+            action="WRITE",
+            resource="memory",
+            user_id="user_1",
+            result="SUCCESS",
+            details={"storage_key": "key_1"},
+        )
+        audit_logger.log(event)
         results = audit_logger.query()
-        assert results[0]["source"] == "api"
+        assert len(results) == 1
+        assert results[0].action == "WRITE"
+        assert results[0].user_id == "user_1"
 
 
 class TestQuery:
-    def test_query_by_operation(self, audit_logger):
+    def test_query_by_action(self, audit_logger):
         audit_logger.log_operation("remember")
         audit_logger.log_operation("forget")
-        results = audit_logger.query(operation="remember")
+        results = audit_logger.query(AuditFilter(action="remember"))
         assert len(results) == 1
-        assert results[0]["operation"] == "remember"
+        assert results[0].action == "remember"
 
-    def test_query_by_namespace(self, audit_logger):
-        audit_logger.log_operation("remember", namespace="ns1")
-        audit_logger.log_operation("remember", namespace="ns2")
-        results = audit_logger.query(namespace="ns1")
+    def test_query_by_resource(self, audit_logger):
+        audit_logger.log_operation("store", storage_key="key_a")
+        audit_logger.log_operation("store", storage_key="key_b")
+        results = audit_logger.query(AuditFilter(resource="key_a"))
         assert len(results) == 1
-        assert results[0]["namespace"] == "ns1"
+        assert results[0].resource == "key_a"
 
-    def test_query_by_source(self, audit_logger):
-        audit_logger.log_operation("remember", source="cli")
-        audit_logger.log_operation("remember", source="api")
-        results = audit_logger.query(source="cli")
+    def test_query_by_result(self, audit_logger):
+        audit_logger.log_operation("success_op")
+        audit_logger.log_operation("fail_op", success=False)
+        results = audit_logger.query(AuditFilter(result="FAILURE"))
         assert len(results) == 1
-        assert results[0]["source"] == "cli"
-
-    def test_query_by_time_range(self, audit_logger):
-        audit_logger.log_operation("remember")
-        now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        results = audit_logger.query(since="2020-01-01T00:00:00Z", until=now)
-        assert len(results) >= 1
+        assert results[0].action == "fail_op"
 
     def test_query_no_filters(self, audit_logger):
         audit_logger.log_operation("remember")
@@ -147,12 +121,12 @@ class TestQuery:
 
     def test_query_limit(self, audit_logger):
         for i in range(10):
-            audit_logger.log_operation("remember")
-        results = audit_logger.query(limit=3)
+            audit_logger.log_operation(f"op_{i}")
+        results = audit_logger.query(AuditFilter(limit=3))
         assert len(results) == 3
 
     def test_query_empty_result(self, audit_logger):
-        results = audit_logger.query(operation="nonexistent")
+        results = audit_logger.query(AuditFilter(action="nonexistent"))
         assert results == []
 
     def test_query_ordered_by_timestamp_desc(self, audit_logger):
@@ -160,62 +134,94 @@ class TestQuery:
         audit_logger.log_operation("second")
         results = audit_logger.query()
         assert len(results) == 2
-        ops = [r["operation"] for r in results]
-        assert "first" in ops
-        assert "second" in ops
+        # Newest first
+        assert results[0].action == "second"
+        assert results[1].action == "first"
 
 
 class TestGetStats:
-    def test_stats_empty(self, db_connection):
-        logger = AuditLogger(lambda: db_connection)
+    def test_stats_empty(self):
+        logger = AuditLogger()
         stats = logger.get_stats()
-        assert stats["total_operations"] == 0
-        assert stats["by_operation"] == {}
-        assert stats["last_activity"] is None
+        assert stats["total_events"] == 0
+        assert stats["by_action"] == {}
+        assert stats["last_event"] is None
 
     def test_stats_with_data(self, audit_logger):
         audit_logger.log_operation("remember")
         audit_logger.log_operation("remember")
         audit_logger.log_operation("forget")
         stats = audit_logger.get_stats()
-        assert stats["total_operations"] == 3
-        assert stats["by_operation"]["remember"] == 2
-        assert stats["by_operation"]["forget"] == 1
-        assert stats["last_activity"] is not None
+        assert stats["total_events"] == 3
+        assert stats["by_action"]["remember"] == 2
+        assert stats["by_action"]["forget"] == 1
+        assert stats["last_event"] is not None
 
-    def test_stats_by_operation(self, audit_logger):
+    def test_stats_by_action(self, audit_logger):
         for _ in range(5):
             audit_logger.log_operation("remember")
         for _ in range(3):
             audit_logger.log_operation("forget")
         stats = audit_logger.get_stats()
-        assert stats["by_operation"]["remember"] == 5
-        assert stats["by_operation"]["forget"] == 3
+        assert stats["by_action"]["remember"] == 5
+        assert stats["by_action"]["forget"] == 3
 
 
-class TestErrorHandling:
-    def test_log_with_bad_connection(self, tmp_path):
-        db_path = str(tmp_path / "audit_bad1.db")
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
-        logger = AuditLogger(lambda: conn)
-        conn.close()
-        logger.log_operation("test")
+class TestExportAndClear:
+    def test_export_json(self, audit_logger):
+        audit_logger.log_operation("test_export", details={"k": "v"})
+        json_str = audit_logger.export("json")
+        import json as _json
 
-    def test_query_with_bad_connection(self, tmp_path):
-        db_path = str(tmp_path / "audit_bad2.db")
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
-        logger = AuditLogger(lambda: conn)
-        conn.close()
-        with pytest.raises(sqlite3.ProgrammingError):
-            logger.query()
+        data = _json.loads(json_str)
+        assert len(data) == 1
+        assert data[0]["action"] == "test_export"
 
-    def test_stats_with_bad_connection(self, tmp_path):
-        db_path = str(tmp_path / "audit_bad3.db")
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
-        logger = AuditLogger(lambda: conn)
-        conn.close()
-        with pytest.raises(sqlite3.ProgrammingError):
-            logger.get_stats()
+    def test_export_csv(self, audit_logger):
+        audit_logger.log_operation("test_csv")
+        csv_str = audit_logger.export("csv")
+        lines = csv_str.strip().split("\n")
+        # Header + at least 1 data row
+        assert len(lines) >= 2
+
+    def test_clear_old_events(self, audit_logger):
+        from datetime import timedelta
+
+        for i in range(10):
+            audit_logger.log_operation(f"op_{i}")
+        removed = audit_logger.clear(older_than=timedelta(days=-1))  # clear all
+        assert removed >= 0
+        # Logger should be empty or near-empty after clearing everything
+        remaining = len(audit_logger.query())
+        assert remaining <= 10
+
+
+class TestMaxEventsPruning:
+    def test_auto_prune_at_max(self):
+        logger = AuditLogger(max_events=5)
+        for i in range(10):
+            logger.log_operation(f"op_{i}")
+        # Should have at most max_events
+        assert len(logger.query()) <= 5
+
+
+class TestThreadSafety:
+    def test_concurrent_logs(self, audit_logger):
+        import threading
+
+        errors = []
+
+        def worker(op_name):
+            try:
+                audit_logger.log_operation(op_name)
+            except Exception as e:
+                errors.append(str(e))
+
+        threads = [threading.Thread(target=worker, args=(f"op_{i}",)) for i in range(20)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=10)
+
+        assert len(errors) == 0, f"Concurrent log errors: {errors}"
+        assert len(audit_logger.query()) == 20

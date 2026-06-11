@@ -19,15 +19,17 @@ Security:
 import asyncio
 import hmac
 import json
+import logging
 import os
 import re
 import uuid
 from typing import Any, Dict, Optional
 
 from carrymem.__version__ import __version__ as _version
-from carrymem.utils.logger import logger
 
 from .server import MCPServer
+
+logger = logging.getLogger(__name__)
 
 _MAX_REQUEST_SIZE = 10 * 1024 * 1024
 _MAX_SSE_CLIENTS = 100
@@ -171,6 +173,9 @@ class MCPHTTPServer:
             else:
                 await self._send_response(writer, 404, {"error": "Not found"}, request_origin)
 
+        # NOTE: Broad exception in HTTP server request handler is intentional to catch
+        # all errors and return sanitized error responses. This prevents raw exceptions
+        # from breaking the HTTP protocol and leaking sensitive information.
         except Exception as e:
             # Log detailed error for debugging
             logger.error(f"Request handling error: {e}", exc_info=True)
@@ -307,4 +312,4 @@ def run_http_server(host: str = "127.0.0.1", port: int = 8765, api_key: Optional
     try:
         asyncio.run(server.start())
     except KeyboardInterrupt:
-        print("\nShutting down...")
+        logger.info("Shutting down...")

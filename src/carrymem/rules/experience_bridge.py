@@ -236,7 +236,7 @@ class ExperienceRuleBridge:
             )
             conn.commit()
             return audit_id
-        except Exception:
+        except (sqlite3.IntegrityError, sqlite3.OperationalError):
             conn.rollback()
             return None
         finally:
@@ -299,10 +299,10 @@ class ExperienceRuleBridge:
                 rule_type="avoid",
                 override=True,
                 derived_from="failure_lesson",
-                source_memories=[entry.source_memory_id],
-                confidence=entry.confidence,
-            )
-        except Exception:
+            source_memories=[entry.source_memory_id],
+            confidence=entry.confidence,
+        )
+        except (ValueError, TypeError, RuntimeError):
             return None
 
         now = datetime.now(timezone.utc).isoformat()
@@ -317,7 +317,7 @@ class ExperienceRuleBridge:
                 (EXPERIENCE_STATUS_ACCEPTED, now, note, rule.id, audit_id),
             )
             conn.commit()
-        except Exception:
+        except (sqlite3.OperationalError, sqlite3.IntegrityError):
             conn.rollback()
         finally:
             pass
@@ -343,7 +343,7 @@ class ExperienceRuleBridge:
             )
             conn.commit()
             return True
-        except Exception:
+        except (sqlite3.OperationalError, sqlite3.IntegrityError):
             conn.rollback()
             return False
         finally:
@@ -367,7 +367,7 @@ class ExperienceRuleBridge:
             )
             conn.commit()
             return cursor.rowcount
-        except Exception:
+        except (sqlite3.OperationalError, sqlite3.IntegrityError):
             conn.rollback()
             return 0
         finally:

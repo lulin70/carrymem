@@ -27,10 +27,12 @@ if not HAS_TEXTUAL:
         print("  Then run: carrymem tui")
 
 else:
+    import sqlite3
     from typing import Any, Dict, List, Optional
 
     from carrymem import CarryMem
     from carrymem.constants import DB_PATH
+    from carrymem.errors import CarryMemError
 
     _DEFAULT_DB = DB_PATH
 
@@ -287,6 +289,52 @@ else:
                 lines.append(f"\u2502  {icon} {label}: {c}")
             self.update("\n".join(lines))
 
+    # ── Error Display Component ─────────────────────────────────────
+
+    class ErrorDisplay(Static):
+        """Red error prompt box with code, message, and hint."""
+
+        def show_error(self, exc: Exception) -> None:
+            if isinstance(exc, CarryMemError):
+                code = exc.code
+                message = exc.message
+                hint = exc.hint
+            else:
+                friendly = CarryMemError.from_cause(exc)
+                code = friendly.code
+                message = friendly.message
+                hint = friendly.hint
+
+            lines = [f"  [{_MORANDI['error']} ERROR] {code}", f"  {message}"]
+            if hint:
+                lines.append(f"  💡 {hint}")
+            self.update("\n".join(lines))
+            self.add_class("error-visible")
+            self.remove_class("error-hidden")
+
+        def clear_error(self) -> None:
+            self.update("")
+            self.remove_class("error-visible")
+            self.add_class("error-hidden")
+
+        CSS = f"""
+        ErrorDisplay {{
+            width: 100%;
+            padding: 1 2;
+            margin: 0 1;
+            border: round {_MORANDI['error']};
+            background: {_MORANDI['bg_surface']};
+            color: {_MORANDI['error']};
+            display: none;
+        }}
+        .error-visible {{
+            display: block;
+        }}
+        .error-hidden {{
+            display: none;
+        }}
+        """
+
     # ── Main TUI Application ───────────────────────────────────────
 
     class CarryMemTUI(App):
@@ -520,6 +568,7 @@ else:
             yield Header(show_clock=True)
             with Horizontal(id="search-bar"):
                 yield Input(placeholder="\U0001f50d  Search memories... (/ to focus)", id="search-input")
+            yield ErrorDisplay(id="error-display")
             with Container(id="main-container"):
                 with Vertical(id="sidebar"):
                     yield Static("  CarryMem", id="sidebar-title")
@@ -556,10 +605,11 @@ else:
                             self.cm.declare(value)
                             event.input.placeholder = "\U0001f50d  Search memories... (/ to focus)"
                             event.input.value = ""
+                            self._clear_error()
                             self._load_memories()
                             self._set_status(f"Added: {value[:50]}")
-                        except (ValueError, KeyError, RuntimeError) as e:
-                            self._set_status(f"Error: {e}")
+                        except (ValueError, TypeError, KeyError, RuntimeError) as e:
+                            self._show_error(e)
                     else:
                         event.input.placeholder = "\U0001f50d  Search memories... (/ to focus)"
                 else:
@@ -569,6 +619,7 @@ else:
         # ── Data Loading & Rendering ────────────────────────────────
 
         def _load_memories(self) -> None:
+            self._clear_error()
             try:
                 filters: Dict[str, Any] = {}
                 if self.current_filter:
@@ -580,8 +631,23 @@ else:
                 self._render_memories()
                 self._update_status()
                 self._update_sidebar_active()
-            except (ValueError, KeyError, RuntimeError, AttributeError) as e:
-                self._set_content(f"Error loading memories: {e}")
+            except (ValueError, TypeError, KeyError, RuntimeError, sqlite3.Error) as e:
+                self._show_error(e)
+                self._set_content("")
+
+        def _show_error(self, exc: Exception) -> None:
+            try:
+                error_display = self.query_one("#error-display", ErrorDisplay)
+                error_display.show_error(exc)
+            except (AttributeError, ValueError):
+                self._set_status(f"Error: {exc}")
+
+        def _clear_error(self) -> None:
+            try:
+                error_display = self.query_one("#error-display", ErrorDisplay)
+                error_display.clear_error()
+            except (AttributeError, ValueError):
+                pass
 
         def _render_memories(self) -> None:
             if not self.memories:

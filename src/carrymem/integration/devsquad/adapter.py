@@ -38,7 +38,7 @@ class DevSquadAdapter:
                 lambda: sqlite3.connect(self._db_path),
                 namespace=self._namespace,
             )
-        except Exception as e:
+        except (sqlite3.OperationalError, sqlite3.DatabaseError, OSError) as e:
             self._init_error = str(e)
             self._rule_engine = None
             self._audit = None
@@ -49,7 +49,7 @@ class DevSquadAdapter:
         try:
             self._rule_engine.count_rules()
             return True
-        except Exception as e:
+        except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
             logger.warning(f"Health check failed: {e}")
             return False
 

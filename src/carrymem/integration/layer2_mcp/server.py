@@ -111,12 +111,16 @@ class MCPServer:
                 except json.JSONDecodeError as e:
                     logger.error(f"Invalid JSON: {e}")
                     await self.send_error(None, -32700, "Parse error")
+                # NOTE: Broad exception in MCP server request handler is intentional to catch
+                # all errors and return standardized JSON-RPC error responses.
                 except Exception as e:
                     logger.error(f"Error handling request: {e}")
                     await self.send_error(None, -32603, "Internal error")
 
         except KeyboardInterrupt:
             logger.info("Received interrupt, shutting down...")
+        # NOTE: Broad exception in MCP server main loop is intentional to catch all errors
+        # and prevent server crashes. All errors are logged for debugging.
         except Exception as e:
             logger.error(f"Server error: {e}")
         finally:
@@ -228,6 +232,8 @@ class MCPServer:
         except asyncio.TimeoutError:
             logger.error(f"Tool '{tool_name}' timed out after {self.request_timeout}s")
             return await self.send_error(request_id, -32603, f"Tool '{tool_name}' timeout")
+        # NOTE: Broad exception in tool execution is intentional to catch all handler errors
+        # and return standardized error responses to MCP clients.
         except Exception as e:
             logger.error(f"Error calling tool {tool_name}: {e}")
             return await self.send_error(request_id, -32603, f"Tool error: {str(e)}")

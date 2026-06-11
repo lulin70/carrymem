@@ -64,7 +64,10 @@ class ConfigManager:
         except PermissionError as e:
             _logger.warning(f"Config file permission denied: {self.config_path}: {e}")
             return {}
-        except Exception as e:
+        # NOTE: Broad exception for config loading is intentional to handle
+        # unexpected file system errors, encoding issues, or corrupted config files.
+        # All errors are logged and gracefully degraded to empty config.
+        except (OSError, ValueError, TypeError) as e:
             _logger.warning(f"Config file load error: {self.config_path}: {e}")
             return {}
 

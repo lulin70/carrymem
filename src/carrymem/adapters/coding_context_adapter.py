@@ -500,6 +500,41 @@ class CodingContextAdapter(StorageAdapter):
     def forget(self, *args, **kwargs) -> Any:
         raise NotImplementedError("CodingContextAdapter is read-only")
 
+    def initialize(self, config: dict) -> None:
+        """Initialize adapter (schema already created in __init__)."""
+        pass
+
+    def store(self, entry: dict) -> str:
+        raise NotImplementedError("CodingContextAdapter is read-only")
+
+    def delete(self, entry_id: str) -> bool:
+        raise NotImplementedError("CodingContextAdapter is read-only")
+
+    def count(self, filter_: Optional[dict] = None) -> int:
+        conn = self._get_connection()
+        if filter_:
+            where_clause = []
+            params = []
+            for key, value in filter_.items():
+                where_clause.append(f"{key} = ?")
+                params.append(value)
+            query = f"SELECT COUNT(*) FROM coding_entries WHERE {' AND '.join(where_clause)}"
+            row = conn.execute(query, params).fetchone()
+        else:
+            row = conn.execute("SELECT COUNT(*) FROM coding_entries").fetchone()
+        return row[0] if row else 0
+
+    def health_check(self) -> dict:
+        import time
+        start = time.monotonic()
+        try:
+            conn = self._get_connection()
+            conn.execute("SELECT COUNT(*) FROM coding_entries").fetchone()
+            latency_ms = (time.monotonic() - start) * 1000
+            return {"status": "healthy", "latency_ms": round(latency_ms, 2)}
+        except Exception as exc:
+            return {"status": "unhealthy", "latency_ms": -1, "error": str(exc)}
+
     def close(self):
         self._closed = True
         with self._conn_lock:

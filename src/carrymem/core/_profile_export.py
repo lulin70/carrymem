@@ -1,6 +1,7 @@
 """Profile, stats, export, import operations."""
 
 import json
+import logging
 import warnings
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,7 +13,25 @@ from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.core._lifecycle import StorageNotConfiguredError, _validate_file_path
 from carrymem.domain import get_domain_description, infer_domains_from_memories
 from carrymem.security.input_validator import InputValidator
-from carrymem.utils.logger import logger
+from carrymem.types import (
+    ExportMemoriesResult,
+    ExportProfileResult,
+    ImportMemoriesResult,
+    MemoryProfile,
+    MemoryStats,
+    WhoamiResult,
+)
+from carrymem.constants import (
+    WHOAMI_PREFERENCE_COUNT,
+    WHOAMI_DECISION_COUNT,
+    WHOAMI_CORRECTION_COUNT,
+    EXPORT_SCHEMA_VERSION,
+    DEFAULT_CONFIDENCE_SCORE,
+    IMPORT_CONTENT_SEARCH_LENGTH,
+    CORRECTION_RECALL_LIMIT,
+)
+
+logger = logging.getLogger(__name__)
 
 _import_validator = InputValidator(strict_mode=True)
 
@@ -20,13 +39,13 @@ _import_validator = InputValidator(strict_mode=True)
 class ProfileExportMixin:
     """User profile, statistics, export, and import of memories."""
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> MemoryStats:
         if not self._adapter:
             return {"adapter": None, "total_count": 0}
 
         return self._adapter.get_stats()
 
-    def get_memory_profile(self) -> Dict[str, Any]:
+    def get_memory_profile(self) -> MemoryProfile:
         if not self._adapter:
             return {
                 "summary": "No storage configured",
@@ -38,7 +57,7 @@ class ProfileExportMixin:
         profile = self._adapter.get_profile()
         return profile
 
-    def whoami(self) -> Dict[str, Any]:
+    def whoami(self) -> WhoamiResult:
         if not self._adapter:
             return {"identity": "unknown", "summary": "No storage configured"}
 
@@ -56,9 +75,9 @@ class ProfileExportMixin:
         by_type = stats.get("by_type", {}) if isinstance(stats, dict) else {}
         profile_stats = profile.get("stats", {}) if isinstance(profile, dict) else {}
 
-        preferences = self.recall_memories(query="", filters={"type": "user_preference"}, limit=10)
-        decisions = self.recall_memories(query="", filters={"type": "decision"}, limit=5)
-        corrections = self.recall_memories(query="", filters={"type": "correction"}, limit=5)
+        preferences = self.recall_memories(query="", filters={"type": "user_preference"}, limit=WHOAMI_PREFERENCE_COUNT)
+        decisions = self.recall_memories(query="", filters={"type": "decision"}, limit=WHOAMI_DECISION_COUNT)
+        corrections = self.recall_memories(query="", filters={"type": "correction"}, limit=WHOAMI_CORRECTION_COUNT)
 
         pref_list = [m.get("content", "") for m in preferences[:5]]
         decision_list = [m.get("content", "") for m in decisions[:3]]
@@ -93,12 +112,12 @@ class ProfileExportMixin:
             "domains": [get_domain_description(d) for d in domains],
         }
 
-    def export_profile(self, output_path: Optional[str] = None) -> Dict[str, Any]:
+    def export_profile(self, output_path: Optional[str] = None) -> ExportProfileResult:
         whoami = self.whoami()
         profile = self.get_memory_profile()
 
         export = {
-            "schema_version": "1.0.0",
+            "schema_version": EXPORT_SCHEMA_VERSION,
             "format": "carrymem_identity",
             "exported_at": datetime.now(timezone.utc).isoformat(),
             "identity": whoami.get("identity", "unknown"),
@@ -129,7 +148,7 @@ class ProfileExportMixin:
         output_path: Optional[str] = None,
         format: str = "json",
         namespace: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    ) -> ExportMemoriesResult:
         """Export memories to a portable format."""
         if not self._adapter:
             raise StorageNotConfiguredError()
@@ -148,7 +167,7 @@ class ProfileExportMixin:
             all_memories = self._adapter.recall("", limit=export_limit, namespaces=[ns])
 
         export_data = {
-            "schema_version": "1.0.0",
+            "schema_version": EXPORT_SCHEMA_VERSION,
             "export_format": "carrymem_portable",
             "exported_at": datetime.now(timezone.utc).isoformat(),
             "source": {
@@ -217,7 +236,7 @@ class ProfileExportMixin:
         data: Optional[Dict[str, Any]] = None,
         namespace: Optional[str] = None,
         merge_strategy: str = "skip_existing",
-    ) -> Dict[str, Any]:
+    ) -> ImportMemoriesResult:
         """Import memories from a portable format."""
         if not self._adapter:
             raise StorageNotConfiguredError()
@@ -247,7 +266,7 @@ class ProfileExportMixin:
                     content = _import_validator.validate_content(content, "imported_content")
                 content_hash = mem_dict.get("content_hash", "")
                 if merge_strategy == "skip_existing" and content_hash:
-                    existing = self._adapter.recall(mem_dict.get("content", "")[:50], limit=5)
+                    existing = self._adapter.recall(mem_dict.get("content", "")[:IMPORT_CONTENT_SEARCH_LENGTH], limit=CORRECTION_RECALL_LIMIT)
                     if any(
                         (
                             getattr(e, "content_hash", None) == content_hash
@@ -267,7 +286,7 @@ class ProfileExportMixin:
                     id=mem_dict.get("id", ""),
                     type=mem_dict.get("type", "unknown"),
                     content=content,
-                    confidence=mem_dict.get("confidence", 0.5),
+                    confidence=mem_dict.get("confidence", DEFAULT_CONFIDENCE_SCORE),
                     tier=mem_dict.get("tier", 2),
                     source_layer=mem_dict.get("source_layer", "import"),
                     reasoning=mem_dict.get("reasoning", ""),
@@ -282,7 +301,7 @@ class ProfileExportMixin:
                 self._adapter.remember(entry)
                 imported += 1
             except (ValueError, KeyError, TypeError) as e:
-                logger.warning(f"Failed to import memory entry: {e}")
+                logger.warning("Failed to import memory entry: %s", e)
                 errors += 1
 
         self._auto_backup()

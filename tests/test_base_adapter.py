@@ -1,8 +1,8 @@
 """
 Tests for base adapter module.
 
-Covers: StoredMemory.from_dict, StorageAdapter base defaults,
-MemoryEntry.
+Covers: MemoryEntry, StoredMemory.from_dict/to_dict,
+StorageAdapter base defaults, StorageAdapterProtocol.
 """
 
 from dataclasses import dataclass
@@ -12,8 +12,9 @@ import pytest
 
 from carrymem.adapters.base import (
     MemoryEntry,
-    StorageAdapter,
     StoredMemory,
+    StorageAdapter,
+    StorageAdapterProtocol,
 )
 
 
@@ -155,23 +156,59 @@ class TestStoredMemoryFromDict:
         assert stored.storage_key == "mem_008"
 
 
+class _MinimalAdapter(StorageAdapter):
+    """Minimal concrete implementation for testing default behaviours."""
+
+    def __init__(self):
+        self._initialized = False
+        self._closed = False
+
+    @property
+    def name(self) -> str:
+        return "test_minimal"
+
+    @property
+    def capabilities(self) -> dict:
+        return {"read": True, "write": True}
+
+    def initialize(self, config: dict) -> None:
+        self._initialized = True
+
+    def remember(self, entry: MemoryEntry) -> StoredMemory:
+        return StoredMemory.from_memory_entry(entry, storage_key=f"key_{id(entry)}")
+
+    def store(self, entry: dict) -> str:
+        key = f"store_{id(entry)}"
+        return key
+
+    def recall(
+        self,
+        query: str,
+        filters: dict | None = None,
+        limit: int = 20,
+        update_access: bool = True,
+    ) -> list[StoredMemory]:
+        return []
+
+    def forget(self, storage_key: str) -> bool:
+        return False
+
+    def delete(self, entry_id: str) -> bool:
+        return False
+
+    def count(self, filter_: dict | None = None) -> int:
+        return 0
+
+    def health_check(self) -> dict:
+        return {"status": "ok", "adapter": self.name}
+
+    def close(self) -> None:
+        self._closed = True
+
+
 class TestStorageAdapterDefaults:
     def _make_adapter(self):
-        class TestAdapter(StorageAdapter):
-            def remember(self, entry):
-                return None
-
-            def recall(self, query, **kwargs):
-                return []
-
-            def forget(self, storage_key):
-                return False
-
-            @property
-            def name(self):
-                return "test"
-
-        return TestAdapter()
+        return _MinimalAdapter()
 
     def test_remember_batch_default(self):
         adapter = self._make_adapter()
@@ -197,3 +234,31 @@ class TestStorageAdapterDefaults:
         adapter = self._make_adapter()
         result = adapter.capabilities
         assert isinstance(result, dict)
+
+    def test_initialize_sets_flag(self):
+        adapter = self._make_adapter()
+        adapter.initialize({})
+        assert adapter._initialized is True
+
+    def test_health_check_returns_dict(self):
+        adapter = self._make_adapter()
+        result = adapter.health_check()
+        assert result["status"] == "ok"
+
+    def test_close_sets_flag(self):
+        adapter = self._make_adapter()
+        adapter.close()
+        assert adapter._closed is True
+
+    def test_count_returns_int(self):
+        adapter = self._make_adapter()
+        assert adapter.count() == 0
+
+
+class TestStorageAdapterProtocol:
+    """Verify StorageAdapterProtocol is compatible with real adapters."""
+
+    def test_protocol_compliance(self):
+        adapter = _MinimalAdapter()
+        # runtime_checkable protocol check
+        assert isinstance(adapter, StorageAdapterProtocol)

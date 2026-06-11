@@ -128,16 +128,19 @@ class SQLiteAdapter(StorageAdapter):
         # --- Query builder with context ---
         self._query_builder = QueryBuilderWithContext(self)
 
-        # --- Audit logger ---
+        # --- Audit logger (in-memory, P2-5 refactor) ---
         self._audit = None
         try:
             from ...security.audit import AuditLogger
 
-            self._audit = AuditLogger(self._conn_mgr.get_connection, namespace=namespace)
+            # Note: AuditLogger refactored to in-memory only (P2-5).
+            # Old signature: AuditLogger(get_connection_fn, namespace=...)
+            # New signature: AuditLogger(max_events=10000)
+            self._audit = AuditLogger()
         except (ImportError, OSError) as e:
             from ...utils.logger import logger
 
-            logger.warning(f"Audit logger initialization failed: {e}")
+            logger.warning("Audit logger initialization failed: %s", e)
 
         # --- RRF configuration ---
         _rc = rrf_config or {}
@@ -313,6 +316,132 @@ class SQLiteAdapter(StorageAdapter):
     def _get_connection(self):
         return self._conn_mgr.get_connection()
 
+    def initialize(self, config: dict) -> None:
+        """Initialize (re-initialize) the SQLite adapter with new config.
+
+        Since SQLiteAdapter is fully initialized in __init__, this method
+        validates that the adapter is operational and optionally applies
+        runtime configuration changes.
+
+        Args:
+            config: Optional config dict. Supported keys:
+                    - ``enable_vector`` (bool): Toggle vector search at runtime
+                    - ``enable_semantic`` (bool): Toggle semantic recall
+        """
+        if config.get("enable_vector") is not None:
+            self.enable_vector_search(config["enable_vector"])
+        if config.get("enable_semantic") is not None:
+            self.enable_semantic_recall(config["enable_semantic"])
+
+    def store(self, entry: dict) -> str:
+        """Store a memory entry from a plain dict and return its storage_key.
+
+        Args:
+            entry: Dict with ``content``, ``type`` and other MemoryEntry fields.
+
+        Returns:
+            The storage_key of the stored memory.
+        """
+        mem_entry = MemoryEntry.from_dict(entry)
+        stored = self.remember(mem_entry)
+        return stored.storage_key
+
+    def delete(self, entry_id: str) -> bool:
+        """Delete a memory by its storage_key."""
+        return self.forget(entry_id)
+
+    def count(self, filter_: Optional[dict] = None) -> int:
+        """Count stored memories with optional filtering.
+
+        Args:
+            filter_: Filter criteria. Supports ``type``, ``namespace`` keys.
+
+        Returns:
+            Number of matching memories.
+        """
+        stats = self.get_stats()
+        if filter_ and "type" in filter_:
+            by_type = stats.get("by_type", {})
+            return by_type.get(filter_["type"], 0)
+        return stats.get("total_count", 0)
+
+    def health_check(self) -> dict:
+        """Run a health check on the SQLite backend.
+
+        Returns:
+            Dict with status, latency_ms, and backend-specific metrics.
+        """
+        import time as _time
+        start = _time.monotonic()
+        status_detail = "healthy"
+        try:
+            conn = self._conn_mgr.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM memories")
+            row_count = cursor.fetchone()[0]
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = [r[0] for r in cursor.fetchall()]
+        except Exception as e:
+            from ...utils.logger import logger
+            logger.warning(f"SQLiteAdapter health check failed: {e}")
+            status_detail = "unhealthy"
+            row_count = -1
+            tables = []
+        elapsed_ms = (_time.monotonic() - start) * 1000.0
+
+        return {
+            "status": status_detail,
+            "latency_ms": round(elapsed_ms, 3),
+            "backend": "sqlite",
+            "db_path": self.db_path,
+            "namespace": self.namespace,
+            "row_count": row_count,
+            "tables": tables,
+            "vector_enabled": self._enable_vector,
+            "semantic_enabled": self._enable_semantic,
+        }
+
+    def export_data(self) -> str:
+        """Export all data as JSON string.
+
+        Returns:
+            JSON-serialized string of all stored memories.
+        """
+        import json as _json
+        results = self.recall("*", limit=100000, update_access=False)
+        entries = [r.to_dict() for r in results]
+        return _json.dumps(entries, ensure_ascii=False, default=str)
+
+    def import_data(self, data: str) -> int:
+        """Import data from an exported JSON string.
+
+        Args:
+            data: JSON string produced by :meth:`export_data`.
+
+        Returns:
+            Number of entries imported.
+        """
+        import json as _json
+        entries = _json.loads(data)
+        count = 0
+        for entry_dict in entries:
+            mem_entry = MemoryEntry.from_dict(entry_dict)
+            self.remember(mem_entry)
+            count += 1
+        return count
+
+    def search_fulltext(self, query: str) -> list[dict]:
+        """Full-text search across all stored entries.
+
+        Args:
+            query: Free-text search string.
+
+        Returns:
+            List of matching entry dicts.
+        """
+        results = self.recall(query, update_access=False)
+        return [r.to_dict() for r in results]
+
     def close(self):
         self._conn_mgr.close()
 
@@ -326,6 +455,8 @@ class SQLiteAdapter(StorageAdapter):
     def __del__(self):
         try:
             self.close()
+        # NOTE: Broad exception in __del__ is intentional to prevent exceptions
+        # from propagating during garbage collection, which can cause crashes.
         except Exception as e:
             from ...utils.logger import logger
 

@@ -1,954 +1,208 @@
-# CarryMem Architecture
+# CarryMem Core 架构文档 — Mixin 耦合治理 (P0-1)
 
-**Version**: v0.2.0
-**Date**: 2026-05-27
-**Status**: Stable
+> **版本**: v0.4.0 | **日期**: 2026-06-11 | **状态**: ✅ 已完成
 
----
+## 1. 概述
 
-## Table of Contents
+v0.3.0 将原始的 `carrymem.py`（1769 行 God Class）拆分为 **8 个 Mixin + 1 个 Facade** 模式。
+本文档记录 Mixin 之间的依赖关系、共享状态使用情况，以及如何安全地扩展架构。
 
-1. [System Overview](#system-overview)
-2. [Core Architecture](#core-architecture)
-3. [Layer Design](#layer-design)
-4. [Data Flow](#data-flow)
-5. [Key Components](#key-components)
-6. [Rules Engine](#rules-engine)
-7. [Context Engineering](#context-engineering)
-8. [Concurrent Safety](#concurrent-safety)
-9. [Auto-Backup Architecture](#auto-backup-architecture)
-10. [.carry File Format](#carry-file-format)
-11. [Extension Mechanisms](#extension-mechanisms)
-12. [Performance Optimization](#performance-optimization)
-13. [Security Design](#security-design)
-
----
-
-## System Overview
-
-### Design Philosophy
-
-CarryMem uses a **layered architecture + plugin design**:
-
-1. **Zero-config**: Works out of the box, auto-initializes
-2. **High performance**: 60%+ zero-cost classification, FTS5 full-text search
-3. **Extensible**: Adapter pattern supports multiple storage backends
-4. **Cross-platform**: Pure Python, minimal external dependencies
-
-### Core Value
+## 2. 文件结构
 
 ```
-User Input → Auto-Classify → Smart Store → Semantic Recall → Proactive Inject
-   ↓              ↓              ↓             ↓              ↓
- Simple       90%+ accuracy   Dedup+TTL    <100ms      AI knows who you are
+src/carrymem/core/
+├── __init__.py              # Facade — CarryMem 类（多重继承组合）
+├── _protocols.py            # Protocol 接口定义（结构性类型）
+├── _lifecycle.py            # LifecycleMixin — 生命周期 & 共享状态
+├── _backup.py               # BackupMixin — 备份/审计
+├── _memory_crud.py          # MemoryCRUDMixin — 核心增删改查
+├── _classification.py       # ClassificationMixin — 分类管道
+├── _recall.py               # RecallMixin — 检索操作
+├── _profile_export.py       # ProfileExportMixin — 档案/导出/导入
+├── _maintenance.py          # MaintenanceMixin — 质量/冲突/合并
+└── _prompt_delegate.py      # PromptDelegateMixin — 提示词构建/LLM
 ```
 
----
-
-## Core Architecture
-
-### Architecture Diagram
+## 3. Mixin 依赖图 (DAG)
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    User Layer                            │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐              │
-│  │ Python   │  │   CLI    │  │   MCP    │              │
-│  │   API    │  │  Tool    │  │  Server  │              │
-│  └──────────┘  └──────────┘  └──────────┘              │
-└─────────────────────────────────────────────────────────┘
-                         ↓
-┌─────────────────────────────────────────────────────────┐
-│                   API Layer                              │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │              CarryMem (Main Entry)                │  │
-│  │  - classify_and_remember()  - recall_memories()   │  │
-│  │  - recall_aggregated()      - recall_timeline()   │  │
-│  │  - declare()  - forget_memory()                   │  │
-│  │  - export_memories()  - import_memories()         │  │
-│  │  Note: classify_and_remember(session_id=...)      │  │
-│  └──────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────┘
-                         ↓
-┌─────────────────────────────────────────────────────────┐
-│              Classification Layer                        │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
-│  │  Rule Engine │  │   Pattern    │  │   Semantic   │ │
-│  │ (Zero-cost)  │  │  Analyzer    │  │  Classifier  │ │
-│  │    60%+      │  │    ~30%      │  │    <10%      │ │
-│  └──────────────┘  └──────────────┘  └──────────────┘ │
-└─────────────────────────────────────────────────────────┘
-                         ↓
-┌─────────────────────────────────────────────────────────┐
-│               Storage Layer                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
-│  │   SQLite     │  │   Obsidian   │  │   Custom     │ │
-│  │  (Default)   │  │   (Plugin)   │  │  (Adapter)   │ │
-│  └──────────────┘  └──────────────┘  └──────────────┘ │
-└─────────────────────────────────────────────────────────┘
-                         ↓
-┌─────────────────────────────────────────────────────────┐
-│               Recall Layer                               │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
-│  │  FTS5 Search │  │   Semantic   │  │    Result    │ │
-│  │  (Exact)     │  │   Expander   │  │    Merger    │ │
-│  └──────────────┘  └──────────────┘  └──────────────┘ │
-└─────────────────────────────────────────────────────────┘
-                         ↓
-┌─────────────────────────────────────────────────────────┐
-│            Consolidation Layer                           │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
-│  │  P0: Dedup   │  │  P1: Pattern │  │  P2: Semantic│ │
-│  │  + Decay     │  │  → Rules     │  │  Merge       │ │
-│  └──────────────┘  └──────────────┘  └──────────────┘ │
-└─────────────────────────────────────────────────────────┘
+                        ┌─────────────────────┐
+                        │   LifecycleMixin    │ ◄── 根节点（无外部依赖）
+                        │  __init__/close/     │     提供所有共享状态
+                        │  properties          │
+                        └──────┬──────┬───────┘
+                               │      │
+              ┌────────────────┘      └────────────────┐
+              ▼                                          ▼
+    ┌─────────────────┐                     ┌─────────────────────┐
+    │   BackupMixin   │                     │     RecallMixin     │
+    │ backup/audit    │                     │ recall/search        │
+    └────────┬────────┘                     └──────┬───────────────┘
+             │                                      │
+             │         ┌──────────────────┐         │
+             └────────►│ ClassificationMix│◄────────┘
+                       │ in (分类管道)      │
+                       └────────┬─────────┘
+                                │
+                     ┌──────────▼──────────┐
+                     │  MemoryCRUDMixin    │ ◄── 最高层消费者
+                     │  增删改查核心操作     │
+                     └─────────────────────┘
+
+             ┌─────────────────────┐
+             │ ProfileExportMixin  │ ◄── 依赖 Recall + Backup
+             │ whoami/export/import│
+             └─────────────────────┘
+
+             ┌─────────────────────┐
+             │ MaintenanceMixin    │ ◄── 仅依赖 Lifecycle 状态
+             │ quality/conflict/   │
+             │ consolidation       │
+             └─────────────────────┘
+
+             ┌─────────────────────┐
+             │ PromptDelegateMixin │ ◄── 依赖 Lifecycle + Recall
+             │ prompt/LLM features │
+             └─────────────────────┘
 ```
 
----
+### 3.1 依赖关系详解
 
-## Layer Design
+| Mixin | 依赖的 Mixin / 属性 | 调用的方法 |
+|-------|---------------------|-----------|
+| **LifecycleMixin** | 无（根节点） | — |
+| **BackupMixin** | LifecycleMixin（共享状态） | `self._adapter`, `self._backup_dir`, `self._write_count`, `self._auto_backup_interval`, `self._initial_backup_done`, `self._namespace` |
+| **RecallMixin** | LifecycleMixin（共享状态） | `self.rule_engine`, `self._adapter`, `self._knowledge_adapter`, `self._namespace`, `self.recall_memories()` (自身), `self.recall_from_knowledge()` (自身) |
+| **ClassificationMixin** | RecallMixin, LifecycleMixin, BackupMixin | `self.recall_memories()` (Recall), `self._engine`, `self.rule_engine` (Lifecycle), `self._candidate_generator.*` (Lifecycle), `self._adapter`, `self._auto_backup()` (Backup) |
+| **MemoryCRUDMixin** | ClassificationMixin, BackupMixin | `self._validate_and_resolve()`, `self._classify_message()`, `self._store_entries()` (Classification), `self.classify_message()`, `self._count_by_type()` (Classification), `self._auto_backup()` (Backup) |
+| **ProfileExportMixin** | RecallMixin, BackupMixin, LifecycleMixin | `self.recall_memories()` (Recall), `self._auto_backup()` (Backup), `_validate_file_path()` (Lifecycle), `self._adapter`, `self._namespace` |
+| **MaintenanceMixin** | LifecycleMixin（共享状态） | `self._adapter`, `self._rule_engine`, `self._namespace`, `self._consolidation_timer` (Lifecycle class attr), `self.consolidate()` (自身) |
+| **PromptDelegateMixin** | LifecycleMixin, RecallMixin | `self.prompt_builder` (Lifecycle), `self.recall_memories()` (Recall), `self._adapter`, `self._config` |
 
-### 1. User Layer
+## 4. 共享状态说明
 
-**Responsibility**: Provide multiple interaction methods
+### 4.1 由 LifecycleMixin.__init__() 初始化的状态
 
-#### 1.1 Python API
-```python
-from carrymem import CarryMem
+| 属性名 | 类型 | 说明 | 主要消费者 |
+|--------|------|------|-----------|
+| `_engine` | `MemoryClassificationEngine` | 分类引擎 | ClassificationMixin, MemoryCRUDMixin |
+| `_adapter` | `StorageAdapter \| None` | 存储适配器 | **全部 Mixin** |
+| `_knowledge_adapter` | `StorageAdapter \| None` | 知识库适配器 | RecallMixin |
+| `_namespace` | `str` | 命名空间 | BackupMixin, RecallMixin, MaintenanceMixin, ProfileExportMixin |
+| `_config` | `Dict \| None` | 配置字典 | PromptDelegateMixin, ProfileExportMixin |
+| `_rule_engine` | `RuleEngine \| None` (lazy) | 规则引擎 | ClassificationMixin, RecallMixin, MaintenanceMixin |
+| `_prompt_builder` | `PromptBuilder \| None` (lazy) | 提示词构建器 | PromptDelegateMixin |
+| `_candidate_generator` | `RuleCandidateGenerator` | 规则候选生成器 | ClassificationMixin |
+| `_write_count` | `int` | 写入计数器 | BackupMixin |
+| `_auto_backup_interval` | `int` | 自动备份间隔 | BackupMixin |
+| `_initial_backup_done` | `bool` | 初始备份标记 | BackupMixin |
+| `_backup_dir` | `str \| None` | 备份目录 | BackupMixin |
 
-with CarryMem() as cm:
-    cm.classify_and_remember("I prefer dark mode")
-    memories = cm.recall_memories(query="theme")
-```
+### 4.2 类级别属性
 
-#### 1.2 CLI Tool
-```bash
-carrymem init
-carrymem list
-carrymem stats
-```
+| 属性名 | 所属 Mixin | 类型 | 说明 |
+|--------|-----------|------|------|
+| `_consolidation_timer` | `LifecycleMixin` | `Timer \| None` | 后台合并定时器，被 MaintenanceMixin 读写 |
 
-#### 1.3 MCP Server
-```json
-{
-  "mcpServers": {
-    "carrymem": {
-      "command": "python3",
-      "args": ["-m", "carrymem.integration.layer2_mcp"]
-    }
-  }
-}
-```
+### 4.3 运行时动态属性
 
-### 2. API Layer
+| 属性名 | 所属 Mixin | 类型 | 说明 |
+|--------|-----------|------|------|
+| `_llm_client` | `PromptDelegateMixin` | `LLMClient \| None` | LLM 客户端（延迟初始化） |
 
-**Responsibility**: Unified business logic entry point
+## 5. MRO（Method Resolution Order）
 
-#### Core Class: CarryMem
+### 5.1 CarryMem 的 MRO 验证
 
 ```python
-class CarryMem:
-    def __init__(
-        self,
-        storage: Optional[Any] = "sqlite",
-        db_path: Optional[str] = None,
-        knowledge_adapter: Optional[StorageAdapter] = None,
-        namespace: str = "default",
-        config: Optional[Dict] = None,
-    ): ...
-
-    def classify_and_remember(self, message, context=None, language=None) -> Dict: ...
-    def recall_memories(self, query=None, filters=None, limit=20) -> List[Dict]: ...
-    def forget_memory(self, memory_id: str) -> bool: ...
-    def declare(self, message: str) -> Dict: ...
-    def get_memory_profile(self) -> Dict: ...
-    def export_memories(self, output_path=None, format="json", namespace=None) -> Dict: ...
-    def import_memories(self, input_path=None, merge_strategy="skip", namespace=None) -> Dict: ...
-    def build_system_prompt(self, context=None, max_memories=10, max_knowledge=5, language="en") -> str: ...
+>>> import carrymem
+>>> CarryMem = carrymem.CarryMem
+>>> [c.__name__ for c in CarryMem.__mro__]
+[
+    'CarryMem',           # 0: Facade 自身
+    'PromptDelegateMixin',# 1
+    'MaintenanceMixin',   # 2
+    'ProfileExportMixin', # 3
+    'RecallMixin',        # 4
+    'ClassificationMixin',# 5
+    'MemoryCRUDMixin',    # 6
+    'BackupMixin',        # 7
+    'LifecycleMixin',     # 8 ← 最后解析，确保 __init__ 正确绑定
+    'object',             # 9
+]
 ```
 
-### 3. Classification Layer
-
-**Responsibility**: Auto-identify memory types
-
-#### Three-Tier Classification Strategy
-
-```
-Input → Rule Engine (60%+) → Pattern Analyzer (~30%) → Semantic Classifier (<10%)
-          ↓                       ↓                         ↓
-      Zero cost             Near-zero cost             Token cost
-      High speed            Medium speed               Low speed
-```
-
-#### 3.1 Rule Engine (RuleMatcher)
-
-Pattern-based classification using regex and keywords. Zero cost, covers ~60% of inputs.
-
-#### 3.2 Pattern Analyzer (PatternAnalyzer)
-
-NLP-based pattern analysis. Near-zero cost, covers ~30% of inputs.
-
-**Architecture**: Uses a layered pattern management system (`carrymem.patterns`):
-
-- **Pattern** (base class): Single compiled regex with metadata (language, type, confidence, match method). Subclasses: `NoisePattern`, `PreferencePattern`, `CorrectionPattern`, `FactPattern`, `TaskPattern`, `DecisionPattern`, `RelationshipPattern`, `SentimentPattern`, `LocationPattern`.
-- **PatternGroup**: Named collection of related patterns with language-indexed lookup (e.g. `noise_ack`, `preference_strong`, `correction_explicit`).
-- **PatternRegistry**: Central registry managing all groups, with per-language indexing for fast matching.
-- **PatternBuilder**: Fluent API for constructing and registering pattern groups.
-- **Definitions**: Pattern definitions split by category (`definitions_noise.py`, `definitions_preference.py`, etc.), supporting EN/ZH/JA languages.
-
-```
-PatternAnalyzer
-  └── PatternRegistry
-        ├── PatternGroup "noise_ack"     → [NoisePattern(en), NoisePattern(zh), NoisePattern(ja)]
-        ├── PatternGroup "noise_chat"    → [NoisePattern(en), NoisePattern(zh), NoisePattern(ja)]
-        ├── PatternGroup "preference_strong" → [PreferencePattern(en), PreferencePattern(zh), ...]
-        ├── PatternGroup "correction_explicit" → [CorrectionPattern(en), CorrectionPattern(zh), ...]
-        └── ... (29 groups total)
-```
-
-#### 3.3 Semantic Classifier (SemanticClassifier)
-
-LLM-based classification for ambiguous cases. Token cost, covers <10% of inputs.
-
-### 4. Storage Layer
-
-**Responsibility**: Persistence and retrieval
-
-#### 4.1 Adapter Interface
-
-```python
-class StorageAdapter(ABC):
-    @abstractmethod
-    def remember(self, entry: MemoryEntry) -> StoredMemory: ...
-
-    @abstractmethod
-    def recall(self, query: str, filters=None, limit=20, namespaces=None) -> List[StoredMemory]: ...
-
-    @abstractmethod
-    def forget(self, storage_key: str) -> bool: ...
-```
-
-#### 4.2 SQLite Adapter
-
-**Features**:
-- FTS5 full-text search with trigram tokenizer
-- Content deduplication (content_hash)
-- TTL auto-expiry
-- Transaction support (BEGIN/COMMIT/ROLLBACK)
-- Thread safety (threading.Lock + threading.local)
-
-**Database Schema**:
-```sql
-CREATE TABLE memories (
-    id TEXT PRIMARY KEY,
-    type TEXT NOT NULL,
-    content TEXT NOT NULL,
-    original_message TEXT,
-    raw_text TEXT,              -- NEW: Verbatim user input for FTS5 dual-index
-    confidence REAL NOT NULL,
-    tier INTEGER NOT NULL,
-    namespace TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    expires_at TEXT,
-    access_count INTEGER,
-    content_hash TEXT NOT NULL,
-    metadata TEXT,
-    superseded_at TEXT,         -- NEW: When this memory was superseded
-    supersedes TEXT             -- NEW: Which memory this replaces
-);
-
-CREATE VIRTUAL TABLE memories_fts USING fts5(
-    content,
-    original_message,
-    tokenize='trigram'
-);
-```
-
-### 5. Recall Layer
-
-**Responsibility**: Smart retrieval and result optimization
-
-#### 5.1 Recall Pipeline
-
-```
-Query → FTS5 Search → Semantic Expansion → Result Fusion → Sort → Return
-  ↓         ↓              ↓                 ↓           ↓       ↓
-Validate  Exact match  Synonym expand    Dedup     Relevance  Top-K
-```
-
-#### 5.2 Semantic Expansion
-
-Zero-dependency semantic expansion:
-- **Synonym expansion**: YAML-based synonym graph (470+ terms, CN/EN/JP)
-- **Spell correction**: Levenshtein edit distance
-- **Cross-language mapping**: CN↔EN↔JP term mapping
-
-#### 5.3 Result Fusion
-
-```python
-class ResultMerger:
-    def merge(self, original_results, expanded_results, query, limit=20, source="synonym"):
-        # 1. Deduplicate by storage_key
-        # 2. Calculate relevance score
-        # 3. Sort by relevance
-        # 4. Return top-K
-```
-
-### 6. Knowledge Lifecycle Layer
-
-**Responsibility**: Track knowledge evolution and manage memory supersession
-
-#### 6.1 Auto-Supersession Pipeline
-
-```
-New Memory → Jaccard Similarity Check → Contradiction Detection → Mark Old as Superseded
-     ↓              ↓                        ↓                         ↓
-  INSERT      ≥ 0.25 threshold      Word boundary regex         superseded_at = now
-              + Update marker detection      (like/dislike, etc.)        supersedes = new_key
-              detection              + Assistant exclusion
-```
-
-#### 6.2 Session-Aware Storage
-
-```
-classify_and_remember(session_id="s_20260513")
-     ↓
-session_id → metadata JSON → session_id filter in recall()
-```
-
-#### 6.3 Time Expression Parsing
-
-```
-Query: "What did I recently decide about databases?"
-     ↓
-_parse_time_expressions() → created_after = 7 days ago
-     ↓
-recall_memories(query="databases", filters={"created_after": "2026-05-06T..."})
-```
-
-#### 6.4 Structured Prompt Generation
-
-```
-Memories → Priority Classification → Structured Prompt
-              ↓                         ↓
-         MANDATORY (correction/decision)  → Head section
-         IMPORTANT (high confidence)       → Middle section
-         OUTDATED (superseded)            → Tail section with update notes
-```
-
-### 7. LLM-Augmented Layer
-
-**Responsibility**: LLM-powered session summarization and semantic aggregation (optional, requires API key)
-
-- **Consolidation Engine** (`consolidation.py`): Memory lifecycle management with three phases:
-  - P0: Jaccard-based deduplication (≥0.85) + exponential half-life decay
-  - P1: Pattern detection → rule candidate generation via PromotionPipeline
-  - P2: Semantic clustering → host LLM consolidation requests
-  - Preferences are always preserved (never decayed or deduplicated)
-
-#### 7.1 LLM Client Abstraction
-
-```
-Environment Variables → LLMClient → OpenAI/ZhipuAI/vLLM
-     ↓                     ↓              ↓
-CARRYMEM_LLM_*      Lazy-cached      chat(prompt) → str
-CARRYMEM_LLM_API_KEY  instance       is_available() → bool
-CARRYMEM_LLM_MODEL                   count_tokens() → int
-```
-
-#### 7.2 Session Summarizer Pipeline
-
-```
-Session Memories → Prioritize (correction/decision > preference > other)
-     ↓                    ↓
-Exclude superseded    Cap at 50 memories
-     ↓
-LLM available? ──Yes──→ LLM Summarize → session_summary (confidence: 0.9)
-     │
-     No
-     ↓
-Rule-based Concat → session_summary (confidence: 0.7)
-     ↓
-Store with metadata: {session_id, source_memory_ids, summary_method}
-```
-
-#### 7.3 Semantic Aggregator Pipeline
-
-```
-All Active Memories → Embed (all-MiniLM-L6-v2)
-     ↓
-Pairwise Cosine Similarity Matrix
-     ↓
-Connected Component Clustering (DFS, threshold: 0.55)
-     ↓
-For each cluster (size ≥ 2):
-  LLM available? ──Yes──→ LLM Merge → aggregated memory
-       │
-       No
-       ↓
-  Rule-based (latest + note) → aggregated memory
-```
-
-#### 7.4 Session Summary in Recall
-
-```
-recall_memories() → Exclude session_summary by default
-                     (avoid noise from rule-based summaries)
-
-build_context() → Include session_summary (top 3)
-                   (cross-session context for decision support)
-
-filters={"include_session_summary": True} → Explicit inclusion
-filters={"type": "session_summary"}       → Type-specific query
-```
-
----
-
-## Data Flow
-
-### Store Flow
-
-```
-1. User Input
-   ↓
-2. Input Validation
-   ↓
-3. Classification (Rule → Pattern → Semantic)
-   ↓
-4. Create MemoryEntry
-   ↓
-5. Calculate content_hash
-   ↓
-6. Check duplicate
-   ↓
-7. Store to database
-   ↓
-8. Update FTS5 index
-   ↓
-9. Return result
-```
-
-### Recall Flow
-
-```
-1. User Query
-   ↓
-2. Query Validation
-   ↓
-3. Time Expression Parsing (NEW)
-   ↓
-4. FTS5 Search
-   ↓
-5. Results insufficient? → Context Rebuild (NEW)
-   ↓
-6. Result Fusion
-   ↓
-7. Dedup + Sort + Supersession Filter (NEW)
-   ↓
-8. Update access_count
-   ↓
-9. Return Top-K
-```
-
----
-
-## Key Components
-
-### 1. Configuration
-
-```python
-# Default config
-CarryMem(storage="sqlite", db_path=None, namespace="default")
-
-# Custom storage
-CarryMem(storage=SQLiteAdapter(db_path="/custom/path.db"))
-
-# With knowledge base
-CarryMem(knowledge_adapter=ObsidianAdapter("/path/to/vault"))
-```
-
-### 2. Exception Hierarchy
-
-```python
-class CarryMemError(Exception):
-    """Base exception"""
-
-class StorageError(CarryMemError):
-    """Storage error"""
-
-class DatabaseError(StorageError):
-    """Database error"""
-
-class ValidationError(CarryMemError):
-    """Validation error"""
-```
-
-### 3. Logging
-
-```python
-from carrymem.utils.logger import logger
-
-# Log levels: DEBUG, INFO, WARNING, ERROR
-# File: ~/.carrymem/logs/carrymem.log (if configured)
-```
-
----
-
-## Rules Engine
-
-### Architecture Overview
-
-The Rules Engine is CarryMem's behavioral contract system, converting memories into actionable rules.
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Rules Engine               │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  Rule Sources:                                               │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐        │
-│  │  Manual CRUD │ │  Auto        │ │  Experience  │        │
-│  │      │ │  Promotion   │ │  Learning    │        │
-│  │              │ │      │ │      │        │
-│  └──────────────┘ └──────────────┘ └──────────────┘        │
-│  ┌──────────────┐ ┌──────────────┐                          │
-│  │  Q&A         │ │  Templates   │                          │
-│  │  Refinement  │ │      │                          │
-│  │      │ │              │                          │
-│  └──────────────┘ └──────────────┘                          │
-│                                                              │
-│  Core Pipeline:                                              │
-│  ┌─────────┐   ┌─────────┐   ┌─────────┐   ┌─────────┐    │
-│  │ Sanitize│ → │  Limit  │ → │  Store  │ → │  Match  │    │
-│  │ (input) │   │ (usage) │   │ (SQLite)│   │ (FTS5)  │    │
-│  └─────────┘   └─────────┘   └─────────┘   └─────────┘    │
-│       ↓                                          ↓          │
-│  ┌─────────┐   ┌──────────────┐   ┌─────────────────┐     │
-│  │ Conflict│   │   Inject     │   │   Audit Trail   │     │
-│  │ Detect  │   │ (format for  │   │ (promotion_audit│     │
-│  │         │   │  LLM prompt) │   │  experience_audit│     │
-│  └─────────┘   └──────────────┘   │  refinement_    │     │
-│                                     │  sessions)      │     │
-│                                     └─────────────────┘     │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Rule Model
-
-```python
-class Rule:
-    id: str                    # rule_xxxxxxxx
-    trigger: str               # Scene description (FTS5 indexed)
-    action: str                # What to do when triggered
-    rule_type: str             # forbid | avoid | always | prefer | format
-    override: bool             # True = cannot be overridden
-    status: str                # active | paused | deprecated
-    derived_from: str          # manual | auto_promotion | failure_lesson | refined | refinement_session
-    source_memories: List[str] # Originating memory IDs
-    confidence: float          # 0.0-1.0
-    created_at: str
-    updated_at: str
-```
-
-### Rule Lifecycle
-
-```
-Create → Active → Paused → Deprecated
-  ↑        ↓
-  └── Resume
-
-Derivation paths:
-  Manual : User explicitly creates via CLI or API
-  Auto-Promotion : Pattern detection → Candidate → User confirms
-  Experience Learning : Failure signal → Lesson → User confirms
-  Q&A Refinement : Specific rule → Multi-turn dialogue → General rule
-```
-
-### Conflict Detection
-
-Three types of conflicts detected:
-
-| Conflict Type | Severity | Example |
-|--------------|----------|---------|
-| **Contradiction** | HIGH | "always use React" vs "never use React" |
-| **Overlap** | MEDIUM | "prefer PostgreSQL" vs "prefer MySQL" (same trigger) |
-| **Redundancy** | LOW | "avoid MongoDB" vs "avoid document databases" |
-
-### Security Layers
-
-1. **Sanitizer** : Prompt injection detection, SQL injection blocking, length limits
-2. **Limiter** : Global rule cap (3), total cap (200), rate limiting
-3. **Auto-Promotion Safety** : User confirmation required, expiry, queue limits
-4. **Experience Safety** : Duplicate detection, sanitizer validation, audit trail
-5. **Refinement Safety** : Max rounds, session expiry, sanitizer validation
-
----
-
-## Context Engineering
-
-### Problem: Lost-in-the-Middle Effect
-
-LLM attention follows a U-curve pattern — high at the start and end of context, significantly lower in the middle. Research shows 10-40% recall drop for information placed in the middle of long contexts.
-
-This directly impacts CarryMem's rule injection: if critical override rules are placed in the middle of the injected prompt, they may be ignored by the LLM.
-
-### Solution: Anchored Layout Mode 
-
-```
-┌─────────────────────────────────────────────────┐
-│ HEAD ANCHOR (highest attention)                  │
-│ ┌─────────────────────────────────────────────┐ │
-│ │ Absolute Prohibitions (override + forbid)   │ │
-│ │ - Never cite competitor data w/o verification│ │
-│ └─────────────────────────────────────────────┘ │
-│                                                  │
-│ MIDDLE (lower attention)                         │
-│ ┌─────────────────────────────────────────────┐ │
-│ │ Recommended (override=false)                │ │
-│ │ - Prefer domestic warehouses                │ │
-│ │ - Confirm inventory by phone                │ │
-│ └─────────────────────────────────────────────┘ │
-│                                                  │
-│ TAIL ANCHOR (high attention)                     │
-│ ┌─────────────────────────────────────────────┐ │
-│ │ Mandatory Actions (override + always)       │ │
-│ │ - All quotes must include validity period   │ │
-│ └─────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────┘
-```
-
-Implementation in `format_rules_as_prompt()`:
-```python
-def format_rules_as_prompt(
-    matches: List[MatchResult],
-    style: str = "default",     # "default" | "ddd" | "anchored"
-    context_budget_tokens: int = 2000,
-) -> str:
-    if style == "anchored":
-        # Sort: head=override+forbid, middle=normal, tail=override+always
-        head = [m for m in matches if m.override and m.rule_type == "forbid"]
-        middle = [m for m in matches if not m.override]
-        tail = [m for m in matches if m.override and m.rule_type == "always"]
-        ...
-```
-
-### DDD Language View
-
-CarryMem concepts can be expressed in Domain-Driven Design terminology, enabling enterprise architect dialogue:
-
-| CarryMem Concept | DDD Equivalent | Relationship |
-|-----------------|---------------|-------------|
-| trigger | Bounded Context | Defines scope boundary |
-| rule_type: forbid | Aggregate Invariant | Cannot be violated |
-| rule_type: always | Consistency Guarantee | Must be satisfied |
-| rule_type: avoid/prefer | Soft Constraint | Best-effort compliance |
-| override | Invariant Flag | Cannot be overridden by higher priority |
-| source_memories | Event Sourcing Chain | Rule traceable to originating experience |
-| refine process | Ubiquitous Language Refinement | Specific → General abstraction |
-
-### Context Budget Monitoring
-
-When rule injection approaches context window limits:
-
-1. **Token estimation**: Rough token count = len(text) / 4 (English) or len(text) / 2 (CJK)
-2. **Compression strategy**: Override rules preserved, avoid rules compressed to one-line summaries
-3. **Threshold**: 70% of `context_budget_tokens` triggers compression
-
----
-
-## Concurrent Safety
-
-### Problem: Multi-Instance Write Contention
-
-Multiple CarryMem instances (different AI Agent processes) may write to the same SQLite database file simultaneously. Without coordination, this leads to `database is locked` errors or data corruption.
-
-### Solution: Per-File Write Lock
-
-```
-┌──────────────────────────────────────────────────────────┐
-│              _db_write_locks (global dict)                │
-│                                                           │
-│  "/path/to/memories.db" → Lock A                         │
-│  "/other/path/db.db"     → Lock B                        │
-│  ...                                                      │
-└──────────────────────────────────────────────────────────┘
-         ↑                           ↑
-    Instance 1 (Cursor)        Instance 2 (Claude Code)
-    self._file_lock = A        self._file_lock = A
-    (shares same Lock)         (shares same Lock)
-```
-
-**Implementation**:
-
-```python
-# Global registry: maps realpath → Lock
-_db_write_locks: Dict[str, threading.Lock] = {}
-_db_write_locks_guard = threading.Lock()  # guards dict itself
-
-class SQLiteAdapter:
-    def __init__(self, ...):
-        resolved = str(os.path.realpath(self._db_path))
-        with _db_write_locks_guard:
-            if resolved not in _db_write_locks:
-                _db_write_locks[resolved] = threading.Lock()
-            self._file_lock = _db_write_locks[resolved]
-```
-
-**Lock Hierarchy**:
-
-| Operation | Lock Used | Scope | Behavior |
-|-----------|-----------|-------|----------|
-| Write (remember/forget/update/recalculate/remember_batch) | `self._file_lock` | Cross-instance | Serializes all writes to the same DB file |
-| Read (recall/list) | `self._lock` | Per-instance | Does not block reads from other instances |
-
-**Secondary Protection**: WAL mode + `busy_timeout=10000ms`
-
-```python
-conn = sqlite3.connect(db_path, timeout=10.0)
-conn.execute("PRAGMA journal_mode=WAL")
-```
-
-WAL mode allows concurrent reads while a write is in progress. The `busy_timeout` provides a 10-second window for lock acquisition before raising an error, handling edge cases where the per-file lock is insufficient (e.g., external processes).
-
----
-
-## Auto-Backup Architecture
-
-### Overview
-
-CarryMem provides automatic, zero-downtime database backup to protect against data loss.
-
-### Trigger Conditions
-
-- **Interval-based**: Every N write operations (default: 20, configurable via `auto_backup_interval`)
-- **Initial backup**: Automatically created when opening an existing database for the first time
-
-```
-Write Operation → _write_count += 1
-     ↓
-_write_count % auto_backup_interval == 0?
-     ↓ Yes
-BackupManager.create_backup()
-```
-
-### Backup Method: VACUUM INTO
-
-```python
-conn.execute("VACUUM INTO ?", (backup_path,))
-```
-
-- **Zero downtime**: Does not block reads or writes
-- **Consistent snapshot**: SQLite-recommended backup method
-- **Fallback**: If `VACUUM INTO` is not supported, falls back to `shutil.copy2`
-
-### Backup Location and Naming
-
-- **Directory**: `~/.carrymem/backups/` (configurable via `backup_dir` config)
-- **File name format**: `memories_backup_YYYYMMDD_HHMMSS_微秒.db`
-- **Permissions**: Directory `0o700`, backup files `0o600`
-
-### Automatic Cleanup
-
-- **Max backups**: 5 (configurable via `max_backups`)
-- **Strategy**: FIFO — oldest backups are removed first
-- **Timing**: Cleanup runs after each new backup is created
-
-### Restore
-
-```bash
-carrymem backup --list              # List all backups
-carrymem backup --restore <path>    # Restore from a backup
-```
-
-Restore process:
-1. Validates the backup file (opens and queries it)
-2. Creates a pre-restore safety copy (`.pre_restore.bak`)
-3. Copies backup over the current database
-4. On failure, rolls back from the safety copy
-
----
-
-## .carry File Format
-
-The `.carry` file is CarryMem's portable identity format for transferring memories across machines and tools.
-
-### Version History
-
-#### v1.0: Legacy Format
-
-- Pure gzip-compressed JSON
-- No checksum, no encryption support
-- Structure: `gzip(json_data)`
-
-#### v1.1: Container Format (Current)
-
-```json
-{
-    "version": "1.1",
-    "checksum": "<SHA-256 hex of payload before encryption>",
-    "encrypted": false,
-    "payload": "<base64(gzip(json_data)) or encrypted_string>"
-}
-```
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `version` | string | Format version (`"1.1"`) |
-| `checksum` | string | SHA-256 hash of the JSON payload (before compression/encryption) |
-| `encrypted` | boolean | Whether the payload is encrypted |
-| `payload` | string | `base64(gzip(json))` if unencrypted, or encrypted string if encrypted |
-| `encryption_backend` | string | (optional) Encryption backend used (`"fernet"` or `"hmac_ctr"`) |
-
-### Pack Flow
-
-```
-Memory Data → JSON serialize → SHA-256 checksum
-     ↓
-Encrypted? ──Yes──→ MemoryEncryption.encrypt(json_string)
-     │                    ↓
-     No              encrypted payload
-     ↓
-base64(gzip(json_bytes)) = unencrypted payload
-     ↓
-Container {version, checksum, encrypted, payload}
-     ↓
-gzip(container_json) → .carry file
-```
-
-### Unpack Flow
-
-```
-.carry file → gzip decompress → parse JSON
-     ↓
-Has "payload" and "checksum" keys? ──Yes──→ v1.1 format
-     │                                         ↓
-     No                                   encrypted?
-     ↓                                   ↓ Yes        ↓ No
-v1.0 format                          Decrypt       base64 decode
-(warn: legacy)                           ↓              ↓
-                                    Verify SHA-256 checksum
-                                         ↓
-                                    gzip decompress → JSON parse → Memory Data
-```
-
-### Backward Compatibility
-
-- v1.0 format files can still be unpacked
-- A warning is displayed: `⚠ Legacy .carry format (no checksum verification available)`
-- Unsupported version numbers are rejected with an error
-
-### CLI Commands
-
-```bash
-carrymem pack                         # Pack identity (unencrypted)
-carrymem pack --encrypt               # Pack with password-protected encryption
-carrymem pack --output my_id.carry    # Custom output path
-carrymem unpack identity.carry        # Unpack and restore
-carrymem unpack identity.carry --replace  # Replace existing memories
-```
-
----
-
-## Extension Mechanisms
-
-### 1. Custom Storage Adapter
-
-```python
-from carrymem.adapters import StorageAdapter
-
-class PostgreSQLAdapter(StorageAdapter):
-    def remember(self, entry: MemoryEntry) -> StoredMemory: ...
-    def recall(self, query: str, **kwargs) -> List[StoredMemory]: ...
-    def forget(self, storage_key: str) -> bool: ...
-
-# Usage
-cm = CarryMem(storage=PostgreSQLAdapter("postgresql://..."))
-```
-
-### 2. Plugin System
-
-```python
-# setup.py
-entry_points={
-    "carrymem.adapters": [
-        "postgresql=my_plugin:PostgreSQLAdapter",
-    ],
-}
-
-# Dynamic loading
-cm = CarryMem(storage="postgresql")
-```
-
----
-
-## Performance Optimization
-
-### 1. Query Optimization
-
-**Index Strategy**:
-- Single column: type, namespace, content_hash
-- Composite: (namespace, type), (namespace, tier)
-- FTS5: trigram tokenizer
-
-### 2. Batch Operations
-
-```python
-# Atomic batch with transaction
-adapter.remember_batch(entries)
-# → BEGIN → INSERT... → COMMIT (or ROLLBACK on error)
-```
-
-### 3. Thread Safety
-
-```python
-# ThreadLocal connections + Lock
-adapter = SQLiteAdapter()  # Thread-safe by default
-```
-
----
-
-## Security Design
-
-### 1. Input Validation
-
-All inputs validated via `validators.py`:
-- Message length limits
-- Namespace character whitelist
-- Storage key format validation
-- Query length limits
-
-### 2. SQL Injection Prevention
-
-All queries use parameterized statements (`?` placeholders).
-
-### 3. Path Safety
-
-```python
-# Path traversal prevention
-def _validate_file_path(path: str) -> str:
-    if ".." in path:
-        raise ValueError("Path traversal not allowed")
-    return os.path.realpath(os.path.expanduser(path))
-```
-
-### 4. MCP Handler Safety
-
-- Exception sanitization: internal errors never exposed to clients
-- Parameter clamping: limit, max_memories, max_knowledge all bounded
-- Language whitelist: only "en", "zh", "ja" accepted
-
----
-
-## Summary
-
-CarryMem uses a **layered architecture + plugin design**, achieving:
-
-✅ **High Performance**: FTS5 + indexing + caching
-✅ **Extensible**: Adapter pattern + plugin system
-✅ **Easy to Use**: Zero config + CLI tools
-✅ **Secure**: Input validation + parameterized queries + path safety
-✅ **Knowledge Lifecycle**: Auto-supersession + session-aware + time reasoning
-✅ **Structured Injection**: MANDATORY/IMPORTANT/OUTDATED priority labels
-✅ **Concurrent Safety**: Per-file write lock + WAL mode + busy_timeout
-✅ **Auto-Backup**: VACUUM INTO + interval trigger + FIFO cleanup
-✅ **Portable Identity**: .carry format with SHA-256 checksum + optional encryption
+### 5.2 关键设计决策
+
+- **LifecycleMixin 在 MRO 最末尾**（继承列表最前面）：确保 `__init__` 首先被调用，所有共享状态在其他 Mixin 方法执行前就绪。
+- **MemoryCRUDMixin 在 ClassificationMixin 之后**：因为 `classify_and_remember()` 内部调用 ClassificationMixin 的私有方法。
+- **PromptDelegateMixin 在 MRO 最前面**：不与其他 Mixin 有方法名冲突。
+
+## 6. Protocol 接口体系 (`_protocols.py`)
+
+### 6.1 设计原则
+
+1. **每个 Mixin 一个 Protocol** — 1:1 映射，便于追踪
+2. **公共方法 + 关键私有方法** — 私有方法如果构成跨 Mixin 契约也纳入
+3. **Composite Protocol** — `CarryMemOps` 组合所有子 Protocol
+4. **`@runtime_checkable`** — 支持 `isinstance()` 检查（可选）
+5. **零运行时开销** — `type: ignore` 注解避免运行时冲突
+
+### 6.2 Protocol 映射表
+
+| Protocol 名 | 对应 Mixin | 方法数 | 用途 |
+|------------|-----------|--------|------|
+| `HasSharedState` | — | 5 (属性) | 共享状态基础契约 |
+| `LifecycleOps` | LifecycleMixin | ~12 | 生命周期管理 |
+| `BackupOps` | BackupMixin | ~9 | 备份与审计 |
+| `RecallOps` | RecallMixin | ~7 | 检索操作 |
+| `ClassificationOps` | ClassificationMixin | ~16 | 分类管道（含内部方法） |
+| `MemoryCRUDOps` | MemoryCRUDMixin | ~10 | CRUD 操作 |
+| `ProfileExportOps` | ProfileExportMixin | ~7 | 档案与导入导出 |
+| `MaintenanceOps` | MaintenanceMixin | ~7 | 维护与质量 |
+| `PromptDelegateOps` | PromptDelegateMixin | ~6 | 提示词与 LLM |
+| **`CarryMemOps`** | **全部组合** | **~74** | **完整 Facade 契约** |
+
+## 7. 新增 Mixin 指南
+
+### 7.1 步骤清单
+
+1. **创建文件** `src/carrymem/core/_your_feature.py`
+2. **定义 Mixin 类** 继承自无基类（纯 Mixin）
+3. **定义对应 Protocol** 在 `_protocols.py` 中添加 `YourFeatureOps(Protocol)`
+4. **注册到 Facade** 在 `__init__.py` 中：
+   - 导入新 Mixin 和新 Protocol
+   - 将新 Mixin 加入 `CarryMem` 的继承列表
+   - 添加 Protocol 断言 `_: YourFeatureOps = CarryMem`
+   - 更新 `__all__`
+5. **更新本文档** 更新依赖图和 MRO 表
+6. **编写测试** 在 `tests/test_core_protocols.py` 中添加验证
+
+### 7.2 注意事项
+
+⚠️ **不要做的事**：
+- 不要在 Mixin 中重新定义 `__init__`（除非你清楚 MRO 影响）
+- 不要在多个 Mixin 中定义同名公共方法（会导致 MRO 冲突）
+- 不要直接访问其他 Mixin 的私有属性（应通过 Protocol 或公共方法）
+- 不要引入循环依赖（参考 DAG 图）
+
+✅ **推荐做法**：
+- 只通过 `self.xxx()` 调用其他 Mixin 的公共/约定方法
+- 共享状态统一在 LifecycleMixin 中声明和初始化
+- 新 Mixin 放在 MRO 列表靠前位置（继承列表靠后），避免覆盖已有方法
+- 所有新方法必须有对应的 Protocol 定义
+
+## 8. 已知耦合点 & 改进方向
+
+| 编号 | 耦合描述 | 当前方案 | 未来改进 |
+|------|---------|---------|---------|
+| C-01 | ClassificationMixin 直接访问 `self._adapter` 写入数据 | 通过共享状态 | 可考虑注入 Adapter 接口 |
+| C-02 | MemoryCRUDMixin 调用 ClassificationMixin 的 4 个私有方法 | 跨 Mixin 私有方法调用 | 可提升为受保护方法或抽取独立 Service |
+| C-03 | `_candidate_generator` 在 LifecycleMixin 中创建但被 ClassificationMixin 使用 | 通过共享状态 | 可考虑依赖注入 |
+| C-04 | MaintenanceMixin 直接读取 `LifecycleMixin._consolidation_timer` 类属性 | 跨 Mixin 类属性访问 | 可封装为 property 或方法 |
+
+## 9. 变更日志
+
+| 日期 | 变更内容 | 作者 |
+|------|---------|------|
+| 2026-06-11 | 初始版本 — P0-1 Mixin 耦合治理完成；新增 `_protocols.py`、更新 `__init__.py`、本文档、测试 | P0-1 任务 |

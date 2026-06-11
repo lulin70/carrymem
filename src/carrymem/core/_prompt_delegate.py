@@ -1,11 +1,18 @@
 """Prompt delegation and LLM-powered features."""
 
+import logging
 import warnings
 from typing import Any, Dict, List, Optional
 
 from carrymem.adapters.base import MemoryEntry
 from carrymem.core._lifecycle import StorageNotConfiguredError
-from carrymem.utils.logger import logger
+from carrymem.constants import (
+    CONTEXT_BUILD_DEFAULTS,
+    SESSION_SUMMARIZER_LIMIT,
+    AGGREGATE_MEMORIES_LIMIT,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class PromptDelegateMixin:
@@ -14,10 +21,10 @@ class PromptDelegateMixin:
     def build_context(
         self,
         context: Optional[str] = None,
-        max_memories: int = 10,
-        max_knowledge: int = 5,
-        max_rules: int = 5,
-        max_tokens: int = 2000,
+        max_memories: int = CONTEXT_BUILD_DEFAULTS["max_memories"],
+        max_knowledge: int = CONTEXT_BUILD_DEFAULTS["max_knowledge"],
+        max_rules: int = CONTEXT_BUILD_DEFAULTS["max_rules"],
+        max_tokens: int = CONTEXT_BUILD_DEFAULTS["max_tokens_context"],
         language: str = "en",
     ) -> Dict[str, Any]:
         return self.prompt_builder.build_context(
@@ -32,10 +39,10 @@ class PromptDelegateMixin:
     def build_system_prompt(
         self,
         context: Optional[str] = None,
-        max_memories: int = 10,
-        max_knowledge: int = 5,
-        max_rules: int = 5,
-        max_tokens: int = 4000,
+        max_memories: int = CONTEXT_BUILD_DEFAULTS["max_memories"],
+        max_knowledge: int = CONTEXT_BUILD_DEFAULTS["max_knowledge"],
+        max_rules: int = CONTEXT_BUILD_DEFAULTS["max_rules"],
+        max_tokens: int = CONTEXT_BUILD_DEFAULTS["max_tokens_system_prompt"],
         language: str = "en",
     ) -> str:
         return self.prompt_builder.build_system_prompt(
@@ -50,9 +57,9 @@ class PromptDelegateMixin:
     def build_qa_prompt(
         self,
         question: str,
-        max_memories: int = 10,
-        max_knowledge: int = 5,
-        max_tokens: int = 2000,
+        max_memories: int = CONTEXT_BUILD_DEFAULTS["max_memories"],
+        max_knowledge: int = CONTEXT_BUILD_DEFAULTS["max_knowledge"],
+        max_tokens: int = CONTEXT_BUILD_DEFAULTS["max_tokens_qa_prompt"],
         language: str = "en",
         budget: Optional[Any] = None,
         include_question: bool = True,
@@ -92,7 +99,7 @@ class PromptDelegateMixin:
 
         session_memories = self.recall_memories(
             query="",
-            limit=200,
+            limit=SESSION_SUMMARIZER_LIMIT,
             filters={"session_id": session_id, "include_superseded": True},
         )
         if not session_memories:
@@ -147,7 +154,7 @@ class PromptDelegateMixin:
         filters: Dict[str, Any] = {"include_superseded": False}
         if memory_type:
             filters["type"] = memory_type
-        memories = self.recall_memories(query="", limit=500, filters=filters)
+        memories = self.recall_memories(query="", limit=AGGREGATE_MEMORIES_LIMIT, filters=filters)
 
         if not memories:
             return []
@@ -162,7 +169,7 @@ class PromptDelegateMixin:
                     stored = self._adapter.remember(entry)
                     stored_results.append(stored.to_dict())
                 except (ValueError, KeyError, TypeError) as e:
-                    logger.warning(f"Failed to store aggregated memory: {e}")
+                    logger.warning("Failed to store aggregated memory: %s", e)
             return stored_results
 
         return results

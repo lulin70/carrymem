@@ -1,12 +1,16 @@
 """Recall operations: memories, aggregated, timeline, knowledge, all."""
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from carrymem.adapters.obsidian_adapter import ObsidianAdapter
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.core._lifecycle import KnowledgeNotConfiguredError, StorageNotConfiguredError
-from carrymem.utils.logger import logger
+from carrymem.types import RecallAllResult, StoredMemoryDict
 from carrymem.utils.validators import validate_limit, validate_query
+from carrymem.constants import DEFAULT_RECALL_LIMIT, RULE_MATCH_LIMIT_CAP
+
+logger = logging.getLogger(__name__)
 
 
 class RecallMixin:
@@ -25,7 +29,7 @@ class RecallMixin:
         self,
         query: str,
         filters: Optional[Dict[str, Any]] = None,
-        limit: int = 20,
+        limit: int = DEFAULT_RECALL_LIMIT,
     ) -> List[Dict[str, Any]]:
         if not self._knowledge_adapter:
             raise KnowledgeNotConfiguredError()
@@ -39,7 +43,7 @@ class RecallMixin:
         self,
         query: str,
         filters: Optional[Dict[str, Any]] = None,
-        limit: int = 20,
+        limit: int = DEFAULT_RECALL_LIMIT,
         namespaces: Optional[List[str]] = None,
         include_rules: bool = True,
     ) -> Dict[str, Any]:
@@ -50,7 +54,7 @@ class RecallMixin:
         if include_rules:
             try:
                 rule_engine = self.rule_engine
-                matches = rule_engine.match(query, limit=min(limit, 5), increment_count=False)
+                matches = rule_engine.match(query, limit=min(limit, RULE_MATCH_LIMIT_CAP), increment_count=False)
                 rule_results = [
                     {
                         "rule_id": m.rule.id,
@@ -78,7 +82,7 @@ class RecallMixin:
             try:
                 knowledge_results = self.recall_from_knowledge(query=query, filters=filters, limit=limit)
             except (KeyError, ValueError, TypeError, RuntimeError) as e:
-                logger.warning(f"Failed to recall from knowledge base: {e}")
+                logger.warning("Failed to recall from knowledge base: %s", e)
                 knowledge_results = []
 
         return {
@@ -97,7 +101,7 @@ class RecallMixin:
         self,
         query: Optional[str] = None,
         filters: Optional[Dict[str, Any]] = None,
-        limit: int = 20,
+        limit: int = DEFAULT_RECALL_LIMIT,
         namespaces: Optional[List[str]] = None,
         update_access: bool = True,
     ) -> List[Dict[str, Any]]:
@@ -122,7 +126,7 @@ class RecallMixin:
         self,
         memory_type: Optional[str] = None,
         limit_per_type: int = 50,
-    ) -> Dict[str, List[Dict[str, Any]]]:
+    ) -> Dict[str, List[StoredMemoryDict]]:
         if not self._adapter:
             raise StorageNotConfiguredError()
 
@@ -135,7 +139,7 @@ class RecallMixin:
     def recall_timeline(
         self,
         topic: str,
-        limit: int = 20,
+        limit: int = DEFAULT_RECALL_LIMIT,
     ) -> List[Dict[str, Any]]:
         if not self._adapter:
             raise StorageNotConfiguredError()

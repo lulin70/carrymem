@@ -452,7 +452,7 @@ def cmd_doctor(args):
                 _record("db_lock", "warn", "Database may be locked by another process")
             else:
                 _record("db_lock", "ok", "Database accessible")
-        except Exception as e:
+        except (OSError, ValueError, TypeError) as e:
             _record("db_lock", "skip", f"Database lock check: {e}")
     else:
         _record("db_lock", "skip", "Database lock (no database)")

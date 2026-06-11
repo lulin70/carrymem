@@ -1,10 +1,12 @@
 """Memory CRUD: classify_and_remember, declare, forget, update, merge, etc."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from carrymem.adapters.base import MemoryEntry
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.core._lifecycle import StorageNotConfiguredError
+from carrymem.constants import BATCH_RECALL_LIMIT
+from carrymem.types import ClassificationResult, DeclareResult, UpdateMemoryResult, RollbackMemoryResult, MergeMemoriesResult
 from carrymem.utils.validators import (
     validate_context,
     validate_language,
@@ -16,6 +18,24 @@ from carrymem.utils.validators import (
 class MemoryCRUDMixin:
     """Core CRUD operations for memories: remember, declare, forget, update, history, merge."""
 
+    # ── Permission helpers (P1-8 MVP) ──────────────────────────────
+
+    def _check_write_permission(self, user_id: Optional[str] = None) -> None:
+        """Raise SecurityError(CM-403) if user lacks WRITE permission."""
+        policy = self._access_policy  # type: ignore[attr-defined]
+        if policy is not None and user_id is not None:
+            from carrymem.security.permissions import Permission
+
+            policy.require(user_id, Permission.WRITE, resource="memory write")
+
+    def _check_delete_permission(self, user_id: Optional[str] = None) -> None:
+        """Raise SecurityError(CM-403) if user lacks DELETE permission."""
+        policy = self._access_policy  # type: ignore[attr-defined]
+        if policy is not None and user_id is not None:
+            from carrymem.security.permissions import Permission
+
+            policy.require(user_id, Permission.DELETE, resource="memory delete")
+
     def classify_and_remember(
         self,
         message: str,
@@ -23,7 +43,10 @@ class MemoryCRUDMixin:
         language: Optional[str] = None,
         session_id: Optional[str] = None,
         force_type: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        user_id: Optional[str] = None,
+    ) -> ClassificationResult:
+        self._check_write_permission(user_id)
+
         if not self._adapter:
             raise StorageNotConfiguredError()
 
@@ -44,25 +67,42 @@ class MemoryCRUDMixin:
                 "storage_keys": [],
             }
 
-        # 3. Store & post-process
-        result = self._store_entries(
-            classify_result,  # type: ignore[arg-type]
-            resolved_message,
-            message,
-            context,
-            coreference_resolved,
-            force_type,
-            session_id,
-        )
+        # 3. Store & post-process (with audit logging)
+        try:
+            result = self._store_entries(
+                classify_result,  # type: ignore[arg-type]
+                resolved_message,
+                message,
+                context,
+                coreference_resolved,
+                force_type,
+                session_id,
+            )
+            from carrymem.security.audit import log_write
 
-        return result
+            log_write(
+                resource="memory",
+                user_id=user_id,
+                details={"operation": "classify_and_remember", "message_preview": message[:100]},
+            )
+            return result
+        except Exception as exc:
+            from carrymem.security.audit import log_write
+
+            log_write(
+                resource="memory",
+                user_id=user_id,
+                details={"operation": "classify_and_remember", "error": str(exc)},
+                result="FAILURE",
+            )
+            raise
 
     def classify_message(
         self,
         message: str,
         context: Optional[Dict[str, Any]] = None,
         language: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    ) -> ClassificationResult:
         validate_message(message)
         validate_context(context)
         validate_language(language)
@@ -100,7 +140,10 @@ class MemoryCRUDMixin:
         self,
         message: str,
         context: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        user_id: Optional[str] = None,
+    ) -> DeclareResult:
+        self._check_write_permission(user_id)
+
         validate_message(message)
         validate_context(context)
         if not self._adapter:
@@ -149,6 +192,14 @@ class MemoryCRUDMixin:
 
         self._auto_backup()
 
+        from carrymem.security.audit import log_write
+
+        log_write(
+            resource="memory",
+            user_id=user_id,
+            details={"operation": "declare", "storage_keys": storage_keys},
+        )
+
         return {
             "declared": True,
             "entries": stored_memories,
@@ -164,16 +215,28 @@ class MemoryCRUDMixin:
         self,
         message: str,
         context: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
-        return self.declare(message, context)
+        user_id: Optional[str] = None,
+    ) -> DeclareResult:
+        return self.declare(message, context, user_id=user_id)
 
-    def forget_memory(self, memory_id: str) -> bool:
+    def forget_memory(self, memory_id: str, user_id: Optional[str] = None) -> bool:
+        self._check_delete_permission(user_id)
+
         if not self._adapter:
             raise StorageNotConfiguredError()
 
         validate_storage_key(memory_id)
         result = self._adapter.forget(memory_id)
         self._auto_backup()
+
+        from carrymem.security.audit import log_delete
+
+        log_delete(
+            resource="memory",
+            user_id=user_id,
+            details={"operation": "forget_memory", "memory_id": memory_id},
+            result="SUCCESS" if result else "FAILURE",
+        )
         return result
 
     def update_memory(
@@ -181,7 +244,10 @@ class MemoryCRUDMixin:
         storage_key: str,
         new_content: str,
         reason: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        user_id: Optional[str] = None,
+    ) -> UpdateMemoryResult:
+        self._check_write_permission(user_id)
+
         if not self._adapter:
             raise StorageNotConfiguredError()
 
@@ -190,12 +256,28 @@ class MemoryCRUDMixin:
 
         result = self._adapter.update_memory(storage_key, new_content, reason)
         if result is None:
+            from carrymem.security.audit import log_write
+
+            log_write(
+                resource="memory",
+                user_id=user_id,
+                details={"operation": "update_memory", "storage_key": storage_key, "error": "not found"},
+                result="FAILURE",
+            )
             return {"updated": False, "error": f"Memory not found: {storage_key}"}
 
         if self._adapter._cache:
             self._adapter._cache.invalidate()
 
         self._auto_backup()
+
+        from carrymem.security.audit import log_write
+
+        log_write(
+            resource="memory",
+            user_id=user_id,
+            details={"operation": "update_memory", "storage_key": storage_key, "version": result.version},
+        )
 
         return {
             "updated": True,
@@ -220,7 +302,7 @@ class MemoryCRUDMixin:
         self,
         storage_key: str,
         version: int,
-    ) -> Dict[str, Any]:
+    ) -> RollbackMemoryResult:
         if not self._adapter:
             raise StorageNotConfiguredError()
 
@@ -247,8 +329,8 @@ class MemoryCRUDMixin:
         self,
         namespaces: Optional[List[str]] = None,
         strategy: str = "latest_wins",
-        conflict_callback: Optional[Any] = None,
-    ) -> Dict[str, Any]:
+        conflict_callback: Optional[Callable[[Any, Any], Any]] = None,
+    ) -> MergeMemoriesResult:
         from carrymem.merge import merge_memories as _merge
 
         if not self._adapter:
@@ -260,7 +342,7 @@ class MemoryCRUDMixin:
         ns_list = namespaces or [self._namespace]
         all_memories = []
         for ns in ns_list:
-            results = self._adapter.recall("", limit=10000, namespaces=[ns])
+            results = self._adapter.recall("", limit=BATCH_RECALL_LIMIT, namespaces=[ns])
             all_memories.extend([r.to_dict() for r in results])
 
         conflicts_before = len(all_memories)

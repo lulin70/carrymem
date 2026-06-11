@@ -1,0 +1,210 @@
+# Performance Regression Benchmark CI
+#
+# Runs performance benchmarks as an optional, non-blocking job.
+# Triggers on:
+#   - Push to new-main (always runs)
+#   - Pull request to new-main (always runs)
+#   - Manual workflow_dispatch (for ad-hoc runs)
+#   - Schedule: weekly on Monday 00:00 UTC (baseline tracking)
+#
+# Failure behavior:
+#   - Benchmark failures do NOT block merges (continue-on-error)
+#   - Failed benchmarks generate GitHub Issue annotations
+#   - Results uploaded as artifacts for trend analysis
+
+name: Performance Benchmarks
+
+on:
+  push:
+    branches: [new-main]
+  pull_request:
+    branches: [new-main]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 1'  # Weekly Monday 00:00 UTC
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  # ═══════════════════════════════════════
+  # Performance Benchmark Suite (P1-5)
+  # ═══════════════════════════════════════
+  benchmark:
+    name: Performance Benchmarks (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Non-blocking: don't fail the pipeline
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-benchmark-${{ matrix.python-version }}-${{ hashFiles('setup.py') }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]" || {
+            echo "WARNING: Full dev install failed for benchmark"
+            pip install -e ".[dev]" --no-deps 2>/dev/null || true
+            pip install pytest pytest-cov pytest-mock
+          }
+
+      - name: Run performance benchmarks
+        id: benchmark
+        run: |
+          python -m pytest tests/test_performance_benchmark.py \
+            -v \
+            --tb=short \
+            --benchmark-json=benchmark_results.json \
+            --durations=20 \
+            2>&1 | tee /tmp/benchmark_output.txt
+
+          echo "BENCHMARK_EXIT_CODE=$?" >> $GITHUB_OUTPUT
+
+          # Extract key metrics from output
+          echo "## Benchmark Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          grep -E "(classify_and_remember|recall_1000|batch_insert|export_large|encryption_overhead|concurrent_read)" /tmp/benchmark_output.txt >> $GITHUB_STEP_SUMMARY || true
+
+      - name: Check threshold violations
+        if: always()
+        run: |
+          if [ -f /tmp/benchmark_output.txt ]; then
+            FAILED_COUNT=$(grep -c "FAILED\|AssertionError" /tmp/benchmark_output.txt || echo "0")
+            PASSED_COUNT=$(grep -c "PASSED" /tmp/benchmark_output.txt || echo "0")
+
+            echo "### Threshold Summary" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Status |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|--------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Passed | ${PASSED_COUNT} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Failed | ${FAILED_COUNT} |" >> $GITHUB_STEP_SUMMARY
+
+            if [ "${FAILED_COUNT}" -gt 0 ]; then
+              echo "::warning::Performance regression detected: ${FAILED_COUNT} benchmark(s) exceeded thresholds"
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "> ⚠️ **PERFORMANCE REGRESSION DETECTED**" >> $GITHUB_STEP_SUMMARY
+              echo "> ${FAILED_COUNT} benchmark(s) exceeded defined thresholds." >> $GITHUB_STEP_SUMMARY
+              echo "> Review the detailed output above for specific metrics." >> $GITHUB_STEP_SUMMARY
+            else
+              echo "::notice::All benchmarks within acceptable thresholds"
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "> ✅ All benchmarks within acceptable thresholds" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-py${{ matrix.python-version }}
+          path: |
+            ./benchmark_results.json
+            /tmp/benchmark_output.txt
+          if-no-files-found: ignore
+
+      - name: Upload benchmark summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-summary-py${{ matrix.python-version }}
+          path: ${{ github.workspace }}/.github/workflows/  # Placeholder for summary
+          if-no-files-found: ignore
+
+  # ═══════════════════════════════════════
+  # Memory Optimization Tests (P1-6)
+  # ═══════════════════════════════════════
+  memory-optimization:
+    name: Memory Optimization Tests (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Non-blocking
+    needs: []  # Independent of benchmark job
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]" || {
+            pip install pytest pytest-mock
+          }
+
+      - name: Run memory optimization tests
+        id: memory_test
+        run: |
+          python -m pytest tests/test_memory_optimization.py \
+            -v \
+            --tb=long \
+            --durations=15 \
+            2>&1 | tee /tmp/memory_test_output.txt
+
+          echo "MEMORY_TEST_EXIT_CODE=$?" >> $GITHUB_OUTPUT
+
+          echo "## Memory Optimization Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          grep -E "(memory_leak|memory_growth|gc|connection_pool|encryption_buffer)" /tmp/memory_test_output.txt >> $GITHUB_STEP_SUMMARY || true
+
+      - name: Check memory violations
+        if: always()
+        run: |
+          if [ -f /tmp/memory_test_output.txt ]; then
+            MEM_FAILED=$(grep -c "FAILED\|AssertionError.*memory" /tmp/memory_test_output.txt || echo "0")
+
+            echo "### Memory Test Summary" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Failed | ${MEM_FAILED} |" >> $GITHUB_STEP_SUMMARY
+
+            if [ "${MEM_FAILED}" -gt 0 ]; then
+              echo "::warning::Memory issue detected: ${MEM_FAILED} test(s) failed"
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "> ⚠️ **MEMORY ISSUE DETECTED**" >> $GITHUB_STEP_SUMMARY
+              echo "> ${MEM_FAILED} memory optimization test(s) failed." >> $GITHUB_STEP_SUMMARY
+            else
+              echo "::notice::All memory tests passed"
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "> ✅ All memory optimization tests passed" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+
+      - name: Upload memory test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: memory-test-results-py${{ matrix.python-version }}
+          path: /tmp/memory_test_output.txt
+          if-no-files-found: ignore

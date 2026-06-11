@@ -89,7 +89,7 @@ class SemanticClassifier:
             result = json.loads(content)
 
             return result
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError, TypeError, KeyError, AttributeError) as e:
             logger.error(f"Semantic classification failed: {e}")
             return None
 

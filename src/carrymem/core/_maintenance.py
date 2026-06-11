@@ -1,12 +1,24 @@
 """Maintenance: conflict detection, quality scoring, expiry, consolidation, scheduling."""
 
+import logging
 import sqlite3
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.core._lifecycle import StorageNotConfiguredError
-from carrymem.utils.logger import logger
+from carrymem.constants import (
+    BATCH_RECALL_LIMIT,
+    MIN_QUALITY_THRESHOLD,
+    MAINTENANCE_CONTENT_SNIPPET_LENGTH,
+    DEFAULT_CONFIDENCE_SCORE,
+    DECAY_CONFIDENCE_FLOOR,
+    DECAY_ROUNDING_PRECISION,
+    CONSOLIDATION_MIN_INTERVAL_HOURS,
+    SECONDS_PER_HOUR,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class MaintenanceMixin:
@@ -20,7 +32,7 @@ class MaintenanceMixin:
 
         all_conflicts: List[Dict[str, Any]] = []
 
-        all_memories = self._adapter.recall("", limit=10000)
+        all_memories = self._adapter.recall("", limit=BATCH_RECALL_LIMIT)
         if all_memories:
             detector = ConflictDetector()
             memory_conflicts = detector.detect_conflicts(all_memories)
@@ -44,13 +56,13 @@ class MaintenanceMixin:
 
         return all_conflicts
 
-    def check_quality(self, min_score: float = 0.3) -> List[Dict[str, Any]]:
+    def check_quality(self, min_score: float = MIN_QUALITY_THRESHOLD) -> List[Dict[str, Any]]:
         from carrymem.quality_scorer import QualityAnalyzer
 
         if not self._adapter:
             raise StorageNotConfiguredError()
 
-        all_memories = self._adapter.recall("", limit=10000)
+        all_memories = self._adapter.recall("", limit=BATCH_RECALL_LIMIT)
         if not all_memories:
             return []
 
@@ -63,7 +75,7 @@ class MaintenanceMixin:
                     "storage_key": item["storage_key"],
                     "score": item["score"],
                     "reasons": item["reasons"],
-                    "content": item["memory"].content[:80],
+                    "content": item["memory"].content[:MAINTENANCE_CONTENT_SNIPPET_LENGTH],
                     "type": item["memory"].type,
                 }
             )
@@ -76,7 +88,7 @@ class MaintenanceMixin:
         if not isinstance(self._adapter, SQLiteAdapter):
             return []
 
-        conn = self._adapter._get_connection()
+        conn = self._adapter._get_connection()  # Internal access for raw SQL query (maintenance operation)
         now_iso = datetime.now(timezone.utc).isoformat()
         rows = conn.execute(
             "SELECT storage_key, content, type, expires_at FROM memories "
@@ -87,12 +99,12 @@ class MaintenanceMixin:
         result = []
         for row in rows:
             content = row["content"]
-            if self._adapter._encryption and self._adapter._encryption.is_active:
-                content = self._adapter._decrypt_field(content)
+            if self._adapter._security and self._adapter._security.is_active:
+                content = self._adapter.decrypt_field(content)  # Use public API for decryption
             result.append(
                 {
                     "storage_key": row["storage_key"],
-                    "content": (content or "")[:80],
+                    "content": (content or "")[:MAINTENANCE_CONTENT_SNIPPET_LENGTH],
                     "type": row["type"],
                     "expires_at": row["expires_at"],
                 }
@@ -120,7 +132,7 @@ class MaintenanceMixin:
                         "storage_key": getattr(entry, "storage_key", ""),
                         "type": getattr(entry, "memory_type", ""),
                         "content": getattr(entry, "content", ""),
-                        "confidence": getattr(entry, "confidence", 0.5),
+                        "confidence": getattr(entry, "confidence", DEFAULT_CONFIDENCE_SCORE),
                         "created_at": getattr(entry, "created_at", ""),
                         "superseded_at": getattr(entry, "superseded_at", None),
                         "access_count": getattr(entry, "access_count", 0),
@@ -144,7 +156,7 @@ class MaintenanceMixin:
                         adapter.supersede(older_key)
                         superseded_count += 1
                 except (AttributeError, ValueError, KeyError, RuntimeError) as e:
-                    logger.warning(f"Failed to supersede {older_key}: {e}")
+                    logger.warning("Failed to supersede %s: %s", older_key, e)
 
         forgotten_count = 0
         for item in report["to_forget"]:
@@ -154,19 +166,19 @@ class MaintenanceMixin:
                     adapter.forget(key)
                     forgotten_count += 1
                 except (KeyError, ValueError) as e:
-                    logger.warning(f"Failed to forget {key}: {e}")
+                    logger.warning("Failed to forget %s: %s", key, e)
 
         for item in report["to_decay"]:
             key = item.get("storage_key")
             decay = item.get("decay", 1.0)
-            current_conf = item.get("current_confidence", 0.5)
-            new_conf = round(current_conf * decay, 3)
-            if new_conf < 0.1:
+            current_conf = item.get("current_confidence", DEFAULT_CONFIDENCE_SCORE)
+            new_conf = round(current_conf * decay, DECAY_ROUNDING_PRECISION)
+            if new_conf < DECAY_CONFIDENCE_FLOOR:
                 try:
                     adapter.forget(key)
                     forgotten_count += 1
                 except (KeyError, ValueError) as e:
-                    logger.warning(f"Failed to forget decayed {key}: {e}")
+                    logger.warning("Failed to forget decayed %s: %s", key, e)
 
         report["dry_run"] = False
         report["superseded_count"] = superseded_count
@@ -185,7 +197,7 @@ class MaintenanceMixin:
                 db_path = getattr(self._adapter, "db_path", None)
                 rule_storage = RuleStorage(db_path=db_path) if db_path else None
             except (ImportError, sqlite3.OperationalError, ValueError) as e:
-                logger.warning(f"P1 skipped: RuleStorage init failed: {e}")
+                logger.warning("P1 skipped: RuleStorage init failed: %s", e)
 
             p1_result = consolidate_p1(
                 memories=all_memories,
@@ -213,13 +225,13 @@ class MaintenanceMixin:
         """Start periodic memory consolidation on a background timer."""
         import threading
 
-        min_interval = 0.1
+        min_interval = CONSOLIDATION_MIN_INTERVAL_HOURS
         if interval_hours < min_interval:
             interval_hours = min_interval
 
         self.stop_consolidation()
 
-        interval_sec = interval_hours * 3600
+        interval_sec = interval_hours * SECONDS_PER_HOUR
         status = {
             "scheduled": True,
             "interval_hours": interval_hours,
@@ -230,15 +242,16 @@ class MaintenanceMixin:
 
         def _run_consolidation():
             try:
-                logger.info(f"Scheduled consolidation starting (interval={interval_hours}h)")
+                logger.info("Scheduled consolidation starting (interval=%fh)", interval_hours)
                 result = self.consolidate(dry_run=dry_run, run_p1=run_p1, run_p2=run_p2)
                 logger.info(
-                    f"Scheduled consolidation complete: "
-                    f"{result.get('superseded_count', 0)} superseded, "
-                    f"{result.get('forgotten_count', 0)} forgotten"
+                    "Scheduled consolidation complete: "
+                    "%d superseded, %d forgotten",
+                    result.get('superseded_count', 0),
+                    result.get('forgotten_count', 0),
                 )
-            except Exception as e:
-                logger.error(f"Scheduled consolidation failed: {e}")
+            except (ValueError, TypeError, RuntimeError, sqlite3.Error) as e:
+                logger.error("Scheduled consolidation failed: %s", e)
             finally:
                 if self._consolidation_timer is not None:
                     self._consolidation_timer = threading.Timer(interval_sec, _run_consolidation)
@@ -249,7 +262,7 @@ class MaintenanceMixin:
         self._consolidation_timer.daemon = True
         self._consolidation_timer.start()
 
-        logger.info(f"Consolidation scheduled every {interval_hours}h")
+        logger.info("Consolidation scheduled every %fh", interval_hours)
         return status
 
     def stop_consolidation(self) -> Dict[str, Any]:

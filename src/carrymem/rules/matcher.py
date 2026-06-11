@@ -11,6 +11,7 @@ Business logic for matching scenes to rules using:
 from __future__ import annotations
 
 import logging
+import sqlite3
 from dataclasses import dataclass
 from typing import List, Tuple
 
@@ -63,7 +64,7 @@ class RuleMatcher:
         matcher = RuleMatcher(storage)
         results = matcher.match("帮我做竞品分析")
         for result in results:
-            print(f"{result.rule.summary()} (score: {result.score:.2f})")
+            _logger.debug("%s (score: %.2f)", result.rule.summary(), result.score)
     """
 
     # Score weights for different match types
@@ -210,11 +211,11 @@ class RuleMatcher:
     def _match_fts(self, scene: str, limit: int) -> List[MatchResult]:
         try:
             fts_results = self.storage.search_with_rank(scene, limit=limit)
-        except Exception:
+        except (sqlite3.OperationalError, sqlite3.DatabaseError):
             try:
                 matched_rules = self.storage.search(scene, limit=limit)
                 fts_results = [(r, 0.0) for r in matched_rules]
-            except Exception as e:
+            except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
                 _logger.warning(f"FTS5 match failed for scene '{scene[:50]}': {e}")
                 return []
 

@@ -1,15 +1,35 @@
 """Classification pipeline internals + rule-delegate methods."""
 
-from typing import Any, Dict, List, Optional
+import logging
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from carrymem.adapters.base import MemoryEntry
 from carrymem.security.input_validator import InputValidator
-from carrymem.utils.logger import logger
+from carrymem.types import (
+    ClassificationResult,
+    CorrectionUpdateInfo,
+    ValidateAndResolveResult,
+    ValidationResult,
+)
 from carrymem.utils.validators import (
     validate_context,
     validate_language,
     validate_message,
 )
+from carrymem.constants import (
+    MAX_MESSAGE_LENGTH,
+    DEFAULT_FORCE_TYPE_CONFIDENCE,
+    COREFERENCE_RECALL_LIMIT,
+    CORRECTION_RECALL_LIMIT,
+    CONTENT_PREVIEW_LENGTH,
+    RULE_CONTENT_MAX_LENGTH,
+    ACTIVE_RULES_LIST_LIMIT,
+    CORRECTION_KEYWORD_OVERLAP,
+    IMPORT_CONTENT_SEARCH_LENGTH,
+    MIN_CORRECTION_CONTENT_LENGTH,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class ClassificationMixin:
@@ -21,7 +41,7 @@ class ClassificationMixin:
         context: Optional[Dict[str, Any]],
         force_type: Optional[str],
         session_id: Optional[str],
-    ) -> tuple:
+    ) -> ValidateAndResolveResult:
         """Validate input, inject session_id, resolve coreferences, check redaction.
 
         Returns:
@@ -30,8 +50,8 @@ class ClassificationMixin:
         if not message or not message.strip():
             raise ValueError("Message cannot be empty")
 
-        if len(message) > 50000:
-            raise ValueError(f"Message too long: {len(message)} chars (max 50000)")
+        if len(message) > MAX_MESSAGE_LENGTH:
+            raise ValueError(f"Message too long: {len(message)} chars (max {MAX_MESSAGE_LENGTH})")
 
         # Inject session_id into context
         if session_id and context is None:
@@ -76,7 +96,7 @@ class ClassificationMixin:
                     context_str = context.get("ai_reply", "") or context.get("previous_message", "")
                 recent_mems = []
                 try:
-                    recent_mems = self.recall_memories(query="", limit=5, update_access=False)
+                    recent_mems = self.recall_memories(query="", limit=COREFERENCE_RECALL_LIMIT, update_access=False)
                 except (KeyError, ValueError, RuntimeError) as e:
                     logger.debug(f"Coreference recall skipped (non-critical): {e}")
                 resolved_message, coreference_resolved = resolve_coreference(
@@ -87,7 +107,7 @@ class ClassificationMixin:
                 if coreference_resolved:
                     logger.debug(f"Coreference resolved: '{message}' → '{resolved_message}'")
             except (ValueError, TypeError, ImportError, RuntimeError) as e:
-                logger.debug(f"Coreference resolution failed (non-critical), using original message: {e}")
+                logger.debug("Coreference resolution failed (non-critical), using original message: %s", e)
 
         # Auto-redaction
         if not force_type:
@@ -96,7 +116,7 @@ class ClassificationMixin:
 
                 should_block, redact_reason = should_redact(resolved_message)
                 if should_block:
-                    logger.warning(f"Auto-redact blocked memory storage: {redact_reason}")
+                    logger.warning("Auto-redact blocked memory storage: %s", redact_reason)
                     redact_result = {
                         "should_remember": False,
                         "type": "auto_redacted",
@@ -127,11 +147,11 @@ class ClassificationMixin:
         language: Optional[str],
         force_type: Optional[str],
         message: str,
-    ) -> List[Dict[str, Any]]:
+    ) -> Union[List[Dict[str, Any]], ClassificationResult]:
         """Classify the message and apply force_type override.
 
         Returns:
-            entries list (may be empty for noise).
+            entries list (may be empty for noise) or ClassificationResult dict.
         """
         classify_result = self.classify_message(resolved_message, context=context, language=language)
 
@@ -146,7 +166,7 @@ class ClassificationMixin:
                         "content": message,
                         "type": force_type,
                         "suggested_action": "store",
-                        "confidence": 0.8,
+                        "confidence": DEFAULT_FORCE_TYPE_CONFIDENCE,
                     }
                 ]
 
@@ -161,7 +181,7 @@ class ClassificationMixin:
         coreference_resolved: bool,
         force_type: Optional[str],
         session_id: Optional[str],
-    ) -> Dict[str, Any]:
+    ) -> ClassificationResult:
         """Store classified entries, handle corrections, suggest rules, backup."""
         stored_memories = []
         storage_keys = []
@@ -211,34 +231,34 @@ class ClassificationMixin:
             "summary": classify_result["summary"],
         }
 
-    def _handle_correction(self, correction_entry: MemoryEntry) -> Optional[Dict[str, Any]]:
+    def _handle_correction(self, correction_entry: MemoryEntry) -> Optional[CorrectionUpdateInfo]:
         if not self._adapter:
             return None
 
         content = correction_entry.content
-        if not content or len(content.strip()) < 3:
+        if not content or len(content.strip()) < MIN_CORRECTION_CONTENT_LENGTH:
             return None
 
         updated_info = None
 
         try:
             keywords = content.lower().split()
-            related = self.recall_memories(limit=10)
+            related = self.recall_memories(limit=CORRECTION_RECALL_LIMIT)
             for mem in related:
                 mem_content = mem.get("content", "").lower()
                 mem_type = mem.get("type", "")
                 if mem_type in ("user_preference", "decision", "fact_declaration"):
                     overlap = sum(1 for kw in keywords if kw in mem_content and len(kw) > 1)
-                    if overlap >= 2:
+                    if overlap >= CORRECTION_KEYWORD_OVERLAP:
                         storage_key = mem.get("storage_key", "")
                         if storage_key and hasattr(self._adapter, "update_memory"):
                             try:
-                                reason = f"Corrected by: {content[:100]}"
+                                reason = f"Corrected by: {content[:CONTENT_PREVIEW_LENGTH]}"
                                 self._adapter.update_memory(storage_key, content, reason)
                                 updated_info = {
                                     "storage_key": storage_key,
-                                    "old_content": mem.get("content", "")[:100],
-                                    "new_content": content[:100],
+                                    "old_content": mem.get("content", "")[:CONTENT_PREVIEW_LENGTH],
+                                    "new_content": content[:CONTENT_PREVIEW_LENGTH],
                                     "reason": reason,
                                 }
                             except (ValueError, KeyError, TypeError) as e:
@@ -249,18 +269,18 @@ class ClassificationMixin:
 
         try:
             engine = self.rule_engine
-            rules = engine.list_rules(status="active", limit=50)
+            rules = engine.list_rules(status="active", limit=ACTIVE_RULES_LIST_LIMIT)
             for rule in rules:
                 rule_content = (rule.trigger + " " + rule.action).lower()
                 overlap = sum(1 for kw in keywords if kw in rule_content and len(kw) > 1)
-                if overlap >= 2:
+                if overlap >= CORRECTION_KEYWORD_OVERLAP:
                     try:
-                        safe_action = self._sanitize_rule_content(content[:200])
+                        safe_action = self._sanitize_rule_content(content[:RULE_CONTENT_MAX_LENGTH])
                         engine.update_rule(rule.id, action=safe_action)
                         if updated_info is None:
                             updated_info = {
                                 "rule_updated": rule.id,
-                                "new_action": safe_action[:100],
+                                "new_action": safe_action[:CONTENT_PREVIEW_LENGTH],
                             }
                         else:
                             updated_info["rule_updated"] = rule.id
@@ -268,7 +288,7 @@ class ClassificationMixin:
                         logger.warning(f"Rule update in correction handling failed: {e}")
                     break
         except (ImportError, ValueError, KeyError, TypeError, RuntimeError) as e:
-            logger.warning(f"Rule correction handling failed: {e}")
+            logger.warning("Rule correction handling failed: %s", e)
 
         return updated_info
 

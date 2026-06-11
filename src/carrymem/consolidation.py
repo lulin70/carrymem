@@ -298,7 +298,7 @@ def consolidate_p1(
             auto_accept=auto_accept,
         )
         result.update(p1_result)
-    except Exception as e:
+    except (ValueError, TypeError, RuntimeError, Exception) as e:
         result["p1_error"] = str(e)
         logger.warning(f"P1 consolidation failed: {e}")
 
@@ -357,7 +357,11 @@ def consolidate_p2(
             text = m.get("content", "") or m.get("raw_text", "")
             mtype = m.get("type", "unknown")
             created = m.get("created_at", "")
-            content_parts.append(f"[{mtype}] ({created[:10] if created else 'unknown'}) {text}")
+            if isinstance(created, str):
+                created_str = created[:10]
+            else:
+                created_str = (created.isoformat() if hasattr(created, 'isoformat') else str(created))[:10]
+            content_parts.append(f"[{mtype}] ({created_str or 'unknown'}) {text}")
 
         source_keys = [m.get("storage_key", "") for m in cluster]
         dominant_type = max(

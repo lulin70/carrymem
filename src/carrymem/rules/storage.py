@@ -122,7 +122,7 @@ class RuleStorage:
                     conn.execute("ALTER TABLE rules ADD COLUMN expires_at TEXT DEFAULT ''")
                 if "condition" not in columns:
                     conn.execute("ALTER TABLE rules ADD COLUMN condition TEXT DEFAULT ''")
-            except Exception as e:
+            except (sqlite3.OperationalError, sqlite3.ProgrammingError) as e:
                 _logger.debug(f"[RuleStorage] Schema migration (add columns) skipped: {e}")
 
             conn.executescript("""
@@ -161,7 +161,7 @@ class RuleStorage:
                 """)
             conn.commit()
             self._migrate_fts_tokenizer()
-        except Exception as e:
+        except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
             _logger.debug(f"[RuleStorage] _ensure_schema failed: {e}")
 
     def _migrate_fts_tokenizer(self):
@@ -328,7 +328,7 @@ class RuleStorage:
                 ),
             )
             conn.commit()
-        except Exception as e:
+        except (sqlite3.IntegrityError, sqlite3.OperationalError) as e:
             _logger.debug(f"[RuleStorage] create insert failed: {e}")
 
         return rule
@@ -590,7 +590,7 @@ class RuleStorage:
         try:
             conn.execute(f"UPDATE rules SET {', '.join(set_clauses)} WHERE id = ?", params)
             conn.commit()
-        except Exception as e:
+        except (sqlite3.IntegrityError, sqlite3.OperationalError) as e:
             _logger.debug(f"[RuleStorage] update failed: {e}")
 
         return self.get(rule_id)
@@ -713,6 +713,17 @@ class RuleStorage:
 
         return updated
 
-    def _row_to_rule(self, sqlite3_row) -> Rule:
-        """Convert SQLite Row object to Rule dataclass"""
-        return Rule.from_dict(dict(sqlite3_row))
+    _RULE_COLUMNS = [
+        "id", "trigger", "action", "rule_type",
+        "source_memories", "derived_from",
+        "status", "override", "confidence",
+        "trigger_count", "confirmed_by_user", "scope",
+        "created_at", "updated_at", "metadata",
+        "expires_at", "condition",
+    ]
+
+    def _row_to_rule(self, row) -> Rule:
+        """Convert SQLite Row object or tuple to Rule dataclass"""
+        if hasattr(row, "keys"):
+            return Rule.from_dict(dict(zip(row.keys(), row)))
+        return Rule.from_dict(dict(zip(self._RULE_COLUMNS, row)))

@@ -209,7 +209,7 @@ class PromotionPipeline:
             )
             conn.commit()
             return audit_id
-        except Exception:
+        except (sqlite3.IntegrityError, sqlite3.OperationalError):
             conn.rollback()
             return None
         finally:
@@ -281,7 +281,7 @@ class PromotionPipeline:
                 (PROMOTION_STATUS_ACCEPTED, now, note, rule.id, audit_id),
             )
             conn.commit()
-        except Exception:
+        except (sqlite3.OperationalError, sqlite3.IntegrityError):
             conn.rollback()
         finally:
             pass
@@ -307,7 +307,7 @@ class PromotionPipeline:
             )
             conn.commit()
             return True
-        except Exception:
+        except (sqlite3.OperationalError, sqlite3.IntegrityError):
             conn.rollback()
             return False
         finally:
@@ -331,7 +331,7 @@ class PromotionPipeline:
             )
             conn.commit()
             return cursor.rowcount
-        except Exception:
+        except (sqlite3.OperationalError, sqlite3.IntegrityError):
             conn.rollback()
             return 0
         finally:

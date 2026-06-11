@@ -6,6 +6,7 @@ from carrymem.cli._mcp import *
 from carrymem.cli._memory import *
 from carrymem.cli._rules import *
 from carrymem.cli._stats import *
+from carrymem.errors import CarryMemError
 
 
 def show_help():
@@ -198,8 +199,21 @@ def main():
     except KeyboardInterrupt:
         print()
         sys.exit(130)
+    except CarryMemError as e:
+        print(f"  {_red(f'[ERROR] {e.code}')}")
+        print(f"  {e.message}")
+        if e.hint:
+            print(f"  {_dim(f'💡 {e.hint}')}")
+        sys.exit(1)
+    # NOTE: Broad exception at CLI top-level is intentional to catch all unhandled errors
+    # and convert them to user-friendly CarryMemError messages. This is the final safety net
+    # to prevent raw tracebacks from reaching end users.
     except Exception as e:
-        print(f"  {_red(f'Error: {e}')}")
+        friendly = CarryMemError.from_cause(e)
+        print(f"  {_red(f'[ERROR] {friendly.code}')}")
+        print(f"  {friendly.message}")
+        if friendly.hint:
+            print(f"  {_dim(f'💡 {friendly.hint}')}")
         sys.exit(1)
 
 

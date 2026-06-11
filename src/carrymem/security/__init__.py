@@ -1,7 +1,8 @@
 """
 Security module for CarryMem
 
-Provides input validation, encryption, redaction, and audit logging.
+Provides input validation, encryption, redaction, audit logging,
+and permission / access-control framework.
 """
 
 from .audit import AuditLogger
@@ -19,6 +20,7 @@ from .input_validator import (
     validate_path,
     validate_query,
 )
+from .permissions import AccessPolicy, Permission
 from .redaction import detect_sensitive_content, redact_content, should_redact
 
 __all__ = [
@@ -40,4 +42,7 @@ __all__ = [
     "redact_content",
     "detect_sensitive_content",
     "AuditLogger",
+    # P1-8: Permissions & access control
+    "Permission",
+    "AccessPolicy",
 ]

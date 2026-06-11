@@ -1,11 +1,14 @@
 """Backup & audit operations."""
 
+import logging
 import os
 from typing import Any, Dict, List, Optional
 
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.core._lifecycle import StorageNotConfiguredError
-from carrymem.utils.logger import logger
+from carrymem.constants import AUDIT_LOG_DEFAULT_LIMIT
+
+logger = logging.getLogger(__name__)
 
 
 class BackupMixin:
@@ -50,9 +53,9 @@ class BackupMixin:
 
                     manager = BackupManager(db_path, backup_dir=self._backup_dir)
                     manager.create_backup()
-                    logger.debug(f"Auto-backup triggered after {self._auto_backup_interval} writes")
+                    logger.debug("Auto-backup triggered after %d writes", self._auto_backup_interval)
             except (OSError, ValueError, RuntimeError) as e:
-                logger.debug(f"Auto-backup failed: {e}")
+                logger.debug("Auto-backup failed: %s", e)
 
     def clear_cache(self) -> None:
         if self._adapter and hasattr(self._adapter, "_cache") and self._adapter._cache:
@@ -110,7 +113,7 @@ class BackupMixin:
         since: Optional[str] = None,
         until: Optional[str] = None,
         source: Optional[str] = None,
-        limit: int = 100,
+        limit: int = AUDIT_LOG_DEFAULT_LIMIT,
     ) -> List[Dict[str, Any]]:
         if not self._adapter or not isinstance(self._adapter, SQLiteAdapter):
             return []
@@ -118,11 +121,11 @@ class BackupMixin:
         if not self._adapter._audit:
             return []
 
-        return self._adapter._audit.query(
-            operation=operation,
-            namespace=self._namespace,
-            since=since,
-            until=until,
-            source=source,
-            limit=limit,
-        )
+        from carrymem.security.audit import AuditFilter
+
+        filter_ = AuditFilter(limit=limit)
+        if operation:
+            filter_.action = operation
+
+        events = self._adapter._audit.query(filter_)
+        return [e.to_dict() for e in events]

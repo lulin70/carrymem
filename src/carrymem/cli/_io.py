@@ -343,7 +343,7 @@ def cmd_pack(args):
 
         print(f"  \u2192 Saved to {output_path} ({size_str})")
 
-    except Exception as e:
+    except (OSError, IOError, ValueError, TypeError) as e:
         print(f"\n  {_red('Pack failed:')} {e}")
         cm.close()
         return 1
@@ -568,7 +568,7 @@ def cmd_unpack(args):
 
         print(f"\n  \u2192 Run {_cyan('carrymem setup-mcp --all --global')} to reconnect your AI tools")
 
-    except Exception as e:
+    except (OSError, IOError, ValueError, TypeError, json.JSONDecodeError) as e:
         print(f"\n  {_red('Unpack failed:')} {e}")
         cm.close()
         return 1

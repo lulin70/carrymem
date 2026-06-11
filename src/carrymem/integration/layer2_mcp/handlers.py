@@ -172,6 +172,9 @@ def handle_classify_message(engine, arguments: Dict[str, Any]) -> Dict[str, Any]
                 "processing_time_ms": round(processing_time * 1000, 2) if processing_time else None,
             },
         }
+    # NOTE: Broad exception in MCP handler is intentional to catch all errors
+    # and return standardized error responses to MCP clients. This prevents
+    # raw exceptions from breaking the MCP protocol.
     except Exception as e:
         return {
             "schema_version": "1.0.0",
@@ -470,6 +473,8 @@ def handle_add_rule(engine, args: Dict[str, Any]) -> Dict[str, Any]:
             "override": rule.override,
         }
     except Exception as e:
+        # NOTE: Broad exception in MCP tool handler is intentional to catch all errors
+        # and return standardized error responses to MCP clients.
         return {"added": False, "error": _safe_error(e)}
 
 
@@ -603,6 +608,8 @@ def handle_delete_rule(engine, args: Dict[str, Any]) -> Dict[str, Any]:
             "rule_id": rule_id,
         }
     except Exception as e:
+        # NOTE: Broad exception in MCP tool handler is intentional to catch all errors
+        # and return standardized error responses to MCP clients.
         return {"error": _safe_error(e)}
 
 
@@ -702,6 +709,8 @@ def handle_update_rule(engine, args: Dict[str, Any]) -> Dict[str, Any]:
             "rule_type": updated.rule_type if updated else None,
         }
     except Exception as e:
+        # NOTE: Broad exception in MCP tool handler is intentional to catch all errors
+        # and return standardized error responses to MCP clients.
         return {"error": _safe_error(e)}
 
 
@@ -903,6 +912,8 @@ class Handlers:
             result = await loop.run_in_executor(None, lambda: handler_func(target, arguments or {}))
             return {"success": True, "data": result}
         except Exception as e:
+            # NOTE: Broad exception in async MCP handler wrapper is intentional to catch
+            # all errors and return standardized error responses to MCP clients.
             return {"success": False, "error": _safe_error(e)}
 
     async def cleanup(self):

@@ -472,6 +472,130 @@ class StorageAdapter(ABC):
             "graph": False,
         }
 
+    # ── Standardized Adapter Interface (P2-8) ──────────────────────────
+    # These methods provide a uniform interface across all adapters.
+    # Adapters must implement the abstract methods; optional methods
+    # have default implementations that raise NotImplementedError.
+
+    @abstractmethod
+    def initialize(self, config: dict) -> None:
+        """Initialize the adapter with configuration.
+
+        Called once before any other operation. Use for connection setup,
+        schema creation, resource allocation, etc.
+
+        Args:
+            config: Adapter-specific configuration dictionary.
+                    Common keys: ``path``, ``namespace``, ``encryption_key``.
+        """
+        ...
+
+    @abstractmethod
+    def store(self, entry: dict) -> str:
+        """Store a memory entry and return its unique ID.
+
+        This is the standardized store method that accepts a plain dict
+        (compatible with JSON serialization) rather than a MemoryEntry object.
+
+        Args:
+            entry: Dictionary containing memory data. Must include at minimum
+                   ``content`` and ``type`` fields.
+
+        Returns:
+            The unique entry_id (storage_key) of the stored memory.
+        """
+        ...
+
+    @abstractmethod
+    def delete(self, entry_id: str) -> bool:
+        """Delete a memory by its entry ID.
+
+        Args:
+            entry_id: The storage_key/ID returned by :meth:`store`.
+
+        Returns:
+            True if the entry was deleted, False if it was not found.
+        """
+        ...
+
+    @abstractmethod
+    def count(self, filter_: Optional[dict] = None) -> int:
+        """Count stored memories, optionally filtered.
+
+        Args:
+            filter_: Optional filter criteria. Supported keys vary by adapter.
+                     Common keys: ``type``, ``tier``, ``namespace``.
+
+        Returns:
+            Number of matching memories.
+        """
+        ...
+
+    @abstractmethod
+    def health_check(self) -> dict:
+        """Run a health check on the adapter's backend.
+
+        Returns:
+            Dict with at least:
+            - ``status`` (str): ``"healthy"``, ``"degraded"``, or ``"unhealthy"``
+            - ``latency_ms`` (float): Round-trip time for the check
+            - Additional adapter-specific metrics
+        """
+        ...
+
+    @abstractmethod
+    def close(self) -> None:
+        """Release all resources held by this adapter.
+
+        Must be safe to call multiple times. After close(), the adapter
+        should not be used for further operations.
+        """
+        ...
+
+    # ── Optional methods (default: raise NotImplementedError) ────────────
+
+    def export_data(self) -> str:
+        """Export all stored data as a serialized string.
+
+        Returns:
+            Serialized data (e.g., JSON string, SQLite dump).
+
+        Raises:
+            NotImplementedError: If the adapter does not support export.
+        """
+        raise NotImplementedError(f"{self.__class__.__name__} does not implement export_data()")
+
+    def import_data(self, data: str) -> int:
+        """Import previously exported data.
+
+        Args:
+            data: Serialized data string as produced by :meth:`export_data`.
+
+        Returns:
+            Number of entries imported.
+
+        Raises:
+            NotImplementedError: If the adapter does not support import.
+        """
+        raise NotImplementedError(f"{self.__class__.__name__} does not implement import_data()")
+
+    def search_fulltext(self, query: str) -> list[dict]:
+        """Full-text search across all stored entries.
+
+        Unlike :meth:`recall`, this searches raw content without
+        ranking or relevance scoring.
+
+        Args:
+            query: Free-text search query string.
+
+        Returns:
+            List of matching entry dicts.
+
+        Raises:
+            NotImplementedError: If the adapter does not support full-text search.
+        """
+        raise NotImplementedError(f"{self.__class__.__name__} does not implement search_fulltext()")
+
 
 @runtime_checkable
 class AsyncStorageAdapter(Protocol):
@@ -505,6 +629,114 @@ class AsyncStorageAdapter(Protocol):
 
     @property
     def capabilities(self) -> Dict[str, bool]: ...
+
+
+@runtime_checkable
+class StorageAdapterProtocol(Protocol):
+    """Standardized Protocol for all storage adapters (P2-4).
+
+    This Protocol defines the minimal interface that all storage adapters must implement.
+    It provides a runtime-checkable contract using Python's typing.Protocol.
+
+    All official adapters (SQLiteAdapter, JSONAdapter, ObsidianAdapter, etc.) must
+    conform to this Protocol. Use isinstance() with this Protocol to verify compliance.
+
+    Interface methods:
+    - initialize(): Initialize adapter with configuration
+    - store(): Store a memory entry (dict-based)
+    - recall(): Retrieve memories matching query
+    - delete(): Delete a memory by ID
+    - count(): Count stored memories
+    - health_check(): Run health check on backend
+    - close(): Release all resources
+
+    Example:
+        from carrymem.adapters.base import StorageAdapterProtocol
+
+        def use_adapter(adapter: StorageAdapterProtocol):
+            adapter.initialize({"path": "/data"})
+            entry_id = adapter.store({"content": "test", "type": "fact_declaration"})
+            results = adapter.recall("test")
+            adapter.close()
+
+        # Runtime check
+        assert isinstance(sqlite_adapter, StorageAdapterProtocol)
+    """
+
+    @abstractmethod
+    def initialize(self, config: dict) -> None:
+        """Initialize the adapter with configuration.
+
+        Args:
+            config: Adapter-specific configuration dictionary.
+        """
+        ...
+
+    @abstractmethod
+    def store(self, entry: dict) -> str:
+        """Store a memory entry and return its unique ID.
+
+        Args:
+            entry: Dictionary containing memory data. Must include at minimum
+                   ``content`` and ``type`` fields.
+
+        Returns:
+            The unique entry_id (storage_key) of the stored memory.
+        """
+        ...
+
+    @abstractmethod
+    def recall(self, query: str, limit: int = 20) -> list[dict]:
+        """Retrieve memories matching a query.
+
+        Args:
+            query: Search query string.
+            limit: Maximum number of results to return.
+
+        Returns:
+            List of matching memory entry dicts.
+        """
+        ...
+
+    @abstractmethod
+    def delete(self, entry_id: str) -> bool:
+        """Delete a memory by its entry ID.
+
+        Args:
+            entry_id: The storage_key/ID returned by store().
+
+        Returns:
+            True if the entry was deleted, False if not found.
+        """
+        ...
+
+    @abstractmethod
+    def count(self) -> int:
+        """Count total stored memories.
+
+        Returns:
+            Total number of stored memories.
+        """
+        ...
+
+    @abstractmethod
+    def health_check(self) -> dict:
+        """Run health check on the adapter's backend.
+
+        Returns:
+            Dict with at least:
+            - ``status`` (str): ``"healthy"``, ``"degraded"``, or ``"unhealthy"``
+            - ``latency_ms`` (float): Round-trip time for the check
+        """
+        ...
+
+    @abstractmethod
+    def close(self) -> None:
+        """Release all resources held by this adapter.
+
+        Must be safe to call multiple times.
+        """
+        ...
 
 
 class TestStorageAdapterContract:
@@ -595,3 +827,18 @@ class TestStorageAdapterContract:
         assert "adapter" in stats
         assert "total_count" in stats
         assert stats["adapter"] == self.adapter.name
+
+
+__all__ = [
+    # Data classes
+    "MemoryEntry",
+    "StoredMemory",
+    # Abstract base class
+    "StorageAdapter",
+    # Async protocol
+    "AsyncStorageAdapter",
+    # Standardized protocol
+    "StorageAdapterProtocol",
+    # Test contract
+    "TestStorageAdapterContract",
+]

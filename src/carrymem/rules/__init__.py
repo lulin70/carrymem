@@ -507,14 +507,14 @@ class RuleEngine:
         try:
             all_active = self.storage.list_all(status="active", limit=10000)
             active_ids = {r.id for r in all_active}
-        except Exception as e:
+        except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
             _logger.warning(f"Failed to list active rules: {e}")
 
         superseded_ids = set()
         try:
             all_deprecated = self.storage.list_all(status="deprecated", limit=10000)
             superseded_ids = {r.id for r in all_deprecated}
-        except Exception as e:
+        except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
             _logger.warning(f"Failed to list deprecated rules: {e}")
 
         results = []
@@ -872,7 +872,7 @@ class RuleEngine:
 
             except ImportModeError:
                 raise
-            except Exception as e:
+            except (ValueError, TypeError, KeyError, sqlite3.Error) as e:
                 stats["errors"].append(str(e))
 
         return stats
