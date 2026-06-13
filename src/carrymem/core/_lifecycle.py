@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional, Union
 from carrymem.adapters.base import MemoryEntry, StorageAdapter
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.engine import MemoryClassificationEngine
+from carrymem.error_messages import get_hint, get_message
 from carrymem.errors import CarryMemError
 from carrymem.exceptions import KnowledgeNotConfiguredError as _KnowledgeNotConfiguredError
 from carrymem.exceptions import StorageNotConfiguredError as _StorageNotConfiguredError
@@ -99,15 +100,15 @@ class LifecycleMixin:
             if adapter_cls is None:
                 raise CarryMemError(
                     code="CM-100",
-                    message=f"未知的存储适配器类型: {storage!r}",
-                    hint="使用 'sqlite'、'obsidian'、StorageAdapter 实例，或安装注册此名称的插件。",
+                    message=get_message("CM-100"),
+                    hint=get_hint("CM-100"),
                     cause=ValueError(f"Unknown adapter: {storage!r}"),
                 )
             if storage == "obsidian":
                 raise CarryMemError(
                     code="CM-100",
-                    message="Obsidian 适配器需要指定 vault_path 参数。",
-                    hint="请使用 CarryMem(knowledge_adapter=ObsidianAdapter('/path/to/vault')) 的方式配置。",
+                    message=get_message("CM-100"),
+                    hint=get_hint("CM-110"),
                     cause=ValueError("ObsidianAdapter requires a vault_path."),
                 )
             else:
@@ -115,8 +116,8 @@ class LifecycleMixin:
         else:
             raise CarryMemError(
                 code="CM-202",
-                message=f"无效的存储类型参数: {storage!r}",
-                hint="支持 None、'sqlite' 或 StorageAdapter 实例。",
+                message=get_message("CM-202"),
+                hint=get_hint("CM-202"),
                 cause=ValueError(f"Invalid storage type: {storage!r}"),
             )
 

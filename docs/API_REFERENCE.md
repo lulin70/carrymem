@@ -843,8 +843,9 @@ LLM 驱动的语义聚合（实验性功能）。
 |--------|----------|----------|----------|
 | CM-401 | 加密操作失败 | Encryption operation failed | 密钥/加密错误 |
 | CM-402 | 路径安全检查未通过（路径穿越检测） | Path security check failed (path traversal detected) | 不安全路径 |
-| CM-403 | 解密失败：密钥不匹配或数据已损坏 | Decryption failed: key mismatch or data corruption | 解密失败 |
+| CM-403 | 权限拒绝：用户没有执行此操作的权限 | Permission denied: user does not have permission for this operation | 权限不足 |
 | CM-404 | 输入内容触发了安全过滤规则 | Input content triggered security filter rules | 危险输入检测 |
+| CM-408 | 解密失败：密钥不匹配或数据已损坏 | Decryption failed: key mismatch or data corruption | 解密失败 |
 
 ### CM-500 ~ CM-599: 导入/导出
 

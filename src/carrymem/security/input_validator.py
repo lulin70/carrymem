@@ -13,6 +13,7 @@ import re
 from pathlib import Path
 from typing import Any, Dict
 
+from carrymem.constants import MAX_MESSAGE_LENGTH
 from carrymem.exceptions import ValidationError
 
 
@@ -62,7 +63,7 @@ class InputValidator:
     ]
 
     # Maximum lengths
-    MAX_CONTENT_LENGTH = 10000  # 10KB
+    MAX_CONTENT_LENGTH = MAX_MESSAGE_LENGTH  # synced with constants.MAX_MESSAGE_LENGTH
     MAX_QUERY_LENGTH = 1000
     MAX_NAMESPACE_LENGTH = 100
     MAX_PATH_LENGTH = 500

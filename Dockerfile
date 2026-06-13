@@ -1,8 +1,10 @@
 FROM python:3.12-slim
 
+ARG VERSION=0.4.0
+
 LABEL org.opencontainers.image.title="CarryMem MCP Server"
 LABEL org.opencontainers.image.description="Your portable AI memory layer — MCP server for memory classification"
-LABEL org.opencontainers.image.version="0.2.4"
+LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.source="https://github.com/lulin70/carrymem"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
