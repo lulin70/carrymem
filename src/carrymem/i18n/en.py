@@ -3,64 +3,31 @@
 EN_MESSAGES: dict[str, str] = {
     # ── Error messages (err.*) ─────────────────────────────────
     "err.config_malformed": "Configuration file is malformed or missing required fields.",
-    "err.init_dependency_missing": (
-        "Initialization failed: required dependency missing."
-        " Run 'pip install -e .' to install all dependencies."
-    ),
-    "err.storage_not_configured": (
-        "Storage adapter not configured or unknown type."
-        " Use CarryMem(storage='sqlite') or pass a StorageAdapter instance."
-    ),
+    "err.init_dependency_missing": "Initialization failed: required dependency missing. Run 'pip install -e .' to install all dependencies.",
+    "err.storage_not_configured": "Storage adapter not configured or unknown type. Use CarryMem(storage='sqlite') or pass a StorageAdapter instance.",
     "err.db_operation_failed": "Database operation execution failed. Run 'carrymem doctor' for diagnostics.",
-    "err.db_duplicate": (
-        "Duplicate data detected (unique constraint conflict)."
-        " This record may already exist. Try updating instead of creating."
-    ),
-    "err.db_table_missing": (
-        "Database table does not exist or is uninitialized."
-        " Run 'carrymem init' to initialize database schema."
-    ),
+    "err.db_duplicate": "Duplicate data detected (unique constraint conflict). This record may already exist. Try updating instead of creating.",
+    "err.db_table_missing": "Database table does not exist or is uninitialized. Run 'carrymem init' to initialize database schema.",
     "err.db_locked": "Database is locked by another process. Close other CarryMem instances or wait and retry.",
-    "err.db_cannot_open": (
-        "Unable to open database file. Check file permissions"
-        " and disk space. Run 'carrymem doctor --fix'."
-    ),
+    "err.db_cannot_open": "Unable to open database file. Check file permissions and disk space. Run 'carrymem doctor --fix'.",
     "err.permission_denied": "Permission denied: cannot access file or directory. Check file/directory permissions.",
     "err.disk_full": "Insufficient disk space. Free up disk space before retrying.",
     "err.file_not_found": "Specified file not found. Verify the file path exists. Run 'carrymem init' if needed.",
     "err.db_connection_failed": "Unable to connect to the database. Check DB path and file permissions.",
     "err.input_validation": "Input validation failed. Check required fields and data format.",
     "err.invalid_param": "Invalid input parameter. Check parameter type, range, and format.",
-    "err.memory_empty": (
-        "Memory content is empty or too short."
-        " Content must contain at least a few meaningful characters."
-    ),
-    "err.memory_not_found": (
-        "The specified memory entry does not exist."
-        " Use 'carrymem list' to view available memories."
-    ),
+    "err.memory_empty": "Memory content is empty or too short. Content must contain at least a few meaningful characters.",
+    "err.memory_not_found": "The specified memory entry does not exist. Use 'carrymem list' to view available memories.",
     "err.recall_failed": "Memory recall operation failed. Check search query syntax. Try simplifying keywords.",
     "err.classification_failed": "Memory classification failed. Ensure content is non-empty and reasonably sized.",
     "err.rule_engine_error": "Rule engine execution error. Check rule definition format.",
-    "err.encryption_failed": (
-        "Encryption operation failed. Check encryption key configuration."
-        " The key may be corrupted or expired."
-    ),
-    "err.decryption_failed": (
-        "Decryption failed: key mismatch or data corruption."
-        " Ensure the decryption key matches the encryption key."
-    ),
+    "err.encryption_failed": "Encryption operation failed. Check encryption key configuration. The key may be corrupted or expired.",
+    "err.decryption_failed": "Decryption failed: key mismatch or data corruption. Ensure the decryption key matches the encryption key.",
     "err.path_traversal": "Path security check failed (path traversal detected). Access blocked for security reasons.",
-    "err.import_format": (
-        "Import file format is unsupported or corrupted."
-        " Supported formats: JSON (.json), Carry files (.carry)."
-    ),
+    "err.import_format": "Import file format is unsupported or corrupted. Supported formats: JSON (.json), Carry files (.carry).",
     "err.export_failed": "Export operation failed. Check target path has write permission and sufficient disk space.",
     "err.unknown_command": "Unknown command or invalid arguments. Run 'carrymem help' for all available commands.",
-    "err.tui_launch_failed": (
-        "TUI launch failed: terminal lacks required capabilities."
-        " Install Textual: pip install textual"
-    ),
+    "err.tui_launch_failed": "TUI launch failed: terminal lacks required capabilities. Install Textual: pip install textual",
     "err.mcp_startup_failed": "MCP server startup failed. Check port usage and MCP configuration.",
     "err.cli_timeout": "CLI command execution timed out. Increase timeout setting or reduce data volume.",
     "err.unknown": "An unknown error occurred. Please report this error code to the development team.",

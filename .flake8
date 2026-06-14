@@ -21,4 +21,6 @@ extend-ignore =
 
 per-file-ignores =
     src/carrymem/cli/_base.py:F403,F405
+    src/carrymem/i18n/en.py:E501
+    src/carrymem/i18n/zh_CN.py:E501
     tests/*:F401,F841

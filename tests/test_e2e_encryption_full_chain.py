@@ -82,9 +82,7 @@ class TestE2EEncryptionLifecycle:
                 for orig in secret_memories
                 if any(orig.lower() in rc.lower() or rc.lower() in orig.lower() for rc in recalled_contents)
             )
-            assert found_count == len(
-                secret_memories
-            ), (
+            assert found_count == len(secret_memories), (
                 f"All original content should be recoverable after encrypt/reopen cycle."
                 f" Found {found_count}/{len(secret_memories)}"
             )

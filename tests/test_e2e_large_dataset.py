@@ -37,11 +37,7 @@ class TestE2EBatchInsert:
         errors = []
         for i in range(100):
             try:
-                topic = (
-                    "programming" if i % 3 == 0
-                    else "database" if i % 3 == 1
-                    else "devops"
-                )
+                topic = "programming" if i % 3 == 0 else "database" if i % 3 == 1 else "devops"
                 memory = f"Batch memory {i}: Test data for stress testing - topic is {topic}"
                 result = cm.classify_and_remember(memory)
                 if not isinstance(result, dict):
