@@ -30,7 +30,7 @@ import uuid
 from typing import Any, Dict, Optional
 
 from carrymem.__version__ import __version__ as _version
-from carrymem.monitoring import MetricsCollector, HealthChecker
+from carrymem.monitoring import HealthChecker, MetricsCollector
 
 from .server import MCPServer
 
@@ -331,7 +331,7 @@ class MCPHTTPServer:
         else:
             print("⚠️  WARNING: No API key set — server is open to all connections!")
             print("   Set CARRYMEM_API_KEY env var or use --api-key flag")
-        
+
         self._health_checker.set_ready(True)
 
         async with self._server:

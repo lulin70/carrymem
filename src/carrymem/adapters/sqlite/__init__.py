@@ -373,6 +373,7 @@ class SQLiteAdapter(StorageAdapter):
             Dict with status, latency_ms, and backend-specific metrics.
         """
         import time as _time
+
         start = _time.monotonic()
         status_detail = "healthy"
         try:
@@ -384,6 +385,7 @@ class SQLiteAdapter(StorageAdapter):
             tables = [r[0] for r in cursor.fetchall()]
         except Exception as e:
             from ...utils.logger import logger
+
             logger.warning("SQLiteAdapter health check failed: %s", e)
             status_detail = "unhealthy"
             row_count = -1
@@ -409,6 +411,7 @@ class SQLiteAdapter(StorageAdapter):
             JSON-serialized string of all stored memories.
         """
         import json as _json
+
         results = self.recall("*", limit=100000, update_access=False)
         entries = [r.to_dict() for r in results]
         return _json.dumps(entries, ensure_ascii=False, default=str)
@@ -423,6 +426,7 @@ class SQLiteAdapter(StorageAdapter):
             Number of entries imported.
         """
         import json as _json
+
         entries = _json.loads(data)
         count = 0
         for entry_dict in entries:
@@ -467,8 +471,7 @@ class SQLiteAdapter(StorageAdapter):
 
     def remember(self, entry: MemoryEntry, _skip_commit: bool = False) -> StoredMemory:
         warnings.warn(
-            "remember() is deprecated, use store() instead. "
-            "Will be removed in v0.5.0.",
+            "remember() is deprecated, use store() instead. " "Will be removed in v0.5.0.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -479,8 +482,7 @@ class SQLiteAdapter(StorageAdapter):
 
     def forget(self, storage_key: str) -> bool:
         warnings.warn(
-            "forget() is deprecated, use delete() instead. "
-            "Will be removed in v0.5.0.",
+            "forget() is deprecated, use delete() instead. " "Will be removed in v0.5.0.",
             DeprecationWarning,
             stacklevel=2,
         )

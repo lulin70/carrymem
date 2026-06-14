@@ -21,7 +21,7 @@ Design principles:
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, Callable, Dict, List, Optional, Protocol, TYPE_CHECKING, Type, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Protocol, Type, Union
 
 if TYPE_CHECKING:
     from carrymem.adapters.base import StorageAdapter
@@ -110,7 +110,9 @@ class LifecycleOps(Protocol):
 
     def __enter__(self) -> CarryMem: ...
 
-    def __exit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]) -> bool: ...
+    def __exit__(
+        self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
+    ) -> bool: ...
 
 
 # ---------------------------------------------------------------------------

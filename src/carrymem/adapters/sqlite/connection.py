@@ -204,8 +204,7 @@ class ConnectionManager:
 
         if elapsed_ms > _SLOW_QUERY_THRESHOLD_MS:
             logger.warning(
-                "Slow query detected (%.2fms > %dms): "
-                "%s", elapsed_ms, _SLOW_QUERY_THRESHOLD_MS, sql_display
+                "Slow query detected (%.2fms > %dms): " "%s", elapsed_ms, _SLOW_QUERY_THRESHOLD_MS, sql_display
             )
 
     def close(self):

@@ -497,8 +497,7 @@ class CodingContextAdapter(StorageAdapter):
 
     def remember(self, *args, **kwargs) -> Any:
         warnings.warn(
-            "remember() is deprecated, use store() instead. "
-            "Will be removed in v0.5.0.",
+            "remember() is deprecated, use store() instead. " "Will be removed in v0.5.0.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -506,8 +505,7 @@ class CodingContextAdapter(StorageAdapter):
 
     def forget(self, *args, **kwargs) -> Any:
         warnings.warn(
-            "forget() is deprecated, use delete() instead. "
-            "Will be removed in v0.5.0.",
+            "forget() is deprecated, use delete() instead. " "Will be removed in v0.5.0.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -539,6 +537,7 @@ class CodingContextAdapter(StorageAdapter):
 
     def health_check(self) -> dict:
         import time
+
         start = time.monotonic()
         try:
             conn = self._get_connection()

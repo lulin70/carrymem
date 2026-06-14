@@ -60,10 +60,7 @@ class I18nManager:
             ValueError: 语言未注册时抛出。
         """
         if locale not in cls._translations:
-            raise ValueError(
-                f"Unsupported locale: '{locale}'. "
-                f"Available: {sorted(cls._translations.keys())}"
-            )
+            raise ValueError(f"Unsupported locale: '{locale}'. " f"Available: {sorted(cls._translations.keys())}")
         cls._current_locale = locale
 
     @classmethod
@@ -126,8 +123,8 @@ class I18nManager:
 
 # ── 自动加载内置翻译表 ───────────────────────────────────────────
 
-from carrymem.i18n.zh_CN import ZH_CN_MESSAGES  # noqa: E402
 from carrymem.i18n.en import EN_MESSAGES  # noqa: E402
+from carrymem.i18n.zh_CN import ZH_CN_MESSAGES  # noqa: E402
 
 I18nManager.register("zh-CN", ZH_CN_MESSAGES)
 I18nManager.register("en", EN_MESSAGES)

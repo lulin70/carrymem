@@ -7,7 +7,7 @@ import os
 import sqlite3
 from threading import Timer
 from types import TracebackType
-from typing import Any, Dict, Optional, TYPE_CHECKING, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type, Union
 
 from carrymem.adapters.base import MemoryEntry, StorageAdapter
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
@@ -102,7 +102,9 @@ class LifecycleMixin:
                     namespace=namespace,
                     encryption_key=encryption_key,
                     enable_vector_search=config.get("enable_vector_search", True) if config else True,
-                    embedding_model=(config.get("embedding_model", "all-MiniLM-L6-v2") if config else "all-MiniLM-L6-v2"),
+                    embedding_model=(
+                        config.get("embedding_model", "all-MiniLM-L6-v2") if config else "all-MiniLM-L6-v2"
+                    ),
                 )
             except (OSError, ValueError, TypeError, sqlite3.Error) as e:
                 raise CarryMemError.from_cause(e) from e
@@ -194,7 +196,9 @@ class LifecycleMixin:
     def __enter__(self) -> "LifecycleMixin":
         return self
 
-    def __exit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]) -> bool:
+    def __exit__(
+        self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
+    ) -> bool:
         self.close()
         return False
 

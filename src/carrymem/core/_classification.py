@@ -4,6 +4,18 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from carrymem.adapters.base import MemoryEntry
+from carrymem.constants import (
+    ACTIVE_RULES_LIST_LIMIT,
+    CONTENT_PREVIEW_LENGTH,
+    COREFERENCE_RECALL_LIMIT,
+    CORRECTION_KEYWORD_OVERLAP,
+    CORRECTION_RECALL_LIMIT,
+    DEFAULT_FORCE_TYPE_CONFIDENCE,
+    IMPORT_CONTENT_SEARCH_LENGTH,
+    MAX_MESSAGE_LENGTH,
+    MIN_CORRECTION_CONTENT_LENGTH,
+    RULE_CONTENT_MAX_LENGTH,
+)
 from carrymem.security.input_validator import InputValidator
 from carrymem.types import (
     ClassificationResult,
@@ -15,18 +27,6 @@ from carrymem.utils.validators import (
     validate_context,
     validate_language,
     validate_message,
-)
-from carrymem.constants import (
-    MAX_MESSAGE_LENGTH,
-    DEFAULT_FORCE_TYPE_CONFIDENCE,
-    COREFERENCE_RECALL_LIMIT,
-    CORRECTION_RECALL_LIMIT,
-    CONTENT_PREVIEW_LENGTH,
-    RULE_CONTENT_MAX_LENGTH,
-    ACTIVE_RULES_LIST_LIMIT,
-    CORRECTION_KEYWORD_OVERLAP,
-    IMPORT_CONTENT_SEARCH_LENGTH,
-    MIN_CORRECTION_CONTENT_LENGTH,
 )
 
 logger = logging.getLogger(__name__)

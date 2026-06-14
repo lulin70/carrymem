@@ -87,7 +87,9 @@ def cmd_list(args):
     parser.add_argument("--limit", "-l", type=int, default=20, help=_t("cli.arg.limit_memories"))
     parser.add_argument("--type", "-t", help=_t("cli.arg.type_filter"))
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace_default"))
-    parser.add_argument("--format", "-f", choices=["table", "json", "plain"], default="table", help=_t("cli.arg.format_table"))
+    parser.add_argument(
+        "--format", "-f", choices=["table", "json", "plain"], default="table", help=_t("cli.arg.format_table")
+    )
     parser.add_argument("--db", help=_t("cli.arg.db"))
 
     parsed = parser.parse_args(args)
@@ -101,7 +103,7 @@ def cmd_list(args):
 
     if not memories:
         print(f"  {_dim(_t('cli.error.no_memories'))}")
-        tip = _t('help.add_memory_tip')
+        tip = _t("help.add_memory_tip")
         print(f"  {_dim(tip)}")
         cm.close()
         return 0
@@ -131,7 +133,9 @@ def cmd_search(args):
     parser.add_argument("--limit", "-l", type=int, default=10, help=_t("cli.arg.limit_results"))
     parser.add_argument("--type", "-t", help=_t("cli.arg.type_filter"))
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace_default"))
-    parser.add_argument("--format", "-f", choices=["table", "json", "plain"], default="table", help=_t("cli.arg.format_table"))
+    parser.add_argument(
+        "--format", "-f", choices=["table", "json", "plain"], default="table", help=_t("cli.arg.format_table")
+    )
     parser.add_argument("--db", help=_t("cli.arg.db"))
 
     parsed = parser.parse_args(args)

@@ -6,17 +6,17 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
-from carrymem.core._lifecycle import StorageNotConfiguredError
 from carrymem.constants import (
     BATCH_RECALL_LIMIT,
-    MIN_QUALITY_THRESHOLD,
-    MAINTENANCE_CONTENT_SNIPPET_LENGTH,
-    DEFAULT_CONFIDENCE_SCORE,
+    CONSOLIDATION_MIN_INTERVAL_HOURS,
     DECAY_CONFIDENCE_FLOOR,
     DECAY_ROUNDING_PRECISION,
-    CONSOLIDATION_MIN_INTERVAL_HOURS,
+    DEFAULT_CONFIDENCE_SCORE,
+    MAINTENANCE_CONTENT_SNIPPET_LENGTH,
+    MIN_QUALITY_THRESHOLD,
     SECONDS_PER_HOUR,
 )
+from carrymem.core._lifecycle import StorageNotConfiguredError
 
 logger = logging.getLogger(__name__)
 
@@ -185,9 +185,10 @@ class MaintenanceMixin:
         report["forgotten_count"] = forgotten_count
 
         logger.info(
-            "Consolidation complete: %d superseded, "
-            "%d forgotten, %d decayed",
-            superseded_count, forgotten_count, len(report['to_decay'])
+            "Consolidation complete: %d superseded, " "%d forgotten, %d decayed",
+            superseded_count,
+            forgotten_count,
+            len(report["to_decay"]),
         )
 
         if run_p1:
@@ -246,10 +247,9 @@ class MaintenanceMixin:
                 logger.info("Scheduled consolidation starting (interval=%fh)", interval_hours)
                 result = self.consolidate(dry_run=dry_run, run_p1=run_p1, run_p2=run_p2)
                 logger.info(
-                    "Scheduled consolidation complete: "
-                    "%d superseded, %d forgotten",
-                    result.get('superseded_count', 0),
-                    result.get('forgotten_count', 0),
+                    "Scheduled consolidation complete: " "%d superseded, %d forgotten",
+                    result.get("superseded_count", 0),
+                    result.get("forgotten_count", 0),
                 )
             except (ValueError, TypeError, RuntimeError, sqlite3.Error) as e:
                 logger.error("Scheduled consolidation failed: %s", e)

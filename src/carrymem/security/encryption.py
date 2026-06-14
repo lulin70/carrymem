@@ -176,9 +176,7 @@ class MemoryEncryption:
             iterations = PBKDF2_ITERATIONS
             self._current_iterations = iterations
             self._ensure_dir(os.path.dirname(salt_path))
-            meta = json.dumps(
-                {"salt": base64.b64encode(salt).decode("ascii"), "iterations": iterations}
-            )
+            meta = json.dumps({"salt": base64.b64encode(salt).decode("ascii"), "iterations": iterations})
             with open(salt_path, "w") as f:
                 f.write(meta)
             os.chmod(salt_path, 0o600)
@@ -258,9 +256,7 @@ class MemoryEncryption:
                     "Refusing to load."
                 )
         except (IOError, OSError) as e:
-            raise EncryptionError(
-                f"Failed to verify key integrity from {digest_path}: {e}"
-            ) from e
+            raise EncryptionError(f"Failed to verify key integrity from {digest_path}: {e}") from e
 
     @staticmethod
     def _ensure_dir(path: str) -> None:
@@ -369,9 +365,7 @@ class MemoryEncryption:
             counter += 1
         return bytes(keystream[:length])
 
-    def rotate_key(
-        self, new_password: Optional[str] = None
-    ) -> Callable[[str], str]:
+    def rotate_key(self, new_password: Optional[str] = None) -> Callable[[str], str]:
         """Rotate the encryption key and return a re-encryption helper.
 
         Performs atomic key rotation:
@@ -446,9 +440,7 @@ class MemoryEncryption:
                     old_f = self._make_fernet(old_key)  # type: ignore[arg-type]
                     plaintext = old_f.decrypt(old_ciphertext.encode("ascii")).decode("utf-8")
                 except (TypeError, ValueError, binascii.Error) as e:
-                    raise EncryptionError(
-                        f"Key rotation decryption failed: {e}"
-                    ) from e
+                    raise EncryptionError(f"Key rotation decryption failed: {e}") from e
             else:
                 # Stream cipher fallback - use old_key directly
                 plaintext = self._decrypt_with_key(old_key, old_ciphertext)  # type: ignore[arg-type]

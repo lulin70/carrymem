@@ -10,6 +10,15 @@ from typing import Any, Dict, List, Optional
 from carrymem.__version__ import __version__ as _version
 from carrymem.adapters.base import MemoryEntry
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
+from carrymem.constants import (
+    CORRECTION_RECALL_LIMIT,
+    DEFAULT_CONFIDENCE_SCORE,
+    EXPORT_SCHEMA_VERSION,
+    IMPORT_CONTENT_SEARCH_LENGTH,
+    WHOAMI_CORRECTION_COUNT,
+    WHOAMI_DECISION_COUNT,
+    WHOAMI_PREFERENCE_COUNT,
+)
 from carrymem.core._lifecycle import StorageNotConfiguredError, _validate_file_path
 from carrymem.domain import get_domain_description, infer_domains_from_memories
 from carrymem.security.input_validator import InputValidator
@@ -20,15 +29,6 @@ from carrymem.types import (
     MemoryProfile,
     MemoryStats,
     WhoamiResult,
-)
-from carrymem.constants import (
-    WHOAMI_PREFERENCE_COUNT,
-    WHOAMI_DECISION_COUNT,
-    WHOAMI_CORRECTION_COUNT,
-    EXPORT_SCHEMA_VERSION,
-    DEFAULT_CONFIDENCE_SCORE,
-    IMPORT_CONTENT_SEARCH_LENGTH,
-    CORRECTION_RECALL_LIMIT,
 )
 
 logger = logging.getLogger(__name__)
@@ -266,7 +266,9 @@ class ProfileExportMixin:
                     content = _import_validator.validate_content(content, "imported_content")
                 content_hash = mem_dict.get("content_hash", "")
                 if merge_strategy == "skip_existing" and content_hash:
-                    existing = self._adapter.recall(mem_dict.get("content", "")[:IMPORT_CONTENT_SEARCH_LENGTH], limit=CORRECTION_RECALL_LIMIT)
+                    existing = self._adapter.recall(
+                        mem_dict.get("content", "")[:IMPORT_CONTENT_SEARCH_LENGTH], limit=CORRECTION_RECALL_LIMIT
+                    )
                     if any(
                         (
                             getattr(e, "content_hash", None) == content_hash

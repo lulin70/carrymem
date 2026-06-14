@@ -25,7 +25,6 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional
 
-
 # ── 环境变量常量 ────────────────────────────────────────────────
 
 ENV_LOG_JSON = "CARRYMEM_LOG_JSON"
@@ -177,9 +176,13 @@ def setup_logging(
     file_path = Path(log_file) if log_file else _get_log_file_path()
 
     # 根式器选择
-    formatter = JSONFormatter() if json_mode else logging.Formatter(
-        fmt=DEFAULT_LOG_FORMAT,
-        datefmt=DEFAULT_DATE_FORMAT,
+    formatter = (
+        JSONFormatter()
+        if json_mode
+        else logging.Formatter(
+            fmt=DEFAULT_LOG_FORMAT,
+            datefmt=DEFAULT_DATE_FORMAT,
+        )
     )
 
     # 配置 root logger

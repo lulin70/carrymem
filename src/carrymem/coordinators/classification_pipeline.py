@@ -110,7 +110,7 @@ class ClassificationPipeline:
         if self.pattern_analyzer._is_noise(message) and not is_confirmation_with_context:
             self._filter_counts["noise"] += 1
             if self._filter_counts["noise"] % 100 == 1:
-                logger.info("Noise filter: %d messages filtered total", self._filter_counts['noise'])
+                logger.info("Noise filter: %d messages filtered total", self._filter_counts["noise"])
             return []
 
         # P0-C: Filter low-information assistant replies

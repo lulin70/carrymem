@@ -299,9 +299,9 @@ class ExperienceRuleBridge:
                 rule_type="avoid",
                 override=True,
                 derived_from="failure_lesson",
-            source_memories=[entry.source_memory_id],
-            confidence=entry.confidence,
-        )
+                source_memories=[entry.source_memory_id],
+                confidence=entry.confidence,
+            )
         except (ValueError, TypeError, RuntimeError):
             return None
 

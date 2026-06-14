@@ -3,35 +3,67 @@
 EN_MESSAGES: dict[str, str] = {
     # ── Error messages (err.*) ─────────────────────────────────
     "err.config_malformed": "Configuration file is malformed or missing required fields.",
-    "err.init_dependency_missing": "Initialization failed: required dependency missing. Run 'pip install -e .' to install all dependencies.",
-    "err.storage_not_configured": "Storage adapter not configured or unknown type. Use CarryMem(storage='sqlite') or pass a StorageAdapter instance.",
+    "err.init_dependency_missing": (
+        "Initialization failed: required dependency missing."
+        " Run 'pip install -e .' to install all dependencies."
+    ),
+    "err.storage_not_configured": (
+        "Storage adapter not configured or unknown type."
+        " Use CarryMem(storage='sqlite') or pass a StorageAdapter instance."
+    ),
     "err.db_operation_failed": "Database operation execution failed. Run 'carrymem doctor' for diagnostics.",
-    "err.db_duplicate": "Duplicate data detected (unique constraint conflict). This record may already exist. Try updating instead of creating.",
-    "err.db_table_missing": "Database table does not exist or is uninitialized. Run 'carrymem init' to initialize database schema.",
+    "err.db_duplicate": (
+        "Duplicate data detected (unique constraint conflict)."
+        " This record may already exist. Try updating instead of creating."
+    ),
+    "err.db_table_missing": (
+        "Database table does not exist or is uninitialized."
+        " Run 'carrymem init' to initialize database schema."
+    ),
     "err.db_locked": "Database is locked by another process. Close other CarryMem instances or wait and retry.",
-    "err.db_cannot_open": "Unable to open database file. Check file permissions and disk space. Run 'carrymem doctor --fix'.",
+    "err.db_cannot_open": (
+        "Unable to open database file. Check file permissions"
+        " and disk space. Run 'carrymem doctor --fix'."
+    ),
     "err.permission_denied": "Permission denied: cannot access file or directory. Check file/directory permissions.",
     "err.disk_full": "Insufficient disk space. Free up disk space before retrying.",
     "err.file_not_found": "Specified file not found. Verify the file path exists. Run 'carrymem init' if needed.",
     "err.db_connection_failed": "Unable to connect to the database. Check DB path and file permissions.",
     "err.input_validation": "Input validation failed. Check required fields and data format.",
     "err.invalid_param": "Invalid input parameter. Check parameter type, range, and format.",
-    "err.memory_empty": "Memory content is empty or too short. Content must contain at least a few meaningful characters.",
-    "err.memory_not_found": "The specified memory entry does not exist. Use 'carrymem list' to view available memories.",
+    "err.memory_empty": (
+        "Memory content is empty or too short."
+        " Content must contain at least a few meaningful characters."
+    ),
+    "err.memory_not_found": (
+        "The specified memory entry does not exist."
+        " Use 'carrymem list' to view available memories."
+    ),
     "err.recall_failed": "Memory recall operation failed. Check search query syntax. Try simplifying keywords.",
     "err.classification_failed": "Memory classification failed. Ensure content is non-empty and reasonably sized.",
     "err.rule_engine_error": "Rule engine execution error. Check rule definition format.",
-    "err.encryption_failed": "Encryption operation failed. Check encryption key configuration. The key may be corrupted or expired.",
-    "err.decryption_failed": "Decryption failed: key mismatch or data corruption. Ensure the decryption key matches the encryption key.",
+    "err.encryption_failed": (
+        "Encryption operation failed. Check encryption key configuration."
+        " The key may be corrupted or expired."
+    ),
+    "err.decryption_failed": (
+        "Decryption failed: key mismatch or data corruption."
+        " Ensure the decryption key matches the encryption key."
+    ),
     "err.path_traversal": "Path security check failed (path traversal detected). Access blocked for security reasons.",
-    "err.import_format": "Import file format is unsupported or corrupted. Supported formats: JSON (.json), Carry files (.carry).",
+    "err.import_format": (
+        "Import file format is unsupported or corrupted."
+        " Supported formats: JSON (.json), Carry files (.carry)."
+    ),
     "err.export_failed": "Export operation failed. Check target path has write permission and sufficient disk space.",
     "err.unknown_command": "Unknown command or invalid arguments. Run 'carrymem help' for all available commands.",
-    "err.tui_launch_failed": "TUI launch failed: terminal lacks required capabilities. Install Textual: pip install textual",
+    "err.tui_launch_failed": (
+        "TUI launch failed: terminal lacks required capabilities."
+        " Install Textual: pip install textual"
+    ),
     "err.mcp_startup_failed": "MCP server startup failed. Check port usage and MCP configuration.",
     "err.cli_timeout": "CLI command execution timed out. Increase timeout setting or reduce data volume.",
     "err.unknown": "An unknown error occurred. Please report this error code to the development team.",
-
     # ── Success / Status messages (status.*) ───────────────────
     "status.memory_stored": "Remembered {count} item(s)",
     "status.memory_updated": "Updated: {key}",
@@ -46,7 +78,6 @@ EN_MESSAGES: dict[str, str] = {
     "status.initialized": "CarryMem is ready!",
     "status.clean_completed": "Cleaned: {removed} removed, {errors} errors",
     "status.nothing_to_clean": "Nothing to clean — all memories are healthy",
-
     # ── Help / Tip text (help.*) ──────────────────────────────
     "help.quick_start": "Quick Start:",
     "help.force_store_tip": "Tip: Use --force to store anyway:",
@@ -55,7 +86,6 @@ EN_MESSAGES: dict[str, str] = {
     "help.confirm_delete": "Confirm? [y/N]",
     "help.cancelled": "Cancelled",
     "help.dry_run": "Dry run — no changes made",
-
     # ── UI labels (ui.*) ─────────────────────────────────────
     "ui.memories": "Memories",
     "ui.search_results": "Search results",
@@ -68,7 +98,6 @@ EN_MESSAGES: dict[str, str] = {
     "ui.expires": "Expires",
     "ui.access_count": "Accesses",
     "ui.tier": "Tier",
-
     # ── CLI command descriptions (cli.cmd.*) ──────────────────
     "cli.cmd.add": "Store a memory",
     "cli.cmd.list": "List recent memories",
@@ -93,7 +122,6 @@ EN_MESSAGES: dict[str, str] = {
     "cli.cmd.serve": "Start MCP HTTP server",
     "cli.cmd.init": "Initialize CarryMem",
     "cli.cmd.version": "Show version",
-
     # ── CLI success messages (cli.success.*) ──────────────────
     "cli.success.stored": "Stored (forced) {count} item(s)",
     "cli.success.remembered": "Remembered {count} item(s)",
@@ -106,7 +134,6 @@ EN_MESSAGES: dict[str, str] = {
     "cli.success.initialized": "CarryMem is ready!",
     "cli.success.nothing_to_clean": "Nothing to clean — all memories are healthy",
     "cli.success.cleaned": "Cleaned: {removed} removed, {errors} errors",
-
     # ── CLI error messages (cli.error.*) ──────────────────────
     "cli.error.not_found": "Memory not found: {key}",
     "cli.error.no_memories": "No memories found",
@@ -122,7 +149,6 @@ EN_MESSAGES: dict[str, str] = {
     "cli.error.validation": "Validation Error: {detail}",
     "cli.error.unknown_command": "Unknown command: {command}",
     "cli.error.json_invalid": "Invalid JSON context: {detail}",
-
     # ── CLI status/info messages (cli.status.*) ──────────────
     "cli.status.not_classified": "Not classified as memorable (noise or too vague)",
     "cli.status.cancelled": "Cancelled",
@@ -132,7 +158,6 @@ EN_MESSAGES: dict[str, str] = {
     "cli.status.confirm_restore": "Proceed? [y/N]",
     "cli.status.confirm_clean": "Remove {count} memories? [y/N]",
     "cli.status.warning_restore": "WARNING: This will replace your current database with the backup.",
-
     # ── CLI help section headers (cli.section.*) ─────────────
     "cli.section.commands": "Commands:",
     "cli.section.rules_engine": "Rules Engine:",
@@ -140,7 +165,6 @@ EN_MESSAGES: dict[str, str] = {
     "cli.section.quick_start": "Quick Start:",
     "cli.section.documentation": "Documentation: https://github.com/lulin70/carrymem",
     "cli.section.tagline": "AI remembers you. Not the other way around.",
-
     # ── CLI argument help text (cli.arg.*) ────────────────────
     # Common arguments
     "cli.arg.db": "Database path",
@@ -150,49 +174,38 @@ EN_MESSAGES: dict[str, str] = {
     "cli.arg.limit": "Number of items to show",
     "cli.arg.force": "Skip confirmation",
     "cli.arg.json": "Output as JSON",
-    
     # add command
     "cli.arg.message": "Message to remember",
     "cli.arg.context": "Additional context (JSON)",
     "cli.arg.force_store": "Force store without classification",
     "cli.arg.type_override": "Override memory type (with --force)",
-    
     # list command
     "cli.arg.limit_memories": "Number of memories to show",
     "cli.arg.type_filter": "Filter by memory type",
     "cli.arg.format_table": "Output format",
-    
     # search command
     "cli.arg.query": "Search query",
     "cli.arg.limit_results": "Max results",
-    
     # show command
     "cli.arg.key": "Storage key of the memory",
-    
     # edit command
     "cli.arg.key_edit": "Storage key of the memory to edit",
     "cli.arg.content": "New content",
-    
     # forget command
     "cli.arg.key_forget": "Storage key of the memory to delete",
-    
     # clean command
     "cli.arg.expired": "Remove expired memories",
     "cli.arg.quality": "Remove memories below quality threshold",
     "cli.arg.dry_run": "Show what would be removed",
-    
     # backup command
     "cli.arg.list_backups": "List all backups",
     "cli.arg.restore": "Restore from a backup file",
-    
     # export command
     "cli.arg.output_path": "Output file path",
     "cli.arg.export_format": "Export format",
-    
     # import command
     "cli.arg.input_path": "Input file path",
     "cli.arg.merge_strategy": "Merge strategy (skip/overwrite/merge)",
-    
     # pack command
     "cli.arg.output_file": "Output file path (default: ./carrymem_identity_YYYYMMDD.carry)",
     "cli.arg.include_rules": "Include rules (default: True)",
@@ -201,49 +214,39 @@ EN_MESSAGES: dict[str, str] = {
     "cli.arg.no_config": "Exclude config from pack",
     "cli.arg.encryption_key": "Encryption key to include encrypted entries",
     "cli.arg.encrypt": "Encrypt the .carry file with a password (prompted)",
-    
     # unpack command
     "cli.arg.carry_file": "Path to .carry file to unpack",
     "cli.arg.merge_mode": "Merge mode (skip/replace/merge)",
     "cli.arg.replace": "Overwrite existing memories",
-    
     # stats command
     "cli.arg.value_report": "Show value perception report (memories, rules, tokens saved, etc.)",
-    
     # whoami command
     "cli.arg.json_output": "Output as JSON",
-    
     # profile command
     "cli.arg.profile_action": "Profile action",
     "cli.arg.output": "Output file path (for export)",
-    
     # check command
     "cli.arg.check_conflicts": "Check for conflicts",
     "cli.arg.check_quality": "Check for low quality memories",
     "cli.arg.check_expired": "Check for expired memories",
     "cli.arg.check_all": "Run all checks",
-    
     # doctor command
     "cli.arg.fix": "Attempt to fix issues",
-    
     # setup-mcp command
     "cli.arg.tool": "Tool name (cursor/windsurf/zed/trae/cline/roo)",
     "cli.arg.project": "Project directory (default: current)",
     "cli.arg.global": "Configure MCP globally (system-level)",
     "cli.arg.force_overwrite": "Overwrite existing config",
     "cli.arg.uninstall": "Remove CarryMem MCP config from specified tool(s)",
-    
     # serve command
     "cli.arg.host": "Host to bind",
     "cli.arg.port": "Port to listen",
     "cli.arg.api_key": "API key for authentication",
-    
     # consolidate command
     "cli.arg.no_p1": "Skip P1 pattern recognition",
     "cli.arg.no_p2": "Skip P2 semantic consolidation",
     "cli.arg.schedule": "Schedule consolidation runs (daily/weekly/monthly)",
     "cli.arg.stop": "Stop scheduled consolidation",
-    
     # Rules command arguments
     # add-rule command
     "cli.arg.rule_action": "Behavior instruction (what AI should do)",
@@ -252,36 +255,28 @@ EN_MESSAGES: dict[str, str] = {
     "cli.arg.soft_rule": "Make this a soft suggestion (AI can ignore)",
     "cli.arg.template": "Use a rule template (see: carrymem list-templates)",
     "cli.arg.interactive": "Guided interactive creation",
-    
     # list-rules command
     "cli.arg.status_filter": "Filter by status",
     "cli.arg.type_filter_rules": "Filter by type",
     "cli.arg.limit_rules": "Max results (default: 20)",
     "cli.arg.format_rules": "Output format",
-    
     # match-rules command
     "cli.arg.scene": "Scene description to match against",
     "cli.arg.limit_match": "Max results (default: 5)",
     "cli.arg.format_match": "Output format",
     "cli.arg.context_budget": "Context budget (token count, default: 2000)",
-    
     # delete-rule command
     "cli.arg.rule_id": "Rule ID to delete",
-    
     # pause-rule command
     "cli.arg.rule_id_pause": "Rule ID to pause",
-    
     # resume-rule command
     "cli.arg.rule_id_resume": "Rule ID to resume",
-    
     # export-rules command
     "cli.arg.rules_output": "Output file path (JSON)",
     "cli.arg.status_export": "Filter by status",
-    
     # import-rules command
     "cli.arg.rules_input": "Input file path (JSON)",
     "cli.arg.import_mode": "Import mode (skip/overwrite/merge)",
-    
     # skill-pack command
     "cli.arg.skill_output": "Output file path (JSON)",
     "cli.arg.skill_name": "Skill name",
@@ -291,15 +286,12 @@ EN_MESSAGES: dict[str, str] = {
     "cli.arg.skill_scope": "Skill scope (personal/team/global)",
     "cli.arg.status_skill": "Filter rules by status",
     "cli.arg.tags": "Categorization tags",
-    
     # skill-install command
     "cli.arg.skill_file": "Skill bundle file path (JSON)",
     "cli.arg.install_scope": "Installation scope (personal/team/global)",
     "cli.arg.install_mode": "Installation mode (skip/overwrite/merge)",
-    
     # skill-verify command
     "cli.arg.skill_verify": "Skill bundle file path (JSON)",
-    
     # edit-rule command
     "cli.arg.rule_id_edit": "Rule ID to edit",
     "cli.arg.new_trigger": "New trigger",
@@ -307,26 +299,21 @@ EN_MESSAGES: dict[str, str] = {
     "cli.arg.new_type": "New rule type",
     "cli.arg.make_soft": "Change to soft rule",
     "cli.arg.make_hard": "Change to hard rule",
-    
     # suggest-rules command
     "cli.arg.suggest_type": "Suggestion type",
     "cli.arg.min_count": "Minimum occurrence count (default: 3)",
     "cli.arg.accept_suggestions": "Accept all suggestions (create rules)",
-    
     # promote-rules command
     "cli.arg.promote_type": "Promotion type",
     "cli.arg.auto_accept": "Auto-accept all candidates (with confirmation)",
     "cli.arg.expiry_days": "Rule expiry days (0 = never expires)",
-    
     # review-promotions command
     "cli.arg.accept_promo": "Accept a specific candidate by ID",
     "cli.arg.reject_promo": "Reject a specific candidate by ID",
     "cli.arg.accept_all_promo": "Accept all pending promotions (with confirmation)",
     "cli.arg.review_note": "Add a review note",
-    
     # promotion-log command
     "cli.arg.log_limit": "Number of entries to show",
-    
     # refine-rule command
     "cli.arg.refine_trigger": "Rule trigger/scene (required for new session)",
     "cli.arg.refine_action": "Rule action (required for new session)",
@@ -336,11 +323,9 @@ EN_MESSAGES: dict[str, str] = {
     "cli.arg.refine_session": "Continue existing session",
     "cli.arg.refine_confirm": "Confirm current session and create rule",
     "cli.arg.refine_cancel": "Cancel current session",
-    
     # learn-experience command
     "cli.arg.learn_type": "Experience type",
     "cli.arg.learn_expiry": "Rule expiry days (0 = never expires)",
-    
     # review-lessons command
     "cli.arg.accept_lesson": "Accept a specific lesson by ID",
     "cli.arg.reject_lesson": "Reject a specific lesson by ID",

@@ -115,13 +115,8 @@ class AccessPolicy:
 
             raise SecurityError(
                 code="CM-403",
-                message=(
-                    f"User '{user_id}' does not have '{permission}' "
-                    f"permission on {resource}."
-                ),
-                hint=(
-                    f"Only the owner ('{self.owner_id}') can perform this action."
-                ),
+                message=(f"User '{user_id}' does not have '{permission}' " f"permission on {resource}."),
+                hint=(f"Only the owner ('{self.owner_id}') can perform this action."),
             )
 
     def __repr__(self) -> str:

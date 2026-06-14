@@ -4,9 +4,15 @@ from typing import Any, Callable, Dict, List, Optional
 
 from carrymem.adapters.base import MemoryEntry
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
-from carrymem.core._lifecycle import StorageNotConfiguredError
 from carrymem.constants import BATCH_RECALL_LIMIT
-from carrymem.types import ClassificationResult, DeclareResult, UpdateMemoryResult, RollbackMemoryResult, MergeMemoriesResult
+from carrymem.core._lifecycle import StorageNotConfiguredError
+from carrymem.types import (
+    ClassificationResult,
+    DeclareResult,
+    MergeMemoriesResult,
+    RollbackMemoryResult,
+    UpdateMemoryResult,
+)
 from carrymem.utils.validators import (
     validate_context,
     validate_language,

@@ -106,9 +106,7 @@ def cmd_stats(args):
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
     parser.add_argument("--db", help=_t("cli.arg.db"))
     parser.add_argument("--format", "-f", choices=["text", "json"], default="text", help=_t("cli.arg.format"))
-    parser.add_argument(
-        "--value", "-v", action="store_true", help=_t("cli.arg.value_report")
-    )
+    parser.add_argument("--value", "-v", action="store_true", help=_t("cli.arg.value_report"))
 
     parsed = parser.parse_args(args)
     cm = _get_carrymem(parsed.db, parsed.namespace)
@@ -239,7 +237,9 @@ def cmd_whoami(args):
 
 def cmd_profile(args):
     parser = _make_parser("profile")
-    parser.add_argument("action", choices=["export", "show"], default="show", nargs="?", help=_t("cli.arg.profile_action"))
+    parser.add_argument(
+        "action", choices=["export", "show"], default="show", nargs="?", help=_t("cli.arg.profile_action")
+    )
     parser.add_argument("--output", "-o", help=_t("cli.arg.output"))
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
     parser.add_argument("--db", help=_t("cli.arg.db"))

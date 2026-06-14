@@ -20,11 +20,11 @@ Available official adapters (planned):
 Community adapters are welcome!
 """
 
+import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
-import warnings
 
 from carrymem.domain import infer_domain
 
@@ -459,8 +459,7 @@ class StorageAdapter(ABC):
             StoredMemory with storage metadata attached
         """
         warnings.warn(
-            "remember() is deprecated, use store() instead. "
-            "Will be removed in v0.5.0.",
+            "remember() is deprecated, use store() instead. " "Will be removed in v0.5.0.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -498,8 +497,7 @@ class StorageAdapter(ABC):
             True if deleted, False if not found
         """
         warnings.warn(
-            "forget() is deprecated, use delete() instead. "
-            "Will be removed in v0.5.0.",
+            "forget() is deprecated, use delete() instead. " "Will be removed in v0.5.0.",
             DeprecationWarning,
             stacklevel=2,
         )

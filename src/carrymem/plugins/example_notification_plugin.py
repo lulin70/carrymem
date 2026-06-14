@@ -11,7 +11,7 @@ Usage:
 
 from typing import TYPE_CHECKING
 
-from carrymem.plugins import HookPoint, PluginProtocol, PluginManager
+from carrymem.plugins import HookPoint, PluginManager, PluginProtocol
 
 if TYPE_CHECKING:
     from carrymem import CarryMem
@@ -37,12 +37,15 @@ class ExampleNotificationPlugin(PluginProtocol):
     def on_unload(self) -> None:
         """Called when the plugin is unloaded."""
         self._loaded = False
-        print(f"[{self.name}] Plugin unloaded. "
-              f"Sent {self._notification_count} notifications, "
-              f"logged {self._error_count} errors.")
+        print(
+            f"[{self.name}] Plugin unloaded. "
+            f"Sent {self._notification_count} notifications, "
+            f"logged {self._error_count} errors."
+        )
 
-    def on_memory_stored(self, memory_id: str = "", content: str = "",
-                         classification: str = "", **kwargs: object) -> None:
+    def on_memory_stored(
+        self, memory_id: str = "", content: str = "", classification: str = "", **kwargs: object
+    ) -> None:
         """Called after a memory is stored.
 
         Prints a notification if the memory looks sensitive.
@@ -51,8 +54,16 @@ class ExampleNotificationPlugin(PluginProtocol):
 
         # Simple sensitivity detection
         sensitive_keywords = [
-            "password", "secret", "token", "api_key", "credential",
-            "private", "confidential", "敏感", "密码", "密钥",
+            "password",
+            "secret",
+            "token",
+            "api_key",
+            "credential",
+            "private",
+            "confidential",
+            "敏感",
+            "密码",
+            "密钥",
         ]
         content_lower = content.lower()
         is_sensitive = any(kw in content_lower for kw in sensitive_keywords)
@@ -66,28 +77,20 @@ class ExampleNotificationPlugin(PluginProtocol):
             )
         elif self._notification_count % 10 == 0:
             # Periodic summary every 10 stores
-            print(f"[{self.name}] Memory storage summary: "
-                  f"{self._notification_count} memories processed so far.")
+            print(f"[{self.name}] Memory storage summary: " f"{self._notification_count} memories processed so far.")
 
-    def on_memory_recalled(self, query: str = "", results_count: int = 0,
-                           **kwargs: object) -> None:
+    def on_memory_recalled(self, query: str = "", results_count: int = 0, **kwargs: object) -> None:
         """Called after a memory recall operation."""
         pass  # No-op for this example; could log recall stats
 
-    def on_classified(self, raw_text: str = "", classification: str = "",
-                      **kwargs: object) -> None:
+    def on_classified(self, raw_text: str = "", classification: str = "", **kwargs: object) -> None:
         """Called after classification completes."""
         pass  # No-op for this example
 
-    def on_error(self, error_type: str = "", error_message: str = "",
-                 **kwargs: object) -> None:
+    def on_error(self, error_type: str = "", error_message: str = "", **kwargs: object) -> None:
         """Called when an error occurs in CarryMem."""
         self._error_count += 1
-        print(
-            f"[{self.name}] 🚨 Error detected!\n"
-            f"    Type: {error_type}\n"
-            f"    Message: {error_message}"
-        )
+        print(f"[{self.name}] 🚨 Error detected!\n" f"    Type: {error_type}\n" f"    Message: {error_message}")
 
 
 # Module-level singleton for auto-discovery

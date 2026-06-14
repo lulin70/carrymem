@@ -140,8 +140,7 @@ class JSONAdapter(StorageAdapter):
             Use ``store()`` instead. Will be removed in v0.5.0.
         """
         warnings.warn(
-            "remember() is deprecated, use store() instead. "
-            "Will be removed in v0.5.0.",
+            "remember() is deprecated, use store() instead. " "Will be removed in v0.5.0.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -246,8 +245,7 @@ class JSONAdapter(StorageAdapter):
             Use ``delete()`` instead. Will be removed in v0.5.0.
         """
         warnings.warn(
-            "forget() is deprecated, use delete() instead. "
-            "Will be removed in v0.5.0.",
+            "forget() is deprecated, use delete() instead. " "Will be removed in v0.5.0.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -331,6 +329,7 @@ class JSONAdapter(StorageAdapter):
             Dict with status, latency_ms, and backend-specific metrics.
         """
         import time as _time
+
         start = _time.monotonic()
         status_detail = "healthy"
         try:
@@ -340,6 +339,7 @@ class JSONAdapter(StorageAdapter):
                 file_size = os.path.getsize(self._path) if file_exists else 0
         except Exception as e:
             from ..utils.logger import logger
+
             logger.warning("JSONAdapter health check failed: %s", e)
             status_detail = "unhealthy"
             total = -1
@@ -365,6 +365,7 @@ class JSONAdapter(StorageAdapter):
             JSON-serialized string of all stored memories.
         """
         import json as _json
+
         with self._lock:
             return _json.dumps(self._data, ensure_ascii=False, indent=2)
 
@@ -378,6 +379,7 @@ class JSONAdapter(StorageAdapter):
             Number of entries imported.
         """
         import json as _json
+
         new_data = _json.loads(data)
         count = 0
         with self._lock:

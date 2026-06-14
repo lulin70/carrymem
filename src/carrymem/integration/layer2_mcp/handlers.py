@@ -16,7 +16,7 @@ import os
 import time
 from datetime import datetime, timezone
 from functools import wraps
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from carrymem.__version__ import __version__ as _version
 

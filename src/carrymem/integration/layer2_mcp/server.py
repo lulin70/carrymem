@@ -174,7 +174,7 @@ class MCPServer:
         protocol_version = params.get("protocolVersion", "2024-11-05")
         client_info = params.get("clientInfo", {})
 
-        logger.info("Client: %s v%s", client_info.get('name', 'unknown'), client_info.get('version', 'unknown'))
+        logger.info("Client: %s v%s", client_info.get("name", "unknown"), client_info.get("version", "unknown"))
         logger.info("Protocol version: %s", protocol_version)
 
         return {
@@ -263,7 +263,9 @@ class MCPServer:
         print(response_json, flush=True)
         logger.debug("Sent response: %s...", response_json[:200])
 
-    async def send_error(self, request_id: Union[str, int, None], code: int, message: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def send_error(
+        self, request_id: Union[str, int, None], code: int, message: str, data: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         Send an error response.
 

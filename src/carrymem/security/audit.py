@@ -17,7 +17,7 @@ import json
 import logging
 import sqlite3
 import threading
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, timezone
 from io import StringIO
 from pathlib import Path
@@ -150,12 +150,8 @@ class AuditLogger:
                 ip_address TEXT
             )
         """)
-        cursor.execute(
-            "CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action)"
-        )
-        cursor.execute(
-            "CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_log(timestamp)"
-        )
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_log(timestamp)")
         self._db_conn.commit()
 
     def _row_to_event(self, row: tuple) -> AuditEvent:
@@ -354,10 +350,18 @@ class AuditLogger:
             output = StringIO()
             if not events_data:
                 return ""
-            writer = csv.DictWriter(output, fieldnames=[
-                "timestamp", "user_id", "action", "resource", "result",
-                "details", "ip_address",
-            ])
+            writer = csv.DictWriter(
+                output,
+                fieldnames=[
+                    "timestamp",
+                    "user_id",
+                    "action",
+                    "resource",
+                    "result",
+                    "details",
+                    "ip_address",
+                ],
+            )
             writer.writeheader()
             for row in events_data:
                 # Serialize dict fields for CSV
@@ -464,15 +468,11 @@ class AuditLogger:
             total = total_row[0]
 
             by_action = {}
-            for row in self._db_conn.execute(
-                "SELECT action, COUNT(*) FROM audit_log GROUP BY action"
-            ):
+            for row in self._db_conn.execute("SELECT action, COUNT(*) FROM audit_log GROUP BY action"):
                 by_action[row[0]] = row[1]
 
             by_result = {}
-            for row in self._db_conn.execute(
-                "SELECT result, COUNT(*) FROM audit_log GROUP BY result"
-            ):
+            for row in self._db_conn.execute("SELECT result, COUNT(*) FROM audit_log GROUP BY result"):
                 by_result[row[0]] = row[1]
 
             last_row = self._db_conn.execute(
@@ -521,8 +521,7 @@ def get_audit_logger(disable_persist: bool = False) -> AuditLogger:
                         _global_logger = AuditLogger(persist_path=persist_path)
                     except Exception:
                         _audit_logger.warning(
-                            "Failed to initialize SQLite persistence at %s, "
-                            "falling back to in-memory mode",
+                            "Failed to initialize SQLite persistence at %s, " "falling back to in-memory mode",
                             persist_path,
                             exc_info=True,
                         )
@@ -539,6 +538,7 @@ def reset_audit_logger() -> None:
 
 # ── Convenience helpers for common operations ──────────────────────
 
+
 def log_write(
     resource: str,
     user_id: Optional[str] = None,
@@ -546,13 +546,15 @@ def log_write(
     result: str = "SUCCESS",
 ) -> None:
     """Log a WRITE operation."""
-    get_audit_logger().log(AuditEvent(
-        action="WRITE",
-        resource=resource,
-        user_id=user_id,
-        result=result,
-        details=details or {},
-    ))
+    get_audit_logger().log(
+        AuditEvent(
+            action="WRITE",
+            resource=resource,
+            user_id=user_id,
+            result=result,
+            details=details or {},
+        )
+    )
 
 
 def log_read(
@@ -562,13 +564,15 @@ def log_read(
     result: str = "SUCCESS",
 ) -> None:
     """Log a READ operation."""
-    get_audit_logger().log(AuditEvent(
-        action="READ",
-        resource=resource,
-        user_id=user_id,
-        result=result,
-        details=details or {},
-    ))
+    get_audit_logger().log(
+        AuditEvent(
+            action="READ",
+            resource=resource,
+            user_id=user_id,
+            result=result,
+            details=details or {},
+        )
+    )
 
 
 def log_delete(
@@ -578,13 +582,15 @@ def log_delete(
     result: str = "SUCCESS",
 ) -> None:
     """Log a DELETE operation."""
-    get_audit_logger().log(AuditEvent(
-        action="DELETE",
-        resource=resource,
-        user_id=user_id,
-        result=result,
-        details=details or {},
-    ))
+    get_audit_logger().log(
+        AuditEvent(
+            action="DELETE",
+            resource=resource,
+            user_id=user_id,
+            result=result,
+            details=details or {},
+        )
+    )
 
 
 def log_denied(
@@ -594,13 +600,15 @@ def log_denied(
     details: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Log a permission DENIED event."""
-    get_audit_logger().log(AuditEvent(
-        action=action,
-        resource=resource,
-        user_id=user_id,
-        result="DENIED",
-        details=details or {},
-    ))
+    get_audit_logger().log(
+        AuditEvent(
+            action=action,
+            resource=resource,
+            user_id=user_id,
+            result="DENIED",
+            details=details or {},
+        )
+    )
 
 
 def log_config(
@@ -610,10 +618,12 @@ def log_config(
     result: str = "SUCCESS",
 ) -> None:
     """Log a CONFIG/Admin operation (e.g., key rotation)."""
-    get_audit_logger().log(AuditEvent(
-        action="CONFIG",
-        resource=resource,
-        user_id=user_id,
-        result=result,
-        details=details or {},
-    ))
+    get_audit_logger().log(
+        AuditEvent(
+            action="CONFIG",
+            resource=resource,
+            user_id=user_id,
+            result=result,
+            details=details or {},
+        )
+    )

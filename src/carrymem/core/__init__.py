@@ -7,7 +7,7 @@ original monolithic class — `cm.method()` calls work without changes.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from carrymem.core._backup import BackupMixin
 from carrymem.core._classification import ClassificationMixin
@@ -20,6 +20,7 @@ from carrymem.core._lifecycle import (
 from carrymem.core._maintenance import MaintenanceMixin
 from carrymem.core._memory_crud import MemoryCRUDMixin
 from carrymem.core._profile_export import ProfileExportMixin
+from carrymem.core._prompt_delegate import PromptDelegateMixin
 from carrymem.core._protocols import (
     BackupOps,
     CarryMemOps,
@@ -31,7 +32,6 @@ from carrymem.core._protocols import (
     PromptDelegateOps,
     RecallOps,
 )
-from carrymem.core._prompt_delegate import PromptDelegateMixin
 from carrymem.core._recall import RecallMixin
 from carrymem.errors import CarryMemError
 from carrymem.types import ComponentStatusDict, HealthCheckResult
@@ -221,10 +221,7 @@ class CarryMem(
             raise CarryMemError(
                 code="CM-002",
                 message="Knowledge adapter is not configured.",
-                hint=(
-                    "Use CarryMem(knowledge_adapter=ObsidianAdapter('/path')) "
-                    "to enable knowledge base features."
-                ),
+                hint=("Use CarryMem(knowledge_adapter=ObsidianAdapter('/path')) " "to enable knowledge base features."),
             )
 
         if self._engine is None:

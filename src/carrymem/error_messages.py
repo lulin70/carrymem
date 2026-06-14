@@ -37,7 +37,6 @@ ERROR_MESSAGES: Dict[str, Dict[str, str]] = {
         "hint_zh": "运行 'pip install -e .' 安装所有依赖。",
         "hint_en": "Run 'pip install -e .' to install all dependencies.",
     },
-
     # ═══ CM-100 ~ CM-199: Storage Adapter ════════════════════════
     "CM-100": {
         "zh": "存储适配器未配置或类型未知。",
@@ -123,7 +122,6 @@ ERROR_MESSAGES: Dict[str, Dict[str, str]] = {
         "hint_zh": "检查存储配置和可用空间。运行 'carrymem doctor' 获取详细诊断。",
         "hint_en": "Check storage config and available space. Run 'carrymem doctor'.",
     },
-
     # ═══ CM-200 ~ CM-299: Memory Operations ══════════════════════
     "CM-201": {
         "zh": "输入验证未通过。",
@@ -155,7 +153,6 @@ ERROR_MESSAGES: Dict[str, Dict[str, str]] = {
         "hint_zh": "检查搜索查询语法。尝试简化搜索关键词。",
         "hint_en": "Check search query syntax. Try simplifying search keywords.",
     },
-
     # ═══ CM-300 ~ CM-399: Classification & Rule Engine ════════════
     "CM-301": {
         "zh": "记忆分类失败。",
@@ -181,7 +178,6 @@ ERROR_MESSAGES: Dict[str, Dict[str, str]] = {
         "hint_zh": "运行 'carrymem check-rules' 查看冲突详情并手动解决。",
         "hint_en": "Run 'carrymem check-rules' to see conflict details and resolve manually.",
     },
-
     # ═══ CM-400 ~ CM-499: Security & Encryption ══════════════════
     "CM-401": {
         "zh": "加密操作失败。",
@@ -213,7 +209,6 @@ ERROR_MESSAGES: Dict[str, Dict[str, str]] = {
         "hint_zh": "确认使用的解密密钥与加密时一致。数据可能已被篡改。",
         "hint_en": "Ensure the decryption key matches the one used for encryption. Data may be tampered.",
     },
-
     # ═══ CM-500 ~ CM-599: Import / Export ════════════════════════
     "CM-501": {
         "zh": "导入文件格式不受支持或已损坏。",
@@ -239,7 +234,6 @@ ERROR_MESSAGES: Dict[str, Dict[str, str]] = {
         "hint_zh": "重新获取 .carry 文件，或从备份恢复。",
         "hint_en": "Re-obtain the .carry file or restore from backup.",
     },
-
     # ═══ CM-600 ~ CM-699: CLI / TUI / MCP Entry Points ═══════════
     "CM-601": {
         "zh": "未知命令或参数错误。",
@@ -265,7 +259,6 @@ ERROR_MESSAGES: Dict[str, Dict[str, str]] = {
         "hint_zh": "增加超时时间设置（CARRYMEM_REQUEST_TIMEOUT 环境变量）或减少数据量。",
         "hint_en": "Increase timeout (CARRYMEM_REQUEST_TIMEOUT env var) or reduce data volume.",
     },
-
     # ═══ Fallback ══════════════════════════════════════════════════
     "CM-999": {
         "zh": "发生未知错误。",

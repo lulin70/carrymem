@@ -98,7 +98,9 @@ def cmd_consolidate(args):
 def cmd_export(args):
     parser = _make_parser("export")
     parser.add_argument("output", help=_t("cli.arg.output_path"))
-    parser.add_argument("--format", "-f", choices=["json", "markdown"], default="json", help=_t("cli.arg.export_format"))
+    parser.add_argument(
+        "--format", "-f", choices=["json", "markdown"], default="json", help=_t("cli.arg.export_format")
+    )
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
     parser.add_argument("--db", help=_t("cli.arg.db"))
 
@@ -146,7 +148,7 @@ def cmd_import(args):
     errors = result.get("errors", 0)
     total = result.get("total_processed", 0)
 
-    _msg = _green(_t('cli.success.imported', imported=imported, skipped=skipped, errors=errors, total=total))
+    _msg = _green(_t("cli.success.imported", imported=imported, skipped=skipped, errors=errors, total=total))
     print(f"  {_msg}")
 
     if errors > 0:

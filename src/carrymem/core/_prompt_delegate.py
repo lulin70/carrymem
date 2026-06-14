@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import logging
 import warnings
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from carrymem.adapters.base import MemoryEntry
-from carrymem.core._lifecycle import StorageNotConfiguredError
 from carrymem.constants import (
+    AGGREGATE_MEMORIES_LIMIT,
     CONTEXT_BUILD_DEFAULTS,
     SESSION_SUMMARIZER_LIMIT,
-    AGGREGATE_MEMORIES_LIMIT,
 )
+from carrymem.core._lifecycle import StorageNotConfiguredError
 
 if TYPE_CHECKING:
     from carrymem.scoring import RecallBudget

@@ -714,12 +714,23 @@ class RuleStorage:
         return updated
 
     _RULE_COLUMNS = [
-        "id", "trigger", "action", "rule_type",
-        "source_memories", "derived_from",
-        "status", "override", "confidence",
-        "trigger_count", "confirmed_by_user", "scope",
-        "created_at", "updated_at", "metadata",
-        "expires_at", "condition",
+        "id",
+        "trigger",
+        "action",
+        "rule_type",
+        "source_memories",
+        "derived_from",
+        "status",
+        "override",
+        "confidence",
+        "trigger_count",
+        "confirmed_by_user",
+        "scope",
+        "created_at",
+        "updated_at",
+        "metadata",
+        "expires_at",
+        "condition",
     ]
 
     def _row_to_rule(self, row) -> Rule:

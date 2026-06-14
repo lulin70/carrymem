@@ -14,7 +14,7 @@ import sys
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Protocol, Type, runtime_checkable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Protocol, Type, runtime_checkable
 
 from carrymem.utils.logger import logger
 
@@ -90,9 +90,7 @@ class PluginManager:
         self._plugin_dir = plugin_dir
         self._plugins: Dict[str, PluginProtocol] = {}
         self._statuses: Dict[str, PluginStatus] = {}
-        self._hooks: Dict[str, List[PluginProtocol]] = {
-            hp: [] for hp in HookPoint.ALL
-        }
+        self._hooks: Dict[str, List[PluginProtocol]] = {hp: [] for hp in HookPoint.ALL}
         self._lock = threading.RLock()
         self._carrymem_ref: Optional["CarryMem"] = None
 
@@ -174,18 +172,12 @@ class PluginManager:
                     if attr_name.startswith("_"):
                         continue
                     candidate = getattr(module, attr_name)
-                    if (
-                        isinstance(candidate, type)
-                        and hasattr(candidate, "name")
-                        and hasattr(candidate, "on_load")
-                    ):
+                    if isinstance(candidate, type) and hasattr(candidate, "name") and hasattr(candidate, "on_load"):
                         plugin_instance = candidate()  # instantiate
                         break
 
             if plugin_instance is None:
-                raise RuntimeError(
-                    f"Plugin '{name}' does not provide a valid PluginProtocol implementation"
-                )
+                raise RuntimeError(f"Plugin '{name}' does not provide a valid PluginProtocol implementation")
 
             # Call on_load
             try:
@@ -234,9 +226,7 @@ class PluginManager:
 
             # Remove from hooks
             for hook_name in self._hooks:
-                self._hooks[hook_name] = [
-                    p for p in self._hooks[hook_name] if p is not plugin
-                ]
+                self._hooks[hook_name] = [p for p in self._hooks[hook_name] if p is not plugin]
 
             self._statuses[name] = PluginStatus(
                 name=name,
@@ -295,8 +285,7 @@ class PluginManager:
                     result = handler(**kwargs)
                     results.append(result)
                 except Exception as e:
-                    logger.error("Error in plugin '%s' "
-                                 "handler '%s': %s", getattr(plugin, 'name', '?'), hook_name, e)
+                    logger.error("Error in plugin '%s' " "handler '%s': %s", getattr(plugin, "name", "?"), hook_name, e)
         return results
 
     def _detect_hook_subscriptions(self, plugin: PluginProtocol) -> List[str]:

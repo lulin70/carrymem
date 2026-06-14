@@ -5,8 +5,8 @@ import os
 from typing import Any, Dict, List, Optional
 
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
-from carrymem.core._lifecycle import StorageNotConfiguredError
 from carrymem.constants import AUDIT_LOG_DEFAULT_LIMIT
+from carrymem.core._lifecycle import StorageNotConfiguredError
 
 logger = logging.getLogger(__name__)
 

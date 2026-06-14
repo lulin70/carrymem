@@ -73,13 +73,17 @@ cmd_import_rules_deprecated = _deprecated_wrapper("import-rules", "import", lamb
 cmd_list_templates_deprecated = _deprecated_wrapper("list-templates", "templates", lambda a: cmd_list_templates(a))
 cmd_suggest_rules_deprecated = _deprecated_wrapper("suggest-rules", "suggest", lambda a: cmd_suggest_rules(a))
 cmd_promote_rules_deprecated = _deprecated_wrapper("promote-rules", "promote", lambda a: cmd_promote_rules(a))
-cmd_review_promotions_deprecated = _deprecated_wrapper("review-promotions", "review-promotions", lambda a: cmd_review_promotions(a))
+cmd_review_promotions_deprecated = _deprecated_wrapper(
+    "review-promotions", "review-promotions", lambda a: cmd_review_promotions(a)
+)
 cmd_promotion_log_deprecated = _deprecated_wrapper("promotion-log", "promotion-log", lambda a: cmd_promotion_log(a))
 cmd_learn_experience_deprecated = _deprecated_wrapper("learn-experience", "learn", lambda a: cmd_learn_experience(a))
 cmd_review_lessons_deprecated = _deprecated_wrapper("review-lessons", "review-lessons", lambda a: cmd_review_lessons(a))
 cmd_lesson_log_deprecated = _deprecated_wrapper("lesson-log", "lesson-log", lambda a: cmd_lesson_log(a))
 cmd_refine_rule_deprecated = _deprecated_wrapper("refine-rule", "refine", lambda a: cmd_refine_rule(a))
-cmd_refinement_sessions_deprecated = _deprecated_wrapper("refinement-sessions", "refinement-sessions", lambda a: cmd_refinement_sessions(a))
+cmd_refinement_sessions_deprecated = _deprecated_wrapper(
+    "refinement-sessions", "refinement-sessions", lambda a: cmd_refinement_sessions(a)
+)
 
 
 def cmd_add_rule(args):
@@ -185,9 +189,13 @@ def cmd_add_rule(args):
 def cmd_list_rules(args):
     parser = _make_parser("list-rules")
     parser.add_argument("--status", choices=["active", "paused", "deprecated"], help=_t("cli.arg.rules.filter_status"))
-    parser.add_argument("--type", choices=["avoid", "always", "prefer", "forbid", "format"], help=_t("cli.arg.rules.filter_type"))
+    parser.add_argument(
+        "--type", choices=["avoid", "always", "prefer", "forbid", "format"], help=_t("cli.arg.rules.filter_type")
+    )
     parser.add_argument("--limit", type=int, default=20, help=_t("cli.arg.rules.limit_20"))
-    parser.add_argument("--format", choices=["detail", "table", "compact"], default="detail", help=_t("cli.arg.rules.format"))
+    parser.add_argument(
+        "--format", choices=["detail", "table", "compact"], default="detail", help=_t("cli.arg.rules.format")
+    )
     parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
@@ -531,7 +539,9 @@ def cmd_skill_pack(args):
         default="personal",
         help=_t("cli.arg.rules.scope_default"),
     )
-    parser.add_argument("--status", choices=["active", "paused", "deprecated"], help=_t("cli.arg.rules.filter_rules_status"))
+    parser.add_argument(
+        "--status", choices=["active", "paused", "deprecated"], help=_t("cli.arg.rules.filter_rules_status")
+    )
     parser.add_argument("--tags", nargs="*", help=_t("cli.arg.rules.tags"))
     parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
@@ -666,7 +676,9 @@ def cmd_edit_rule(args):
     parser.add_argument("rule_id", help=_t("cli.arg.rules.rule_id_edit"))
     parser.add_argument("--trigger", help=_t("cli.arg.rules.new_trigger"))
     parser.add_argument("--action", help=_t("cli.arg.rules.new_action"))
-    parser.add_argument("--type", choices=["avoid", "always", "prefer", "forbid", "format"], help=_t("cli.arg.rules.new_type"))
+    parser.add_argument(
+        "--type", choices=["avoid", "always", "prefer", "forbid", "format"], help=_t("cli.arg.rules.new_type")
+    )
     parser.add_argument("--soft", action="store_true", help=_t("cli.arg.rules.change_soft"))
     parser.add_argument("--hard", action="store_true", help=_t("cli.arg.rules.change_hard"))
     parser.add_argument("--db", help=_t("cli.arg.db"))

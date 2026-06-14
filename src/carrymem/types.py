@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, TypedDict
 
-
 # ---------------------------------------------------------------------------
 # Base memory types
 # ---------------------------------------------------------------------------
@@ -304,10 +303,10 @@ class ValidateResolveTuple:
 
 # Type alias for the actual return type
 ValidateAndResolveResult = tuple[
-    str,                          # resolved_message
-    bool,                         # should_continue
-    Optional[ValidationResult],   # redact_result (None if not blocked)
-    bool,                         # coreference_resolved
+    str,  # resolved_message
+    bool,  # should_continue
+    Optional[ValidationResult],  # redact_result (None if not blocked)
+    bool,  # coreference_resolved
 ]
 
 

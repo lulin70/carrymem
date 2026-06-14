@@ -22,7 +22,6 @@ from typing import Any, Callable, Dict, List, Optional
 
 from carrymem.utils.logger import logger
 
-
 # ── Data Classes ──────────────────────────────────────────────────────────
 
 
@@ -158,9 +157,7 @@ class MetricsCollector:
                 lines.append(f'carrymem_latency_ms{{operation="{op}",quantile="0.95"}} {stats.get("p95", 0)}')
                 lines.append(f'carrymem_latency_ms{{operation="{op}",quantile="0.5"}} {stats.get("avg", 0)}')
                 latency_sum = round(stats.get("avg", 0) * stats["count"], 2)
-                lines.append(
-                    f'carrymem_latency_ms_sum{{operation="{op}"}} {latency_sum}'
-                )
+                lines.append(f'carrymem_latency_ms_sum{{operation="{op}"}} {latency_sum}')
                 lines.append(f'carrymem_latency_ms_count{{operation="{op}"}} {stats["count"]}')
 
         # Gauges
@@ -168,7 +165,7 @@ class MetricsCollector:
             lines.append("\n# TYPE carrymem_gauge gauge")
             for name, val in snapshot["gauges"].items():
                 safe_name = name.replace("-", "_").replace(".", "_")
-                lines.append(f'{safe_name} {val}')
+                lines.append(f"{safe_name} {val}")
 
         lines.append(f"\n# TYPE carrymem_uptime_seconds gauge")
         lines.append(f'carrymem_uptime_seconds {snapshot["uptime_seconds"]}')
@@ -249,11 +246,13 @@ class HealthChecker:
                     entry["severity"] = slo.severity.value
                 slo_status.append(entry)
             else:
-                slo_status.append({
-                    "operation": slo.operation,
-                    "threshold_ms": slo.p99_threshold_ms,
-                    "status": "no_data",
-                })
+                slo_status.append(
+                    {
+                        "operation": slo.operation,
+                        "threshold_ms": slo.p99_threshold_ms,
+                        "status": "no_data",
+                    }
+                )
 
         status = "degraded" if degraded else "ok"
         return {
@@ -464,7 +463,9 @@ class MonitoringHTTPServer:
     async def start(self) -> None:
         """Start the monitoring HTTP server (blocks until stop())."""
         self._server = await asyncio.start_server(
-            self._handle_request, self._host, self._port,
+            self._handle_request,
+            self._host,
+            self._port,
         )
         addrs = ", ".join(str(s.getsockname()) for s in self._server.sockets)
         logger.info("Monitoring server running on %s", addrs)
@@ -477,7 +478,9 @@ class MonitoringHTTPServer:
         The server runs as a background task. Use stop() to shut it down.
         """
         self._server = await asyncio.start_server(
-            self._handle_request, self._host, self._port,
+            self._handle_request,
+            self._host,
+            self._port,
         )
         addrs = ", ".join(str(s.getsockname()) for s in self._server.sockets)
         logger.info("Monitoring server running on %s", addrs)
@@ -489,7 +492,7 @@ class MonitoringHTTPServer:
         if self._server:
             self._server.close()
             await self._server.wait_closed()
-        if hasattr(self, '_serve_task') and self._serve_task:
+        if hasattr(self, "_serve_task") and self._serve_task:
             self._serve_task.cancel()
             try:
                 await self._serve_task
