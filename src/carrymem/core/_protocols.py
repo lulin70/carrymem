@@ -20,10 +20,11 @@ Design principles:
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Protocol, TYPE_CHECKING, runtime_checkable
+from typing import Any, Callable, Dict, List, Optional, Protocol, TYPE_CHECKING, Union, runtime_checkable
 
 if TYPE_CHECKING:
     from carrymem.adapters.base import StorageAdapter
+    from carrymem.core import CarryMem
     from carrymem.engine import MemoryClassificationEngine
     from carrymem.prompt_builder import PromptBuilder
     from carrymem.rules import RuleEngine
@@ -107,7 +108,7 @@ class LifecycleOps(Protocol):
         """Release resources (adapter, rule engine, knowledge adapter)."""
         ...
 
-    def __enter__(self) -> Any: ...
+    def __enter__(self) -> CarryMem: ...
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> bool: ...
 
@@ -263,7 +264,7 @@ class ClassificationOps(Protocol):
         language: Optional[str],
         force_type: Optional[str],
         message: str,
-    ) -> Any:
+    ) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
         """Classify resolved message; returns entries list or classify result dict."""
         ...
 
@@ -280,11 +281,11 @@ class ClassificationOps(Protocol):
         """Store classified entries, trigger auto-backup, suggest rules."""
         ...
 
-    def _handle_correction(self, correction_entry: Any) -> Optional[Dict[str, Any]]:
+    def _handle_correction(self, correction_entry: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Apply a correction entry to existing memories or rules."""
         ...
 
-    def _count_by_type(self, entries: List[Any]) -> Dict[str, int]:
+    def _count_by_type(self, entries: List[Dict[str, Any]]) -> Dict[str, int]:
         """Count entries grouped by memory type."""
         ...
 
@@ -364,7 +365,7 @@ class MemoryCRUDOps(Protocol):
         self,
         namespaces: Optional[List[str]] = None,
         strategy: str = "latest_wins",
-        conflict_callback: Optional[Any] = None,
+        conflict_callback: Optional[Callable[[Dict[str, Any], Dict[str, Any]], Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """Merge duplicate memories across namespaces (SQLite only)."""
         ...
@@ -500,7 +501,7 @@ class PromptDelegateOps(Protocol):
         max_knowledge: int = 5,
         max_tokens: int = 2000,
         language: str = "en",
-        budget: Optional[Any] = None,
+        budget: Optional[Dict[str, Any]] = None,
         include_question: bool = True,
     ) -> str:
         """Build QA prompt with retrieved context."""

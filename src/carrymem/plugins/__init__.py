@@ -14,9 +14,12 @@ import sys
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Protocol, Type, runtime_checkable
+from typing import Any, Callable, Dict, List, Optional, Protocol, Type, runtime_checkable, TYPE_CHECKING
 
 from carrymem.utils.logger import logger
+
+if TYPE_CHECKING:
+    from carrymem import CarryMem
 
 
 # ── Types ─────────────────────────────────────────────────────────────────
@@ -36,7 +39,7 @@ class PluginProtocol(Protocol):
     name: str
     version: str
 
-    def on_load(self, carrymem: Any) -> None:
+    def on_load(self, carrymem: "CarryMem") -> None:
         """Called when the plugin is loaded into CarryMem."""
         ...
 
@@ -91,9 +94,9 @@ class PluginManager:
             hp: [] for hp in HookPoint.ALL
         }
         self._lock = threading.RLock()
-        self._carrymem_ref: Any = None
+        self._carrymem_ref: Optional["CarryMem"] = None
 
-    def set_carrymem(self, carrymem: Any) -> None:
+    def set_carrymem(self, carrymem: "CarryMem") -> None:
         """Set the CarryMem instance reference for plugin loading."""
         self._carrymem_ref = carrymem
 
@@ -274,7 +277,7 @@ class PluginManager:
             return []
         return list(self._hooks[hook_name])
 
-    def dispatch(self, hook_name: str, **kwargs: Any) -> List[Any]:
+    def dispatch(self, hook_name: str, **kwargs: Any) -> List[Optional[Any]]:
         """Dispatch an event to all plugins subscribed to a hook.
 
         Args:
@@ -284,7 +287,7 @@ class PluginManager:
         Returns:
             List of results from each plugin handler.
         """
-        results: List[Any] = []
+        results: List[Optional[Any]] = []
         for plugin in self.get_hooks(hook_name):
             handler = getattr(plugin, hook_name, None)
             if callable(handler):

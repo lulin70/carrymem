@@ -10,7 +10,7 @@ import json
 import logging
 import os
 import sys
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from carrymem.__version__ import __version__ as _version
 
@@ -158,7 +158,7 @@ class MCPServer:
             logger.warning("Unknown method: %s", method)
             return await self.send_error(request_id, -32601, "Method not found")
 
-    async def handle_initialize(self, request_id: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def handle_initialize(self, request_id: Union[str, int, None], params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Handle initialize request.
 
@@ -187,7 +187,7 @@ class MCPServer:
             },
         }
 
-    async def handle_tools_list(self, request_id: Any) -> Dict[str, Any]:
+    async def handle_tools_list(self, request_id: Union[str, int, None]) -> Dict[str, Any]:
         """
         Handle tools/list request.
 
@@ -201,7 +201,7 @@ class MCPServer:
 
         return {"jsonrpc": "2.0", "id": request_id, "result": {"tools": TOOLS}}
 
-    async def handle_tools_call(self, request_id: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def handle_tools_call(self, request_id: Union[str, int, None], params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Handle tools/call request.
 
@@ -238,7 +238,7 @@ class MCPServer:
             logger.error("Error calling tool %s: %s", tool_name, e)
             return await self.send_error(request_id, -32603, f"Tool error: {str(e)}")
 
-    async def handle_shutdown(self, request_id: Any) -> Dict[str, Any]:
+    async def handle_shutdown(self, request_id: Union[str, int, None]) -> Dict[str, Any]:
         """
         Handle shutdown request.
 
@@ -263,7 +263,7 @@ class MCPServer:
         print(response_json, flush=True)
         logger.debug("Sent response: %s...", response_json[:200])
 
-    async def send_error(self, request_id: Any, code: int, message: str, data: Optional[Any] = None) -> Dict[str, Any]:
+    async def send_error(self, request_id: Union[str, int, None], code: int, message: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Send an error response.
 

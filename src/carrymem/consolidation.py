@@ -13,7 +13,7 @@ from __future__ import annotations
 import hashlib
 import re
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from carrymem.utils.logger import Logger
 
@@ -58,7 +58,7 @@ def _similarity(a: str, b: str) -> float:
 
 
 def compute_decay_factor(
-    created_at: Any,
+    created_at: Union[str, datetime, float],
     memory_type: str,
     confidence: float,
     access_count: int = 0,

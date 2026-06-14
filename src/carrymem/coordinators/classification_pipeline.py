@@ -17,7 +17,7 @@ class ClassificationPipeline:
     MIN_SENTIMENT_DEFAULT_CONFIDENCE = 0.7
     ASSISTANT_PREFIXES = ("[assistant said]", "[ai said]", "[bot said]")
 
-    def __init__(self, config: Any, noise_filter_mode: str = "strict"):
+    def __init__(self, config: Dict[str, Any], noise_filter_mode: str = "strict"):
         """Initialize classification pipeline.
 
         Args:

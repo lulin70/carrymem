@@ -9,9 +9,12 @@ Usage:
     This plugin is auto-discovered by PluginManager when placed in the plugin directory.
 """
 
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from carrymem.plugins import HookPoint, PluginProtocol, PluginManager
+
+if TYPE_CHECKING:
+    from carrymem import CarryMem
 
 
 class ExampleNotificationPlugin(PluginProtocol):
@@ -25,7 +28,7 @@ class ExampleNotificationPlugin(PluginProtocol):
         self._error_count: int = 0
         self._loaded: bool = False
 
-    def on_load(self, carrymem: Any) -> None:
+    def on_load(self, carrymem: "CarryMem") -> None:
         """Called when the plugin is loaded."""
         self._loaded = True
         print(f"[{self.name}] Plugin loaded (v{self.version})")
