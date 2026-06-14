@@ -317,14 +317,13 @@ class TestLatencyTimer(unittest.TestCase):
         lat = snap["latency"]["timed_op"]
         self.assertEqual(lat["count"], 1)
         self.assertGreater(lat["p99"], 40)  # at least 40ms
-        self.assertLess(lat["p99"], 200)     # but not absurdly high
+        self.assertLess(lat["p99"], 200)  # but not absurdly high
 
 
 class TestMonitoringHTTPServerEndpoints(unittest.TestCase):
     """Test monitoring HTTP server endpoint routing via async runner."""
 
-    def _run_server_test(self, path: str, expected_status: int = 200,
-                         check_body: callable = None):
+    def _run_server_test(self, path: str, expected_status: int = 200, check_body: callable = None):
         """Helper: start server, make a raw request, verify response."""
         mc = MetricsCollector()
         hc = HealthChecker(metrics_collector=mc)
@@ -363,16 +362,20 @@ class TestMonitoringHTTPServerEndpoints(unittest.TestCase):
 
     def test_healthz_endpoint(self):
         """Test: GET /healthz returns 200 JSON with status field."""
+
         def check(body_bytes):
             data = json.loads(body_bytes.decode())
             self.assertIn(data["status"], ("ok", "degraded"))
+
         self._run_server_test("/healthz", 200, check_body=check)
 
     def test_metrics_endpoint(self):
         """Test: GET /metrics returns 200 with Prometheus format."""
+
         def check(body_bytes):
             text = body_bytes.decode()
             self.assertIn("# TYPE", text)
+
         self._run_server_test("/metrics", 200, check_body=check)
 
     def test_readyz_not_ready_returns_503(self):
@@ -386,8 +389,11 @@ class TestMonitoringHTTPServerEndpoints(unittest.TestCase):
         hc.set_ready(True)
         am = AlertManager()
         server = MonitoringHTTPServer(
-            host="127.0.0.1", port=0,
-            health_checker=hc, metrics_collector=mc, alert_manager=am,
+            host="127.0.0.1",
+            port=0,
+            health_checker=hc,
+            metrics_collector=mc,
+            alert_manager=am,
         )
 
         async def run():

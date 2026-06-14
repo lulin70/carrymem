@@ -136,12 +136,10 @@ class TestE2EMultiThreadedWrites:
         # which is a known SQLite limitation, not a CarryMem bug.
         fts_errors = [e for e in errors if "vtable constructor" in e]
         other_errors = [e for e in errors if "vtable constructor" not in e]
-        assert len(other_errors) == 0, (
-            f"Concurrent R/W should have no non-FTS errors, got {len(other_errors)}: {other_errors[:5]}"
-        )
-        assert len(fts_errors) <= 2, (
-            f"Too many FTS vtable errors: {len(fts_errors)}. Sample: {fts_errors[:3]}"
-        )
+        assert (
+            len(other_errors) == 0
+        ), f"Concurrent R/W should have no non-FTS errors, got {len(other_errors)}: {other_errors[:5]}"
+        assert len(fts_errors) <= 2, f"Too many FTS vtable errors: {len(fts_errors)}. Sample: {fts_errors[:3]}"
 
 
 class TestE2EMultiThreadedRecall:
@@ -159,8 +157,13 @@ class TestE2EMultiThreadedRecall:
         cm = shared_carrymem
 
         # Store varied data
-        topics = ["Python programming", "Database design", "UI/UX principles",
-                  "DevOps practices", "Code review guidelines"]
+        topics = [
+            "Python programming",
+            "Database design",
+            "UI/UX principles",
+            "DevOps practices",
+            "Code review guidelines",
+        ]
         for topic in topics:
             cm.classify_and_remember(f"I have knowledge about {topic}")
 
@@ -238,9 +241,9 @@ class TestE2EBackupDuringWrite:
         cm.close()
 
         # Should complete without critical errors
-        assert len(errors) == 0 or all("lock" in str(e).lower() or "timeout" in str(e).lower() for e in errors), (
-            f"Unexpected errors during backup+write: {errors}"
-        )
+        assert len(errors) == 0 or all(
+            "lock" in str(e).lower() or "timeout" in str(e).lower() for e in errors
+        ), f"Unexpected errors during backup+write: {errors}"
 
         # If backup completed, verify backup file exists
         if backup_done.is_set():
@@ -305,9 +308,7 @@ class TestE2ELockContention:
 
         # Tolerance for timeout errors: under heavy load (200 rapid ops),
         # SQLite may return SQLITE_BUSY occasionally; this should be rare (< 2%).
-        assert len(timeout_errors) <= 4, (
-            f"Too many timeout errors: {len(timeout_errors)}. Sample: {timeout_errors[:3]}"
-        )
+        assert len(timeout_errors) <= 4, f"Too many timeout errors: {len(timeout_errors)}. Sample: {timeout_errors[:3]}"
 
 
 class TestE2EDataConsistencyUnderConcurrency:
@@ -346,9 +347,9 @@ class TestE2EDataConsistencyUnderConcurrency:
                     # Verify all returned content is valid (non-empty, no corruption)
                     for m in results:
                         content = m.get("content", "")
-                        assert isinstance(content, str) and len(content) > 0, (
-                            f"Content for '{keyword}' should be a non-empty string"
-                        )
+                        assert (
+                            isinstance(content, str) and len(content) > 0
+                        ), f"Content for '{keyword}' should be a non-empty string"
                         assert "\x00" not in content, f"Possible corruption in {keyword} result"
 
         threads = [threading.Thread(target=verify_memory_content) for _ in range(10)]
@@ -364,9 +365,9 @@ class TestE2EDataConsistencyUnderConcurrency:
         try:
             for keyword in ["PostgreSQL", "APIs", "credentials", "AWS"]:
                 results = cm_verify.recall_memories(query=keyword, limit=5)
-                assert isinstance(results, list) and len(results) > 0, (
-                    f"Data integrity check: keyword '{keyword}' not found after concurrent access"
-                )
+                assert (
+                    isinstance(results, list) and len(results) > 0
+                ), f"Data integrity check: keyword '{keyword}' not found after concurrent access"
         finally:
             cm_verify.close()
 

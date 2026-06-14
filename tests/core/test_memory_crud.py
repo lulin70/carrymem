@@ -40,6 +40,7 @@ class TestDeclare(unittest.TestCase):
     def test_declare_validates_empty_content(self):
         """declare() raises on empty message."""
         from carrymem.exceptions import ValidationError
+
         with self.assertRaises(ValidationError):
             self.cm.declare("")
 
@@ -196,6 +197,7 @@ class TestClassifyMessage(unittest.TestCase):
     def test_classify_message_validates_empty(self):
         """classify_message() raises on empty message."""
         from carrymem.exceptions import ValidationError
+
         with self.assertRaises(ValidationError):
             self.cm.classify_message("")
 

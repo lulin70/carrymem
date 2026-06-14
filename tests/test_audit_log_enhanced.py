@@ -22,14 +22,13 @@ from carrymem.security.audit import (
     AuditFilter,
     AuditLogger,
     get_audit_logger,
-    reset_audit_logger,
-    log_write,
-    log_read,
+    log_config,
     log_delete,
     log_denied,
-    log_config,
+    log_read,
+    log_write,
+    reset_audit_logger,
 )
-
 
 # ── Fixtures ───────────────────────────────────────────────────────
 
@@ -215,10 +214,12 @@ class TestAuditLoggerQuery:
 
     def test_query_combined_filters(self):
         """Test combining multiple filters."""
-        results = self.logger.query(AuditFilter(
-            action="WRITE",
-            user_id="alice",
-        ))
+        results = self.logger.query(
+            AuditFilter(
+                action="WRITE",
+                user_id="alice",
+            )
+        )
         assert len(results) == 1
         assert results[0].user_id == "alice"
         assert results[0].action == "WRITE"
@@ -379,11 +380,13 @@ class TestThreadSafety:
 
         def worker(thread_id):
             for i in range(events_per_thread):
-                logger.log(AuditEvent(
-                    user_id=f"user_{thread_id}",
-                    action="WRITE",
-                    resource=f"resource_{thread_id}_{i}",
-                ))
+                logger.log(
+                    AuditEvent(
+                        user_id=f"user_{thread_id}",
+                        action="WRITE",
+                        resource=f"resource_{thread_id}_{i}",
+                    )
+                )
 
         threads = [threading.Thread(target=worker, args=(i,)) for i in range(num_threads)]
         for t in threads:

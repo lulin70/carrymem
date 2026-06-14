@@ -11,10 +11,9 @@ Run with:
 import inspect
 import sys
 import typing
-from typing import Any, get_type_hints, Union
+from typing import Any, Union, get_type_hints
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Helper utilities
@@ -80,6 +79,7 @@ def _has_param_annotations(cls: type, method_name: str, *param_names: str) -> bo
 def carrymem_class():
     """Import and return the CarryMem class."""
     from carrymem.core import CarryMem
+
     return CarryMem
 
 
@@ -87,6 +87,7 @@ def carrymem_class():
 def lifecycle_mixin():
     """Import and return LifecycleMixin class."""
     from carrymem.core._lifecycle import LifecycleMixin
+
     return LifecycleMixin
 
 
@@ -94,6 +95,7 @@ def lifecycle_mixin():
 def memory_crud_mixin():
     """Import and return MemoryCRUDMixin class."""
     from carrymem.core._memory_crud import MemoryCRUDMixin
+
     return MemoryCRUDMixin
 
 
@@ -101,6 +103,7 @@ def memory_crud_mixin():
 def recall_mixin():
     """Import and return RecallMixin class."""
     from carrymem.core._recall import RecallMixin
+
     return RecallMixin
 
 
@@ -108,6 +111,7 @@ def recall_mixin():
 def profile_export_mixin():
     """Import and return ProfileExportMixin class."""
     from carrymem.core._profile_export import ProfileExportMixin
+
     return ProfileExportMixin
 
 
@@ -115,6 +119,7 @@ def profile_export_mixin():
 def classification_mixin():
     """Import and return ClassificationMixin class."""
     from carrymem.core._classification import ClassificationMixin
+
     return ClassificationMixin
 
 
@@ -122,6 +127,7 @@ def classification_mixin():
 def types_module():
     """Import and return the types module."""
     from carrymem import types
+
     return types
 
 
@@ -214,8 +220,7 @@ class TestLifecycleMixinAnnotations:
     def test_init_params_annotated(self, lifecycle_mixin):
         """__init__ key parameters should be annotated."""
         assert _has_param_annotations(
-            lifecycle_mixin, "__init__",
-            "storage", "db_path", "knowledge_adapter", "namespace"
+            lifecycle_mixin, "__init__", "storage", "db_path", "knowledge_adapter", "namespace"
         )
 
     def test_close_has_return_annotation(self, lifecycle_mixin):
@@ -271,25 +276,18 @@ class TestMemoryCRUDMixinAnnotations:
         """classify_and_remember should have full type annotations."""
         assert _has_return_annotation(memory_crud_mixin, "classify_and_remember")
         assert _has_param_annotations(
-            memory_crud_mixin, "classify_and_remember",
-            "message", "context", "language", "session_id", "force_type"
+            memory_crud_mixin, "classify_and_remember", "message", "context", "language", "session_id", "force_type"
         )
 
     def test_classify_message_annotated(self, memory_crud_mixin):
         """classify_message should have full type annotations."""
         assert _has_return_annotation(memory_crud_mixin, "classify_message")
-        assert _has_param_annotations(
-            memory_crud_mixin, "classify_message",
-            "message", "context", "language"
-        )
+        assert _has_param_annotations(memory_crud_mixin, "classify_message", "message", "context", "language")
 
     def test_declare_annotated(self, memory_crud_mixin):
         """declare should have full type annotations."""
         assert _has_return_annotation(memory_crud_mixin, "declare")
-        assert _has_param_annotations(
-            memory_crud_mixin, "declare",
-            "message", "context"
-        )
+        assert _has_param_annotations(memory_crud_mixin, "declare", "message", "context")
 
     def test_declare_preference_annotated(self, memory_crud_mixin):
         """declare_preference should have full type annotations."""
@@ -303,10 +301,7 @@ class TestMemoryCRUDMixinAnnotations:
     def test_update_memory_annotated(self, memory_crud_mixin):
         """update_memory should have full type annotations."""
         assert _has_return_annotation(memory_crud_mixin, "update_memory")
-        assert _has_param_annotations(
-            memory_crud_mixin, "update_memory",
-            "storage_key", "new_content", "reason"
-        )
+        assert _has_param_annotations(memory_crud_mixin, "update_memory", "storage_key", "new_content", "reason")
 
     def test_get_memory_history_annotated(self, memory_crud_mixin):
         """get_memory_history should have return type annotation."""
@@ -315,17 +310,13 @@ class TestMemoryCRUDMixinAnnotations:
     def test_rollback_memory_annotated(self, memory_crud_mixin):
         """rollback_memory should have full type annotations."""
         assert _has_return_annotation(memory_crud_mixin, "rollback_memory")
-        assert _has_param_annotations(
-            memory_crud_mixin, "rollback_memory",
-            "storage_key", "version"
-        )
+        assert _has_param_annotations(memory_crud_mixin, "rollback_memory", "storage_key", "version")
 
     def test_merge_memories_annotated(self, memory_crud_mixin):
         """merge_memories should have full type annotations."""
         assert _has_return_annotation(memory_crud_mixin, "merge_memories")
         assert _has_param_annotations(
-            memory_crud_mixin, "merge_memories",
-            "namespaces", "strategy", "conflict_callback"
+            memory_crud_mixin, "merge_memories", "namespaces", "strategy", "conflict_callback"
         )
 
 
@@ -344,42 +335,31 @@ class TestRecallMixinAnnotations:
     def test_recall_from_knowledge_annotated(self, recall_mixin):
         """recall_from_knowledge should have full type annotations."""
         assert _has_return_annotation(recall_mixin, "recall_from_knowledge")
-        assert _has_param_annotations(
-            recall_mixin, "recall_from_knowledge",
-            "query", "filters", "limit"
-        )
+        assert _has_param_annotations(recall_mixin, "recall_from_knowledge", "query", "filters", "limit")
 
     def test_recall_all_annotated(self, recall_mixin):
         """recall_all should have full type annotations."""
         assert _has_return_annotation(recall_mixin, "recall_all")
         assert _has_param_annotations(
-            recall_mixin, "recall_all",
-            "query", "filters", "limit", "namespaces", "include_rules"
+            recall_mixin, "recall_all", "query", "filters", "limit", "namespaces", "include_rules"
         )
 
     def test_recall_memories_annotated(self, recall_mixin):
         """recall_memories should have full type annotations."""
         assert _has_return_annotation(recall_mixin, "recall_memories")
         assert _has_param_annotations(
-            recall_mixin, "recall_memories",
-            "query", "filters", "limit", "namespaces", "update_access"
+            recall_mixin, "recall_memories", "query", "filters", "limit", "namespaces", "update_access"
         )
 
     def test_recall_aggregated_annotated(self, recall_mixin):
         """recall_aggregated should have full type annotations."""
         assert _has_return_annotation(recall_mixin, "recall_aggregated")
-        assert _has_param_annotations(
-            recall_mixin, "recall_aggregated",
-            "memory_type", "limit_per_type"
-        )
+        assert _has_param_annotations(recall_mixin, "recall_aggregated", "memory_type", "limit_per_type")
 
     def test_recall_timeline_annotated(self, recall_mixin):
         """recall_timeline should have full type annotations."""
         assert _has_return_annotation(recall_mixin, "recall_timeline")
-        assert _has_param_annotations(
-            recall_mixin, "recall_timeline",
-            "topic", "limit"
-        )
+        assert _has_param_annotations(recall_mixin, "recall_timeline", "topic", "limit")
 
 
 # ===========================================================================
@@ -410,17 +390,13 @@ class TestProfileExportMixinAnnotations:
     def test_export_memories_annotated(self, profile_export_mixin):
         """export_memories should have full type annotations."""
         assert _has_return_annotation(profile_export_mixin, "export_memories")
-        assert _has_param_annotations(
-            profile_export_mixin, "export_memories",
-            "output_path", "format", "namespace"
-        )
+        assert _has_param_annotations(profile_export_mixin, "export_memories", "output_path", "format", "namespace")
 
     def test_import_memories_annotated(self, profile_export_mixin):
         """import_memories should have full type annotations."""
         assert _has_return_annotation(profile_export_mixin, "import_memories")
         assert _has_param_annotations(
-            profile_export_mixin, "import_memories",
-            "input_path", "data", "namespace", "merge_strategy"
+            profile_export_mixin, "import_memories", "input_path", "data", "namespace", "merge_strategy"
         )
 
 
@@ -436,34 +412,41 @@ class TestClassificationMixinAnnotations:
         """_validate_and_resolve should have full type annotations."""
         assert _has_return_annotation(classification_mixin, "_validate_and_resolve")
         assert _has_param_annotations(
-            classification_mixin, "_validate_and_resolve",
-            "message", "context", "force_type", "session_id"
+            classification_mixin, "_validate_and_resolve", "message", "context", "force_type", "session_id"
         )
 
     def test_classify_message_internal_annotated(self, classification_mixin):
         """_classify_message should have full type annotations."""
         assert _has_return_annotation(classification_mixin, "_classify_message")
         assert _has_param_annotations(
-            classification_mixin, "_classify_message",
-            "resolved_message", "context", "language", "force_type", "message"
+            classification_mixin,
+            "_classify_message",
+            "resolved_message",
+            "context",
+            "language",
+            "force_type",
+            "message",
         )
 
     def test_store_entries_annotated(self, classification_mixin):
         """_store_entries should have full type annotations."""
         assert _has_return_annotation(classification_mixin, "_store_entries")
         assert _has_param_annotations(
-            classification_mixin, "_store_entries",
-            "classify_result", "resolved_message", "message", "context",
-            "coreference_resolved", "force_type", "session_id"
+            classification_mixin,
+            "_store_entries",
+            "classify_result",
+            "resolved_message",
+            "message",
+            "context",
+            "coreference_resolved",
+            "force_type",
+            "session_id",
         )
 
     def test_handle_correction_annotated(self, classification_mixin):
         """_handle_correction should have full type annotations."""
         assert _has_return_annotation(classification_mixin, "_handle_correction")
-        assert _has_param_annotations(
-            classification_mixin, "_handle_correction",
-            "correction_entry"
-        )
+        assert _has_param_annotations(classification_mixin, "_handle_correction", "correction_entry")
 
     def test_count_by_type_annotated(self, classification_mixin):
         """_count_by_type should have full type annotations."""
@@ -473,10 +456,7 @@ class TestClassificationMixinAnnotations:
     def test_auto_suggest_rules_annotated(self, classification_mixin):
         """_auto_suggest_rules should have full type annotations."""
         assert _has_return_annotation(classification_mixin, "_auto_suggest_rules")
-        assert _has_param_annotations(
-            classification_mixin, "_auto_suggest_rules",
-            "stored_memories"
-        )
+        assert _has_param_annotations(classification_mixin, "_auto_suggest_rules", "stored_memories")
 
     def test_detect_implicit_preferences_annotated(self, classification_mixin):
         """_detect_implicit_preferences should have return type annotation."""
@@ -511,10 +491,7 @@ class TestCarryMemFacadeAnnotations:
     def test_validate_ready_annotated(self, carrymem_class):
         """validate_ready should have return type annotation."""
         assert _has_return_annotation(carrymem_class, "validate_ready")
-        assert _has_param_annotations(
-            carrymem_class, "validate_ready",
-            "require_storage", "require_knowledge"
-        )
+        assert _has_param_annotations(carrymem_class, "validate_ready", "require_storage", "require_knowledge")
 
 
 # ===========================================================================
@@ -557,39 +534,57 @@ class TestAnnotationCoverage:
     @pytest.mark.coverage
     def test_core_modules_have_high_coverage(self):
         """Core modules should have >85% type annotation coverage on public methods."""
+        from carrymem.core import CarryMem
+        from carrymem.core._classification import ClassificationMixin
         from carrymem.core._lifecycle import LifecycleMixin
         from carrymem.core._memory_crud import MemoryCRUDMixin
-        from carrymem.core._recall import RecallMixin
         from carrymem.core._profile_export import ProfileExportMixin
-        from carrymem.core._classification import ClassificationMixin
-        from carrymem.core import CarryMem
+        from carrymem.core._recall import RecallMixin
 
         modules_to_test = {
             "LifecycleMixin": [
-                ("__init__", 6), ("close", 0), ("namespace", 0),
-                ("engine", 0), ("adapter", 0), ("storage", 0),
-                ("knowledge_adapter", 0), ("rule_engine", 0), ("prompt_builder", 0),
+                ("__init__", 6),
+                ("close", 0),
+                ("namespace", 0),
+                ("engine", 0),
+                ("adapter", 0),
+                ("storage", 0),
+                ("knowledge_adapter", 0),
+                ("rule_engine", 0),
+                ("prompt_builder", 0),
             ],
             "MemoryCRUDMixin": [
-                ("classify_and_remember", 5), ("classify_message", 3),
-                ("declare", 2), ("declare_preference", 2),
-                ("forget_memory", 1), ("update_memory", 3),
-                ("get_memory_history", 1), ("rollback_memory", 2),
+                ("classify_and_remember", 5),
+                ("classify_message", 3),
+                ("declare", 2),
+                ("declare_preference", 2),
+                ("forget_memory", 1),
+                ("update_memory", 3),
+                ("get_memory_history", 1),
+                ("rollback_memory", 2),
                 ("merge_memories", 3),
             ],
             "RecallMixin": [
-                ("index_knowledge", 0), ("recall_from_knowledge", 3),
-                ("recall_all", 5), ("recall_memories", 5),
-                ("recall_aggregated", 2), ("recall_timeline", 2),
+                ("index_knowledge", 0),
+                ("recall_from_knowledge", 3),
+                ("recall_all", 5),
+                ("recall_memories", 5),
+                ("recall_aggregated", 2),
+                ("recall_timeline", 2),
             ],
             "ProfileExportMixin": [
-                ("get_stats", 0), ("get_memory_profile", 0),
-                ("whoami", 0), ("export_profile", 1),
-                ("export_memories", 3), ("import_memories", 4),
+                ("get_stats", 0),
+                ("get_memory_profile", 0),
+                ("whoami", 0),
+                ("export_profile", 1),
+                ("export_memories", 3),
+                ("import_memories", 4),
             ],
             "CarryMem": [
-                ("version", 0), ("health_check", 0),
-                ("get_component_status", 0), ("validate_ready", 2),
+                ("version", 0),
+                ("health_check", 0),
+                ("get_component_status", 0),
+                ("validate_ready", 2),
             ],
         }
 
@@ -626,10 +621,7 @@ class TestAnnotationCoverage:
         print(f"{'='*60}\n")
 
         # Assert coverage is above threshold (allowing some margin)
-        assert coverage >= 80.0, (
-            f"Type annotation coverage {coverage:.1f}% is below 80% threshold. "
-            f"Target is 85%+."
-        )
+        assert coverage >= 80.0, f"Type annotation coverage {coverage:.1f}% is below 80% threshold. " f"Target is 85%+."
 
 
 if __name__ == "__main__":

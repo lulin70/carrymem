@@ -14,16 +14,6 @@ import tempfile
 
 import pytest
 
-from carrymem.errors import (
-    CLIEntryError,
-    ClassificationError,
-    ConfigError,
-    ImportExportError,
-    MemoryOperationError,
-    SecurityError,
-    StorageAdapterError,
-    CarryMemError,
-)
 from carrymem.error_messages import (
     ERROR_MESSAGES,
     ErrorTemplate,
@@ -31,7 +21,16 @@ from carrymem.error_messages import (
     get_hint,
     get_message,
 )
-
+from carrymem.errors import (
+    CarryMemError,
+    ClassificationError,
+    CLIEntryError,
+    ConfigError,
+    ImportExportError,
+    MemoryOperationError,
+    SecurityError,
+    StorageAdapterError,
+)
 
 # ════════════════════════════════════════════════════════════════════
 # 1. Error Code Uniqueness
@@ -64,9 +63,7 @@ class TestErrorCodeUniqueness:
         }
         for code in ERROR_MESSAGES:
             num = int(code.split("-")[1])
-            in_range = any(
-                lo <= num <= hi for lo, hi in ((int(lo), int(hi)) for lo, hi in ranges.values())
-            )
+            in_range = any(lo <= num <= hi for lo, hi in ((int(lo), int(hi)) for lo, hi in ranges.values()))
             assert in_range or code == "CM-999", f"Code {code} outside defined ranges"
 
     def test_all_error_codes_sorted(self):
@@ -255,8 +252,15 @@ class TestCarryMemErrorBaseClass:
             raise CarryMemError(code="CM-001", message="test")
 
     def test_concrete_subclasses_exist(self):
-        concrete = [ConfigError, StorageAdapterError, MemoryOperationError,
-                    ClassificationError, SecurityError, ImportExportError, CLIEntryError]
+        concrete = [
+            ConfigError,
+            StorageAdapterError,
+            MemoryOperationError,
+            ClassificationError,
+            SecurityError,
+            ImportExportError,
+            CLIEntryError,
+        ]
         for cls in concrete:
             assert issubclass(cls, CarryMemError)
 
@@ -359,6 +363,4 @@ class TestRegistryCompleteness:
         assert code in ERROR_MESSAGES, f"Required error code {code} ({desc}) missing from registry"
 
     def test_total_code_count(self):
-        assert len(ERROR_MESSAGES) >= 35, (
-            f"Expected at least 35 error codes, got {len(ERROR_MESSAGES)}"
-        )
+        assert len(ERROR_MESSAGES) >= 35, f"Expected at least 35 error codes, got {len(ERROR_MESSAGES)}"

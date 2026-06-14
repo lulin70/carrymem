@@ -15,7 +15,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 # 测试前设置日志
-from carrymem.utils.logging_config import setup_logging, reset_logging
+from carrymem.utils.logging_config import reset_logging, setup_logging
 
 setup_logging(level=logging.DEBUG, console_output=False)
 
@@ -101,9 +101,7 @@ class TestEntryPointInitialization(unittest.TestCase):
             )
 
             handlers = Handlers(data_path=self.db_path, namespace="default")
-            result = handle_recall_memories(
-                handlers._carrymem, {"query": "preference", "limit": 10}
-            )
+            result = handle_recall_memories(handlers._carrymem, {"query": "preference", "limit": 10})
             self.assertIn("memories", result)
             self.assertGreaterEqual(len(result["memories"]), 1)
             handlers.cleanup()
@@ -147,9 +145,7 @@ class TestCoreOperationConsistency(unittest.TestCase):
             )
 
             handlers = Handlers(data_path=self.db_path, namespace="default")
-            result_mcp = handle_declare_preference(
-                handlers._carrymem, {"message": "I prefer light mode"}
-            )
+            result_mcp = handle_declare_preference(handlers._carrymem, {"message": "I prefer light mode"})
             self.assertIn("storage_keys", result_mcp)
             mcp_key = result_mcp["storage_keys"][0]
             handlers.cleanup()
@@ -183,9 +179,7 @@ class TestCoreOperationConsistency(unittest.TestCase):
             )
 
             handlers = Handlers(data_path=self.db_path, namespace="default")
-            mcp_result = handle_recall_memories(
-                handlers._carrymem, {"query": "Python", "limit": 10}
-            )
+            mcp_result = handle_recall_memories(handlers._carrymem, {"query": "Python", "limit": 10})
             mcp_memories = mcp_result.get("memories", [])
             handlers.cleanup()
 
@@ -241,9 +235,7 @@ class TestCoreOperationConsistency(unittest.TestCase):
             )
 
             handlers = Handlers(data_path=self.db_path, namespace="default")
-            mcp_result = handle_forget_memory(
-                handlers._carrymem, {"memory_id": key2}
-            )
+            mcp_result = handle_forget_memory(handlers._carrymem, {"memory_id": key2})
             self.assertTrue(mcp_result.get("deleted", False))
             handlers.cleanup()
         except ImportError:
@@ -280,11 +272,9 @@ class TestErrorCodeConsistency(unittest.TestCase):
     def test_tui_error_display_format(self):
         """测试 TUI 错误显示组件包含错误码."""
         try:
-            from carrymem.tui import ErrorDisplay, CarryMemError
+            from carrymem.tui import CarryMemError, ErrorDisplay
 
-            error = CarryMemError(
-                code="CM-201", message="Validation failed", hint="Check input format"
-            )
+            error = CarryMemError(code="CM-201", message="Validation failed", hint="Check input format")
 
             # 模拟 TUI 环境（简化测试）
             display = ErrorDisplay()
@@ -297,8 +287,8 @@ class TestErrorCodeConsistency(unittest.TestCase):
     def test_mcp_error_response_format(self):
         """测试 MCP 错误响应格式."""
         try:
-            from carrymem.integration.layer2_mcp.handlers import _safe_error
             from carrymem.errors import CarryMemError
+            from carrymem.integration.layer2_mcp.handlers import _safe_error
 
             # 测试 CarryMemError 转换
             error = CarryMemError(code="CM-100", message="Storage error")
@@ -407,9 +397,7 @@ class TestNamespaceAndParameterConsistency(unittest.TestCase):
             )
 
             handlers = Handlers(data_path=self.db_path, namespace="work")
-            result = handle_recall_memories(
-                handlers._carrymem, {"query": "", "limit": 100}
-            )
+            result = handle_recall_memories(handlers._carrymem, {"query": "", "limit": 100})
             mcp_contents = [m.get("content") for m in result.get("memories", [])]
             self.assertIn("Work namespace memory", mcp_contents)
             handlers.cleanup()

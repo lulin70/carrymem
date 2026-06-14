@@ -79,6 +79,7 @@ class TestRefinementSessionExceptionNarrowing(unittest.TestCase):
             db_path = os.path.join(tmpdir, "test.db")
             # Initialize storage first
             from carrymem.rules.storage import RuleStorage
+
             storage = RuleStorage(db_path)
             storage._ensure_schema()
 
@@ -105,6 +106,7 @@ class TestExperienceBridgeExceptionNarrowing(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "test.db")
             from carrymem.rules.storage import RuleStorage
+
             storage = RuleStorage(db_path)
             storage._ensure_schema()
 
@@ -129,8 +131,8 @@ class TestEncryptionExceptionNarrowing(unittest.TestCase):
 
     def test_fernet_encrypt_catches_type_errors(self):
         """Verify Fernet encrypt catches TypeError for invalid input."""
-        from carrymem.security.encryption import Encryptor
         from carrymem.exceptions import EncryptionError
+        from carrymem.security.encryption import Encryptor
 
         with tempfile.TemporaryDirectory() as tmpdir:
             key_path = os.path.join(tmpdir, "test.key")
@@ -143,8 +145,8 @@ class TestEncryptionExceptionNarrowing(unittest.TestCase):
 
     def test_fernet_decrypt_catches_value_errors(self):
         """Verify Fernet decrypt catches ValueError for invalid ciphertext."""
-        from carrymem.security.encryption import Encryptor
         from carrymem.exceptions import EncryptionError
+        from carrymem.security.encryption import Encryptor
 
         with tempfile.TemporaryDirectory() as tmpdir:
             key_path = os.path.join(tmpdir, "test.key")
@@ -162,6 +164,7 @@ class TestCLIExceptionNarrowing(unittest.TestCase):
     def test_cli_main_has_broad_exception_with_comment(self):
         """Verify CLI main() has NOTE comment explaining broad exception."""
         import inspect
+
         from carrymem.cli import main
 
         source = inspect.getsource(main)
@@ -176,6 +179,7 @@ class TestMCPHandlerExceptionNarrowing(unittest.TestCase):
     def test_mcp_handlers_have_comments(self):
         """Verify MCP tool handlers have NOTE comments."""
         import inspect
+
         from carrymem.integration.layer2_mcp.handlers import (
             handle_add_rule,
             handle_delete_rule,
@@ -234,6 +238,7 @@ class TestMatcherExceptionNarrowing(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "test.db")
             from carrymem.rules.storage import RuleStorage
+
             storage = RuleStorage(db_path)
             storage._ensure_schema()
 
@@ -254,7 +259,7 @@ class TestSemanticClassifierExceptionNarrowing(unittest.TestCase):
         classifier = SemanticClassifier()
 
         # Mock LLM call to raise JSONDecodeError
-        with patch.object(classifier, '_call_llm') as mock_llm:
+        with patch.object(classifier, "_call_llm") as mock_llm:
             mock_llm.side_effect = json.JSONDecodeError("bad json", "", 0)
 
             result = classifier.classify("test message")
@@ -287,10 +292,7 @@ class TestBroadExceptionJustification(unittest.TestCase):
 
         return unjustified
 
-    @unittest.skipUnless(
-        os.path.exists("/Users/lin/trae_projects/carrymem/src"),
-        "Source directory not available"
-    )
+    @unittest.skipUnless(os.path.exists("/Users/lin/trae_projects/carrymem/src"), "Source directory not available")
     def test_all_broad_exceptions_justified(self):
         """Verify all remaining broad exceptions have justification."""
         unjustified = self.find_files_with_broad_exceptions()
@@ -299,8 +301,7 @@ class TestBroadExceptionJustification(unittest.TestCase):
         self.assertLessEqual(
             len(unjustified),
             12,
-            f"Found {len(unjustified)} unjustified broad exceptions:\n" +
-            "\n".join(unjustified[:10])
+            f"Found {len(unjustified)} unjustified broad exceptions:\n" + "\n".join(unjustified[:10]),
         )
 
 

@@ -49,17 +49,13 @@ class TestValidateAndResolve(unittest.TestCase):
 
     def test_validate_and_resolve_with_session_id(self):
         """_validate_and_resolve injects session_id into context."""
-        resolved, should_continue, _, _ = self.cm._validate_and_resolve(
-            "test message", {}, None, "sess_abc"
-        )
+        resolved, should_continue, _, _ = self.cm._validate_and_resolve("test message", {}, None, "sess_abc")
         self.assertTrue(should_continue)
 
     def test_validate_and_resolve_with_pronoun_attempts_coref(self):
         """_validate_and_resolve attempts coreference resolution when pronouns present."""
         # Even if coreference resolution fails, it should not raise
-        resolved, should_continue, _, coref = self.cm._validate_and_resolve(
-            "I like it", None, None, None
-        )
+        resolved, should_continue, _, coref = self.cm._validate_and_resolve("I like it", None, None, None)
         # Should still continue (coreference failure is non-critical)
         self.assertTrue(should_continue)
 
@@ -92,6 +88,7 @@ class TestClassifyMessage(unittest.TestCase):
     def test_classify_empty_content_raises(self):
         """classify_message() raises on empty message."""
         from carrymem.exceptions import ValidationError
+
         with self.assertRaises(ValidationError):
             self.cm.classify_message("")
 
@@ -135,6 +132,7 @@ class TestClassifyInternal(unittest.TestCase):
     def test_count_by_type(self):
         """_count_by_type returns correct type counts."""
         from carrymem.adapters.base import MemoryEntry
+
         entries = [
             MemoryEntry(type="user_preference", content="a"),
             MemoryEntry(type="user_preference", content="b"),

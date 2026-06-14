@@ -7,7 +7,7 @@ import unittest
 
 from carrymem import CarryMem
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
-from carrymem.core._lifecycle import _validate_file_path, StorageNotConfiguredError
+from carrymem.core._lifecycle import StorageNotConfiguredError, _validate_file_path
 from carrymem.errors import CarryMemError
 
 
@@ -166,6 +166,7 @@ class TestLifecycleProperties(unittest.TestCase):
         cm = CarryMem(storage=None, auto_backup_interval=0)
         try:
             from carrymem.engine import MemoryClassificationEngine
+
             self.assertIsInstance(cm.engine, MemoryClassificationEngine)
         finally:
             cm.close()

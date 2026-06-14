@@ -24,7 +24,6 @@ import pytest
 from carrymem import CarryMem
 from carrymem.security.encryption import MemoryEncryption
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -71,11 +70,13 @@ class TestNoMemoryLeakOnRepeatedRecall:
 
             gc.collect()
             current, peak = tracemalloc.get_traced_memory()
-            snapshots.append({
-                "batch": batch,
-                "current_mb": current / (1024 * 1024),
-                "peak_mb": peak / (1024 * 1024),
-            })
+            snapshots.append(
+                {
+                    "batch": batch,
+                    "current_mb": current / (1024 * 1024),
+                    "peak_mb": peak / (1024 * 1024),
+                }
+            )
 
         final_current, final_peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
@@ -151,11 +152,13 @@ class TestBulkInsertMemoryGrowthLinear:
                 if inserted in checkpoints:
                     gc.collect()
                     current, peak = tracemalloc.get_traced_memory()
-                    checkpoint_data.append({
-                        "count": inserted,
-                        "current_mb": current / (1024 * 1024),
-                        "peak_mb": peak / (1024 * 1024),
-                    })
+                    checkpoint_data.append(
+                        {
+                            "count": inserted,
+                            "current_mb": current / (1024 * 1024),
+                            "peak_mb": peak / (1024 * 1024),
+                        }
+                    )
 
             gc.collect()
             final_current, final_peak = tracemalloc.get_traced_memory()
@@ -166,16 +169,10 @@ class TestBulkInsertMemoryGrowthLinear:
 
             # Check linearity: last half growth shouldn't be disproportionately larger
             if len(checkpoint_data) >= 3:
-                first_half_growth = (
-                    checkpoint_data[1]["current_mb"] - checkpoint_data[0]["current_mb"]
-                )
-                second_half_growth = (
-                    checkpoint_data[-1]["current_mb"] - checkpoint_data[-2]["current_mb"]
-                )
+                first_half_growth = checkpoint_data[1]["current_mb"] - checkpoint_data[0]["current_mb"]
+                second_half_growth = checkpoint_data[-1]["current_mb"] - checkpoint_data[-2]["current_mb"]
                 # Allow up to 2x non-linearity (caching effects)
-                linearity_ratio = (
-                    second_half_growth / first_half_growth if first_half_growth > 0 else 1.0
-                )
+                linearity_ratio = second_half_growth / first_half_growth if first_half_growth > 0 else 1.0
             else:
                 linearity_ratio = 1.0
 
@@ -193,19 +190,17 @@ class TestBulkInsertMemoryGrowthLinear:
                 print(f"  checkpoint@{cp['count']}: {cp['current_mb']:.2f}MB")
 
             # Primary assertion: total growth under 50MB
-            assert total_growth_mb < 50, (
-                f"Memory growth {total_growth_mb:.2f}MB exceeds 50MB threshold for 1000 inserts"
-            )
+            assert (
+                total_growth_mb < 50
+            ), f"Memory growth {total_growth_mb:.2f}MB exceeds 50MB threshold for 1000 inserts"
 
             # Secondary check: reasonable per-entry overhead
-            assert per_entry_kb < 50, (
-                f"Per-entry memory overhead {per_entry_kb:.1f}KB exceeds 50KB threshold"
-            )
+            assert per_entry_kb < 50, f"Per-entry memory overhead {per_entry_kb:.1f}KB exceeds 50KB threshold"
 
             # Tertiary check: roughly linear growth pattern
-            assert linearity_ratio < 5.0, (
-                f"Growth is non-linear ({linearity_ratio:.2f}x), possible memory accumulation issue"
-            )
+            assert (
+                linearity_ratio < 5.0
+            ), f"Growth is non-linear ({linearity_ratio:.2f}x), possible memory accumulation issue"
         finally:
             cm.close()
 
@@ -342,8 +337,7 @@ class TestConnectionPoolMemory:
 
         # Most of the allocated memory should be reclaimable
         assert reclaimed_pct > 70 or growth_during < 2.0, (
-            f"Only {reclaimed_pct:.0f}% of connection pool memory was reclaimed. "
-            f"Possible connection handle leak."
+            f"Only {reclaimed_pct:.0f}% of connection pool memory was reclaimed. " f"Possible connection handle leak."
         )
 
 
@@ -365,8 +359,7 @@ class TestEncryptionBufferCleanup:
 
         # Generate test data
         test_messages = [
-            f"Sensitive buffer cleanup test message {i}: Contains data requiring encryption"
-            for i in range(500)
+            f"Sensitive buffer cleanup test message {i}: Contains data requiring encryption" for i in range(500)
         ]
 
         # Perform many encrypt/decrypt cycles
@@ -383,12 +376,14 @@ class TestEncryptionBufferCleanup:
 
             gc.collect()
             current, peak = tracemalloc.get_traced_memory()
-            snapshots.append({
-                "batch": batch,
-                "items": (batch + 1) * 50,
-                "current_mb": current / (1024 * 1024),
-                "peak_mb": peak / (1024 * 1024),
-            })
+            snapshots.append(
+                {
+                    "batch": batch,
+                    "items": (batch + 1) * 50,
+                    "current_mb": current / (1024 * 1024),
+                    "peak_mb": peak / (1024 * 1024),
+                }
+            )
 
         # Decrypt all items
         for item in encrypted_items:
@@ -414,15 +409,9 @@ class TestEncryptionBufferCleanup:
 
         # Check for linear growth pattern
         if len(snapshots) >= 4:
-            first_half_growth = (
-                snapshots[2]["current_mb"] - snapshots[0]["current_mb"]
-            )
-            second_half_growth = (
-                snapshots[-1]["current_mb"] - snapshots[-3]["current_mb"]
-            )
-            buffer_ratio = (
-                second_half_growth / first_half_growth if first_half_growth > 0 else 1.0
-            )
+            first_half_growth = snapshots[2]["current_mb"] - snapshots[0]["current_mb"]
+            second_half_growth = snapshots[-1]["current_mb"] - snapshots[-3]["current_mb"]
+            buffer_ratio = second_half_growth / first_half_growth if first_half_growth > 0 else 1.0
         else:
             buffer_ratio = 1.0
 
@@ -453,6 +442,4 @@ class TestEncryptionBufferCleanup:
         )
 
         # Total memory use should remain reasonable for 500 encrypt+decrypt ops
-        assert ops_growth < 25, (
-            f"Total memory for 500 encrypt/decrypt ops: {ops_growth:.2f}MB exceeds 25MB threshold"
-        )
+        assert ops_growth < 25, f"Total memory for 500 encrypt/decrypt ops: {ops_growth:.2f}MB exceeds 25MB threshold"

@@ -101,14 +101,14 @@ class TestE2EBulkMemoryStorage:
         for i, memory in enumerate(test_memories):
             result = cm.classify_and_remember(memory)
             assert isinstance(result, dict), f"Memory {i+1} should return dict, got {type(result)}"
-            assert result.get("stored") or result.get("should_remember") or "storage_keys" in result, (
-                f"Memory {i+1} should be stored: {memory}"
-            )
+            assert (
+                result.get("stored") or result.get("should_remember") or "storage_keys" in result
+            ), f"Memory {i+1} should be stored: {memory}"
             stored_count += 1
 
-        assert stored_count == len(test_memories), (
-            f"All memories should be stored, got {stored_count}/{len(test_memories)}"
-        )
+        assert stored_count == len(
+            test_memories
+        ), f"All memories should be stored, got {stored_count}/{len(test_memories)}"
 
     def test_recall_after_bulk_storage(self, fresh_carrymem):
         """Verify: After storing 10+ memories, recall can find them."""
@@ -135,14 +135,10 @@ class TestE2EBulkMemoryStorage:
         keywords = ["dark mode", "Python", "PostgreSQL", "Docker", "AWS", "Agile"]
         for keyword in keywords:
             results = cm.recall_memories(query=keyword, limit=5)
-            assert isinstance(results, list) and len(results) > 0, (
-                f"Should recall memories for keyword '{keyword}'"
-            )
+            assert isinstance(results, list) and len(results) > 0, f"Should recall memories for keyword '{keyword}'"
             found_count += 1
 
-        assert found_count == len(keywords), (
-            f"Should recall all keywords, found {found_count}/{len(keywords)}"
-        )
+        assert found_count == len(keywords), f"Should recall all keywords, found {found_count}/{len(keywords)}"
 
     def test_mixed_memory_types_stored(self, fresh_carrymem):
         """Verify: Different memory types (preference, fact, correction) can coexist."""
@@ -176,9 +172,7 @@ class TestE2EExportProfile:
         # Get profile
         profile = cm.get_memory_profile()
         assert isinstance(profile, dict), "Profile should be a dict"
-        assert "summary" in profile or "stats" in profile, (
-            "Profile should contain 'summary' or 'stats' key"
-        )
+        assert "summary" in profile or "stats" in profile, "Profile should contain 'summary' or 'stats' key"
 
     def test_profile_includes_stored_preferences(self, fresh_carrymem):
         """Verify: Profile includes recently stored preferences."""
@@ -195,8 +189,7 @@ class TestE2EExportProfile:
         profile_str = json.dumps(profile).lower()
         has_content = any(pref.lower()[:10] in profile_str for pref in preferences)
         assert has_content, (
-            f"Profile should contain at least one stored preference. "
-            f"Profile keys: {list(profile.keys())}"
+            f"Profile should contain at least one stored preference. " f"Profile keys: {list(profile.keys())}"
         )
 
 
@@ -252,9 +245,9 @@ class TestE2EBackupRestoreCycle:
         post_backup_recall = cm.recall_memories(limit=20)
         post_backup_count = len(post_backup_recall) if isinstance(post_backup_recall, list) else 0
 
-        assert post_backup_count == pre_backup_count, (
-            f"Data count should not change after backup: before={pre_backup_count}, after={post_backup_count}"
-        )
+        assert (
+            post_backup_count == pre_backup_count
+        ), f"Data count should not change after backup: before={pre_backup_count}, after={post_backup_count}"
 
         # Verify specific memories are still accessible
         for mem in original_memories:
@@ -349,7 +342,9 @@ class TestE2ECompleteLifecycle:
         # Step 4: Recall and verify accessibility
         all_recalled = cm.recall_memories(limit=50)
         assert isinstance(all_recalled, list), "Recall should return list"
-        assert len(all_recalled) == total_stored, f"Should recall all stored memories, got {len(all_recalled)}/{total_stored}"
+        assert (
+            len(all_recalled) == total_stored
+        ), f"Should recall all stored memories, got {len(all_recalled)}/{total_stored}"
 
         # Step 5: Build context and prompt
         context = cm.build_context(context="How should I set up my development environment?")

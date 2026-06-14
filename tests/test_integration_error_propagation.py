@@ -26,9 +26,9 @@ from carrymem import CarryMem, StorageNotConfiguredError
 from carrymem.errors import (
     CarryMemError,
     ConfigError,
-    StorageAdapterError,
     MemoryOperationError,
     SecurityError,
+    StorageAdapterError,
 )
 
 
@@ -62,8 +62,9 @@ class TestStorageLayerErrorPropagation:
             assert isinstance(exc_info.value, CarryMemError)
 
             # Verify error has useful information
-            assert exc_info.value.code in ("CM-100",), \
-                f"Should have storage-related error code, got {exc_info.value.code}"
+            assert exc_info.value.code in (
+                "CM-100",
+            ), f"Should have storage-related error code, got {exc_info.value.code}"
             assert len(exc_info.value.message) > 0, "Error message should not be empty"
         finally:
             cm.close()
@@ -106,8 +107,7 @@ class TestStorageLayerErrorPropagation:
             carrymem_err = CarryMemError.from_cause(test_exc)
 
             assert isinstance(carrymem_err, CarryMemError)
-            assert carrymem_err.code == "CM-102", \
-                f"IntegrityError should map to CM-102, got {carrymem_err.code}"
+            assert carrymem_err.code == "CM-102", f"IntegrityError should map to CM-102, got {carrymem_err.code}"
             assert carrymem_err.cause is test_exc, "Original cause should be preserved"
         finally:
             cm.close()
@@ -124,10 +124,10 @@ class TestStorageLayerErrorPropagation:
         carrymem_err = CarryMemError.from_cause(locked_error)
 
         assert isinstance(carrymem_err, CarryMemError)
-        assert carrymem_err.code == "CM-104", \
-            f"Database locked should be CM-104, got {carrymem_err.code}"
-        assert "locked" in carrymem_err.message.lower() or "lock" in carrymem_err.message.lower(), \
-            "Error message should mention locking"
+        assert carrymem_err.code == "CM-104", f"Database locked should be CM-104, got {carrymem_err.code}"
+        assert (
+            "locked" in carrymem_err.message.lower() or "lock" in carrymem_err.message.lower()
+        ), "Error message should mention locking"
         assert carrymem_err.cause is locked_error, "Original cause preserved"
 
 
@@ -165,8 +165,9 @@ class TestEncryptionErrorHandling:
                 cm2.close()
         except (Exception,) as e:
             # Also acceptable: fails to open entirely
-            assert isinstance(e, (CarryMemError, RuntimeError, Exception)), \
-                f"Wrong key should raise appropriate error, got {type(e)}"
+            assert isinstance(
+                e, (CarryMemError, RuntimeError, Exception)
+            ), f"Wrong key should raise appropriate error, got {type(e)}"
 
     def test_encryption_initialization_failure(self, tmp_path):
         """Verify: Invalid encryption key causes initialization failure.
@@ -185,8 +186,9 @@ class TestEncryptionErrorHandling:
             cm.close()
         except (RuntimeError, CarryMemError, ValueError) as e:
             # Expected: some encryption systems reject short keys
-            assert isinstance(e, (RuntimeError, CarryMemError, ValueError)), \
-                f"Should raise appropriate error for bad key, got {type(e)}"
+            assert isinstance(
+                e, (RuntimeError, CarryMemError, ValueError)
+            ), f"Should raise appropriate error for bad key, got {type(e)}"
         except Exception as e:
             # Other errors also acceptable if they're security-related
             pass
@@ -211,11 +213,7 @@ class TestMultiLayerErrorPreservation:
         # Create a custom error scenario
         original_error = sqlite3.OperationalError("disk I/O error")
         wrapped_once = CarryMemError.from_cause(original_error)
-        wrapped_twice = CarryMemError(
-            code="CM-999",
-            message="Higher level operation failed",
-            cause=wrapped_once
-        )
+        wrapped_twice = CarryMemError(code="CM-999", message="Higher level operation failed", cause=wrapped_once)
 
         # Verify chain integrity
         assert wrapped_twice.cause is wrapped_once, "First wrapping should be preserved"
@@ -243,8 +241,7 @@ class TestMultiLayerErrorPreservation:
 
             error = exc_info.value
             # Should have meaningful error info
-            assert hasattr(error, 'message') or len(str(error)) > 0, \
-                "Error should have descriptive message"
+            assert hasattr(error, "message") or len(str(error)) > 0, "Error should have descriptive message"
         finally:
             cm.close()
 
@@ -264,8 +261,9 @@ class TestMultiLayerErrorPreservation:
 
             error = exc_info.value
             error_msg = str(error).lower()
-            assert "long" in error_msg or "length" in error_msg or "too" in error_msg, \
-                f"Error should mention length issue, got: {error_msg}"
+            assert (
+                "long" in error_msg or "length" in error_msg or "too" in error_msg
+            ), f"Error should mention length issue, got: {error_msg}"
         finally:
             cm.close()
 
@@ -298,8 +296,9 @@ class TestErrorRecoveryAndDegradation:
                 pass
 
         # Most should succeed
-        assert success_count >= len(valid_memories) * 0.8, \
-            f"Most memories should store successfully, got {success_count}/{len(valid_memories)}"
+        assert (
+            success_count >= len(valid_memories) * 0.8
+        ), f"Most memories should store successfully, got {success_count}/{len(valid_memories)}"
 
     def test_recall_graceful_on_empty_database(self, cm):
         """Verify: Recall on empty database returns empty list, not error.
@@ -352,7 +351,7 @@ class TestCLIEntryErrorTransformation:
             code="CM-001",
             message="Test error message",
             hint="This is a hint for users",
-            cause=ValueError("Original error")
+            cause=ValueError("Original error"),
         )
 
         assert err1.code == "CM-001"
@@ -387,8 +386,9 @@ class TestCLIEntryErrorTransformation:
 
         for original_exc, expected_prefix in test_cases:
             transformed = CarryMemError.from_cause(original_exc)
-            assert transformed.code.startswith(expected_prefix[:4]), \
-                f"Error {transformed.code} should start with {expected_prefix}"
+            assert transformed.code.startswith(
+                expected_prefix[:4]
+            ), f"Error {transformed.code} should start with {expected_prefix}"
 
     def test_exception_hierarchy_is_respected(self):
         """Verify: CarryMemError subclass hierarchy enables precise catching.
@@ -405,8 +405,7 @@ class TestCLIEntryErrorTransformation:
 
         # All should be catchable as CarryMemError
         for err in [config_err, storage_err, memory_err, security_err]:
-            assert isinstance(err, CarryMemError), \
-                f"{type(err).__name__} should be instance of CarryMemError"
+            assert isinstance(err, CarryMemError), f"{type(err).__name__} should be instance of CarryMemError"
 
         # Each should be catchable by its specific type
         assert isinstance(config_err, ConfigError)
@@ -451,7 +450,7 @@ class TestEdgeCaseErrorScenarios:
         db_path = str(tmp_path / "corrupted.db")
 
         # Write garbage to file
-        with open(db_path, 'wb') as f:
+        with open(db_path, "wb") as f:
             f.write(b"This is not a valid SQLite database file")
 
         # Try to open - should fail gracefully
@@ -467,8 +466,9 @@ class TestEdgeCaseErrorScenarios:
                 cm.close()
         except (CarryMemError, sqlite3.DatabaseError, ValueError, Exception) as e:
             # Also acceptable: fails to open
-            assert isinstance(e, (CarryMemError, sqlite3.DatabaseError, ValueError, Exception)), \
-                f"Corrupted DB should raise appropriate error, got {type(e)}"
+            assert isinstance(
+                e, (CarryMemError, sqlite3.DatabaseError, ValueError, Exception)
+            ), f"Corrupted DB should raise appropriate error, got {type(e)}"
 
     def test_unicode_and_special_chars_in_errors(self):
         """Verify: Error messages handle unicode and special characters correctly.
@@ -485,11 +485,7 @@ class TestEdgeCaseErrorScenarios:
         ]
 
         for msg in special_messages:
-            err = CarryMemError(
-                code="CM-999",
-                message=msg,
-                hint=f"Hint for: {msg}"
-            )
+            err = CarryMemError(code="CM-999", message=msg, hint=f"Hint for: {msg}")
             # Should stringify without errors
             error_str = str(err)
             assert len(error_str) > 0, f"Should stringify error for: {msg}"
@@ -516,8 +512,7 @@ class TestErrorContextPreservation:
         except StorageNotConfiguredError as e:
             # Error should indicate storage is needed
             error_str = str(e).lower()
-            assert "storage" in error_str or "adapter" in error_str, \
-                f"Error should mention storage, got: {error_str}"
+            assert "storage" in error_str or "adapter" in error_str, f"Error should mention storage, got: {error_str}"
         finally:
             cm.close()
 

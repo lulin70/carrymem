@@ -29,7 +29,6 @@ import pytest
 from carrymem import CarryMem
 from carrymem.security.encryption import MemoryEncryption, NoEncryption
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -98,12 +97,8 @@ class TestClassifyAndRememberLatency:
             f"throughput={throughput:.0f} ops/s"
         )
 
-        assert p99 < 100, (
-            f"P99 latency {p99:.1f}ms exceeds 100ms threshold"
-        )
-        assert avg < 50, (
-            f"Average latency {avg:.1f}ms exceeds 50ms threshold"
-        )
+        assert p99 < 100, f"P99 latency {p99:.1f}ms exceeds 100ms threshold"
+        assert avg < 50, f"Average latency {avg:.1f}ms exceeds 50ms threshold"
 
 
 # ---------------------------------------------------------------------------
@@ -140,9 +135,7 @@ class TestRecall1000Records:
             f"total_time={total_time_s:.2f}s, throughput={throughput:.0f} QPS"
         )
 
-        assert max_latency < 500, (
-            f"Max recall latency {max_latency:.1f}ms exceeds 500ms threshold for 1000 records"
-        )
+        assert max_latency < 500, f"Max recall latency {max_latency:.1f}ms exceeds 500ms threshold for 1000 records"
 
 
 # ---------------------------------------------------------------------------
@@ -191,12 +184,8 @@ class TestBatchInsert100:
             )
 
             assert len(errors) == 0, f"Errors during batch insert: {errors[:5]}"
-            assert elapsed_s < 1.0, (
-                f"Batch insert of 100 took {elapsed_s:.3f}s, exceeds 1s threshold"
-            )
-            assert throughput >= 100, (
-                f"Throughput {throughput:.0f} ops/s below expected 100 ops/s"
-            )
+            assert elapsed_s < 1.0, f"Batch insert of 100 took {elapsed_s:.3f}s, exceeds 1s threshold"
+            assert throughput >= 100, f"Throughput {throughput:.0f} ops/s below expected 100 ops/s"
         finally:
             cm.close()
 
@@ -236,12 +225,8 @@ class TestExportProfileLarge:
         )
 
         assert total_exported > 0, "Should have exported memories"
-        assert json_time < 2.0, (
-            f"JSON export took {json_time:.3f}s, exceeds 2s threshold"
-        )
-        assert md_time < 2.0, (
-            f"Markdown export took {md_time:.3f}s, exceeds 2s threshold"
-        )
+        assert json_time < 2.0, f"JSON export took {json_time:.3f}s, exceeds 2s threshold"
+        assert md_time < 2.0, f"Markdown export took {md_time:.3f}s, exceeds 2s threshold"
         assert os.path.exists(export_path), "JSON export file should exist"
         assert os.path.exists(md_path), "Markdown export file should exist"
 
@@ -306,15 +291,11 @@ class TestEncryptionOverhead:
             assert decrypted == item, "Encrypt/decrypt roundtrip failed"
 
         # Overhead ratio check (encryption can be slower but not excessively so)
-        assert overhead_ratio < 50, (
-            f"Encryption overhead {overhead_ratio:.1f}x is excessive (>50x baseline)"
-        )
+        assert overhead_ratio < 50, f"Encryption overhead {overhead_ratio:.1f}x is excessive (>50x baseline)"
 
         # Absolute performance: encrypt 200 items should be fast
         total_enc_time = sum(enc_times)
-        assert total_enc_time < 5.0, (
-            f"Total encrypt time for 200 items: {total_enc_time:.3f}s exceeds 5s"
-        )
+        assert total_enc_time < 5.0, f"Total encrypt time for 200 items: {total_enc_time:.3f}s exceeds 5s"
 
 
 # ---------------------------------------------------------------------------
@@ -386,9 +367,7 @@ class TestConcurrentReadThroughput:
         )
 
         assert len(all_errors) == 0, f"Concurrent read errors: {all_errors[:5]}"
-        assert total_ops == num_threads * ops_per_thread, (
-            f"Expected {num_threads * ops_per_thread} ops, got {total_ops}"
-        )
-        assert qps > 20, (
-            f"Concurrent read QPS {qps:.0f} below minimum 20 QPS"
-        )
+        assert (
+            total_ops == num_threads * ops_per_thread
+        ), f"Expected {num_threads * ops_per_thread} ops, got {total_ops}"
+        assert qps > 20, f"Concurrent read QPS {qps:.0f} below minimum 20 QPS"

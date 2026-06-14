@@ -156,8 +156,11 @@ class TestClassificationAndRecallCollaboration:
 
         # All returned should be preference type (or compatible)
         for mem in preferences:
-            assert mem.get("type") in ("user_preference", "preference", "unknown"), \
-                f"Expected preference type, got {mem.get('type')}"
+            assert mem.get("type") in (
+                "user_preference",
+                "preference",
+                "unknown",
+            ), f"Expected preference type, got {mem.get('type')}"
 
     def test_classify_multiple_recall_aggregated(self, cm):
         """Verify: Multiple classifications are aggregated correctly by RecallMixin.
@@ -183,8 +186,9 @@ class TestClassificationAndRecallCollaboration:
         assert len(aggregated) > 0, "Should have at least one type group"
 
         total_from_groups = sum(len(v) for v in aggregated.values())
-        assert total_from_groups >= len(test_messages) * 0.6, \
-            f"Aggregated count {total_from_groups} should cover most stored memories"
+        assert (
+            total_from_groups >= len(test_messages) * 0.6
+        ), f"Aggregated count {total_from_groups} should cover most stored memories"
 
 
 class TestBackupAndProfileExportCollaboration:
@@ -219,8 +223,7 @@ class TestBackupAndProfileExportCollaboration:
         stats = cm.get_stats()
         assert isinstance(stats, dict), "Stats should be a dict"
         total_count = stats.get("total_count", 0)
-        assert total_count >= len(memories) * 0.6, \
-            f"Stats should show {len(memories)}+ memories, got {total_count}"
+        assert total_count >= len(memories) * 0.6, f"Stats should show {len(memories)}+ memories, got {total_count}"
 
     def test_backup_restore_recall_integrity(self, tmp_path):
         """Verify: Backup → Restore cycle preserves recallable data integrity.
@@ -265,12 +268,8 @@ class TestBackupAndProfileExportCollaboration:
                 contents = [m.get("content", "") for m in recalled]
 
                 # At least one initial memory should be present
-                found_initial = sum(
-                    1 for orig in initial_memories
-                    if any(orig.lower() in c.lower() for c in contents)
-                )
-                assert found_initial >= 1, \
-                    f"Should find initial memories after restore, found {found_initial}"
+                found_initial = sum(1 for orig in initial_memories if any(orig.lower() in c.lower() for c in contents))
+                assert found_initial >= 1, f"Should find initial memories after restore, found {found_initial}"
         finally:
             cm.close()
 
@@ -330,8 +329,9 @@ class TestMaintenanceAndRecallCollaboration:
         after_consolidate = cm.recall_memories(limit=20)
         after_count = len(after_consolidate)
 
-        assert after_count == before_count, \
-            f"Dry-run consolidation changed recall count: {before_count} -> {after_count}"
+        assert (
+            after_count == before_count
+        ), f"Dry-run consolidation changed recall count: {before_count} -> {after_count}"
 
     def test_check_conflicts_returns_valid_data(self, cm):
         """Verify: MaintenanceMixin.check_conflicts() analyzes stored memories.
@@ -350,8 +350,9 @@ class TestMaintenanceAndRecallCollaboration:
         # If conflicts detected, verify structure
         if conflicts:
             conflict = conflicts[0]
-            assert "conflict_type" in conflict or "reason" in conflict, \
-                "Conflict entries should have descriptive fields"
+            assert (
+                "conflict_type" in conflict or "reason" in conflict
+            ), "Conflict entries should have descriptive fields"
 
     def test_check_quality_identifies_low_quality(self, cm):
         """Verify: MaintenanceMixin.check_quality() can analyze memory quality.
@@ -371,8 +372,7 @@ class TestMaintenanceAndRecallCollaboration:
         # Report items should have expected structure if any found
         if quality_report:
             item = quality_report[0]
-            assert "score" in item or "reasons" in item, \
-                "Quality items should have score/reasons"
+            assert "score" in item or "reasons" in item, "Quality items should have score/reasons"
 
 
 class TestPromptDelegateCollaboration:
@@ -401,8 +401,9 @@ class TestPromptDelegateCollaboration:
         assert isinstance(context, dict), "build_context should return dict"
 
         # Context should contain memory-related information
-        assert "memories" in context or "memory_count" in context or "context_text" in context, \
-            f"Context should include memory data, got keys: {list(context.keys())}"
+        assert (
+            "memories" in context or "memory_count" in context or "context_text" in context
+        ), f"Context should include memory data, got keys: {list(context.keys())}"
 
     def test_build_system_prompt_incorporates_profile(self, cm):
         """Verify: PromptDelegateMixin.build_system_prompt() incorporates user profile.
@@ -434,12 +435,12 @@ class TestPromptDelegateCollaboration:
 
         # Should have expected keys
         expected_keys = {"memories", "rules", "knowledge", "total_count"}
-        assert expected_keys.issubset(all_results.keys()), \
-            f"recall_all should have keys {expected_keys}, got {list(all_results.keys())}"
+        assert expected_keys.issubset(
+            all_results.keys()
+        ), f"recall_all should have keys {expected_keys}, got {list(all_results.keys())}"
 
         # Should have found our test memory
-        assert all_results.get("memory_count", 0) >= 1, \
-            "Should find at least one memory in recall_all"
+        assert all_results.get("memory_count", 0) >= 1, "Should find at least one memory in recall_all"
 
 
 class TestCrossMixinDataFlow:
@@ -477,8 +478,9 @@ class TestCrossMixinDataFlow:
 
             # Verify content preserved
             exported_contents = [m.get("content", "") for m in exported_memories]
-            assert any("pipeline test" in c.lower() for c in exported_contents), \
-                "Exported data should contain original content"
+            assert any(
+                "pipeline test" in c.lower() for c in exported_contents
+            ), "Exported data should contain original content"
         finally:
             cm.close()
 

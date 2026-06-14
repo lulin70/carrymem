@@ -85,9 +85,9 @@ class TestE2ESQLiteToJSONSwitch:
 
             # Verify SQLite has data
             sqlite_recall = cm_sqlite.recall_memories(limit=10)
-            assert isinstance(sqlite_recall, list) and len(sqlite_recall) == len(original_memories), (
-                "SQLite should have stored all data before migration"
-            )
+            assert isinstance(sqlite_recall, list) and len(sqlite_recall) == len(
+                original_memories
+            ), "SQLite should have stored all data before migration"
         finally:
             cm_sqlite.close()
 
@@ -107,22 +107,24 @@ class TestE2ESQLiteToJSONSwitch:
             # so exact count cannot be asserted. Verify all original memories are present instead.
             json_contents = [m.get("content", "") for m in json_recall if isinstance(m, dict)]
             found_in_json = sum(
-                1 for orig in original_memories
+                1
+                for orig in original_memories
                 if any(orig.lower() in jc.lower() or jc.lower() in orig.lower() for jc in json_contents)
             )
-            assert found_in_json == len(original_memories), (
-                f"JSON should contain all migrated data. Found {found_in_json}/{len(original_memories)}"
-            )
+            assert found_in_json == len(
+                original_memories
+            ), f"JSON should contain all migrated data. Found {found_in_json}/{len(original_memories)}"
 
             # Verify content matches
             json_contents = [m.get("content", "") for m in json_recall if isinstance(m, dict)]
             found_count = sum(
-                1 for orig in original_memories
+                1
+                for orig in original_memories
                 if any(orig.lower() in jc.lower() or jc.lower() in orig.lower() for jc in json_contents)
             )
-            assert found_count == len(original_memories), (
-                f"Migrated data should be intact in JSON. Found {found_count}/{len(original_memories)}"
-            )
+            assert found_count == len(
+                original_memories
+            ), f"Migrated data should be intact in JSON. Found {found_count}/{len(original_memories)}"
         finally:
             cm_json.close()
 
@@ -139,9 +141,7 @@ class TestE2EAdapterFeatureParity:
             cm = CarryMem(storage=storage_type, db_path=db_path)
             try:
                 result = cm.classify_and_remember(f"Parity test for {storage_type}")
-                assert isinstance(result, dict), (
-                    f"{storage_type}: classify_and_remember should return dict"
-                )
+                assert isinstance(result, dict), f"{storage_type}: classify_and_remember should return dict"
             finally:
                 cm.close()
 
@@ -155,9 +155,7 @@ class TestE2EAdapterFeatureParity:
             try:
                 cm.classify_and_remember(f"Recall test data for {storage_type}")
                 results = cm.recall_memories(query=f"{storage_type}", limit=5)
-                assert isinstance(results, list), (
-                    f"{storage_type}: recall should return list"
-                )
+                assert isinstance(results, list), f"{storage_type}: recall should return list"
             finally:
                 cm.close()
 
@@ -171,9 +169,7 @@ class TestE2EAdapterFeatureParity:
             try:
                 cm.classify_and_remember(f"Profile test {storage_type}")
                 profile = cm.get_memory_profile()
-                assert isinstance(profile, dict), (
-                    f"{storage_type}: profile should return dict"
-                )
+                assert isinstance(profile, dict), f"{storage_type}: profile should return dict"
             finally:
                 cm.close()
 
@@ -190,9 +186,7 @@ class TestE2EAdapterFeatureParity:
                 cm.classify_and_remember(f"Backup test {storage_type}")
                 try:
                     backup_result = cm.backup(backup_dir=backup_dir)
-                    assert isinstance(backup_result, dict), (
-                        f"{storage_type}: backup should return dict"
-                    )
+                    assert isinstance(backup_result, dict), f"{storage_type}: backup should return dict"
                 except (AttributeError, TypeError, NotImplementedError):
                     pytest.skip(f"{storage_type} adapter may not support backup")
             finally:
@@ -235,6 +229,7 @@ class TestE2EAdapterSpecificBehavior:
         else:
             # JSONAdapter may use a default path like ~/.carrymem/memories.json
             import os as _os
+
             default_path = _os.path.join(_os.path.expanduser("~"), ".carrymem", "memories.json")
             if os.path.exists(default_path):
                 check_path = default_path
@@ -243,7 +238,7 @@ class TestE2EAdapterSpecificBehavior:
                 # This is acceptable if JSONAdapter doesn't persist in this mode
                 pytest.skip("JSON file not created at expected location")
 
-        with open(check_path, 'r', encoding='utf-8') as f:
+        with open(check_path, "r", encoding="utf-8") as f:
             try:
                 data = json.load(f)
                 assert isinstance(data, (dict, list)), "JSON file should contain valid structure"
@@ -277,7 +272,7 @@ class TestE2EAdapterErrorHandling:
         json_path = str(tmp_path / "corrupted.json")
 
         # Write invalid JSON
-        with open(json_path, 'w') as f:
+        with open(json_path, "w") as f:
             f.write("{ this is not valid JSON !!!")
 
         # Try to open - should handle gracefully

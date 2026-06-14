@@ -12,8 +12,8 @@ import pytest
 
 from carrymem.adapters.base import (
     MemoryEntry,
-    StoredMemory,
     StorageAdapter,
+    StoredMemory,
 )
 
 

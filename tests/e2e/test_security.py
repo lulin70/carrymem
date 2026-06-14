@@ -1,7 +1,7 @@
 """End-to-end security tests for CarryMem.
 
 Tests for:
-- SQL injection prevention  
+- SQL injection prevention
 - Path traversal attacks
 - Input validation and sanitization
 - Authentication and authorization
@@ -9,9 +9,10 @@ Tests for:
 """
 
 import os
-import pytest
 import tempfile
 from pathlib import Path
+
+import pytest
 
 from carrymem import CarryMem
 from carrymem.security.input_validator import InputValidator
@@ -24,10 +25,10 @@ class TestSQLInjectionPrevention:
         """Test that SQL injection attempts in search queries are prevented."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cm = CarryMem(db_path=os.path.join(tmpdir, "test.db"))
-            
+
             # Store legitimate memory
             cm.classify_and_remember("Alice loves Python programming")
-            
+
             # Attempt SQL injection in search
             malicious_queries = [
                 "'; DROP TABLE memories; --",
@@ -37,7 +38,7 @@ class TestSQLInjectionPrevention:
                 "admin'--",
                 "' OR 1=1--",
             ]
-            
+
             for query in malicious_queries:
                 try:
                     # Should not raise exception or return unexpected results
@@ -49,20 +50,20 @@ class TestSQLInjectionPrevention:
                     error_str = str(e).upper()
                     # Should not expose SQL internals
                     assert "DROP" not in error_str or "valid" in str(e).lower()
-            
+
             cm.close()
 
     def test_sql_injection_in_namespace(self):
         """Test SQL injection prevention in namespace parameter."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cm = CarryMem(db_path=os.path.join(tmpdir, "test.db"))
-            
+
             malicious_namespaces = [
                 "default'; DROP TABLE memories--",
                 "' OR '1'='1",
                 "../../etc/passwd",
             ]
-            
+
             for ns in malicious_namespaces:
                 try:
                     # Should sanitize or reject malicious namespace
@@ -72,7 +73,7 @@ class TestSQLInjectionPrevention:
                 except (ValueError, Exception) as e:
                     # Expected: validation should catch this
                     assert "invalid" in str(e).lower() or "namespace" in str(e).lower()
-            
+
             cm.close()
 
 
@@ -86,13 +87,13 @@ class TestPathTraversalPrevention:
                 "../../etc/passwd",
                 "../../../root/.ssh/id_rsa",
             ]
-            
+
             for path in malicious_paths:
                 try:
                     # Should either normalize path or raise error
                     cm = CarryMem(db_path=path)
                     # If created, verify it's within safe boundaries
-                    if hasattr(cm, 'adapter') and hasattr(cm.adapter, 'db_path'):
+                    if hasattr(cm, "adapter") and hasattr(cm.adapter, "db_path"):
                         actual_path = Path(cm.adapter.db_path).resolve()
                         # Should not escape to system directories
                         assert "/etc/" not in str(actual_path)
@@ -110,10 +111,10 @@ class TestInputValidationAndSanitization:
         """Test that extremely large content is handled safely."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cm = CarryMem(db_path=os.path.join(tmpdir, "test.db"))
-            
+
             # Attempt to store large content (1MB)
             large_content = "A" * (1 * 1024 * 1024)
-            
+
             try:
                 result = cm.classify_and_remember(large_content)
                 # If accepted, it should be stored safely
@@ -121,19 +122,19 @@ class TestInputValidationAndSanitization:
             except (ValueError, MemoryError) as e:
                 # Expected: might reject oversized input
                 pass
-            
+
             cm.close()
 
     def test_special_characters_in_content(self):
         """Test handling of special characters and control codes."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cm = CarryMem(db_path=os.path.join(tmpdir, "test.db"))
-            
+
             special_contents = [
                 "<script>alert('XSS')</script>",  # HTML/JS
                 "'; DROP TABLE users; --",  # SQL
             ]
-            
+
             for content in special_contents:
                 try:
                     result = cm.classify_and_remember(content)
@@ -142,13 +143,13 @@ class TestInputValidationAndSanitization:
                 except (ValueError, TypeError):
                     # Expected: might reject invalid input
                     pass
-            
+
             cm.close()
 
     def test_namespace_validation(self):
         """Test namespace input validation."""
         validator = InputValidator()
-        
+
         invalid_namespaces = [
             "",  # Empty
             " " * 100,  # Whitespace only
@@ -157,7 +158,7 @@ class TestInputValidationAndSanitization:
             "name\nspace",  # Newline
             "a" * 300,  # Too long
         ]
-        
+
         for ns in invalid_namespaces:
             try:
                 result = validator.sanitize_namespace(ns)
@@ -183,7 +184,7 @@ class TestAuthenticationSecurity:
             "\n",
             " " * 10,
         ]
-        
+
         for key in invalid_keys:
             # Empty keys should be detected
             assert len(key.strip()) == 0
@@ -197,7 +198,7 @@ class TestAuthenticationSecurity:
             "test",
             "a",
         ]
-        
+
         for key in weak_keys:
             # Weak keys should be detected (length < 16 chars)
             assert len(key) < 16
@@ -237,9 +238,9 @@ class TestPermissionBypass:
         """Test that delete operations handle invalid IDs safely."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cm = CarryMem(db_path=os.path.join(tmpdir, "test.db"))
-            
+
             cm.classify_and_remember("Test memory")
-            
+
             # Attempt to delete with invalid IDs
             invalid_ids = [
                 "' OR '1'='1",
@@ -247,7 +248,7 @@ class TestPermissionBypass:
                 "\x00",
                 "nonexistent_id_12345",
             ]
-            
+
             for invalid_id in invalid_ids:
                 try:
                     # Should handle invalid IDs safely
@@ -255,7 +256,7 @@ class TestPermissionBypass:
                 except (ValueError, KeyError, TypeError, Exception):
                     # Expected: should reject or safely handle invalid IDs
                     pass
-            
+
             cm.close()
 
 
@@ -266,7 +267,7 @@ class TestErrorMessageSecurity:
         """Test that error messages don't reveal system internals."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cm = CarryMem(db_path=os.path.join(tmpdir, "test.db"))
-            
+
             try:
                 # Trigger various errors with invalid input
                 cm.recall_memories(query="test", namespace="invalid\x00namespace")
@@ -276,7 +277,7 @@ class TestErrorMessageSecurity:
                 assert "SELECT" not in error_msg.upper()
                 assert "INSERT" not in error_msg.upper()
                 assert "DELETE" not in error_msg.upper()
-            
+
             cm.close()
 
 

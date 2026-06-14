@@ -28,7 +28,7 @@ import tempfile
 import types
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional, Tuple
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -38,18 +38,17 @@ from carrymem import CarryMem
 from carrymem.adapters.base import MemoryEntry, StoredMemory
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.constants import (
-    MAX_MESSAGE_LENGTH,
     DEFAULT_FORCE_TYPE_CONFIDENCE,
+    MAX_MESSAGE_LENGTH,
     PBKDF2_ITERATIONS,
     PBKDF2_ITERATIONS_LEGACY,
 )
+from carrymem.quality_scorer import MemoryQualityScorer
 from carrymem.security.encryption import (
     EncryptionError,
     MemoryEncryption,
     NoEncryption,
 )
-from carrymem.quality_scorer import MemoryQualityScorer
-
 
 # ==============================================================================
 # Mutation Test Runner 框架核心
@@ -246,7 +245,9 @@ class TestClassifyMessageConditionFlip:
         # MUTATION CHECK: 如果 should_remember 判断被翻转，
         # 这个明确的偏好声明可能被当作噪声返回空列表
         assert isinstance(result, dict), "Should return classification result"
-        assert result.get("should_remember", False) or len(result.get("entries", [])) > 0 or result.get("stored", False), (
+        assert (
+            result.get("should_remember", False) or len(result.get("entries", [])) > 0 or result.get("stored", False)
+        ), (
             "Clear preference should be recognized as rememberable, "
             "not treated as noise (possible condition flip mutation)"
         )
@@ -275,9 +276,7 @@ class TestClassifyMessageConditionFlip:
 
         # MUTATION CHECK: 如果 force_type 覆盖逻辑被翻转或移除，
         # 结果可能不包含 decision 类型
-        assert result.get("stored", False), (
-            "Force type should ensure storage even for ambiguous messages"
-        )
+        assert result.get("stored", False), "Force type should ensure storage even for ambiguous messages"
 
         entries = result.get("entries", [])
         if entries:
@@ -324,9 +323,7 @@ class TestClassifyMessageConditionFlip:
 
         # 验证高置信度记忆可召回
         recalled = carrymem_instance.recall_memories(query="HTTPS")
-        assert len(recalled) > 0 or high_stored, (
-            "High-confidence memory should be recallable"
-        )
+        assert len(recalled) > 0 or high_stored, "High-confidence memory should be recallable"
 
     def test_mutation_4_empty_entries_handling(self, carrymem_instance):
         """MUTATION #4: 空条目列表处理异常
@@ -356,8 +353,7 @@ class TestClassifyMessageConditionFlip:
         # 至少应该有内容（要么 stored=True，要么有 entries）
         has_content = result.get("stored", False) or len(entries) > 0
         assert has_content, (
-            "Force type should guarantee content creation. "
-            "Empty entries suggest mutation in entry creation logic."
+            "Force type should guarantee content creation. " "Empty entries suggest mutation in entry creation logic."
         )
 
 
@@ -367,10 +363,9 @@ class TestClassifyMessageConditionFlip:
 
 
 TestClassifyAndRememberStorageIntegrity = type(
-    'TestClassifyAndRememberStorageIntegrity',
+    "TestClassifyAndRememberStorageIntegrity",
     (),
-    {
-        '__doc__': """MUTATION TARGET: classify_and_remember() in core/_memory_crud.py
+    {"__doc__": """MUTATION TARGET: classify_and_remember() in core/_memory_crud.py
 
         关键逻辑点：
         - Line 48: 权限检查 `_check_write_permission(user_id)`
@@ -380,8 +375,7 @@ TestClassifyAndRememberStorageIntegrity = type(
         - Line 81-87: 审计日志记录
 
         变异策略：移除关键步骤，验证流程完整性
-        """
-    }
+        """},
 )
 
 
@@ -449,10 +443,7 @@ class TestClassifyAndRememberStatementRemoval:
                     f"_store_entries may have been removed (mutation)."
                 )
             elif reported_stored and not storage_keys:
-                pytest.fail(
-                    "Reported stored=True but no storage_keys returned. "
-                    "Possible mutation in storage logic."
-                )
+                pytest.fail("Reported stored=True but no storage_keys returned. " "Possible mutation in storage logic.")
         finally:
             teardown_carrymem(cm, db_path)
 
@@ -497,9 +488,9 @@ class TestClassifyAndRememberStatementRemoval:
                 cm.classify_and_remember(excessive)
 
             error_msg2 = str(exc_info2.value).lower()
-            assert any(kw in error_msg2 for kw in ["too long", "max", "length"]), (
-                f"Excessive length should be rejected. Got: {exc_info2.value}"
-            )
+            assert any(
+                kw in error_msg2 for kw in ["too long", "max", "length"]
+            ), f"Excessive length should be rejected. Got: {exc_info2.value}"
         finally:
             teardown_carrymem(cm, db_path)
 
@@ -522,7 +513,7 @@ class TestClassifyAndRememberStatementRemoval:
         cm, db_path = setup_carrymem()
 
         try:
-            with patch('carrymem.security.audit.log_write') as mock_log:
+            with patch("carrymem.security.audit.log_write") as mock_log:
                 cm.classify_and_remember(
                     "Auditable operation test",
                     user_id="test-user-123",
@@ -531,8 +522,7 @@ class TestClassifyAndRememberStatementRemoval:
                 # MUTATION CHECK: 如果审计日志被移除，
                 # mock_log 应该没有被调用
                 assert mock_log.called, (
-                    "log_write should be called for audit trail. "
-                    "Audit logging may have been removed (mutation)."
+                    "log_write should be called for audit trail. " "Audit logging may have been removed (mutation)."
                 )
 
                 # 验证调用参数
@@ -540,12 +530,10 @@ class TestClassifyAndRememberStatementRemoval:
                 assert call_args is not None, "log_write was called but no args recorded"
 
                 kwargs = call_args.kwargs if call_args.kwargs else {}
-                assert kwargs.get("resource") == "memory", (
-                    f"Audit resource should be 'memory', got '{kwargs.get('resource')}'"
-                )
-                assert kwargs.get("user_id") == "test-user-123", (
-                    f"user_id should be preserved in audit log"
-                )
+                assert (
+                    kwargs.get("resource") == "memory"
+                ), f"Audit resource should be 'memory', got '{kwargs.get('resource')}'"
+                assert kwargs.get("user_id") == "test-user-123", f"user_id should be preserved in audit log"
         finally:
             teardown_carrymem(cm, db_path)
 
@@ -625,9 +613,7 @@ class TestEncryptionParameterTampering:
         )
 
         # 验证派生的密钥长度正确
-        assert len(standard_key) == 32, (
-            f"Derived key should be 32 bytes, got {len(standard_key)}"
-        )
+        assert len(standard_key) == 32, f"Derived key should be 32 bytes, got {len(standard_key)}"
 
     def test_mutation_9_encryption_integrity_check_disabled(self, encryption_instance):
         """MUTATION #9: 禁用密钥完整性验证
@@ -677,9 +663,9 @@ class TestEncryptionParameterTampering:
             )
         except EncryptionError as e:
             # 预期行为：检测到篡改并抛出异常
-            assert "integrity" in str(e).lower() or "tamper" in str(e).lower() or "failed" in str(e).lower(), (
-                f"Error should mention integrity/tampering, got: {e}"
-            )
+            assert (
+                "integrity" in str(e).lower() or "tamper" in str(e).lower() or "failed" in str(e).lower()
+            ), f"Error should mention integrity/tampering, got: {e}"
         except Exception as e:
             # 其他异常也可接受（例如重新生成密钥）
             pass
@@ -731,9 +717,7 @@ class TestEncryptionParameterTampering:
 
             # 验证密文与明文不同（除非为空字符串）
             if plaintext:
-                assert encrypted != plaintext, (
-                    f"Ciphertext should differ from plaintext for message #{i}"
-                )
+                assert encrypted != plaintext, f"Ciphertext should differ from plaintext for message #{i}"
 
     def test_mutation_11_noencryption_passthrough_security(self):
         """MUTATION #11: NoEncryption 类的安全性退化
@@ -756,29 +740,22 @@ class TestEncryptionParameterTampering:
 
         # MUTATION CHECK: 如果 NoEncryption 误报状态
         assert no_enc.is_active == False, (
-            "NoEncryption.is_active must be False. "
-            "If True, users think data is encrypted when it's not."
+            "NoEncryption.is_active must be False. " "If True, users think data is encrypted when it's not."
         )
 
-        assert no_enc.backend == "none", (
-            f"NoEncryption.backend must be 'none', got '{no_enc.backend}'"
-        )
+        assert no_enc.backend == "none", f"NoEncryption.backend must be 'none', got '{no_enc.backend}'"
 
-        assert no_enc.security_level == "none", (
-            f"NoEncryption.security_level must be 'none', got '{no_enc.security_level}'"
-        )
+        assert (
+            no_enc.security_level == "none"
+        ), f"NoEncryption.security_level must be 'none', got '{no_enc.security_level}'"
 
         # 验证 passthrough 行为
         secret_data = "Sensitive information"
         encrypted = no_enc.encrypt(secret_data)
-        assert encrypted == secret_data, (
-            "NoEncryption should passthrough without modification"
-        )
+        assert encrypted == secret_data, "NoEncryption should passthrough without modification"
 
         decrypted = no_enc.decrypt(encrypted)
-        assert decrypted == secret_data, (
-            "NoEncryption decrypt should return original"
-        )
+        assert decrypted == secret_data, "NoEncryption decrypt should return original"
 
     def test_mutation_12_key_rotation_atomicity(self, encryption_instance):
         """MUTATION #12: 密钥轮换原子性破坏
@@ -817,9 +794,7 @@ class TestEncryptionParameterTampering:
 
         # MUTATION CHECK: 如果轮换过程不原子，
         # re_encrypt 函数可能无法正确转换旧密文
-        assert callable(re_encrypt), (
-            "rotate_key should return a callable re_encrypt function"
-        )
+        assert callable(re_encrypt), "rotate_key should return a callable re_encrypt function"
 
         # 使用新密钥重新加密所有数据
         re_encrypted_items = [re_encrypt(item) for item in encrypted_items]
@@ -835,11 +810,15 @@ class TestEncryptionParameterTampering:
 
         # 验证备份文件存在（原子性保障的一部分）
         key_file = enc._key_file or enc._default_key_path()
-        backup_exists = any(
-            os.path.exists(f"{key_file}.backup.{ext}")
-            for ext in os.listdir(os.path.dirname(key_file))
-            if f"{key_file}." in ext
-        ) if os.path.exists(os.path.dirname(key_file)) else False
+        backup_exists = (
+            any(
+                os.path.exists(f"{key_file}.backup.{ext}")
+                for ext in os.listdir(os.path.dirname(key_file))
+                if f"{key_file}." in ext
+            )
+            if os.path.exists(os.path.dirname(key_file))
+            else False
+        )
 
         # 注意：在某些环境下备份路径可能不同
         # 主要验证点是数据可恢复性（上面已验证）
@@ -882,9 +861,7 @@ class TestCombinedMutationScenarios:
 
             # MUTATION CHECK: 如果任何变异存在（分类、存储、召回），
             # 端到端流程会失败
-            successful_storages = sum(
-                1 for _, _, r in storage_results if r.get("stored", False)
-            )
+            successful_storages = sum(1 for _, _, r in storage_results if r.get("stored", False))
 
             assert successful_storages >= 3, (
                 f"Only {successful_storages}/4 memories stored successfully. "
@@ -896,16 +873,13 @@ class TestCombinedMutationScenarios:
                 query = content.split()[0]  # 用第一个词查询
                 recalled = cm.recall_memories(query=query)
 
-                assert len(recalled) > 0, (
-                    f"Failed to recall '{content[:30]}'. "
-                    f"Recall mechanism may be mutated."
-                )
+                assert len(recalled) > 0, f"Failed to recall '{content[:30]}'. " f"Recall mechanism may be mutated."
 
                 # 验证类型一致性
                 recalled_types = [r.get("type") for r in recalled]
-                assert mem_type in recalled_types or len(recalled) > 0, (
-                    f"Recalled memory type mismatch for '{content[:30]}'"
-                )
+                assert (
+                    mem_type in recalled_types or len(recalled) > 0
+                ), f"Recalled memory type mismatch for '{content[:30]}'"
 
         finally:
             cm.close()
@@ -956,25 +930,19 @@ class TestCombinedMutationScenarios:
                     errors.append(f"W{worker_id} fatal: {e}")
 
         try:
-            threads = [
-                threading.Thread(target=worker, args=(i,))
-                for i in range(3)
-            ]
+            threads = [threading.Thread(target=worker, args=(i,)) for i in range(3)]
             for t in threads:
                 t.start()
             for t in threads:
                 t.join(timeout=30)
 
             # MUTATION CHECK: 变异导致的微小问题会在并发下放大
-            assert len(errors) == 0, (
-                f"Concurrent operations exposed potential mutations: {errors[:5]}"
-            )
+            assert len(errors) == 0, f"Concurrent operations exposed potential mutations: {errors[:5]}"
 
             # 大部分操作应该成功
             total_ops = 3 * 5  # 3 workers × 5 ops
             assert success_count[0] >= total_ops * 0.8, (
-                f"Only {success_count[0]}/{total_ops} operations succeeded. "
-                f"Concurrency may expose logic mutations."
+                f"Only {success_count[0]}/{total_ops} operations succeeded. " f"Concurrency may expose logic mutations."
             )
 
         finally:

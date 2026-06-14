@@ -26,12 +26,11 @@ from carrymem import CarryMem
 from carrymem.adapters.base import MemoryEntry, StoredMemory
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.constants import (
-    MAX_MESSAGE_LENGTH,
     DEFAULT_FORCE_TYPE_CONFIDENCE,
+    MAX_MESSAGE_LENGTH,
     MIN_QUALITY_THRESHOLD,
 )
 from carrymem.quality_scorer import MemoryQualityScorer, QualityAnalyzer
-
 
 # ==============================================================================
 # a) 条件翻转测试 (Condition Flip Test)
@@ -40,7 +39,7 @@ from carrymem.quality_scorer import MemoryQualityScorer, QualityAnalyzer
 
 class TestConditionFlipConfidence:
     """MUTATION: 将 `if confidence > 0.8` 改为 `if confidence < 0.8`
-    
+
     Why test should catch it:
     - 高置信度记忆应该被优先处理或特殊标记
     - 翻转条件会导致低置信度记忆被错误地当作高置信度处理
@@ -107,8 +106,7 @@ class TestConditionFlipConfidence:
         # MUTATION CHECK: 如果 confidence 比较逻辑被翻转，
         # 低置信度记忆可能会得到不正确的高分
         assert high_score > low_score, (
-            f"High confidence ({high_score:.3f}) should score higher than "
-            f"low confidence ({low_score:.3f})"
+            f"High confidence ({high_score:.3f}) should score higher than " f"low confidence ({low_score:.3f})"
         )
 
         # 验证质量等级不同
@@ -158,7 +156,7 @@ class TestConditionFlipConfidence:
 
 class TestBoundaryValueShiftMaxLength:
     """MUTATION: 将 MAX_MESSAGE_LENGTH = 50000 改为 500
-    
+
     Why test should catch it:
     - 正常消息长度通常超过 500 字符
     - 缩小阈值会导致大量合法消息被拒绝
@@ -179,9 +177,9 @@ class TestBoundaryValueShiftMaxLength:
 
             # MUTATION CHECK: 如果 MAX_MESSAGE_LENGTH 被改为 500，
             # 这个约 600+ 字符的消息会被错误拒绝
-            assert result.get("stored", False) or result.get("should_remember", False), (
-                f"Normal message ({len(normal_length_msg)} chars) should be accepted"
-            )
+            assert result.get("stored", False) or result.get(
+                "should_remember", False
+            ), f"Normal message ({len(normal_length_msg)} chars) should be accepted"
 
             cm.close()
         finally:
@@ -206,9 +204,9 @@ class TestBoundaryValueShiftMaxLength:
             # MUTATION CHECK: 如果阈值被随意改变，此测试可能失败
             # （例如如果阈值被设得很大，超长消息就不会被拒绝）
             error_msg = str(exc_info.value).lower()
-            assert any(keyword in error_msg for keyword in ["too long", "max", "length"]), (
-                f"Should reject excessive message with length-related error, got: {exc_info.value}"
-            )
+            assert any(
+                keyword in error_msg for keyword in ["too long", "max", "length"]
+            ), f"Should reject excessive message with length-related error, got: {exc_info.value}"
 
             cm.close()
         finally:
@@ -236,9 +234,9 @@ class TestBoundaryValueShiftMaxLength:
             except ValueError as e:
                 # 如果被拒绝，应该是合理的理由
                 error_str = str(e).lower()
-                assert "length" in error_str or "long" in error_str or "size" in error_str, (
-                    f"Unexpected rejection reason: {e}"
-                )
+                assert (
+                    "length" in error_str or "long" in error_str or "size" in error_str
+                ), f"Unexpected rejection reason: {e}"
 
             cm.close()
         finally:
@@ -256,7 +254,7 @@ class TestBoundaryValueShiftMaxLength:
 
 class TestReturnValueTamperingEmptyRecall:
     """MUTATION: 模拟 recall 返回空列表 [] 或 None
-    
+
     Why test should catch it:
     - 调用方不应因空结果而崩溃
     - 空结果应有明确的语义（无数据 vs 错误）
@@ -346,7 +344,7 @@ class TestReturnValueTamperingEmptyRecall:
 
 class TestExceptionSwallowing:
     """MUTATION: except 块中静默 pass 或只 log 不传播
-    
+
     Why test should catch it:
     - 关键路径的异常不应被吞没
     - 吞没异常会隐藏真实错误，导致难以调试
@@ -431,17 +429,15 @@ class TestExceptionSwallowing:
             # 调用方无法区分"无数据"和"查询失败"
             try:
                 results = cm.recall_memories(query="test")
-                
+
                 # 如果返回了结果（异常被吞没），至少应该是空列表而非 None
                 # 且调用方应该能够检测到这是一个异常情况
                 if results is None:
                     pytest.fail("Recall returned None on error - exception swallowed?")
-                
+
                 # 注意：当前实现可能会捕获异常并返回空列表
                 # 这是一种有效的错误处理策略，但测试应记录这种行为
-                assert isinstance(results, list), (
-                    "Even on error, should return consistent type (list)"
-                )
+                assert isinstance(results, list), "Even on error, should return consistent type (list)"
             except (IOError, Exception):
                 # 异常传播也是可接受的行为
                 pass
@@ -469,19 +465,17 @@ class TestExceptionSwallowing:
                 raise ClassificationError("Simulated classification failure")
 
             # 使用 monkeypatch 或直接替换
-            with patch.object(cm, 'classify_message', side_effect=failing_classify):
+            with patch.object(cm, "classify_message", side_effect=failing_classify):
                 # MUTATION CHECK: 如果分类异常被吞没，
                 # 用户会得到一个空的"成功"结果而非错误提示
                 result = cm.classify_and_remember("This message triggers classification failure")
-                
+
                 # 验证：即使异常被处理，结果也应该表明出了问题
                 # 而不是假装成功存储了
                 if result.get("stored", False):
                     # 如果报告已存储，那说明异常被不当处理了
                     entries = result.get("entries", [])
-                    assert len(entries) == 0, (
-                        "Should not report stored entries when classification failed"
-                    )
+                    assert len(entries) == 0, "Should not report stored entries when classification failed"
 
             cm.close()
         finally:
@@ -499,7 +493,7 @@ class TestExceptionSwallowing:
 
 class TestLogicalOperatorReplacement:
     """MUTATION: and/or 条件互换
-    
+
     Why test should catch it:
     - and/or 互换会改变条件的语义
     - 例如：`if A and B` 变成 `if A or B` 会放宽条件
@@ -528,8 +522,7 @@ class TestLogicalOperatorReplacement:
         # 实际实现使用加权求和（所有因子都贡献），
         # 所以单个高分因子不应该主导结果
         assert score < 0.8, (
-            f"Memory with only high confidence but poor other factors "
-            f"should not get excellent score ({score:.3f})"
+            f"Memory with only high confidence but poor other factors " f"should not get excellent score ({score:.3f})"
         )
 
     def test_filter_combines_conditions_correctly(self):
@@ -558,18 +551,15 @@ class TestLogicalOperatorReplacement:
         for mem in filtered:
             individual_score = scorer.score(mem)
             assert individual_score >= MIN_QUALITY_THRESHOLD, (
-                f"Filtered memory has score {individual_score:.3f} "
-                f"below threshold {MIN_QUALITY_THRESHOLD}"
+                f"Filtered memory has score {individual_score:.3f} " f"below threshold {MIN_QUALITY_THRESHOLD}"
             )
 
         # 验证确实过滤掉了一些
-        assert len(filtered) < len(memories), (
-            "Should filter out some low-quality memories"
-        )
+        assert len(filtered) < len(memories), "Should filter out some low-quality memories"
 
     def test_validation_uses_correct_logic_for_complex_input(self):
         """验证复杂输入验证使用正确的逻辑组合"""
-        from carrymem.utils.validators import validate_query, validate_limit
+        from carrymem.utils.validators import validate_limit, validate_query
 
         # 测试查询验证：多个无效字符应都被检测
         invalid_chars_query = "SELECT * FROM users; DROP TABLE--"
@@ -601,18 +591,18 @@ class TestLogicalOperatorReplacement:
 
         # 测试边界值
         boundary_cases = [
-            (0.799, "good"),      # just below 0.8
+            (0.799, "good"),  # just below 0.8
             (0.800, "excellent"),  # exactly 0.8
             (0.801, "excellent"),  # just above 0.8
-            (0.599, "fair"),       # just below 0.6
-            (0.600, "good"),       # exactly 0.6
-            (0.399, "poor"),       # just below 0.4
-            (0.400, "fair"),       # exactly 0.4
+            (0.599, "fair"),  # just below 0.6
+            (0.600, "good"),  # exactly 0.6
+            (0.399, "poor"),  # just below 0.4
+            (0.400, "fair"),  # exactly 0.4
         ]
 
         for score, expected_tier in boundary_cases:
             actual_tier = scorer.get_quality_tier(score)
-            
+
             # MUTATION CHECK: 如果比较运算符被翻转（> 变 <，>= 变 <=），
             # 边界值会被归入错误的等级
             assert actual_tier == expected_tier, (
@@ -651,17 +641,13 @@ class TestCombinedMutationScenarios:
 
             # 2. 验证都能召回
             recalled = cm.recall_memories(query="", limit=10)
-            
+
             # MUTATION CHECK: 多个变异点组合影响
             # - 如果置信度判断翻转：排序可能错误
             # - 如果边界值偏移：某些记忆可能丢失
             # - 如果返回值篡改：recalled 可能为 None
-            assert recalled is not None and isinstance(recalled, list), (
-                "Recall must return valid list"
-            )
-            assert len(recalled) >= 2, (
-                f"Should recall at least 2 of 3 memories, got {len(recalled)}"
-            )
+            assert recalled is not None and isinstance(recalled, list), "Recall must return valid list"
+            assert len(recalled) >= 2, f"Should recall at least 2 of 3 memories, got {len(recalled)}"
 
             # 3. 验证质量评分一致性
             scorer = MemoryQualityScorer()
@@ -701,12 +687,12 @@ class TestCombinedMutationScenarios:
             def worker(worker_id):
                 try:
                     for i in range(10):
-                        # MIXED OPERATION CHECK: 
+                        # MIXED OPERATION CHECK:
                         # 如果条件翻转、边界偏移等变异存在，
                         # 并发操作更容易暴露问题
                         msg = f"Worker-{worker_id}-Op-{i}: Test data"
                         result = cm.classify_and_remember(msg)
-                        
+
                         # 验证返回类型一致
                         if not isinstance(result, dict):
                             with lock:

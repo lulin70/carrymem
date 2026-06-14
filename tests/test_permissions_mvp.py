@@ -12,7 +12,6 @@ import pytest
 from carrymem.errors import SecurityError
 from carrymem.security.permissions import AccessPolicy, Permission
 
-
 # ══════════════════════════════════════════════════════════════════
 #  Permission constants
 # ══════════════════════════════════════════════════════════════════

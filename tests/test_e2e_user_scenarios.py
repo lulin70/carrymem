@@ -170,9 +170,9 @@ class TestE2EPreferenceHelpfulness:
 
         prompt = cm.build_qa_prompt("What are some ways to learn data science?")
         # The prompt should contain the preference as context
-        assert "online" in prompt.lower() or "dislike" in prompt.lower(), (
-            "Prompt should reference the 'online courses' or 'dislike' preference"
-        )
+        assert (
+            "online" in prompt.lower() or "dislike" in prompt.lower()
+        ), "Prompt should reference the 'online courses' or 'dislike' preference"
 
     def test_avoid_rule_still_allows_answer(self, tmp_path):
         cm = _cm(tmp_path)

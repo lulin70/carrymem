@@ -60,9 +60,9 @@ class TestE2EEncryptionLifecycle:
 
             # Verify storage worked
             stored = cm1.recall_memories(limit=10)
-            assert isinstance(stored, list) and len(stored) == len(secret_memories), (
-                f"All encrypted memories should be stored before close, got {len(stored)}/{len(secret_memories)}"
-            )
+            assert isinstance(stored, list) and len(stored) == len(
+                secret_memories
+            ), f"All encrypted memories should be stored before close, got {len(stored)}/{len(secret_memories)}"
         finally:
             cm1.close()
 
@@ -71,18 +71,22 @@ class TestE2EEncryptionLifecycle:
         try:
             recalled = cm2.recall_memories(limit=10)
             assert isinstance(recalled, list), "Recall after reopen should return list"
-            assert len(recalled) == len(secret_memories), (
-                f"All memories should be recalled after reopen, got {len(recalled)}/{len(secret_memories)}"
-            )
+            assert len(recalled) == len(
+                secret_memories
+            ), f"All memories should be recalled after reopen, got {len(recalled)}/{len(secret_memories)}"
 
             # Verify content integrity
             recalled_contents = [m.get("content", "") for m in recalled if isinstance(m, dict)]
             found_count = sum(
-                1 for orig in secret_memories
+                1
+                for orig in secret_memories
                 if any(orig.lower() in rc.lower() or rc.lower() in orig.lower() for rc in recalled_contents)
             )
-            assert found_count == len(secret_memories), (
-                f"All original content should be recoverable after encrypt/reopen cycle. Found {found_count}/{len(secret_memories)}"
+            assert found_count == len(
+                secret_memories
+            ), (
+                f"All original content should be recoverable after encrypt/reopen cycle."
+                f" Found {found_count}/{len(secret_memories)}"
             )
         finally:
             cm2.close()
@@ -109,9 +113,7 @@ class TestE2EEncryptionLifecycle:
                 # If it returns data, it should be garbled/empty, not plaintext
                 contents = [m.get("content", "") for m in recalled]
                 has_plaintext = any("Secret data" in c for c in contents)
-                assert not has_plaintext, (
-                    "Wrong key should NOT be able to decrypt to plaintext"
-                )
+                assert not has_plaintext, "Wrong key should NOT be able to decrypt to plaintext"
         except (EncryptionError, Exception):
             pass  # Expected: decryption failure
         finally:
@@ -138,9 +140,7 @@ class TestE2EEncryptionLifecycle:
             if isinstance(result, list) and len(result) > 0:
                 contents = [m.get("content", "") for m in result]
                 has_readable = any("Encrypted memory" in c for c in contents)
-                assert not has_readable, (
-                    "Encrypted data should not be readable without key"
-                )
+                assert not has_readable, "Encrypted data should not be readable without key"
         except Exception:
             pass  # Acceptable: cannot open without key
         finally:
@@ -201,9 +201,7 @@ class TestE2EEncryptedExportImport:
             try:
                 pack_result = cm.pack(output_path=carry_path, encrypt=True, password="pack-pw-123")
                 # Should either return success dict or create file
-                assert (
-                    isinstance(pack_result, dict) or os.path.exists(carry_path)
-                ), "Pack should produce output"
+                assert isinstance(pack_result, dict) or os.path.exists(carry_path), "Pack should produce output"
             except (AttributeError, TypeError):
                 pytest.skip("pack() may not support all parameters in this version")
         finally:
@@ -278,15 +276,10 @@ class TestE2EKeyRotation:
 
             # Verify accessible with old key
             old_recall = cm_old.recall_memories(limit=10)
-            assert isinstance(old_recall, list) and len(old_recall) >= 1, (
-                "Data should be accessible with old key"
-            )
+            assert isinstance(old_recall, list) and len(old_recall) >= 1, "Data should be accessible with old key"
             # Verify at least one of the stored memories is recalled with correct content
             recalled_contents = [m.get("content", "") for m in old_recall if isinstance(m, dict)]
-            has_stored_data = any(
-                "Historical preferences" in c or "Legacy data" in c
-                for c in recalled_contents
-            )
+            has_stored_data = any("Historical preferences" in c or "Legacy data" in c for c in recalled_contents)
             assert has_stored_data, "Recalled data should contain stored encrypted memories"
         finally:
             cm_old.close()
@@ -358,9 +351,7 @@ class TestE2ERawDatabaseProtection:
             # Raw DB should NOT contain exact sensitive values
             for sensitive in sensitive_data:
                 # Check for obvious plaintext exposure
-                assert sensitive not in raw_content, (
-                    f"Raw DB should not contain plaintext: '{sensitive[:30]}...'"
-                )
+                assert sensitive not in raw_content, f"Raw DB should not contain plaintext: '{sensitive[:30]}...'"
         finally:
             conn.close()
 
@@ -386,13 +377,10 @@ class TestE2EUnicodeUnderEncryption:
         recalled = cm.recall_memories(limit=10)
         recalled_contents = [m.get("content", "") for m in recalled if isinstance(m, dict)]
 
-        found = sum(
-            1 for orig in chinese_memories
-            if any(orig in rc or rc in orig for rc in recalled_contents)
-        )
-        assert found == len(chinese_memories), (
-            f"All Chinese text should survive encryption roundtrip. Found {found}/{len(chinese_memories)}"
-        )
+        found = sum(1 for orig in chinese_memories if any(orig in rc or rc in orig for rc in recalled_contents))
+        assert found == len(
+            chinese_memories
+        ), f"All Chinese text should survive encryption roundtrip. Found {found}/{len(chinese_memories)}"
 
     def test_emoji_and_special_chars_under_encryption(self, encrypted_carrymem):
         """Verify: Emoji and special characters work with encryption."""
@@ -436,6 +424,6 @@ class TestE2ELongContentUnderEncryption:
         if isinstance(recalled, list) and len(recalled) > 0:
             content = recalled[0].get("content", "")
             # Content should retain the original text (may be truncated by system)
-            assert "important memory" in content.lower(), (
-                f"Recalled content should contain 'important memory', got: {content[:100]}"
-            )
+            assert (
+                "important memory" in content.lower()
+            ), f"Recalled content should contain 'important memory', got: {content[:100]}"

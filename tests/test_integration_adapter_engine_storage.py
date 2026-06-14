@@ -35,10 +35,7 @@ def cm(tmp_path):
 def encrypted_cm(tmp_path):
     """Create a CarryMem instance with encryption enabled."""
     db_path = str(tmp_path / "encrypted_test.db")
-    instance = CarryMem(
-        db_path=db_path,
-        encryption_key="integration-test-encryption-key-12345"
-    )
+    instance = CarryMem(db_path=db_path, encryption_key="integration-test-encryption-key-12345")
     yield instance
     instance.close()
 
@@ -63,9 +60,7 @@ class TestSQLiteAdapterSchemaAndPersistence:
             cursor = conn.cursor()
 
             # Check memories table exists
-            cursor.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='memories'"
-            )
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='memories'")
             table_result = cursor.fetchone()
             assert table_result is not None, "memories table should exist"
 
@@ -73,8 +68,9 @@ class TestSQLiteAdapterSchemaAndPersistence:
             cursor.execute("PRAGMA table_info(memories)")
             columns = [col[1] for col in cursor.fetchall()]
             expected_columns = {"storage_key", "content", "type", "confidence", "namespace"}
-            assert expected_columns.issubset(set(columns)), \
-                f"Missing expected columns. Have: {columns}, Need: {expected_columns}"
+            assert expected_columns.issubset(
+                set(columns)
+            ), f"Missing expected columns. Have: {columns}, Need: {expected_columns}"
 
             conn.close()
         finally:
@@ -197,17 +193,14 @@ class TestRecallEngineFullChain:
         assert any("dark mode" in m.get("content", "").lower() for m in dark_mode_results)
 
         # Query phase - type filtering
-        preferences = cm.recall_memories(
-            query="",
-            filters={"type": "user_preference"},
-            limit=10
-        )
+        preferences = cm.recall_memories(query="", filters={"type": "user_preference"}, limit=10)
         assert len(preferences) >= 1, "Should find preferences by type filter"
 
         # Query phase - broad search
         all_memories = cm.recall_memories(query="", limit=20)
-        assert len(all_memories) >= len(memories) * 0.6, \
-            f"Should recall most memories, got {len(all_memories)}/{len(memories)}"
+        assert (
+            len(all_memories) >= len(memories) * 0.6
+        ), f"Should recall most memories, got {len(all_memories)}/{len(memories)}"
 
     def test_recall_with_time_filtering(self, cm):
         """Verify: RecallEngine respects time-based filters.
@@ -226,8 +219,7 @@ class TestRecallEngineFullChain:
         # Verify results have timestamp fields
         if all_results:
             result = all_results[0]
-            assert "created_at" in result or "storage_key" in result, \
-                "Recalled memories should have metadata"
+            assert "created_at" in result or "storage_key" in result, "Recalled memories should have metadata"
 
 
 class TestEncryptionIntegration:
@@ -260,20 +252,20 @@ class TestEncryptionIntegration:
 
         # Recall (should auto-decrypt)
         recalled = encrypted_cm.recall_memories(limit=10)
-        assert len(recalled) >= len(sensitive_memories) * 0.6, \
-            f"Should recall most encrypted memories, got {len(recalled)}"
+        assert (
+            len(recalled) >= len(sensitive_memories) * 0.6
+        ), f"Should recall most encrypted memories, got {len(recalled)}"
 
         # Verify content integrity after decryption
         recalled_contents = [m.get("content", "") for m in recalled]
         found_count = sum(
-            1 for orig in sensitive_memories
-            if any(
-                orig.split(":")[1].strip() in rc or orig.lower() in rc.lower()
-                for rc in recalled_contents
-            )
+            1
+            for orig in sensitive_memories
+            if any(orig.split(":")[1].strip() in rc or orig.lower() in rc.lower() for rc in recalled_contents)
         )
-        assert found_count >= 2, \
-            f"Decrypted content should match original, matched {found_count}/{len(sensitive_memories)}"
+        assert (
+            found_count >= 2
+        ), f"Decrypted content should match original, matched {found_count}/{len(sensitive_memories)}"
 
     def test_encryption_persists_across_reopen(self, tmp_path):
         """Verify: Encrypted data survives close → reopen cycle.
@@ -299,8 +291,9 @@ class TestEncryptionIntegration:
             assert len(recalled) >= 1, "Should recall encrypted memory after reopen"
 
             contents = [m.get("content", "") for m in recalled]
-            assert any("hunter2" in c or "meeting password" in c.lower() for c in contents), \
-                "Decrypted content should match original after reopen"
+            assert any(
+                "hunter2" in c or "meeting password" in c.lower() for c in contents
+            ), "Decrypted content should match original after reopen"
         finally:
             cm2.close()
 
@@ -321,13 +314,14 @@ class TestEncryptionIntegration:
         cm.close()
 
         # Read raw database file
-        with open(db_path, 'rb') as f:
-            raw_content = f.read().decode('utf-8', errors='ignore')
+        with open(db_path, "rb") as f:
+            raw_content = f.read().decode("utf-8", errors="ignore")
 
         # Original secret should NOT appear as plaintext in raw DB
         # (allowing for partial matches due to indexing, but full value shouldn't be there)
-        assert secret_message.lower() not in raw_content.lower(), \
-            "Encrypted database should not contain plaintext secret"
+        assert (
+            secret_message.lower() not in raw_content.lower()
+        ), "Encrypted database should not contain plaintext secret"
 
 
 class TestAdapterSwitching:
@@ -357,10 +351,10 @@ class TestAdapterSwitching:
             a_contents = [m.get("content", "") for m in a_memories]
             b_contents = [m.get("content", "") for m in b_memories]
 
-            assert any("instance A" in c for c in a_contents), \
-                "Instance A should see its own writes"
-            assert not any("instance A" in c for c in b_contents), \
-                "Instance B should NOT see Instance A's writes (different namespace)"
+            assert any("instance A" in c for c in a_contents), "Instance A should see its own writes"
+            assert not any(
+                "instance A" in c for c in b_contents
+            ), "Instance B should NOT see Instance A's writes (different namespace)"
 
             # Now write with B
             cm2.classify_and_remember("Written by instance B")
@@ -372,10 +366,8 @@ class TestAdapterSwitching:
             a_contents_2 = [m.get("content", "") for m in a_memories_2]
             b_contents_2 = [m.get("content", "") for m in b_memories_2]
 
-            assert any("instance A" in c for c in a_contents_2), \
-                "Instance A should still see its own writes"
-            assert any("instance B" in c for c in b_contents_2), \
-                "Instance B should see its own writes"
+            assert any("instance A" in c for c in a_contents_2), "Instance A should still see its own writes"
+            assert any("instance B" in c for c in b_contents_2), "Instance B should see its own writes"
         finally:
             cm1.close()
             cm2.close()
@@ -390,13 +382,13 @@ class TestAdapterSwitching:
         """
         # Adapter layer
         assert cm.adapter is not None, "Adapter should be initialized"
-        assert hasattr(cm.adapter, 'remember'), "Adapter should have remember method"
-        assert hasattr(cm.adapter, 'recall'), "Adapter should have recall method"
-        assert hasattr(cm.adapter, 'forget'), "Adapter should have forget method"
+        assert hasattr(cm.adapter, "remember"), "Adapter should have remember method"
+        assert hasattr(cm.adapter, "recall"), "Adapter should have recall method"
+        assert hasattr(cm.adapter, "forget"), "Adapter should have forget method"
 
         # Engine layer
         assert cm.engine is not None, "Engine should be initialized"
-        assert hasattr(cm.engine, 'process_message'), "Engine should have process_message"
+        assert hasattr(cm.engine, "process_message"), "Engine should have process_message"
 
         # Namespace
         assert isinstance(cm.namespace, str), "Namespace should be string"
@@ -436,8 +428,7 @@ class TestEndToEndCompleteChain:
 
         # Phase 2: Recall verification
         recalled = cm.recall_memories(query="e2e test", limit=10)
-        assert len(recalled) >= len(original_memories) * 0.8, \
-            f"Should recall most E2E memories, got {len(recalled)}"
+        assert len(recalled) >= len(original_memories) * 0.8, f"Should recall most E2E memories, got {len(recalled)}"
 
         # Phase 3: Export
         export_result = cm.export_memories(output_path=export_path, format="json")
@@ -450,19 +441,18 @@ class TestEndToEndCompleteChain:
 
         try:
             import_result = cm2.import_memories(input_path=export_path)
-            assert import_result.get("imported", 0) >= len(original_memories) * 0.8, \
-                f"Should import most memories, imported {import_result.get('imported', 0)}"
+            assert (
+                import_result.get("imported", 0) >= len(original_memories) * 0.8
+            ), f"Should import most memories, imported {import_result.get('imported', 0)}"
 
             # Phase 5: Verify imported data
             imported_recalled = cm2.recall_memories(query="e2e test", limit=10)
             imported_contents = [m.get("content", "") for m in imported_recalled]
 
             match_count = sum(
-                1 for orig in original_memories
-                if any(orig.lower() in ic.lower() for ic in imported_contents)
+                1 for orig in original_memories if any(orig.lower() in ic.lower() for ic in imported_contents)
             )
-            assert match_count >= 2, \
-                f"Imported data should match originals, matched {match_count}"
+            assert match_count >= 2, f"Imported data should match originals, matched {match_count}"
         finally:
             cm2.close()
             cm.close()
@@ -489,24 +479,20 @@ class TestEndToEndCompleteChain:
             if result.get("stored", False):
                 success_count += 1
 
-        assert success_count >= len(memories) * 0.9, \
-            f"Should store most memories, succeeded {success_count}/{len(memories)}"
+        assert (
+            success_count >= len(memories) * 0.9
+        ), f"Should store most memories, succeeded {success_count}/{len(memories)}"
 
         # Bulk read - verify count
         all_recalled = cm.recall_memories(limit=100)
-        assert len(all_recalled) >= success_count * 0.9, \
-            f"Should recall most stored memories, got {len(all_recalled)}"
+        assert len(all_recalled) >= success_count * 0.9, f"Should recall most stored memories, got {len(all_recalled)}"
 
         # Targeted read - verify specific items
         target_result = cm.recall_memories(query="Memory #25", limit=5)
         assert len(target_result) >= 1, "Should find specific memory by content"
 
         # Type-filtered read
-        filtered = cm.recall_memories(
-            query="",
-            filters={"type": "user_preference"},
-            limit=50
-        )
+        filtered = cm.recall_memories(query="", filters={"type": "user_preference"}, limit=50)
         assert isinstance(filtered, list), "Filtered recall should return list"
 
     def test_concurrent_namespace_operations(self, tmp_path):
@@ -538,14 +524,14 @@ class TestEndToEndCompleteChain:
                 contents = [m.get("content", "") for m in memories]
 
                 # Should find own data
-                assert any(namespaces[i] in c for c in contents), \
-                    f"Namespace {namespaces[i]} should see its own data"
+                assert any(namespaces[i] in c for c in contents), f"Namespace {namespaces[i]} should see its own data"
 
                 # Should NOT see others' data
                 for j, other_ns in enumerate(namespaces):
                     if i != j:
-                        assert not any(other_ns in c for c in contents), \
-                            f"Namespace {namespaces[i]} should NOT see {other_ns}'s data"
+                        assert not any(
+                            other_ns in c for c in contents
+                        ), f"Namespace {namespaces[i]} should NOT see {other_ns}'s data"
         finally:
             for cm_inst in instances:
                 cm_inst.close()

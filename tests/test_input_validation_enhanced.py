@@ -20,7 +20,6 @@ from carrymem.utils.validators import (
     validate_unicode_safe,
 )
 
-
 # ══════════════════════════════════════════════════════════════════
 #  validate_unicode_safe
 # ══════════════════════════════════════════════════════════════════
@@ -67,12 +66,12 @@ class TestValidateUnicodeSafe:
     def test_bidi_ltr_embedding_rejected(self):
         # U+202A LEFT-TO-RIGHT EMBEDDING
         with pytest.raises(ValidationError, match="bidirectional override"):
-            validate_unicode_safe("safe\u202Atext")
+            validate_unicode_safe("safe\u202atext")
 
     def test_bidi_rtl_override_rejected(self):
         # U+202E RIGHT-TO-LEFT OVERRIDE
         with pytest.raises(ValidationError, match="bidirectional override"):
-            validate_unicode_safe("safe\u202Etext")
+            validate_unicode_safe("safe\u202etext")
 
     def test_bidi_isolate_rejected(self):
         # U+2066 LEFT-TO-RIGHT ISOLATE
@@ -107,6 +106,7 @@ class TestSafeTextMatch:
     def test_dangerous_nested_quantifier_warns(self):
         # Should log a warning for dangerous pattern but still execute successfully
         import unittest.mock as mock
+
         with mock.patch("carrymem.utils.validators.logger") as mock_logger:
             safe_text_match(r"(a+)+", "aaa")
             mock_logger.warning.assert_called_once()
@@ -115,6 +115,7 @@ class TestSafeTextMatch:
     def test_long_text_truncated(self):
         # Should handle very long text without error (truncates internally)
         import unittest.mock as mock
+
         with mock.patch("carrymem.utils.validators.logger") as mock_logger:
             long_text = "x" * 2_000_000
             result = safe_text_match(r"x+", long_text)

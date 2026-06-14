@@ -26,10 +26,10 @@ from carrymem.security.encryption import (
     NoEncryption,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def tmp_key_dir(tmp_path):
@@ -145,6 +145,7 @@ class TestKeyRotation:
         backup_glob = encryptor._key_file + ".backup.*"
         # Ensure no backups before rotation
         import glob
+
         assert not glob.glob(backup_glob)
 
         encryptor.rotate_key()

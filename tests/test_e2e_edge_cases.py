@@ -196,9 +196,7 @@ class TestE2EPathBoundaryConditions:
             cm = CarryMem(db_path="relative_path_test.db")
             try:
                 result = cm.classify_and_remember("Relative path test")
-                assert isinstance(result, dict), (
-                    "Relative path should return a dict result"
-                )
+                assert isinstance(result, dict), "Relative path should return a dict result"
             finally:
                 cm.close()
         finally:
@@ -283,7 +281,7 @@ class TestE2EDiskSpaceSimulation:
         cm.classify_and_remember("Small database test")
 
         # Check DB file size exists and is reasonable
-        db_path = getattr(cm, 'db_path', None) or getattr(cm, '_db_path', None)
+        db_path = getattr(cm, "db_path", None) or getattr(cm, "_db_path", None)
         if db_path and os.path.exists(db_path):
             size = os.path.getsize(db_path)
             # Even empty SQLite has some overhead, but shouldn't be huge
@@ -307,13 +305,10 @@ class TestE2EDiskSpaceSimulation:
 
             growth_ratio = size_final / size_initial if size_initial > 0 else 1
 
-            print(f"\n[DB Growth] Initial: {size_initial}B, Final: {size_final}B, "
-                  f"Ratio: {growth_ratio:.1f}x")
+            print(f"\n[DB Growth] Initial: {size_initial}B, Final: {size_final}B, " f"Ratio: {growth_ratio:.1f}x")
 
             # Should grow but not explosively
-            assert growth_ratio < 1000, (
-                f"DB growth excessive: {growth_ratio:.1f}x increase"
-            )
+            assert growth_ratio < 1000, f"DB growth excessive: {growth_ratio:.1f}x increase"
         finally:
             cm.close()
 

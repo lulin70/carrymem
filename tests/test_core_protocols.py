@@ -22,6 +22,13 @@ import pytest
 
 sys.path.insert(0, str(__file__).rsplit("/tests", 1)[0])
 
+from carrymem.core._backup import BackupMixin
+from carrymem.core._classification import ClassificationMixin
+from carrymem.core._lifecycle import LifecycleMixin
+from carrymem.core._maintenance import MaintenanceMixin
+from carrymem.core._memory_crud import MemoryCRUDMixin
+from carrymem.core._profile_export import ProfileExportMixin
+from carrymem.core._prompt_delegate import PromptDelegateMixin
 from carrymem.core._protocols import (
     BackupOps,
     CarryMemOps,
@@ -34,15 +41,7 @@ from carrymem.core._protocols import (
     PromptDelegateOps,
     RecallOps,
 )
-from carrymem.core._backup import BackupMixin
-from carrymem.core._classification import ClassificationMixin
-from carrymem.core._lifecycle import LifecycleMixin
-from carrymem.core._maintenance import MaintenanceMixin
-from carrymem.core._memory_crud import MemoryCRUDMixin
-from carrymem.core._profile_export import ProfileExportMixin
-from carrymem.core._prompt_delegate import PromptDelegateMixin
 from carrymem.core._recall import RecallMixin
-
 
 # ===========================================================================
 # Helper: collect method/property names from a Protocol class
@@ -157,9 +156,7 @@ class TestMixinProtocolCoverage:
             (PromptDelegateMixin, PromptDelegateOps),
         ],
     )
-    def test_mixin_public_methods_covered_by_protocol(
-        self, mixin_cls: type, proto_cls: type
-    ):
+    def test_mixin_public_methods_covered_by_protocol(self, mixin_cls: type, proto_cls: type):
         """Every public method on a Mixin should exist in its Protocol."""
         proto_members = _protocol_members(proto_cls)
         mixin_pub = _mixin_public_methods(mixin_cls)
@@ -194,7 +191,7 @@ _SAFE_STANDALONE_MIXINS: dict[type, type] = {
 # Mixins that CANNOT be instantiated standalone (their __init__ or lifecycle
 # depends on other Mixins' methods being present).
 _UNSAFE_STANDALONE_MIXINS = {
-    LifecycleMixin,   # __init__ creates RuleCandidateGenerator → needs recall_memories
+    LifecycleMixin,  # __init__ creates RuleCandidateGenerator → needs recall_memories
     ClassificationMixin,  # no __init__ but protocol includes _store_entries that needs _adapter
 }
 
@@ -208,15 +205,11 @@ class TestStructuralConformance:
     """
 
     @pytest.mark.parametrize("mixin_cls,proto_cls", list(_SAFE_STANDALONE_MIXINS.items()))
-    def test_standalone_mixin_satisfies_protocol(
-        self, mixin_cls: type, proto_cls: type
-    ):
+    def test_standalone_mixin_satisfies_protocol(self, mixin_cls: type, proto_cls: type):
         proto_members = _protocol_members(proto_cls)
         instance = mixin_cls()
         for name in proto_members:
-            assert hasattr(instance, name), (
-                f"{mixin_cls.__name__} missing Protocol method {proto_cls.__name__}.{name}"
-            )
+            assert hasattr(instance, name), f"{mixin_cls.__name__} missing Protocol method {proto_cls.__name__}.{name}"
 
     def test_lifecycle_mixin_satisfies_lifecycle_ops_via_carrymem(self):
         """LifecycleMixin can only be tested via full CarryMem composition."""
@@ -227,9 +220,7 @@ class TestStructuralConformance:
         proto_members = _protocol_members(LifecycleOps)
         instance = CarryMem()
         for name in proto_members:
-            assert hasattr(instance, name), (
-                f"CarryMem missing LifecycleOps method: {name}"
-            )
+            assert hasattr(instance, name), f"CarryMem missing LifecycleOps method: {name}"
 
     def test_classification_mixin_satisfies_classification_ops_via_carrymem(self):
         """ClassificationMixin can only be tested via full CarryMem composition."""
@@ -240,9 +231,7 @@ class TestStructuralConformance:
         proto_members = _protocol_members(ClassificationOps)
         instance = CarryMem()
         for name in proto_members:
-            assert hasattr(instance, name), (
-                f"CarryMem missing ClassificationOps method: {name}"
-            )
+            assert hasattr(instance, name), f"CarryMem missing ClassificationOps method: {name}"
 
 
 # ===========================================================================
@@ -285,9 +274,7 @@ class TestCompositeProtocol:
             if sub_proto.__name__ == "Protocol":
                 continue
             for name in _protocol_members(sub_proto):
-                assert hasattr(instance, name), (
-                    f"CarryMem missing {sub_proto.__name__}.{name}"
-                )
+                assert hasattr(instance, name), f"CarryMem missing {sub_proto.__name__}.{name}"
 
 
 # ===========================================================================
@@ -370,20 +357,21 @@ class TestSignatureSanity:
             (LifecycleOps, "close", []),
             (ProfileExportOps, "whoami", []),
             (MaintenanceOps, "check_conflicts", []),
-            (PromptDelegateOps, "build_system_prompt", ["context", "max_memories", "max_knowledge", "max_rules", "max_tokens", "language"]),
+            (
+                PromptDelegateOps,
+                "build_system_prompt",
+                ["context", "max_memories", "max_knowledge", "max_rules", "max_tokens", "language"],
+            ),
         ],
     )
-    def test_method_has_expected_params(
-        self, proto_cls: type, method_name: str, expected_params: list[str]
-    ):
+    def test_method_has_expected_params(self, proto_cls: type, method_name: str, expected_params: list[str]):
         method = getattr(proto_cls, method_name, None)
         assert method is not None, f"{proto_cls.__name__} missing {method_name}"
         sig = inspect.signature(method)
         actual_params = list(sig.parameters.keys())
         for param in expected_params:
             assert param in actual_params, (
-                f"{proto_cls.__name__}.{method_name} missing parameter '{param}'. "
-                f"Got: {actual_params}"
+                f"{proto_cls.__name__}.{method_name} missing parameter '{param}'. " f"Got: {actual_params}"
             )
 
 

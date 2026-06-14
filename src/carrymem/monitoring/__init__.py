@@ -157,7 +157,10 @@ class MetricsCollector:
                 lines.append(f'carrymem_latency_ms{{operation="{op}",quantile="0.99"}} {stats.get("p99", 0)}')
                 lines.append(f'carrymem_latency_ms{{operation="{op}",quantile="0.95"}} {stats.get("p95", 0)}')
                 lines.append(f'carrymem_latency_ms{{operation="{op}",quantile="0.5"}} {stats.get("avg", 0)}')
-                lines.append(f'carrymem_latency_ms_sum{{operation="{op}"}} {round(stats.get("avg", 0) * stats["count"], 2)}')
+                latency_sum = round(stats.get("avg", 0) * stats["count"], 2)
+                lines.append(
+                    f'carrymem_latency_ms_sum{{operation="{op}"}} {latency_sum}'
+                )
                 lines.append(f'carrymem_latency_ms_count{{operation="{op}"}} {stats["count"]}')
 
         # Gauges

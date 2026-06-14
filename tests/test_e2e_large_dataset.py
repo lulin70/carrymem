@@ -37,7 +37,12 @@ class TestE2EBatchInsert:
         errors = []
         for i in range(100):
             try:
-                memory = f"Batch memory {i}: Test data for stress testing - topic is {'programming' if i % 3 == 0 else 'database' if i % 3 == 1 else 'devops'}"
+                topic = (
+                    "programming" if i % 3 == 0
+                    else "database" if i % 3 == 1
+                    else "devops"
+                )
+                memory = f"Batch memory {i}: Test data for stress testing - topic is {topic}"
                 result = cm.classify_and_remember(memory)
                 if not isinstance(result, dict):
                     errors.append(f"Memory {i}: Unexpected result type")
@@ -55,9 +60,16 @@ class TestE2EBatchInsert:
             start_time = time.time()
             errors = []
 
-            topics = ["Python programming", "Database design", "DevOps practices",
-                      "Code review guidelines", "Testing strategies", "API design",
-                      "Security best practices", "Performance optimization"]
+            topics = [
+                "Python programming",
+                "Database design",
+                "DevOps practices",
+                "Code review guidelines",
+                "Testing strategies",
+                "API design",
+                "Security best practices",
+                "Performance optimization",
+            ]
 
             for i in range(1000):
                 try:
@@ -71,12 +83,8 @@ class TestE2EBatchInsert:
 
             elapsed = time.time() - start_time
 
-            assert len(errors) == 0, (
-                f"All 1000 inserts should succeed, got {len(errors)} errors. Sample: {errors[:5]}"
-            )
-            assert elapsed < 120, (  # Should complete within 2 minutes
-                f"1000 inserts took too long: {elapsed:.1f}s"
-            )
+            assert len(errors) == 0, f"All 1000 inserts should succeed, got {len(errors)} errors. Sample: {errors[:5]}"
+            assert elapsed < 120, f"1000 inserts took too long: {elapsed:.1f}s"  # Should complete within 2 minutes
 
             # Verify at least some were stored
             recalled = cm.recall_memories(limit=10)
@@ -126,19 +134,15 @@ class TestE2EBatchInsert:
             current, peak = tracemalloc.get_traced_memory()
             tracemalloc.stop()
 
-            print(f"\n[Stress Test] 5000 inserts: {elapsed:.2f}s, "
-                  f"success={success_count}, errors={len(errors)}, "
-                  f"peak_memory={peak / 1024 / 1024:.1f}MB")
+            print(
+                f"\n[Stress Test] 5000 inserts: {elapsed:.2f}s, "
+                f"success={success_count}, errors={len(errors)}, "
+                f"peak_memory={peak / 1024 / 1024:.1f}MB"
+            )
 
-            assert success_count == 5000, (
-                f"Expected all 5000 inserts to succeed, got {success_count}/5000"
-            )
-            assert elapsed < 300, (  # 5 minute upper bound
-                f"5000 inserts exceeded time limit: {elapsed:.1f}s"
-            )
-            assert peak < 1024 * 1024 * 1024, (  # < 1GB
-                f"Peak memory usage too high: {peak / 1024 / 1024:.1f}MB"
-            )
+            assert success_count == 5000, f"Expected all 5000 inserts to succeed, got {success_count}/5000"
+            assert elapsed < 300, f"5000 inserts exceeded time limit: {elapsed:.1f}s"  # 5 minute upper bound
+            assert peak < 1024 * 1024 * 1024, f"Peak memory usage too high: {peak / 1024 / 1024:.1f}MB"  # < 1GB
         finally:
             cm.close()
 
@@ -183,15 +187,12 @@ class TestE2ERecallUnderLoad:
 
             avg_recall_time = total_recall_time / len(queries) if queries else 0
 
-            print(f"\n[Recall Speed 1000] Avg: {avg_recall_time:.3f}s, "
-                  f"Total: {total_recall_time:.2f}s")
+            print(f"\n[Recall Speed 1000] Avg: {avg_recall_time:.3f}s, " f"Total: {total_recall_time:.2f}s")
 
-            assert avg_recall_time < 5.0, (
-                f"Avg recall time exceeds 5s threshold: {avg_recall_time:.3f}s"
-            )
-            assert successful_recalls == len(queries), (
-                f"All recalls should succeed: {successful_recalls}/{len(queries)}"
-            )
+            assert avg_recall_time < 5.0, f"Avg recall time exceeds 5s threshold: {avg_recall_time:.3f}s"
+            assert successful_recalls == len(
+                queries
+            ), f"All recalls should succeed: {successful_recalls}/{len(queries)}"
         finally:
             cm.close()
 
@@ -218,14 +219,14 @@ class TestE2ERecallUnderLoad:
 
             max_time = max(time_python, time_docker, time_generic)
 
-            print(f"\n[Recall Speed 5000] Python: {time_python:.3f}s, "
-                  f"Docker: {time_docker:.3f}s, Generic: {time_generic:.3f}s, "
-                  f"Max: {max_time:.3f}s")
+            print(
+                f"\n[Recall Speed 5000] Python: {time_python:.3f}s, "
+                f"Docker: {time_docker:.3f}s, Generic: {time_generic:.3f}s, "
+                f"Max: {max_time:.3f}s"
+            )
 
             # Relaxed threshold for large datasets
-            assert max_time < 10.0, (
-                f"Max recall time exceeds 10s for 5000 records: {max_time:.3f}s"
-            )
+            assert max_time < 10.0, f"Max recall time exceeds 10s for 5000 records: {max_time:.3f}s"
         finally:
             cm.close()
 
@@ -243,14 +244,11 @@ class TestE2ERecallUnderLoad:
 
             assert isinstance(results, list), "Recall should return list"
             # With 1000 entries containing PostgreSQL references, should find relevant results
-            assert len(results) > 0, (
-                f"Should find results for specific query '{specific_query}' in 1000-record dataset"
-            )
+            assert len(results) > 0, f"Should find results for specific query '{specific_query}' in 1000-record dataset"
             contents = [r.get("content", "").lower() for r in results]
             has_relevant = any(specific_query.lower() in c for c in contents)
             assert has_relevant, (
-                f"Results for '{specific_query}' should contain relevant content, "
-                f"got contents: {contents[:3]}"
+                f"Results for '{specific_query}' should contain relevant content, " f"got contents: {contents[:3]}"
             )
         finally:
             cm.close()
@@ -281,9 +279,9 @@ class TestE2EConsolidationUnderLoad:
             # Run consolidation (dry run first)
             dry_run_result = cm.consolidate(dry_run=True)
             assert isinstance(dry_run_result, dict), "Dry run consolidate should return dict"
-            assert "stats" in dry_run_result or "summary" in dry_run_result, (
-                "Consolidate dry run should return stats or summary"
-            )
+            assert (
+                "stats" in dry_run_result or "summary" in dry_run_result
+            ), "Consolidate dry run should return stats or summary"
 
             # Run actual consolidation
             actual_result = cm.consolidate(dry_run=False)
@@ -323,13 +321,14 @@ class TestE2EConsolidationUnderLoad:
             after_contents = [m.get("content", "") for m in after_recall if isinstance(m, dict)]
 
             found_unique = sum(
-                1 for uniq in unique_memories
+                1
+                for uniq in unique_memories
                 if any(uniq in ac or ac.startswith(uniq.split(":")[0]) for ac in after_contents)
             )
 
-            assert found_unique == len(unique_memories), (
-                f"Consolidation should preserve all unique memories. Found {found_unique}/{len(unique_memories)}"
-            )
+            assert found_unique == len(
+                unique_memories
+            ), f"Consolidation should preserve all unique memories. Found {found_unique}/{len(unique_memories)}"
         finally:
             cm.close()
 
@@ -358,14 +357,14 @@ class TestE2EMemoryUsageMonitoring:
 
             growth_mb = (current_peak - baseline_peak) / 1024 / 1024
 
-            print(f"\n[Memory Usage] Baseline: {baseline_peak/1024/1024:.1f}MB, "
-                  f"Current: {current_peak/1024/1024:.1f}MB, "
-                  f"Growth: {growth_mb:.1f}MB")
+            print(
+                f"\n[Memory Usage] Baseline: {baseline_peak/1024/1024:.1f}MB, "
+                f"Current: {current_peak/1024/1024:.1f}MB, "
+                f"Growth: {growth_mb:.1f}MB"
+            )
 
             # Memory growth should be reasonable (< 500MB for 500 entries)
-            assert growth_mb < 500, (
-                f"Memory growth excessive: {growth_mb:.1f}MB for 500 entries"
-            )
+            assert growth_mb < 500, f"Memory growth excessive: {growth_mb:.1f}MB for 500 entries"
         finally:
             cm.close()
 
@@ -398,14 +397,14 @@ class TestE2EMemoryUsageMonitoring:
                 second_half_avg = sum(s[0] for s in snapshots[5:]) / 5
                 growth_ratio = second_half_avg / first_half_avg if first_half_avg > 0 else 1
 
-                print(f"\n[Recall Memory] First half avg: {first_half_avg/1024:.1f}KB, "
-                      f"Second half avg: {second_half_avg/1024:.1f}KB, "
-                      f"Ratio: {growth_ratio:.2f}")
+                print(
+                    f"\n[Recall Memory] First half avg: {first_half_avg/1024:.1f}KB, "
+                    f"Second half avg: {second_half_avg/1024:.1f}KB, "
+                    f"Ratio: {growth_ratio:.2f}"
+                )
 
                 # Memory shouldn't more than double (allowing some growth)
-                assert growth_ratio < 3.0, (
-                    f"Possible memory leak: ratio {growth_ratio:.2f}"
-                )
+                assert growth_ratio < 3.0, f"Possible memory leak: ratio {growth_ratio:.2f}"
         finally:
             cm.close()
 

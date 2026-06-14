@@ -16,7 +16,7 @@ import threading
 import time
 import unittest
 
-from carrymem.adapters.sqlite.connection import ConnectionManager, _SLOW_QUERY_THRESHOLD_MS
+from carrymem.adapters.sqlite.connection import _SLOW_QUERY_THRESHOLD_MS, ConnectionManager
 
 
 class TestConnectionReuse(unittest.TestCase):
@@ -140,7 +140,7 @@ class TestSlowQueryLogging(unittest.TestCase):
         debug_messages = [r.getMessage() for r in cm.records if r.levelno == logging.DEBUG]
         self.assertTrue(
             any("Query executed in" in msg for msg in debug_messages),
-            "Should have a DEBUG message about query execution time"
+            "Should have a DEBUG message about query execution time",
         )
 
     def test_timed_query_slow_query_logs_warning(self):
@@ -151,6 +151,7 @@ class TestSlowQueryLogging(unittest.TestCase):
         # Temporarily set a very low threshold to trigger slow query warning
         original_threshold = _SLOW_QUERY_THRESHOLD_MS
         import carrymem.adapters.sqlite.connection as conn_module
+
         conn_module._SLOW_QUERY_THRESHOLD_MS = 1  # 1ms threshold
 
         try:
@@ -162,8 +163,7 @@ class TestSlowQueryLogging(unittest.TestCase):
 
             warning_messages = [r.getMessage() for r in cm.records if r.levelno == logging.WARNING]
             self.assertTrue(
-                any("Slow query detected" in msg for msg in warning_messages),
-                "Should have a WARNING about slow query"
+                any("Slow query detected" in msg for msg in warning_messages), "Should have a WARNING about slow query"
             )
         finally:
             conn_module._SLOW_QUERY_THRESHOLD_MS = original_threshold
@@ -171,6 +171,7 @@ class TestSlowQueryLogging(unittest.TestCase):
     def test_timed_query_disabled_when_threshold_zero(self):
         """When CARRYMEM_SLOW_QUERY_MS=0, timing should be disabled."""
         import carrymem.adapters.sqlite.connection as conn_module
+
         original = conn_module._SLOW_QUERY_THRESHOLD_MS
         conn_module._SLOW_QUERY_THRESHOLD_MS = 0
 
@@ -204,8 +205,9 @@ class TestConnectionCleanup(unittest.TestCase):
         self.assertTrue(len(self.mgr._all_connections) > 0, "Should have tracked connections")
 
         self.mgr.close_all_connections()
-        self.assertEqual(len(self.mgr._all_connections) > 0, False,
-                         "All connections should be cleared after close_all_connections")
+        self.assertEqual(
+            len(self.mgr._all_connections) > 0, False, "All connections should be cleared after close_all_connections"
+        )
 
     def test_close_prevents_new_connections(self):
         """After close(), get_connection() should raise an error."""
@@ -281,10 +283,7 @@ class TestConcurrentReadWrite(unittest.TestCase):
             try:
                 with self.mgr.file_lock:
                     local_conn = self.mgr.get_connection()
-                    local_conn.execute(
-                        "INSERT INTO counters (count) VALUES (?)",
-                        (thread_id,)
-                    )
+                    local_conn.execute("INSERT INTO counters (count) VALUES (?)", (thread_id,))
                     local_conn.commit()
             except Exception as e:
                 errors.append(e)

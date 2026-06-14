@@ -21,9 +21,9 @@ from carrymem.utils.logging_config import (
     ENV_LOG_JSON,
     ENV_LOG_LEVEL,
     JSONFormatter,
-    setup_logging,
     get_logger,
     reset_logging,
+    setup_logging,
 )
 
 
@@ -377,9 +377,7 @@ class TestNoResidualPrintStatements(unittest.TestCase):
 
     def test_no_print_in_http_server(self):
         """测试 http_server.py 没有 print() 调用."""
-        http_file = (
-            Path(__file__).parent.parent / "src" / "carrymem" / "integration" / "layer2_mcp" / "http_server.py"
-        )
+        http_file = Path(__file__).parent.parent / "src" / "carrymem" / "integration" / "layer2_mcp" / "http_server.py"
 
         if http_file.exists():
             source = http_file.read_text(encoding="utf-8")

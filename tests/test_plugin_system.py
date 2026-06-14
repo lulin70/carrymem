@@ -30,7 +30,6 @@ from carrymem.plugins import (
 )
 from carrymem.plugins.example_notification_plugin import ExampleNotificationPlugin
 
-
 # ── Fixtures ──────────────────────────────────────────────────────────────
 
 
@@ -47,7 +46,7 @@ def _write_plugin_file(plugin_dir: str, name: str, content: str) -> str:
     return path
 
 
-_MINIMAL_PLUGIN_TEMPLATE = '''
+_MINIMAL_PLUGIN_TEMPLATE = """
 from carrymem.plugins import PluginProtocol
 from typing import Any
 
@@ -68,7 +67,7 @@ class {cls_name}(PluginProtocol):
         self.unloaded = True
 
 plugin = {cls_name}()
-'''
+"""
 
 
 # ── Tests ─────────────────────────────────────────────────────────────────
@@ -81,31 +80,34 @@ class TestPluginDiscovery(unittest.TestCase):
         """Test 1: discover() finds .py files in plugin directory."""
         plugin_dir = _make_plugin_dir()
         try:
-            _write_plugin_file(plugin_dir, "my_plugin",
-                               _MINIMAL_PLUGIN_TEMPLATE.format(
-                                   cls_name="MyPlugin", plugin_name="my_plugin"))
+            _write_plugin_file(
+                plugin_dir, "my_plugin", _MINIMAL_PLUGIN_TEMPLATE.format(cls_name="MyPlugin", plugin_name="my_plugin")
+            )
             pm = PluginManager(plugin_dir=plugin_dir)
             discovered = pm.discover()
             self.assertIn("my_plugin", discovered)
         finally:
             import shutil
+
             shutil.rmtree(plugin_dir, ignore_errors=True)
 
     def test_discover_ignores_private_files(self):
         """Test 2: discover() ignores files starting with underscore."""
         plugin_dir = _make_plugin_dir()
         try:
-            _write_plugin_file(plugin_dir, "public_plugin",
-                               _MINIMAL_PLUGIN_TEMPLATE.format(
-                                   cls_name="PublicPlugin", plugin_name="public"))
-            _write_plugin_file(plugin_dir, "_private",
-                               "# private file\npass")
+            _write_plugin_file(
+                plugin_dir,
+                "public_plugin",
+                _MINIMAL_PLUGIN_TEMPLATE.format(cls_name="PublicPlugin", plugin_name="public"),
+            )
+            _write_plugin_file(plugin_dir, "_private", "# private file\npass")
             pm = PluginManager(plugin_dir=plugin_dir)
             discovered = pm.discover()
             self.assertIn("public_plugin", discovered)
             self.assertNotIn("_private", discovered)
         finally:
             import shutil
+
             shutil.rmtree(plugin_dir, ignore_errors=True)
 
     def test_discover_empty_directory(self):
@@ -116,6 +118,7 @@ class TestPluginDiscovery(unittest.TestCase):
             self.assertEqual(pm.discover(), [])
         finally:
             import shutil
+
             shutil.rmtree(plugin_dir, ignore_errors=True)
 
     def test_discover_nonexistent_directory(self):
@@ -132,12 +135,14 @@ class TestPluginLoading(unittest.TestCase):
 
     def tearDown(self):
         import shutil
+
         shutil.rmtree(self.plugin_dir, ignore_errors=True)
 
     def test_load_basic_plugin(self):
         """Test 3: load() successfully loads a valid plugin."""
-        _write_plugin_file(self.plugin_dir, "basic",
-                           _MINIMAL_PLUGIN_TEMPLATE.format(cls_name="BasicPlugin", plugin_name="basic"))
+        _write_plugin_file(
+            self.plugin_dir, "basic", _MINIMAL_PLUGIN_TEMPLATE.format(cls_name="BasicPlugin", plugin_name="basic")
+        )
         pm = PluginManager(plugin_dir=self.plugin_dir)
         plugin = pm.load("basic")
         self.assertIsNotNone(plugin)
@@ -146,8 +151,9 @@ class TestPluginLoading(unittest.TestCase):
 
     def test_load_sets_version(self):
         """Test: Loaded plugin has correct version."""
-        _write_plugin_file(self.plugin_dir, "ver_test",
-                           _MINIMAL_PLUGIN_TEMPLATE.format(cls_name="VerPlugin", plugin_name="ver_test"))
+        _write_plugin_file(
+            self.plugin_dir, "ver_test", _MINIMAL_PLUGIN_TEMPLATE.format(cls_name="VerPlugin", plugin_name="ver_test")
+        )
         pm = PluginManager(plugin_dir=self.plugin_dir)
         plugin = pm.load("ver_test")
         self.assertEqual(plugin.version, "1.0.0")
@@ -155,8 +161,9 @@ class TestPluginLoading(unittest.TestCase):
     def test_load_calls_on_load_with_carrymem(self):
         """Test 4: on_load receives the CarryMem reference."""
         fake_cm = object()
-        _write_plugin_file(self.plugin_dir, "ref_test",
-                           _MINIMAL_PLUGIN_TEMPLATE.format(cls_name="RefPlugin", plugin_name="ref_test"))
+        _write_plugin_file(
+            self.plugin_dir, "ref_test", _MINIMAL_PLUGIN_TEMPLATE.format(cls_name="RefPlugin", plugin_name="ref_test")
+        )
         pm = PluginManager(plugin_dir=self.plugin_dir)
         pm.set_carrymem(fake_cm)
         plugin = pm.load("ref_test")
@@ -183,13 +190,17 @@ class TestPluginUnloading(unittest.TestCase):
 
     def setUp(self):
         self.plugin_dir = _make_plugin_dir()
-        _write_plugin_file(self.plugin_dir, "unloadable",
-                           _MINIMAL_PLUGIN_TEMPLATE.format(cls_name="UnloadablePlugin", plugin_name="unloadable"))
+        _write_plugin_file(
+            self.plugin_dir,
+            "unloadable",
+            _MINIMAL_PLUGIN_TEMPLATE.format(cls_name="UnloadablePlugin", plugin_name="unloadable"),
+        )
         self.pm = PluginManager(plugin_dir=self.plugin_dir)
         self.plugin = self.pm.load("unloadable")
 
     def tearDown(self):
         import shutil
+
         shutil.rmtree(self.plugin_dir, ignore_errors=True)
 
     def test_unload_calls_on_unload(self):
@@ -215,14 +226,17 @@ class TestPluginListAndStatus(unittest.TestCase):
 
     def setUp(self):
         self.plugin_dir = _make_plugin_dir()
-        _write_plugin_file(self.plugin_dir, "alpha",
-                           _MINIMAL_PLUGIN_TEMPLATE.format(cls_name="AlphaPlugin", plugin_name="alpha"))
-        _write_plugin_file(self.plugin_dir, "beta",
-                           _MINIMAL_PLUGIN_TEMPLATE.format(cls_name="BetaPlugin", plugin_name="beta"))
+        _write_plugin_file(
+            self.plugin_dir, "alpha", _MINIMAL_PLUGIN_TEMPLATE.format(cls_name="AlphaPlugin", plugin_name="alpha")
+        )
+        _write_plugin_file(
+            self.plugin_dir, "beta", _MINIMAL_PLUGIN_TEMPLATE.format(cls_name="BetaPlugin", plugin_name="beta")
+        )
         self.pm = PluginManager(plugin_dir=self.plugin_dir)
 
     def tearDown(self):
         import shutil
+
         shutil.rmtree(self.plugin_dir, ignore_errors=True)
 
     def test_list_shows_all_discovered(self):
@@ -247,7 +261,7 @@ class TestHookSystem(unittest.TestCase):
     def setUp(self):
         self.plugin_dir = _make_plugin_dir()
         # Create a plugin with hook implementations
-        hook_plugin_code = '''
+        hook_plugin_code = """
 from carrymem.plugins import PluginProtocol, HookPoint
 from typing import Any
 
@@ -272,13 +286,14 @@ class HookedPlugin(PluginProtocol):
         self.error_calls.append({"type": error_type, "message": error_message})
 
 plugin = HookedPlugin()
-'''
+"""
         _write_plugin_file(self.plugin_dir, "hooked", hook_plugin_code)
         self.pm = PluginManager(plugin_dir=self.plugin_dir)
         self.plugin = self.pm.load("hooked")
 
     def tearDown(self):
         import shutil
+
         shutil.rmtree(self.plugin_dir, ignore_errors=True)
 
     def test_get_hooks_returns_subscribed_plugins(self):
@@ -294,16 +309,14 @@ plugin = HookedPlugin()
 
     def test_dispatch_calls_hook_handler(self):
         """Test 8: dispatch() calls the plugin's hook handler."""
-        results = self.pm.dispatch(HookPoint.ON_MEMORY_STORED,
-                                    memory_id="mem-123", content="hello world")
+        results = self.pm.dispatch(HookPoint.ON_MEMORY_STORED, memory_id="mem-123", content="hello world")
         self.assertEqual(len(results), 1)
         self.assertEqual(len(self.plugin.memory_stored_calls), 1)
         self.assertEqual(self.plugin.memory_stored_calls[0]["memory_id"], "mem-123")
 
     def test_dispatch_error_hook(self):
         """Test: Dispatch to on_error hook works correctly."""
-        self.pm.dispatch(HookPoint.ON_ERROR,
-                          error_type="ValueError", error_message="test error")
+        self.pm.dispatch(HookPoint.ON_ERROR, error_type="ValueError", error_message="test error")
         self.assertEqual(len(self.plugin.error_calls), 1)
         self.assertEqual(self.plugin.error_calls[0]["type"], "ValueError")
 
@@ -342,11 +355,10 @@ class TestExampleNotificationPlugin(unittest.TestCase):
         # Capture prints
         import io
         from contextlib import redirect_stdout
+
         buf = io.StringIO()
         with redirect_stdout(buf):
-            plugin.on_memory_stored(memory_id="sec-1",
-                                     content="My password is secret123",
-                                     classification="fact")
+            plugin.on_memory_stored(memory_id="sec-1", content="My password is secret123", classification="fact")
         output = buf.getvalue()
         self.assertIn("SENSITIVE MEMORY DETECTED", output)
 
@@ -355,11 +367,10 @@ class TestExampleNotificationPlugin(unittest.TestCase):
         plugin = ExampleNotificationPlugin()
         import io
         from contextlib import redirect_stdout
+
         buf = io.StringIO()
         with redirect_stdout(buf):
-            plugin.on_memory_stored(memory_id="norm-1",
-                                     content="I like pizza",
-                                     classification="preference")
+            plugin.on_memory_stored(memory_id="norm-1", content="I like pizza", classification="preference")
         output = buf.getvalue()
         self.assertNotIn("SENSITIVE MEMORY DETECTED", output)
 
@@ -368,10 +379,10 @@ class TestExampleNotificationPlugin(unittest.TestCase):
         plugin = ExampleNotificationPlugin()
         import io
         from contextlib import redirect_stdout
+
         buf = io.StringIO()
         with redirect_stdout(buf):
-            plugin.on_error(error_type="RuntimeError",
-                             error_message="something broke")
+            plugin.on_error(error_type="RuntimeError", error_message="something broke")
         output = buf.getvalue()
         self.assertIn("Error detected", output)
         self.assertIn("RuntimeError", output)
@@ -382,12 +393,16 @@ class TestPluginReload(unittest.TestCase):
 
     def setUp(self):
         self.plugin_dir = _make_plugin_dir()
-        _write_plugin_file(self.plugin_dir, "reloadable",
-                           _MINIMAL_PLUGIN_TEMPLATE.format(cls_name="ReloadablePlugin", plugin_name="reloadable"))
+        _write_plugin_file(
+            self.plugin_dir,
+            "reloadable",
+            _MINIMAL_PLUGIN_TEMPLATE.format(cls_name="ReloadablePlugin", plugin_name="reloadable"),
+        )
         self.pm = PluginManager(plugin_dir=self.plugin_dir)
 
     def tearDown(self):
         import shutil
+
         shutil.rmtree(self.plugin_dir, ignore_errors=True)
 
     def test_reload_unloads_then_reloads(self):
@@ -406,16 +421,19 @@ class TestUnloadAll(unittest.TestCase):
 
     def setUp(self):
         self.plugin_dir = _make_plugin_dir()
-        _write_plugin_file(self.plugin_dir, "p1",
-                           _MINIMAL_PLUGIN_TEMPLATE.format(cls_name="P1Plugin", plugin_name="p1"))
-        _write_plugin_file(self.plugin_dir, "p2",
-                           _MINIMAL_PLUGIN_TEMPLATE.format(cls_name="P2Plugin", plugin_name="p2"))
+        _write_plugin_file(
+            self.plugin_dir, "p1", _MINIMAL_PLUGIN_TEMPLATE.format(cls_name="P1Plugin", plugin_name="p1")
+        )
+        _write_plugin_file(
+            self.plugin_dir, "p2", _MINIMAL_PLUGIN_TEMPLATE.format(cls_name="P2Plugin", plugin_name="p2")
+        )
         self.pm = PluginManager(plugin_dir=self.plugin_dir)
         self.p1 = self.pm.load("p1")
         self.p2 = self.pm.load("p2")
 
     def tearDown(self):
         import shutil
+
         shutil.rmtree(self.plugin_dir, ignore_errors=True)
 
     def test_unload_all_unloads_everything(self):
@@ -433,8 +451,7 @@ class TestHookPointConstants(unittest.TestCase):
 
     def test_all_hook_points_defined(self):
         """Test: All required hook points are defined."""
-        expected = ["on_memory_stored", "on_memory_recalled",
-                     "on_classified", "on_error"]
+        expected = ["on_memory_stored", "on_memory_recalled", "on_classified", "on_error"]
         for hp in expected:
             self.assertTrue(hasattr(HookPoint, hp.upper()))
 
@@ -442,12 +459,15 @@ class TestHookPointConstants(unittest.TestCase):
         """Test: HookPoint.ALL contains all hook points."""
         self.assertEqual(len(HookPoint.ALL), 4)
         for hp in HookPoint.ALL:
-            self.assertIn(hp, [
-                HookPoint.ON_MEMORY_STORED,
-                HookPoint.ON_MEMORY_RECALLED,
-                HookPoint.ON_CLASSIFIED,
-                HookPoint.ON_ERROR,
-            ])
+            self.assertIn(
+                hp,
+                [
+                    HookPoint.ON_MEMORY_STORED,
+                    HookPoint.ON_MEMORY_RECALLED,
+                    HookPoint.ON_CLASSIFIED,
+                    HookPoint.ON_ERROR,
+                ],
+            )
 
 
 if __name__ == "__main__":

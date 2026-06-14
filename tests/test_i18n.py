@@ -5,8 +5,7 @@
 
 import pytest
 
-from carrymem.i18n import I18nManager, _, set_locale, get_locale, available_locales
-
+from carrymem.i18n import I18nManager, _, available_locales, get_locale, set_locale
 
 # ── Fixtures ───────────────────────────────────────────────────
 
@@ -15,9 +14,8 @@ from carrymem.i18n import I18nManager, _, set_locale, get_locale, available_loca
 def _reset_i18n():
     """每个测试前后重置 I18nManager 状态，避免测试间污染。"""
     I18nManager._reset()
-    from carrymem.i18n.zh_CN import ZH_CN_MESSAGES
-
     from carrymem.i18n.en import EN_MESSAGES
+    from carrymem.i18n.zh_CN import ZH_CN_MESSAGES
 
     I18nManager.register("zh-CN", ZH_CN_MESSAGES)
     I18nManager.register("en", EN_MESSAGES)

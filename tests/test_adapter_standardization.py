@@ -4,8 +4,9 @@ Verifies that all storage adapters conform to the StorageAdapter interface.
 Tests runtime ABC compliance and method signatures.
 """
 
-import pytest
 from typing import TYPE_CHECKING
+
+import pytest
 
 from carrymem.adapters.base import MemoryEntry, StorageAdapter, StoredMemory
 from carrymem.adapters.json_adapter import JSONAdapter
@@ -22,23 +23,19 @@ class TestStorageAdapterProtocolCompliance:
         """SQLiteAdapter must conform to StorageAdapter."""
         adapter = SQLiteAdapter(":memory:")
         try:
-            assert isinstance(adapter, StorageAdapter), (
-                "SQLiteAdapter does not conform to StorageAdapter"
-            )
+            assert isinstance(adapter, StorageAdapter), "SQLiteAdapter does not conform to StorageAdapter"
         finally:
             adapter.close()
 
     def test_json_adapter_protocol_compliance(self):
         """JSONAdapter must conform to StorageAdapter."""
-        import tempfile
         import os
+        import tempfile
 
         with tempfile.TemporaryDirectory() as tmpdir:
             path = os.path.join(tmpdir, "test_memories.json")
             adapter = JSONAdapter(path=path)
-            assert isinstance(adapter, StorageAdapter), (
-                "JSONAdapter does not conform to StorageAdapter"
-            )
+            assert isinstance(adapter, StorageAdapter), "JSONAdapter does not conform to StorageAdapter"
             adapter.close()
 
 
