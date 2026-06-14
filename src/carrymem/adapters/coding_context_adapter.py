@@ -24,6 +24,7 @@ import json
 import re
 import sqlite3
 import threading
+import warnings
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -495,9 +496,21 @@ class CodingContextAdapter(StorageAdapter):
         return stack
 
     def remember(self, *args, **kwargs) -> Any:
+        warnings.warn(
+            "remember() is deprecated, use store() instead. "
+            "Will be removed in v0.5.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         raise NotImplementedError("CodingContextAdapter is read-only")
 
     def forget(self, *args, **kwargs) -> Any:
+        warnings.warn(
+            "forget() is deprecated, use delete() instead. "
+            "Will be removed in v0.5.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         raise NotImplementedError("CodingContextAdapter is read-only")
 
     def initialize(self, config: dict) -> None:

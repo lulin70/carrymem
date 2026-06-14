@@ -508,14 +508,14 @@ class RuleEngine:
             all_active = self.storage.list_all(status="active", limit=10000)
             active_ids = {r.id for r in all_active}
         except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
-            _logger.warning(f"Failed to list active rules: {e}")
+            _logger.warning("Failed to list active rules: %s", e)
 
         superseded_ids = set()
         try:
             all_deprecated = self.storage.list_all(status="deprecated", limit=10000)
             superseded_ids = {r.id for r in all_deprecated}
         except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
-            _logger.warning(f"Failed to list deprecated rules: {e}")
+            _logger.warning("Failed to list deprecated rules: %s", e)
 
         results = []
         active_count = 0

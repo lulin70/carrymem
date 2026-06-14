@@ -42,7 +42,7 @@ class CRUDOperations:
                     )
                     conn.commit()
                 except sqlite3.Error as e:
-                    logger.debug(f"Failed to update raw_text for existing memory: {e}")
+                    logger.debug("Failed to update raw_text for existing memory: %s", e)
             stored = self._adapter._serializer.row_to_stored(
                 conn.execute(
                     "SELECT * FROM memories WHERE content_hash = ? AND namespace = ?",
@@ -122,7 +122,7 @@ class CRUDOperations:
                     if not _skip_commit:
                         conn.commit()
                 except (sqlite3.Error, struct.error, ValueError, TypeError) as e:
-                    logger.warning(f"Failed to store embedding: {e}")
+                    logger.warning("Failed to store embedding: %s", e)
 
         if self._adapter._audit:
             self._adapter._audit.log_operation(
@@ -139,7 +139,7 @@ class CRUDOperations:
         try:
             conn.commit()
         except sqlite3.Error as e:
-            logger.debug(f"Post-supersede commit failed: {e}")
+            logger.debug("Post-supersede commit failed: %s", e)
 
         # Set initial version_chain_id for state memories (if not set by supersede)
         if entry.memory_nature == "state" and not entry.version_chain_id:
@@ -150,7 +150,7 @@ class CRUDOperations:
                 )
                 conn.commit()
             except sqlite3.Error as e:
-                logger.debug(f"Failed to set initial version_chain_id: {e}")
+                logger.debug("Failed to set initial version_chain_id: %s", e)
 
         stored = StoredMemory.from_memory_entry(entry, storage_key=storage_key, created_at=now)
         stored.importance_score = imp_score
@@ -169,7 +169,7 @@ class CRUDOperations:
                 conn.commit()
             except (sqlite3.Error, ValueError) as e:
                 conn.rollback()
-                logger.warning(f"Batch remember failed, rolled back: {e}")
+                logger.warning("Batch remember failed, rolled back: %s", e)
                 raise
         if self._adapter._enable_cache and self._adapter._cache:
             self._adapter._cache.invalidate(self._adapter.namespace)
@@ -196,7 +196,7 @@ class CRUDOperations:
                         (memory_id,),
                     )
                 except sqlite3.Error as e:
-                    logger.warning(f"Failed to delete vector for memory {memory_id}: {e}")
+                    logger.warning("Failed to delete vector for memory %s: %s", memory_id, e)
             conn.commit()
             result = cursor.rowcount > 0
         if self._adapter._enable_cache and self._adapter._cache:
@@ -234,7 +234,7 @@ class CRUDOperations:
                 return self._adapter._serializer.row_to_stored(row)
             return None
         except sqlite3.Error as e:
-            logger.debug(f"_get_by_key failed: {e}")
+            logger.debug("_get_by_key failed: %s", e)
             return None
 
     def update_memory(

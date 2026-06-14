@@ -115,7 +115,7 @@ class RuleCandidateGenerator:
                         if candidate_dict not in candidates:
                             candidates.append(candidate_dict)
                 except (ValueError, KeyError, TypeError, RuntimeError) as e:
-                    logger.warning(f"Pattern detection candidate generation failed: {e}")
+                    logger.warning("Pattern detection candidate generation failed: %s", e)
 
             try:
                 implicit = self.detect_implicit_preferences()
@@ -123,10 +123,10 @@ class RuleCandidateGenerator:
                     if not any(c.get("trigger") == imp["trigger"] for c in candidates):
                         candidates.append(imp)
             except (ValueError, KeyError, TypeError) as e:
-                logger.warning(f"Implicit preference detection failed: {e}")
+                logger.warning("Implicit preference detection failed: %s", e)
 
         except (ImportError, ValueError, KeyError, RuntimeError) as e:
-            logger.debug(f"Rule suggestion engine unavailable: {e}")
+            logger.debug("Rule suggestion engine unavailable: %s", e)
 
         return candidates[:3]
 

@@ -385,7 +385,7 @@ class RecallEngine:
             return all_expanded_rows[:limit]
 
         except (ValueError, TypeError, RuntimeError, ImportError) as e:
-            logger.warning(f"Semantic recall search failed: {e}")
+            logger.warning("Semantic recall search failed: %s", e)
             return []
 
     def _vector_search(self, query: str, where_clause: str, params: List, limit: int):
@@ -409,7 +409,7 @@ class RecallEngine:
             ]
             return conn.execute(vec_sql, vec_params).fetchall()
         except (sqlite3.Error, ValueError, struct.error, TypeError) as e:
-            logger.warning(f"Vector search failed: {e}")
+            logger.warning("Vector search failed: %s", e)
             return []
 
     def _rrf_fuse(self, fts_rows: list, vec_rows: list, limit: int) -> list:
@@ -473,7 +473,7 @@ class RecallEngine:
             params_with_query = params + [safe_query, limit]
             return conn.execute(fts_sql, params_with_query).fetchall()
         except sqlite3.OperationalError as e:
-            logger.debug(f"FTS5 search failed: {e}")
+            logger.debug("FTS5 search failed: %s", e)
             return []
 
     def _like_search(self, query, where_clause, params, limit):

@@ -60,8 +60,8 @@ class TestE2EEncryptionLifecycle:
 
             # Verify storage worked
             stored = cm1.recall_memories(limit=10)
-            assert isinstance(stored, list) and len(stored) >= len(secret_memories) * 0.8, (
-                f"Should have stored most memories before close"
+            assert isinstance(stored, list) and len(stored) == len(secret_memories), (
+                f"All encrypted memories should be stored before close, got {len(stored)}/{len(secret_memories)}"
             )
         finally:
             cm1.close()
@@ -71,8 +71,8 @@ class TestE2EEncryptionLifecycle:
         try:
             recalled = cm2.recall_memories(limit=10)
             assert isinstance(recalled, list), "Recall after reopen should return list"
-            assert len(recalled) >= 2, (
-                f"Should recall memories after reopen, got {len(recalled)}"
+            assert len(recalled) == len(secret_memories), (
+                f"All memories should be recalled after reopen, got {len(recalled)}/{len(secret_memories)}"
             )
 
             # Verify content integrity
@@ -81,8 +81,8 @@ class TestE2EEncryptionLifecycle:
                 1 for orig in secret_memories
                 if any(orig.lower() in rc.lower() or rc.lower() in orig.lower() for rc in recalled_contents)
             )
-            assert found_count >= 2, (
-                f"Original content should be recoverable after encrypt/reopen cycle. Found {found_count}/{len(secret_memories)}"
+            assert found_count == len(secret_memories), (
+                f"All original content should be recoverable after encrypt/reopen cycle. Found {found_count}/{len(secret_memories)}"
             )
         finally:
             cm2.close()
@@ -281,6 +281,13 @@ class TestE2EKeyRotation:
             assert isinstance(old_recall, list) and len(old_recall) >= 1, (
                 "Data should be accessible with old key"
             )
+            # Verify at least one of the stored memories is recalled with correct content
+            recalled_contents = [m.get("content", "") for m in old_recall if isinstance(m, dict)]
+            has_stored_data = any(
+                "Historical preferences" in c or "Legacy data" in c
+                for c in recalled_contents
+            )
+            assert has_stored_data, "Recalled data should contain stored encrypted memories"
         finally:
             cm_old.close()
 
@@ -383,8 +390,8 @@ class TestE2EUnicodeUnderEncryption:
             1 for orig in chinese_memories
             if any(orig in rc or rc in orig for rc in recalled_contents)
         )
-        assert found >= 2, (
-            f"Chinese text should survive encryption roundtrip. Found {found}/{len(chinese_memories)}"
+        assert found == len(chinese_memories), (
+            f"All Chinese text should survive encryption roundtrip. Found {found}/{len(chinese_memories)}"
         )
 
     def test_emoji_and_special_chars_under_encryption(self, encrypted_carrymem):
@@ -428,7 +435,7 @@ class TestE2ELongContentUnderEncryption:
         recalled = cm.recall_memories(query="important memory", limit=5)
         if isinstance(recalled, list) and len(recalled) > 0:
             content = recalled[0].get("content", "")
-            # Content should retain substantial length (may be truncated by system)
-            assert len(content) >= 100, (
-                f"Recalled content too short: {len(content)} chars (original: {len(long_text)})"
+            # Content should retain the original text (may be truncated by system)
+            assert "important memory" in content.lower(), (
+                f"Recalled content should contain 'important memory', got: {content[:100]}"
             )

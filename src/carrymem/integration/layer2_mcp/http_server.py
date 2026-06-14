@@ -90,7 +90,7 @@ class MCPHTTPServer:
 
         # Validate origin format (must be a valid URL)
         if not re.match(r"^https?://[a-zA-Z0-9\.\-]+(:\d+)?$", request_origin):
-            logger.debug(f"Invalid origin format: {request_origin}")
+            logger.debug("Invalid origin format: %s", request_origin)
             return ""
 
         for pattern in self._allowed_origins:
@@ -100,7 +100,7 @@ class MCPHTTPServer:
 
                 # Ensure prefix ends with : for port wildcard
                 if not prefix.endswith(":"):
-                    logger.warning(f"Invalid wildcard pattern (must end with :*): {pattern}")
+                    logger.warning("Invalid wildcard pattern (must end with :*): %s", pattern)
                     continue
 
                 # Check if origin starts with the prefix
@@ -113,7 +113,7 @@ class MCPHTTPServer:
                         if 1 <= port <= 65535:
                             return request_origin
                         else:
-                            logger.debug(f"Port out of range: {port}")
+                            logger.debug("Port out of range: %d", port)
             elif request_origin == pattern:
                 # Exact match
                 return request_origin
@@ -178,7 +178,7 @@ class MCPHTTPServer:
         # from breaking the HTTP protocol and leaking sensitive information.
         except Exception as e:
             # Log detailed error for debugging
-            logger.error(f"Request handling error: {e}", exc_info=True)
+            logger.error("Request handling error: %s", e, exc_info=True)
             try:
                 # Return sanitized error message (no stack trace or sensitive info)
                 error_msg = "Internal server error"
@@ -187,12 +187,12 @@ class MCPHTTPServer:
                     error_msg = str(e)
                 await self._send_response(writer, 500, {"error": error_msg}, "")
             except (OSError, ConnectionError, RuntimeError) as e2:
-                logger.debug(f"Failed to send error response: {e2}")
+                logger.debug("Failed to send error response: %s", e2)
         finally:
             try:
                 writer.close()
             except (OSError, ConnectionError) as e:
-                logger.debug(f"Failed to close connection: {e}")
+                logger.debug("Failed to close connection: %s", e)
 
     async def _handle_sse(self, writer, request_origin: str = ""):
         if len(self._clients) >= _MAX_SSE_CLIENTS:

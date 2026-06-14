@@ -101,13 +101,13 @@ class TestE2EBulkMemoryStorage:
         for i, memory in enumerate(test_memories):
             result = cm.classify_and_remember(memory)
             assert isinstance(result, dict), f"Memory {i+1} should return dict, got {type(result)}"
-            # Check if stored or at least processed without error
-            if result.get("stored") or result.get("should_remember") or "storage_keys" in result:
-                stored_count += 1
+            assert result.get("stored") or result.get("should_remember") or "storage_keys" in result, (
+                f"Memory {i+1} should be stored: {memory}"
+            )
+            stored_count += 1
 
-        # At least some memories should have been stored
-        assert stored_count >= len(test_memories) * 0.8, (
-            f"Expected at least 80% of memories to be stored, got {stored_count}/{len(test_memories)}"
+        assert stored_count == len(test_memories), (
+            f"All memories should be stored, got {stored_count}/{len(test_memories)}"
         )
 
     def test_recall_after_bulk_storage(self, fresh_carrymem):
@@ -135,12 +135,13 @@ class TestE2EBulkMemoryStorage:
         keywords = ["dark mode", "Python", "PostgreSQL", "Docker", "AWS", "Agile"]
         for keyword in keywords:
             results = cm.recall_memories(query=keyword, limit=5)
-            if isinstance(results, list) and len(results) > 0:
-                found_count += 1
+            assert isinstance(results, list) and len(results) > 0, (
+                f"Should recall memories for keyword '{keyword}'"
+            )
+            found_count += 1
 
-        # Should find most of the stored memories
-        assert found_count >= len(keywords) * 0.7, (
-            f"Should recall most memories, found {found_count}/{len(keywords)} keywords"
+        assert found_count == len(keywords), (
+            f"Should recall all keywords, found {found_count}/{len(keywords)}"
         )
 
     def test_mixed_memory_types_stored(self, fresh_carrymem):
@@ -156,7 +157,9 @@ class TestE2EBulkMemoryStorage:
         # All should be recallable
         all_memories = cm.recall_memories(limit=20)
         assert isinstance(all_memories, list)
-        assert len(all_memories) >= 3, f"Should have at least 3 memories, got {len(all_memories)}"
+        # TODO: session_summary is not returned by generic recall_memories(limit=20).
+        # Once fixed, this assertion should be == 4 (all 4 stored types recalled).
+        assert len(all_memories) == 3, f"Should have all recallable memories, got {len(all_memories)}"
 
 
 class TestE2EExportProfile:
@@ -173,8 +176,8 @@ class TestE2EExportProfile:
         # Get profile
         profile = cm.get_memory_profile()
         assert isinstance(profile, dict), "Profile should be a dict"
-        assert "summary" in profile or "stats" in profile or len(profile) > 0, (
-            "Profile should contain summary/stats/data"
+        assert "summary" in profile or "stats" in profile, (
+            "Profile should contain 'summary' or 'stats' key"
         )
 
     def test_profile_includes_stored_preferences(self, fresh_carrymem):
@@ -189,11 +192,12 @@ class TestE2EExportProfile:
         assert isinstance(profile, dict)
 
         # Profile should reflect that we have stored data
-        # (exact field names depend on implementation)
         profile_str = json.dumps(profile).lower()
         has_content = any(pref.lower()[:10] in profile_str for pref in preferences)
-        # This is a soft check - profile may summarize rather than include raw text
-        assert isinstance(profile, dict), "Profile should still be valid dict"
+        assert has_content, (
+            f"Profile should contain at least one stored preference. "
+            f"Profile keys: {list(profile.keys())}"
+        )
 
 
 class TestE2EBackupRestoreCycle:
@@ -248,8 +252,8 @@ class TestE2EBackupRestoreCycle:
         post_backup_recall = cm.recall_memories(limit=20)
         post_backup_count = len(post_backup_recall) if isinstance(post_backup_recall, list) else 0
 
-        assert post_backup_count >= pre_backup_count, (
-            f"Data count should not decrease after backup: before={pre_backup_count}, after={post_backup_count}"
+        assert post_backup_count == pre_backup_count, (
+            f"Data count should not change after backup: before={pre_backup_count}, after={post_backup_count}"
         )
 
         # Verify specific memories are still accessible
@@ -313,7 +317,7 @@ class TestE2ECompleteLifecycle:
 
         # Step 1: Initialize
         cm = CarryMem(db_path=db_path)
-        assert cm is not None, "CarryMem should initialize successfully"
+        assert isinstance(cm, CarryMem), "CarryMem should initialize successfully"
 
         # Step 2-3: Store various types of memories
         memories_to_store = {
@@ -340,12 +344,12 @@ class TestE2ECompleteLifecycle:
                 if isinstance(result, dict) and (result.get("stored") or result.get("should_remember")):
                     total_stored += 1
 
-        assert total_stored >= 6, f"Should store at least 6 memories, got {total_stored}"
+        assert total_stored == 8, f"Should store all 8 memories, got {total_stored}"
 
         # Step 4: Recall and verify accessibility
         all_recalled = cm.recall_memories(limit=50)
         assert isinstance(all_recalled, list), "Recall should return list"
-        assert len(all_recalled) >= 5, f"Should recall multiple memories, got {len(all_recalled)}"
+        assert len(all_recalled) == total_stored, f"Should recall all stored memories, got {len(all_recalled)}/{total_stored}"
 
         # Step 5: Build context and prompt
         context = cm.build_context(context="How should I set up my development environment?")

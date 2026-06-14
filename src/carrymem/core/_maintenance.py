@@ -185,8 +185,9 @@ class MaintenanceMixin:
         report["forgotten_count"] = forgotten_count
 
         logger.info(
-            f"Consolidation complete: {superseded_count} superseded, "
-            f"{forgotten_count} forgotten, {len(report['to_decay'])} decayed"
+            "Consolidation complete: %d superseded, "
+            "%d forgotten, %d decayed",
+            superseded_count, forgotten_count, len(report['to_decay'])
         )
 
         if run_p1:

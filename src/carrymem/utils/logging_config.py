@@ -213,7 +213,7 @@ def setup_logging(
             file_handler.setFormatter(formatter)
             root_logger.addHandler(file_handler)
         except OSError as e:
-            root_logger.warning(f"无法创建日志文件 {file_path}: {e}")
+            root_logger.warning("无法创建日志文件 %s: %s", file_path, e)
 
     # 防止 propagate 到 Python root logger（避免重复输出）
     root_logger.propagate = False

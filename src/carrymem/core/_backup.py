@@ -33,7 +33,7 @@ class BackupMixin:
                 manager.create_backup()
                 logger.info("Initial backup created")
             except (OSError, ValueError, RuntimeError) as e:
-                logger.debug(f"Initial backup failed: {e}")
+                logger.debug("Initial backup failed: %s", e)
         self._initial_backup_done = True
 
     def _auto_backup(self) -> None:

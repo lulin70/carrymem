@@ -27,5 +27,5 @@ class SecurityOps:
         try:
             return self._encryption.decrypt(ciphertext)
         except (ValueError, TypeError) as e:
-            logger.warning(f"Decryption failed, returning ciphertext: {e}")
+            logger.warning("Decryption failed, returning ciphertext: %s", e)
             return ciphertext

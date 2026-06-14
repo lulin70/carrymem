@@ -171,7 +171,7 @@ class QueryBuilderWithContext(QueryBuilder):
             ).fetchall()
         except sqlite3.OperationalError as e:
             logger = __import__("logging").getLogger(__name__)
-            logger.debug(f"_rebuild_context query failed: {e}")
+            logger.debug("_rebuild_context query failed: %s", e)
             return original_query
 
         if not profile_rows:

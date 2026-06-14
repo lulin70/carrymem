@@ -5,7 +5,9 @@ that holds __init__ / close / properties.  Every public API is identical to the
 original monolithic class — `cm.method()` calls work without changes.
 """
 
-from typing import Any, Dict, Optional
+from __future__ import annotations
+
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
 from carrymem.core._backup import BackupMixin
 from carrymem.core._classification import ClassificationMixin
@@ -33,6 +35,9 @@ from carrymem.core._prompt_delegate import PromptDelegateMixin
 from carrymem.core._recall import RecallMixin
 from carrymem.errors import CarryMemError
 from carrymem.types import ComponentStatusDict, HealthCheckResult
+
+if TYPE_CHECKING:
+    from carrymem.security.permissions import AccessPolicy
 
 
 class CarryMem(
@@ -73,12 +78,12 @@ class CarryMem(
     # ── Access control (P1-8 MVP) ──────────────────────────────────
 
     @property
-    def access_policy(self) -> Optional[Any]:
+    def access_policy(self) -> Optional[AccessPolicy]:
         """Return the current access policy, or ``None`` if not set."""
         return getattr(self, "_access_policy", None)
 
     @access_policy.setter
-    def access_policy(self, policy: Optional[Any]) -> None:
+    def access_policy(self, policy: Optional[AccessPolicy]) -> None:
         self._access_policy = policy
 
     # ------------------------------------------------------------------ #

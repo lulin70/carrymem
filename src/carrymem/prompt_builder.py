@@ -210,7 +210,7 @@ class PromptBuilder:
                     )
                     _recalc_scores[key] = (new_conf, new_imp)
                 except (KeyError, ValueError, TypeError, ZeroDivisionError) as e:
-                    logger.warning(f"Confidence recalculation failed: {e}")
+                    logger.warning("Confidence recalculation failed: %s", e)
         return _recalc_scores
 
     def _budget_filter(
@@ -288,7 +288,7 @@ class PromptBuilder:
             ]
             return injector._format_structured(matches, include_metadata=False)
         except (ImportError, KeyError, ValueError, TypeError, AttributeError, RuntimeError) as e:
-            logger.warning(f"Rule injection failed: {e}")
+            logger.warning("Rule injection failed: %s", e)
             return ""
 
     # ------------------------------------------------------------------
@@ -350,7 +350,7 @@ class PromptBuilder:
                 ]
                 memories_section = non_pref_selected + pref_in_selected + pref_in_all
             except (KeyError, ValueError, TypeError, RuntimeError) as e:
-                logger.warning(f"Failed to select memories for context: {e}")
+                logger.warning("Failed to select memories for context: %s", e)
 
         # Knowledge
         if getattr(self._cm, "_knowledge_adapter", None) and context:
@@ -363,7 +363,7 @@ class PromptBuilder:
                     max_tokens=knowledge_budget,
                 )
             except (KeyError, ValueError, TypeError, RuntimeError) as e:
-                logger.warning(f"Failed to select knowledge for context: {e}")
+                logger.warning("Failed to select knowledge for context: %s", e)
 
         # Build prompt
         system_prompt = build_prompt(
@@ -391,7 +391,7 @@ class PromptBuilder:
                         }
                     )
         except (KeyError, ValueError, TypeError, AttributeError, RuntimeError) as e:
-            logger.warning(f"Rule matching in system prompt failed: {e}")
+            logger.warning("Rule matching in system prompt failed: %s", e)
 
         total = len(applied_rules_info) + len(memories_section) + len(knowledge_section)
         return {
@@ -525,7 +525,7 @@ class PromptBuilder:
                     )
                     memories_section = pref_in_filtered + [m for m in selected if m.get("storage_key") not in pref_keys]
             except (KeyError, ValueError, TypeError, RuntimeError) as e:
-                logger.warning(f"Failed to select memories for QA prompt: {e}")
+                logger.warning("Failed to select memories for QA prompt: %s", e)
 
         # Knowledge
         if getattr(self._cm, "_knowledge_adapter", None):
@@ -538,7 +538,7 @@ class PromptBuilder:
                     max_tokens=knowledge_budget,
                 )
             except (KeyError, ValueError, TypeError, RuntimeError) as e:
-                logger.warning(f"Failed to select knowledge for QA prompt: {e}")
+                logger.warning("Failed to select knowledge for QA prompt: %s", e)
 
         return _build_qa_prompt(
             memories=memories_section,

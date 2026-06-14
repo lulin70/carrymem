@@ -110,7 +110,7 @@ class PluginManager:
         """
         target_dir = Path(plugin_dir or self._plugin_dir or "")
         if not target_dir.is_dir():
-            logger.debug(f"Plugin directory not found: {target_dir}")
+            logger.debug("Plugin directory not found: %s", target_dir)
             return []
 
         discovered: List[str] = []
@@ -118,7 +118,7 @@ class PluginManager:
             if f.suffix == ".py" and not f.name.startswith("_"):
                 discovered.append(f.stem)
 
-        logger.info(f"Discovered {len(discovered)} plugins in {target_dir}")
+        logger.info("Discovered %d plugins in %s", len(discovered), target_dir)
         return discovered
 
     def load(self, name: str) -> PluginProtocol:
@@ -207,7 +207,7 @@ class PluginManager:
             # Auto-register hooks
             self._register_plugin_hooks(plugin_instance)
 
-            logger.info(f"Plugin loaded: {name} v{plugin_instance.version}")
+            logger.info("Plugin loaded: %s v%s", name, plugin_instance.version)
             return plugin_instance
 
     def unload(self, name: str) -> None:
@@ -221,13 +221,13 @@ class PluginManager:
         with self._lock:
             plugin = self._plugins.pop(name, None)
             if plugin is None:
-                logger.warning(f"Plugin '{name}' is not loaded, skipping unload")
+                logger.warning("Plugin '%s' is not loaded, skipping unload", name)
                 return
 
             try:
                 plugin.on_unload()
             except Exception as e:
-                logger.error(f"Plugin '{name}' on_unload error: {e}")
+                logger.error("Plugin '%s' on_unload error: %s", name, e)
 
             # Remove from hooks
             for hook_name in self._hooks:
@@ -244,7 +244,7 @@ class PluginManager:
             # Clean up sys.modules
             sys.modules.pop(name, None)
 
-            logger.info(f"Plugin unloaded: {name}")
+            logger.info("Plugin unloaded: %s", name)
 
     def list_plugins(self) -> Dict[str, PluginStatus]:
         """Return status of all known plugins (loaded + discovered but not loaded)."""
@@ -270,7 +270,7 @@ class PluginManager:
             List of plugin instances that handle this hook.
         """
         if hook_name not in self._hooks:
-            logger.warning(f"Unknown hook point: {hook_name}")
+            logger.warning("Unknown hook point: %s", hook_name)
             return []
         return list(self._hooks[hook_name])
 
@@ -292,8 +292,8 @@ class PluginManager:
                     result = handler(**kwargs)
                     results.append(result)
                 except Exception as e:
-                    logger.error(f"Error in plugin '{getattr(plugin, 'name', '?')}' "
-                                 f"handler '{hook_name}': {e}")
+                    logger.error("Error in plugin '%s' "
+                                 "handler '%s': %s", getattr(plugin, 'name', '?'), hook_name, e)
         return results
 
     def _detect_hook_subscriptions(self, plugin: PluginProtocol) -> List[str]:

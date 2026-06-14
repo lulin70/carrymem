@@ -118,12 +118,12 @@ class TestE2EExperienceLearningJourney:
         ]
 
         result = bridge.extract_lessons(failure_memories)
-        assert result["lessons_found"] >= 1, "Should find at least one lesson from failure memories"
-        assert result["candidates_queued"] >= 1, "Should queue at least one candidate"
+        assert result["lessons_found"] == 2, "Should find lessons from both failure memories"
+        assert result["candidates_queued"] == 2, "Should queue candidates for both lessons"
 
         # Verify pending lessons exist
         pending = bridge.list_pending()
-        assert len(pending) >= 1, "Should have pending experience candidates"
+        assert len(pending) == 2, "Should have pending experience candidates for both lessons"
 
         # Verify each pending entry has required fields
         entry = pending[0]
@@ -145,11 +145,11 @@ class TestE2EExperienceLearningJourney:
 
         # Step 1: Extract lessons
         extract_result = bridge.extract_lessons(failure_memories)
-        assert extract_result["candidates_queued"] >= 1
+        assert extract_result["candidates_queued"] == 1
 
         # Step 2: List and accept
         pending = bridge.list_pending()
-        assert len(pending) >= 1
+        assert len(pending) == 1
         audit_id = pending[0].id
 
         # Step 3: Accept lesson -> creates rule
@@ -332,7 +332,7 @@ class TestE2ERuleRefinementJourney:
 
         bridge.extract_lessons(failure_memories)
         pending = bridge.list_pending()
-        assert len(pending) >= 1
+        assert len(pending) == 1
 
         audit_id = pending[0].id
 

@@ -164,18 +164,18 @@ def cmd_setup_mcp(args):
             "all",
         ],
         default="all",
-        help="Target tool",
+        help=_t("cli.arg.tool"),
     )
-    parser.add_argument("--project", "-p", default=".", help="Project directory (default: current)")
+    parser.add_argument("--project", "-p", default=".", help=_t("cli.arg.project"))
     parser.add_argument(
         "--global",
         "-g",
         dest="global_config",
         action="store_true",
-        help="Write to global config (all AI tools on this machine share one CarryMem)",
+        help=_t("cli.arg.global"),
     )
-    parser.add_argument("--force", action="store_true", help="Overwrite existing config")
-    parser.add_argument("--uninstall", action="store_true", help="Remove CarryMem MCP config from specified tool(s)")
+    parser.add_argument("--force", action="store_true", help=_t("cli.arg.force_overwrite"))
+    parser.add_argument("--uninstall", action="store_true", help=_t("cli.arg.uninstall"))
 
     parsed = parser.parse_args(args)
 
@@ -534,9 +534,9 @@ def cmd_mcp(args):
 
 def cmd_serve(args):
     parser = _make_parser("serve")
-    parser.add_argument("--host", default="127.0.0.1", help="Host to bind")
-    parser.add_argument("--port", "-p", type=int, default=8765, help="Port to listen")
-    parser.add_argument("--api-key", help="API key for authentication")
+    parser.add_argument("--host", default="127.0.0.1", help=_t("cli.arg.host"))
+    parser.add_argument("--port", "-p", type=int, default=8765, help=_t("cli.arg.port"))
+    parser.add_argument("--api-key", help=_t("cli.arg.api_key"))
 
     parsed = parser.parse_args(args)
 
@@ -563,8 +563,8 @@ def cmd_tui(args):
         return 1
 
     parser = _make_parser("tui")
-    parser.add_argument("--namespace", "-n", default="default", help="Namespace")
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
 
     parsed = parser.parse_args(args)
     run_tui(db_path=parsed.db, namespace=parsed.namespace)  # type: ignore[call-arg]

@@ -68,14 +68,14 @@ class RecallMixin:
                     for m in matches
                 ]
             except (ImportError, KeyError, ValueError, TypeError, RuntimeError) as e:
-                logger.warning(f"Rule engine failed for recall_all: {e}")
+                logger.warning("Rule engine failed for recall_all: %s", e)
                 rule_results = []
 
         if self._adapter:
             try:
                 memory_results = self.recall_memories(query=query, filters=filters, limit=limit, namespaces=namespaces)
             except (KeyError, ValueError, TypeError, RuntimeError) as e:
-                logger.warning(f"Failed to recall memories for prompt: {e}")
+                logger.warning("Failed to recall memories for prompt: %s", e)
                 memory_results = []
 
         if self._knowledge_adapter:

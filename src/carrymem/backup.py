@@ -140,7 +140,7 @@ class BackupManager:
                         conn.close()
                         memory_count = count
                     except sqlite3.Error as e:
-                        logger.warning(f"Failed to get memory count from backup {filename}: {e}")
+                        logger.warning("Failed to get memory count from backup %s: %s", filename, e)
                         memory_count = None
 
                     backups.append(

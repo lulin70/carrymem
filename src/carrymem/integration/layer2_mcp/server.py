@@ -67,15 +67,15 @@ class MCPServer:
 
         logger.info("MCP Server initialized")
         if self.config_path:
-            logger.info(f"Config path: {self.config_path}")
+            logger.info("Config path: %s", self.config_path)
         if self.data_path:
-            logger.info(f"Data path: {self.data_path}")
+            logger.info("Data path: %s", self.data_path)
         if self.namespace != "default":
-            logger.info(f"Namespace: {self.namespace}")
+            logger.info("Namespace: %s", self.namespace)
 
     async def start(self):
         """Start the MCP server and listen for requests."""
-        logger.info(f"MCP Server starting (request_timeout={self.request_timeout}s)...")
+        logger.info("MCP Server starting (request_timeout=%ds)...", self.request_timeout)
 
         try:
             while True:
@@ -106,15 +106,15 @@ class MCPServer:
                     if response:
                         await self.send_response(response)
                 except asyncio.TimeoutError:
-                    logger.error(f"Request timed out after {self.request_timeout}s")
+                    logger.error("Request timed out after %ds", self.request_timeout)
                     await self.send_error(None, -32603, "Request timeout")
                 except json.JSONDecodeError as e:
-                    logger.error(f"Invalid JSON: {e}")
+                    logger.error("Invalid JSON: %s", e)
                     await self.send_error(None, -32700, "Parse error")
                 # NOTE: Broad exception in MCP server request handler is intentional to catch
                 # all errors and return standardized JSON-RPC error responses.
                 except Exception as e:
-                    logger.error(f"Error handling request: {e}")
+                    logger.error("Error handling request: %s", e)
                     await self.send_error(None, -32603, "Internal error")
 
         except KeyboardInterrupt:
@@ -122,7 +122,7 @@ class MCPServer:
         # NOTE: Broad exception in MCP server main loop is intentional to catch all errors
         # and prevent server crashes. All errors are logged for debugging.
         except Exception as e:
-            logger.error(f"Server error: {e}")
+            logger.error("Server error: %s", e)
         finally:
             await self.cleanup()
 
@@ -140,7 +140,7 @@ class MCPServer:
         method = request.get("method")
         params = request.get("params", {})
 
-        logger.debug(f"Handling request: {method} (id: {request_id})")
+        logger.debug("Handling request: %s (id: %s)", method, request_id)
 
         if method == "initialize":
             return await self.handle_initialize(request_id, params)
@@ -155,7 +155,7 @@ class MCPServer:
         elif method == "exit":
             return None
         else:
-            logger.warning(f"Unknown method: {method}")
+            logger.warning("Unknown method: %s", method)
             return await self.send_error(request_id, -32601, "Method not found")
 
     async def handle_initialize(self, request_id: Any, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -174,8 +174,8 @@ class MCPServer:
         protocol_version = params.get("protocolVersion", "2024-11-05")
         client_info = params.get("clientInfo", {})
 
-        logger.info(f"Client: {client_info.get('name', 'unknown')} " f"v{client_info.get('version', 'unknown')}")
-        logger.info(f"Protocol version: {protocol_version}")
+        logger.info("Client: %s v%s", client_info.get('name', 'unknown'), client_info.get('version', 'unknown'))
+        logger.info("Protocol version: %s", protocol_version)
 
         return {
             "jsonrpc": "2.0",
@@ -215,8 +215,8 @@ class MCPServer:
         tool_name = params.get("name")
         arguments = params.get("arguments", {})
 
-        logger.info(f"Handling tools/call: {tool_name}")
-        logger.debug(f"Arguments: {arguments}")
+        logger.info("Handling tools/call: %s", tool_name)
+        logger.debug("Arguments: %s", arguments)
 
         try:
             result = await asyncio.wait_for(
@@ -230,12 +230,12 @@ class MCPServer:
                 "result": {"content": [{"type": "text", "text": json.dumps(result, indent=2, ensure_ascii=False)}]},
             }
         except asyncio.TimeoutError:
-            logger.error(f"Tool '{tool_name}' timed out after {self.request_timeout}s")
+            logger.error("Tool '%s' timed out after %ds", tool_name, self.request_timeout)
             return await self.send_error(request_id, -32603, f"Tool '{tool_name}' timeout")
         # NOTE: Broad exception in tool execution is intentional to catch all handler errors
         # and return standardized error responses to MCP clients.
         except Exception as e:
-            logger.error(f"Error calling tool {tool_name}: {e}")
+            logger.error("Error calling tool %s: %s", tool_name, e)
             return await self.send_error(request_id, -32603, f"Tool error: {str(e)}")
 
     async def handle_shutdown(self, request_id: Any) -> Dict[str, Any]:
@@ -261,7 +261,7 @@ class MCPServer:
         """
         response_json = json.dumps(response, ensure_ascii=False)
         print(response_json, flush=True)
-        logger.debug(f"Sent response: {response_json[:200]}...")
+        logger.debug("Sent response: %s...", response_json[:200])
 
     async def send_error(self, request_id: Any, code: int, message: str, data: Optional[Any] = None) -> Dict[str, Any]:
         """

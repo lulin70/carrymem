@@ -16,6 +16,7 @@ import tempfile
 import pytest
 
 from carrymem import CarryMem
+from carrymem.exceptions import DBConnectionError
 
 
 @pytest.fixture
@@ -195,8 +196,8 @@ class TestE2EPathBoundaryConditions:
             cm = CarryMem(db_path="relative_path_test.db")
             try:
                 result = cm.classify_and_remember("Relative path test")
-                assert isinstance(result, dict) or result is not None, (
-                    "Relative path should be handled"
+                assert isinstance(result, dict), (
+                    "Relative path should return a dict result"
                 )
             finally:
                 cm.close()
@@ -219,16 +220,10 @@ class TestE2EPermissionScenarios:
         readonly_dir.chmod(0o555)
 
         try:
-            # Should fail or handle gracefully
-            error_occurred = False
-            try:
+            # Should fail when parent directory is read-only
+            with pytest.raises((PermissionError, OSError, DBConnectionError)):
                 cm = CarryMem(db_path=db_path)
                 cm.close()
-            except (PermissionError, OSError, Exception):
-                error_occurred = True
-
-            # Either it failed (expected) or somehow succeeded
-            assert True  # Just verify no hard crash
         finally:
             # Restore permissions for cleanup
             readonly_dir.chmod(0o755)
@@ -249,19 +244,13 @@ class TestE2EPermissionScenarios:
         try:
             cm_ro = CarryMem(db_path=db_path)
             try:
-                # Reads might work
+                # Read operations should work
                 recalled = cm_ro.recall_memories(limit=5)
                 assert isinstance(recalled, list), "Reads may work on read-only file"
 
-                # Writes should fail gracefully
-                write_error = False
-                try:
+                # Write operations should fail on read-only database
+                with pytest.raises(Exception, match="readonly|read-only|permission"):
                     cm_ro.classify_and_remember("Attempted write to read-only")
-                except (PermissionError, OSError, Exception):
-                    write_error = True
-
-                # Either write failed or was handled
-                assert True
             finally:
                 cm_ro.close()
         finally:
@@ -339,7 +328,7 @@ class TestE2ENumericAndSpecialInputs:
         numerics = ["12345", "0", "-42", "3.14159", "1e10"]
         for num in numerics:
             result = cm.classify_and_remember(num)
-            assert result is not None, f"Numeric input {num} should be handled"
+            assert isinstance(result, dict), f"Numeric input {num} should return a dict result"
 
     def test_special_format_strings(self, standard_carrymem):
         """Verify: Special format strings don't cause injection or parsing issues."""
@@ -391,8 +380,8 @@ class TestE2EAPIBoundaryConditions:
         # Most APIs should reject or handle None
         try:
             result = cm.classify_and_remember(None)
-            # If it doesn't crash, that's acceptable behavior
-            assert result is not None or isinstance(result, (dict, bool))
+            # If it doesn't crash, result should be a dict
+            assert isinstance(result, dict), "classify_and_remember should return dict even for None input"
         except (TypeError, ValueError, AttributeError):
             pass  # Expected: None rejected
 

@@ -56,19 +56,19 @@ class ConfigManager:
                     return yaml.safe_load(f) or {}
                 return json.load(f) or {}
         except FileNotFoundError:
-            _logger.debug(f"Config file not found: {self.config_path}")
+            _logger.debug("Config file not found: %s", self.config_path)
             return {}
         except (json.JSONDecodeError, ValueError) as e:
-            _logger.warning(f"Config file parse error: {self.config_path}: {e}")
+            _logger.warning("Config file parse error: %s: %s", self.config_path, e)
             return {}
         except PermissionError as e:
-            _logger.warning(f"Config file permission denied: {self.config_path}: {e}")
+            _logger.warning("Config file permission denied: %s: %s", self.config_path, e)
             return {}
         # NOTE: Broad exception for config loading is intentional to handle
         # unexpected file system errors, encoding issues, or corrupted config files.
         # All errors are logged and gracefully degraded to empty config.
         except (OSError, ValueError, TypeError) as e:
-            _logger.warning(f"Config file load error: {self.config_path}: {e}")
+            _logger.warning("Config file load error: %s: %s", self.config_path, e)
             return {}
 
     def reload(self):
@@ -87,7 +87,7 @@ class ConfigManager:
                     return yaml.safe_load(f) or {}
                 return json.load(f) or {}
         except (FileNotFoundError, json.JSONDecodeError, PermissionError, OSError, ValueError):
-            _logger.debug(f"Rules file not found: {rules_path}")
+            _logger.debug("Rules file not found: %s", rules_path)
             return {}
 
     def set(self, key: str, value: Any):

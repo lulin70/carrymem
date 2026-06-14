@@ -16,6 +16,7 @@ Public API is fully backward compatible with the monolithic sqlite_adapter.
 """
 
 import os
+import warnings
 from typing import Any, Dict, Optional
 
 from ..base import MemoryEntry, StorageAdapter, StoredMemory
@@ -101,7 +102,7 @@ class SQLiteAdapter(StorageAdapter):
             except (ImportError, ValueError, TypeError) as e:
                 from ...utils.logger import logger
 
-                logger.error(f"Encryption initialization failed: {e}")
+                logger.error("Encryption initialization failed: %s", e)
                 raise RuntimeError(
                     f"Encryption initialization failed with provided key. "
                     f"Refusing to fall back to plaintext storage. Error: {e}"
@@ -189,12 +190,12 @@ class SQLiteAdapter(StorageAdapter):
                 self._schema.init_vec_schema(self._embedding_dim)
                 from ...utils.logger import logger
 
-                logger.info(f"Vector search enabled: model={embedding_model}, dim={self._embedding_dim}")
+                logger.info("Vector search enabled: model=%s, dim=%d", embedding_model, self._embedding_dim)
             except (ImportError, OSError, ValueError, RuntimeError) as e:
                 from ...utils.logger import logger
 
                 self._enable_vector = False
-                logger.warning(f"Vector search initialization failed: {e}")
+                logger.warning("Vector search initialization failed: %s", e)
 
         # --- Run migrations (vector schema first if enabled) ---
         self._schema.migrate_all(enable_vector=self._enable_vector)
@@ -230,7 +231,7 @@ class SQLiteAdapter(StorageAdapter):
                 from ...utils.logger import logger
 
                 self._enable_semantic = False
-                logger.warning(f"Semantic recall initialization failed: {e}")
+                logger.warning("Semantic recall initialization failed: %s", e)
 
         # --- Recall cache ---
         self._enable_cache = enable_cache
@@ -343,12 +344,12 @@ class SQLiteAdapter(StorageAdapter):
             The storage_key of the stored memory.
         """
         mem_entry = MemoryEntry.from_dict(entry)
-        stored = self.remember(mem_entry)
+        stored = self._crud.remember(mem_entry)
         return stored.storage_key
 
     def delete(self, entry_id: str) -> bool:
         """Delete a memory by its storage_key."""
-        return self.forget(entry_id)
+        return self._crud.forget(entry_id)
 
     def count(self, filter_: Optional[dict] = None) -> int:
         """Count stored memories with optional filtering.
@@ -383,7 +384,7 @@ class SQLiteAdapter(StorageAdapter):
             tables = [r[0] for r in cursor.fetchall()]
         except Exception as e:
             from ...utils.logger import logger
-            logger.warning(f"SQLiteAdapter health check failed: {e}")
+            logger.warning("SQLiteAdapter health check failed: %s", e)
             status_detail = "unhealthy"
             row_count = -1
             tables = []
@@ -426,7 +427,7 @@ class SQLiteAdapter(StorageAdapter):
         count = 0
         for entry_dict in entries:
             mem_entry = MemoryEntry.from_dict(entry_dict)
-            self.remember(mem_entry)
+            self._crud.remember(mem_entry)
             count += 1
         return count
 
@@ -460,17 +461,29 @@ class SQLiteAdapter(StorageAdapter):
         except Exception as e:
             from ...utils.logger import logger
 
-            logger.debug(f"SQLiteAdapter.__del__ close failed: {e}")
+            logger.debug("SQLiteAdapter.__del__ close failed: %s", e)
 
     # ── CRUD operations ─────────────────────────────────────────
 
     def remember(self, entry: MemoryEntry, _skip_commit: bool = False) -> StoredMemory:
+        warnings.warn(
+            "remember() is deprecated, use store() instead. "
+            "Will be removed in v0.5.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self._crud.remember(entry, _skip_commit)
 
     def remember_batch(self, entries: list) -> list:
         return self._crud.remember_batch(entries)
 
     def forget(self, storage_key: str) -> bool:
+        warnings.warn(
+            "forget() is deprecated, use delete() instead. "
+            "Will be removed in v0.5.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self._crud.forget(storage_key)
 
     def forget_expired(self) -> int:

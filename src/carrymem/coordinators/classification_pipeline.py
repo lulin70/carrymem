@@ -57,20 +57,20 @@ class ClassificationPipeline:
         rule_matches = self.rule_matcher.match(message, context, execution_context)
 
         if rule_matches:
-            logger.debug(f"Rule matching found {len(rule_matches)} matches")
+            logger.debug("Rule matching found %d matches", len(rule_matches))
             return rule_matches
 
         pattern_matches = self.pattern_analyzer.analyze(message, context, execution_context)
 
         if pattern_matches:
-            logger.debug(f"Pattern analysis found {len(pattern_matches)} matches")
+            logger.debug("Pattern analysis found %d matches", len(pattern_matches))
             pattern_matches = self._resolve_type_priority(pattern_matches)
             return pattern_matches
 
         semantic_matches = self.semantic_classifier.classify(message, context, execution_context)
 
         if semantic_matches:
-            logger.debug(f"Semantic classification found {len(semantic_matches)} matches")
+            logger.debug("Semantic classification found %d matches", len(semantic_matches))
             return semantic_matches
 
         logger.debug("No classification matches found")
@@ -110,7 +110,7 @@ class ClassificationPipeline:
         if self.pattern_analyzer._is_noise(message) and not is_confirmation_with_context:
             self._filter_counts["noise"] += 1
             if self._filter_counts["noise"] % 100 == 1:
-                logger.info(f"Noise filter: {self._filter_counts['noise']} messages filtered total")
+                logger.info("Noise filter: %d messages filtered total", self._filter_counts['noise'])
             return []
 
         # P0-C: Filter low-information assistant replies

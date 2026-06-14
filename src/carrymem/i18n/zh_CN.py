@@ -68,4 +68,284 @@ ZH_CN_MESSAGES: dict[str, str] = {
     "ui.expires": "过期时间",
     "ui.access_count": "访问次数",
     "ui.tier": "层级",
+
+    # ── CLI 命令描述 (cli.cmd.*) ─────────────────────────────
+    "cli.cmd.add": "存储一条记忆",
+    "cli.cmd.list": "列出最近的记忆",
+    "cli.cmd.search": "搜索记忆",
+    "cli.cmd.show": "查看记忆详情",
+    "cli.cmd.edit": "编辑一条记忆",
+    "cli.cmd.forget": "删除一条记忆",
+    "cli.cmd.clean": "清理过期/低质量记忆",
+    "cli.cmd.backup": "创建/列出/恢复备份",
+    "cli.cmd.export": "导出记忆到文件",
+    "cli.cmd.import": "从文件导入记忆",
+    "cli.cmd.pack": "将身份打包为 .carry 文件",
+    "cli.cmd.unpack": "解包 .carry 文件恢复身份",
+    "cli.cmd.stats": "显示记忆统计信息",
+    "cli.cmd.check": "检查记忆质量与冲突",
+    "cli.cmd.whoami": "你的 AI 认为你是谁",
+    "cli.cmd.profile": "导出/查看你的 AI 身份",
+    "cli.cmd.doctor": "运行诊断检查",
+    "cli.cmd.setup_mcp": "配置 MCP 集成",
+    "cli.cmd.mcp": "启动 MCP 服务器 (stdio)",
+    "cli.cmd.tui": "启动终端界面",
+    "cli.cmd.serve": "启动 MCP HTTP 服务器",
+    "cli.cmd.init": "初始化 CarryMem",
+    "cli.cmd.version": "显示版本信息",
+
+    # ── CLI 成功消息 (cli.success.*) ─────────────────────────
+    "cli.success.stored": "已存储（强制）{count} 条",
+    "cli.success.remembered": "已记住 {count} 条",
+    "cli.success.forgotten": "已删除: {key}",
+    "cli.success.updated": "已更新: {key}",
+    "cli.success.backup_created": "备份已创建: {path}",
+    "cli.success.restored": "已从备份恢复: {path}",
+    "cli.success.exported": "已导出 {count} 条记忆到 {path} ({format})",
+    "cli.success.imported": "导入完成: {imported} 条已导入, {skipped} 条跳过, {errors} 条错误 ({total} 总计)",
+    "cli.success.initialized": "CarryMem 已就绪！",
+    "cli.success.nothing_to_clean": "无需清理 — 所有记忆状态健康",
+    "cli.success.cleaned": "清理完成: 已移除 {removed} 条, 错误 {errors} 条",
+
+    # ── CLI 错误消息 (cli.error.*) ───────────────────────────
+    "cli.error.not_found": "记忆未找到: {key}",
+    "cli.error.no_memories": "未找到任何记忆",
+    "cli.error.no_matching": "未找到匹配的记忆: {query}",
+    "cli.error.store_failed": "存储记忆失败",
+    "cli.error.update_failed": "更新失败: {key}",
+    "cli.error.forget_failed": "删除失败: {key}",
+    "cli.error.export_failed": "导出失败: {detail}",
+    "cli.error.import_failed": "导入失败",
+    "cli.error.backup_failed": "备份失败: {detail}",
+    "cli.error.restore_failed": "恢复失败: {detail}",
+    "cli.error.backup_not_found": "备份未找到: {name}",
+    "cli.error.validation": "验证错误: {detail}",
+    "cli.error.unknown_command": "未知命令: {command}",
+    "cli.error.json_invalid": "无效的 JSON 上下文: {detail}",
+
+    # ── CLI 状态/提示消息 (cli.status.*) ─────────────────────
+    "cli.status.not_classified": "未被分类为可记忆内容（噪声或过于模糊）",
+    "cli.status.cancelled": "已取消",
+    "cli.status.dry_run": "试运行 — 未做任何更改",
+    "cli.status.confirm_edit": "确认编辑? [y/N]",
+    "cli.status.confirm_delete": "确认? [y/N]",
+    "cli.status.confirm_restore": "是否继续? [y/N]",
+    "cli.status.confirm_clean": "移除 {count} 条记忆? [y/N]",
+    "cli.status.warning_restore": "警告：这将用备份替换当前数据库。",
+
+    # ── CLI 帮助区域标题 (cli.section.*) ─────────────────────
+    "cli.section.commands": "命令:",
+    "cli.section.rules_engine": "规则引擎:",
+    "cli.section.examples": "示例:",
+    "cli.section.quick_start": "快速开始:",
+    "cli.section.documentation": "文档: https://github.com/lulin70/carrymem",
+    "cli.section.tagline": "AI 记住你。而不是反过来。",
+
+    # ── CLI 参数帮助文本 (cli.arg.*) ─────────────────────────
+    # 通用参数
+    "cli.arg.db": "数据库路径",
+    "cli.arg.namespace": "命名空间",
+    "cli.arg.namespace_default": "命名空间 (默认: default)",
+    "cli.arg.format": "输出格式",
+    "cli.arg.limit": "显示数量限制",
+    "cli.arg.force": "跳过确认",
+    "cli.arg.json": "以 JSON 格式输出",
+    
+    # add 命令
+    "cli.arg.message": "要记忆的消息内容",
+    "cli.arg.context": "额外上下文信息 (JSON 格式)",
+    "cli.arg.force_store": "强制存储，跳过分类",
+    "cli.arg.type_override": "覆盖记忆类型（需配合 --force）",
+    
+    # list 命令
+    "cli.arg.limit_memories": "显示的记忆数量",
+    "cli.arg.type_filter": "按记忆类型筛选",
+    "cli.arg.format_table": "输出格式",
+    
+    # search 命令
+    "cli.arg.query": "搜索查询",
+    "cli.arg.limit_results": "最大结果数量",
+    
+    # show 命令
+    "cli.arg.key": "记忆的存储键",
+    
+    # edit 命令
+    "cli.arg.key_edit": "要编辑的记忆键",
+    "cli.arg.content": "新的内容",
+    
+    # forget 命令
+    "cli.arg.key_forget": "要删除的记忆键",
+    
+    # clean 命令
+    "cli.arg.expired": "移除过期的记忆",
+    "cli.arg.quality": "移除低于此质量阈值的记忆",
+    "cli.arg.dry_run": "显示将要移除的内容但不实际执行",
+    
+    # backup 命令
+    "cli.arg.list_backups": "列出所有备份",
+    "cli.arg.restore": "从备份文件恢复",
+    
+    # export 命令
+    "cli.arg.output_path": "输出文件路径",
+    "cli.arg.export_format": "导出格式",
+    
+    # import 命令
+    "cli.arg.input_path": "输入文件路径",
+    "cli.arg.merge_strategy": "合并策略（skip/overwrite/merge）",
+    
+    # pack 命令
+    "cli.arg.output_file": "输出文件路径（默认: ./carrymem_identity_YYYYMMDD.carry）",
+    "cli.arg.include_rules": "包含规则（默认: True）",
+    "cli.arg.no_rules": "不包含规则",
+    "cli.arg.include_config": "包含配置（默认: True）",
+    "cli.arg.no_config": "不包含配置",
+    "cli.arg.encryption_key": "加密密钥以包含加密条目",
+    "cli.arg.encrypt": "用密码加密 .carry 文件（会提示输入）",
+    
+    # unpack 命令
+    "cli.arg.carry_file": ".carry 文件路径",
+    "cli.arg.merge_mode": "合并模式（skip/replace/merge）",
+    "cli.arg.replace": "覆盖现有记忆",
+    
+    # stats 命令
+    "cli.arg.value_report": "显示价值感知报告（记忆、规则、节省的 token 等）",
+    
+    # whoami 命令
+    "cli.arg.json_output": "以 JSON 格式输出",
+    
+    # profile 命令
+    "cli.arg.profile_action": "操作（export/show）",
+    "cli.arg.output": "输出文件路径（用于 export）",
+    
+    # check 命令
+    "cli.arg.check_conflicts": "检查冲突",
+    "cli.arg.check_quality": "检查低质量记忆",
+    "cli.arg.check_expired": "检查过期记忆",
+    "cli.arg.check_all": "运行所有检查",
+    
+    # doctor 命令
+    "cli.arg.fix": "尝试修复问题",
+    
+    # setup-mcp 命令
+    "cli.arg.tool": "工具名称（cursor/windsurf/zed/trae/cline/roo）",
+    "cli.arg.project": "项目目录（默认: 当前目录）",
+    "cli.arg.global": "全局配置 MCP（系统级）",
+    "cli.arg.force_overwrite": "覆盖现有配置",
+    "cli.arg.uninstall": "从指定工具移除 CarryMem MCP 配置",
+    
+    # serve 命令
+    "cli.arg.host": "绑定的主机地址",
+    "cli.arg.port": "监听端口",
+    "cli.arg.api_key": "用于认证的 API 密钥",
+    
+    # consolidate 命令
+    "cli.arg.no_p1": "跳过 P1 模式识别",
+    "cli.arg.no_p2": "跳过 P2 语义整合",
+    "cli.arg.schedule": "调度整合运行（daily/weekly/monthly）",
+    "cli.arg.stop": "停止已调度的整合",
+    
+    # Rules 命令参数
+    # add-rule 命令
+    "cli.arg.rule_action": "行为指令（AI 应该做什么）",
+    "cli.arg.trigger": "激活此规则的场景描述",
+    "cli.arg.rule_type": "规则类型",
+    "cli.arg.soft_rule": "使其成为软建议（AI 可以忽略）",
+    "cli.arg.template": "使用规则模板（参见: carrymem list-templates）",
+    "cli.arg.interactive": "引导式交互创建",
+    
+    # list-rules 命令
+    "cli.arg.status_filter": "按状态筛选",
+    "cli.arg.type_filter_rules": "按类型筛选",
+    "cli.arg.limit_rules": "最大结果数（默认: 20）",
+    "cli.arg.format_rules": "输出格式",
+    
+    # match-rules 命令
+    "cli.arg.scene": "要匹配的场景描述",
+    "cli.arg.limit_match": "最大结果数（默认: 5）",
+    "cli.arg.format_match": "输出格式",
+    "cli.arg.context_budget": "上下文预算（token 数量，默认: 2000）",
+    
+    # delete-rule 命令
+    "cli.arg.rule_id": "规则 ID",
+    
+    # pause-rule 命令
+    "cli.arg.rule_id_pause": "要暂停的规则 ID",
+    
+    # resume-rule 命令
+    "cli.arg.rule_id_resume": "要恢复的规则 ID",
+    
+    # export-rules 命令
+    "cli.arg.rules_output": "输出文件路径（JSON）",
+    "cli.arg.status_export": "按状态筛选",
+    
+    # import-rules 命令
+    "cli.arg.rules_input": "输入文件路径（JSON）",
+    "cli.arg.import_mode": "导入模式（skip/overwrite/merge）",
+    
+    # skill-pack 命令
+    "cli.arg.skill_output": "输出文件路径（JSON）",
+    "cli.arg.skill_name": "技能名称",
+    "cli.arg.skill_version": "语义版本",
+    "cli.arg.skill_author": "作者名称",
+    "cli.arg.skill_description": "技能描述",
+    "cli.arg.skill_scope": "技能作用域（personal/team/global）",
+    "cli.arg.status_skill": "按状态筛选规则",
+    "cli.arg.tags": "分类标签",
+    
+    # skill-install 命令
+    "cli.arg.skill_file": "技能包文件路径（JSON）",
+    "cli.arg.install_scope": "安装作用域（personal/team/global）",
+    "cli.arg.install_mode": "安装模式（skip/overwrite/merge）",
+    
+    # skill-verify 命令
+    "cli.arg.skill_verify": "技能包文件路径（JSON）",
+    
+    # edit-rule 命令
+    "cli.arg.rule_id_edit": "要编辑的规则 ID",
+    "cli.arg.new_trigger": "新的触发器",
+    "cli.arg.new_action": "新的动作",
+    "cli.arg.new_type": "新的规则类型",
+    "cli.arg.make_soft": "改为软规则",
+    "cli.arg.make_hard": "改为硬规则",
+    
+    # suggest-rules 命令
+    "cli.arg.suggest_type": "建议类型",
+    "cli.arg.min_count": "最小出现次数（默认: 3）",
+    "cli.arg.accept_suggestions": "接受所有建议（创建规则）",
+    
+    # promote-rules 命令
+    "cli.arg.promote_type": "提升类型",
+    "cli.arg.auto_accept": "自动接受所有候选（需确认）",
+    "cli.arg.expiry_days": "规则过期天数（0 = 永不过期）",
+    
+    # review-promotions 命令
+    "cli.arg.accept_promo": "按 ID 接受特定候选",
+    "cli.arg.reject_promo": "按 ID 拒绝特定候选",
+    "cli.arg.accept_all_promo": "接受所有待处理的提升（需确认）",
+    "cli.arg.review_note": "添加审查备注",
+    
+    # promotion-log 命令
+    "cli.arg.log_limit": "显示的条目数量",
+    
+    # refine-rule 命令
+    "cli.arg.refine_trigger": "规则触发器/场景（新会话必需）",
+    "cli.arg.refine_action": "规则动作（新会话必需）",
+    "cli.arg.refine_type": "规则类型（默认: avoid）",
+    "cli.arg.refine_answer": "当前问题的答案（用于推进会话）",
+    "cli.arg.refine_option": "答案的选定选项",
+    "cli.arg.refine_session": "继续现有会话",
+    "cli.arg.refine_confirm": "确认当前会话并创建规则",
+    "cli.arg.refine_cancel": "取消当前会话",
+    
+    # learn-experience 命令
+    "cli.arg.learn_type": "经验类型",
+    "cli.arg.learn_expiry": "规则过期天数（0 = 永不过期）",
+    
+    # review-lessons 命令
+    "cli.arg.accept_lesson": "按 ID 接受特定教训",
+    "cli.arg.reject_lesson": "按 ID 拒绝特定教训",
+    "cli.arg.accept_all_lessons": "接受所有待处理的教训",
+    "cli.arg.override_trigger": "接受时覆盖触发器",
+    "cli.arg.override_action": "接受时覆盖动作",
+    "cli.arg.lesson_note": "添加审查备注",
 }

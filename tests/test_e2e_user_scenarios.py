@@ -9,6 +9,7 @@ not just unit-level correctness. They test the full pipeline:
 import pytest
 
 from carrymem import CarryMem
+from carrymem.prompt_builder import PromptBuilder
 
 
 def _cm(tmp_path):
@@ -30,7 +31,7 @@ class TestE2ENewUserOnboarding:
         cm = _cm(tmp_path)
         cm.classify_and_remember("I prefer dark mode for coding")
         ctx = cm.build_context(context="How should I set up my IDE?")
-        assert ctx["memory_count"] >= 1
+        assert ctx["memory_count"] == 1
         assert "dark mode" in ctx["system_prompt"].lower()
 
     def test_first_correction_stored_and_recalled(self, tmp_path):
@@ -84,7 +85,9 @@ class TestE2EMultiSessionUser:
         cm.classify_and_remember("I prefer FastAPI over Flask", force_type="user_preference")
 
         ctx = cm.build_context(context="How do I add authentication to my API?")
-        assert ctx["memory_count"] >= 1
+        # TODO: session_summary is not injected into build_context memory_count.
+        # Once fixed, this assertion should be == 2.
+        assert ctx["memory_count"] == 1
 
     def test_correction_overrides_preference(self, tmp_path):
         cm = _cm(tmp_path)
@@ -146,7 +149,7 @@ class TestE2EPromptBuilderDelegation:
 
     def test_carrymem_uses_prompt_builder(self, tmp_path):
         cm = _cm(tmp_path)
-        assert cm.prompt_builder is not None
+        assert isinstance(cm.prompt_builder, PromptBuilder)
         assert cm.prompt_builder is cm.prompt_builder  # Cached
 
     def test_build_context_delegates(self, tmp_path):
@@ -167,7 +170,9 @@ class TestE2EPreferenceHelpfulness:
 
         prompt = cm.build_qa_prompt("What are some ways to learn data science?")
         # The prompt should contain the preference as context
-        assert "online" in prompt.lower() or "dislike" in prompt.lower() or "preference" in prompt.lower()
+        assert "online" in prompt.lower() or "dislike" in prompt.lower(), (
+            "Prompt should reference the 'online courses' or 'dislike' preference"
+        )
 
     def test_avoid_rule_still_allows_answer(self, tmp_path):
         cm = _cm(tmp_path)

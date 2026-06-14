@@ -1,9 +1,12 @@
 """Lifecycle: __init__, close, context-manager, properties."""
 
+from __future__ import annotations
+
 import logging
 import os
 import sqlite3
-from typing import Any, Dict, Optional, Union
+from threading import Timer
+from typing import Any, Dict, Optional, TYPE_CHECKING, Union
 
 from carrymem.adapters.base import MemoryEntry, StorageAdapter
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
@@ -13,6 +16,11 @@ from carrymem.errors import CarryMemError
 from carrymem.exceptions import KnowledgeNotConfiguredError as _KnowledgeNotConfiguredError
 from carrymem.exceptions import StorageNotConfiguredError as _StorageNotConfiguredError
 from carrymem.rules.candidate_generator import RuleCandidateGenerator
+
+if TYPE_CHECKING:
+    from carrymem.prompt_builder import PromptBuilder
+    from carrymem.rules import RuleEngine
+    from carrymem.security.permissions import AccessPolicy
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +65,7 @@ class LifecycleMixin:
     """Handles object lifecycle: init, close, context-manager, and shared-state properties."""
 
     # Class-level attribute used by MaintenanceMixin
-    _consolidation_timer: Optional[Any] = None
+    _consolidation_timer: Optional[Timer] = None
 
     def __init__(
         self,
@@ -122,9 +130,9 @@ class LifecycleMixin:
             )
 
         self._knowledge_adapter = knowledge_adapter
-        self._rule_engine: Optional[Any] = None
+        self._rule_engine: Optional[RuleEngine] = None
         self._config = config
-        self._prompt_builder: Optional[Any] = None
+        self._prompt_builder: Optional[PromptBuilder] = None
         self._candidate_generator = RuleCandidateGenerator(
             rule_engine_getter=lambda: self.rule_engine,
             recall_memories=self.recall_memories,
@@ -137,7 +145,7 @@ class LifecycleMixin:
         self._backup_dir = config.get("backup_dir") if config else None
 
         # Access control (P1-8 MVP) — set via CarryMem.access_policy property
-        self._access_policy: Optional[Any] = None
+        self._access_policy: Optional[AccessPolicy] = None
 
         # Perform initial backup on first creation with SQLite
         if self._adapter and isinstance(self._adapter, SQLiteAdapter):
@@ -149,7 +157,7 @@ class LifecycleMixin:
                     logger.debug("Initial backup skipped: %s", e)
 
     @property
-    def rule_engine(self) -> Any:  # RuleEngine (lazy import to avoid circular dependency)
+    def rule_engine(self) -> RuleEngine:  # lazy init; uses TYPE_CHECKING import
         if self._rule_engine is None:
             from carrymem.rules import RuleEngine
 
@@ -158,7 +166,7 @@ class LifecycleMixin:
         return self._rule_engine
 
     @property
-    def prompt_builder(self) -> Any:  # PromptBuilder (lazy import to avoid circular dependency)
+    def prompt_builder(self) -> PromptBuilder:  # lazy init; uses TYPE_CHECKING import
         if self._prompt_builder is None:
             from carrymem.prompt_builder import PromptBuilder
 

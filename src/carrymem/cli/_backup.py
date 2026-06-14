@@ -10,10 +10,10 @@ from carrymem.cli._base import *
 def cmd_backup(args):
     """Manage CarryMem database backups."""
     parser = _make_parser("backup")
-    parser.add_argument("--list", action="store_true", help="List all backups")
-    parser.add_argument("--restore", help="Restore from a backup file")
-    parser.add_argument("--db", help="Database path")
-    parser.add_argument("--namespace", "-n", default="default", help="Namespace")
+    parser.add_argument("--list", action="store_true", help=_t("cli.arg.list_backups"))
+    parser.add_argument("--restore", help=_t("cli.arg.restore"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
+    parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
 
     parsed = parser.parse_args(args)
     cm = _get_carrymem(parsed.db, parsed.namespace)
@@ -55,30 +55,30 @@ def cmd_backup(args):
             if matched:
                 backup_path = matched[0]["path"]
             else:
-                print(f"  {_red('Backup not found:')} {parsed.restore}")
+                print(f"  {_red(_t('cli.error.backup_not_found', name=parsed.restore))}")
                 print(f"  {_dim('Use --list to see available backups')}")
                 cm.close()
                 return 1
 
-        print(f"  {_yellow('WARNING:')} This will replace your current database with the backup.")
+        print(f"  {_yellow(_t('cli.status.warning_restore'))}")
         print(f"  Backup: {backup_path}")
         try:
-            answer = input("  Proceed? [y/N] ").strip().lower()
+            answer = input(f"  {_t('cli.status.confirm_restore')} ").strip().lower()
         except (EOFError, KeyboardInterrupt):
             print()
             cm.close()
             return 0
 
         if answer != "y":
-            print(f"  {_dim('Cancelled')}")
+            print(f"  {_dim(_t('cli.status.cancelled'))}")
             cm.close()
             return 0
 
         result = cm.restore_backup(backup_path)
         if result.get("restored"):
-            print(f"  {_green('Restored from backup:')} {backup_path}")
+            print(f"  {_green(_t('cli.success.restored', path=backup_path))}")
         else:
-            print(f"  {_red('Restore failed:')} {result.get('error', 'unknown error')}")
+            print(f"  {_red(_t('cli.error.restore_failed', detail=result.get('error', 'unknown error')))}")
             cm.close()
             return 1
 
@@ -88,9 +88,9 @@ def cmd_backup(args):
     # Default: create a backup
     result = cm.backup()
     if result.get("backed_up"):
-        print(f"  {_green('Backup created:')} {result['path']}")
+        print(f"  {_green(_t('cli.success.backup_created', path=result['path']))}")
     else:
-        print(f"  {_red('Backup failed:')} {result.get('error', 'unknown error')}")
+        print(f"  {_red(_t('cli.error.backup_failed', detail=result.get('error', 'unknown error')))}")
         cm.close()
         return 1
 
@@ -100,7 +100,7 @@ def cmd_backup(args):
 
 def cmd_init(args):
     parser = _make_parser("init")
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--db", help=_t("cli.arg.db"))
 
     parsed = parser.parse_args(args)
     db_path = parsed.db or str(_DEFAULT_DB)
@@ -135,8 +135,8 @@ def cmd_init(args):
         print(f"  {_red('[FAIL]')} Database init error: {e}")
         return 1
 
-    print(f"\n  {_green(_bold('CarryMem is ready!'))}")
-    print(f"\n  {_bold('Quick Start:')}")
+    print(f"\n  {_green(_bold(_t('cli.success.initialized')))}")
+    print(f"\n  {_bold(_t('cli.section.quick_start'))}")
     print('    carrymem add "I prefer dark mode"')
     print("    carrymem list")
     print('    carrymem search "theme"')

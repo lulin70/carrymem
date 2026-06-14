@@ -20,7 +20,13 @@ Design principles:
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
+from typing import Any, Dict, List, Optional, Protocol, TYPE_CHECKING, runtime_checkable
+
+if TYPE_CHECKING:
+    from carrymem.adapters.base import StorageAdapter
+    from carrymem.engine import MemoryClassificationEngine
+    from carrymem.prompt_builder import PromptBuilder
+    from carrymem.rules import RuleEngine
 
 
 # ---------------------------------------------------------------------------
@@ -36,7 +42,7 @@ class HasSharedState(Protocol):
     """
 
     @property
-    def _adapter(self) -> Optional[Any]: ...  # StorageAdapter | None
+    def _adapter(self) -> Optional[StorageAdapter]: ...
 
     @property
     def _namespace(self) -> str: ...
@@ -45,10 +51,10 @@ class HasSharedState(Protocol):
     def _config(self) -> Optional[Dict[str, Any]]: ...
 
     @property
-    def _engine(self) -> Optional[Any]: ...  # MemoryClassificationEngine
+    def _engine(self) -> Optional[MemoryClassificationEngine]: ...
 
     @property
-    def _knowledge_adapter(self) -> Optional[Any]: ...
+    def _knowledge_adapter(self) -> Optional[StorageAdapter]: ...
 
 
 # ---------------------------------------------------------------------------
@@ -68,32 +74,32 @@ class LifecycleOps(Protocol):
         ...
 
     @property
-    def engine(self) -> Any:
+    def engine(self) -> MemoryClassificationEngine:
         """MemoryClassificationEngine instance."""
         ...
 
     @property
-    def adapter(self) -> Optional[Any]:
+    def adapter(self) -> Optional[StorageAdapter]:
         """Storage adapter (alias for storage)."""
         ...
 
     @property
-    def storage(self) -> Optional[Any]:
+    def storage(self) -> Optional[StorageAdapter]:
         """Storage adapter."""
         ...
 
     @property
-    def knowledge_adapter(self) -> Optional[Any]:
+    def knowledge_adapter(self) -> Optional[StorageAdapter]:
         """Knowledge-base adapter (e.g. ObsidianAdapter)."""
         ...
 
     @property
-    def rule_engine(self) -> Any:
+    def rule_engine(self) -> RuleEngine:
         """Lazy-initialised RuleEngine instance."""
         ...
 
     @property
-    def prompt_builder(self) -> Any:
+    def prompt_builder(self) -> PromptBuilder:
         """Lazy-initialised PromptBuilder instance."""
         ...
 

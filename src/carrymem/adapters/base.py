@@ -24,6 +24,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
+import warnings
 
 from carrymem.domain import infer_domain
 
@@ -301,16 +302,25 @@ class StorageAdapter(ABC):
     Every downstream storage system that wants to receive MCE's
     classification output must implement this interface.
 
-    v3.2 Interface (2026-04-20):
-    - remember(): Store a memory entry
+    Standardized Interface (current):
+    - store(): Store a memory entry (dict-based, returns entry_id)
     - recall(): Retrieve memories matching query
-    - forget(): Delete a memory by ID
+    - delete(): Delete a memory by ID
+    - count(): Count stored memories
+    - initialize(): Initialize adapter with configuration
+    - health_check(): Run health check on backend
+    - close(): Release all resources
+
+    Legacy Interface (deprecated):
+    - remember(): Use ``store()`` instead. Will be removed in v0.5.0.
+    - forget(): Use ``delete()`` instead. Will be removed in v0.5.0.
 
     Implementation guide:
     1. Subclass StorageAdapter
-    2. Implement all abstract methods
+    2. Implement all abstract methods (store, recall, delete, count, initialize, health_check, close)
     3. Set name and capabilities properties
-    4. Pass TestStorageAdapterContract (see tests/adapters/)
+    4. Legacy methods (remember, forget) have default implementations that delegate to the new methods
+    5. Pass TestStorageAdapterContract (see tests/adapters/)
 
     Example:
         class SQLiteAdapter(StorageAdapter):
@@ -318,164 +328,23 @@ class StorageAdapter(ABC):
             def name(self) -> str:
                 return "sqlite"
 
-            def remember(self, entry: MemoryEntry) -> StoredMemory:
+            def store(self, entry: dict) -> str:
                 cursor.execute(
                     "INSERT INTO memories (id, type, content) VALUES (?, ?, ?)",
-                    (entry.id, entry.type, entry.content)
+                    (entry["id"], entry["type"], entry["content"])
                 )
-                return StoredMemory.from_memory_entry(entry, storage_key=entry.id)
+                return entry["id"]
 
-            def recall(
-                self, query: str, filters: Dict = None, limit: int = 20,
-                update_access: bool = True,
-            ) -> List[StoredMemory]:
+            def recall(self, query, filters=None, limit=20, update_access=True):
                 # FTS5 search implementation
                 ...
 
-            def forget(self, storage_key: str) -> bool:
-                cursor.execute("DELETE FROM memories WHERE id = ?", (storage_key,))
+            def delete(self, entry_id: str) -> bool:
+                cursor.execute("DELETE FROM memories WHERE id = ?", (entry_id,))
                 return cursor.rowcount > 0
     """
 
-    @abstractmethod
-    def remember(self, entry: MemoryEntry) -> StoredMemory:
-        """Store a memory entry.
-
-        Args:
-            entry: The MemoryEntry to persist
-
-        Returns:
-            StoredMemory with storage metadata attached
-        """
-        ...
-
-    def remember_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:
-        """Store multiple memory entries.
-
-        Default implementation calls remember() for each entry.
-        Override for atomic batch operations.
-
-        Args:
-            entries: List of MemoryEntry objects to persist
-
-        Returns:
-            List of StoredMemory objects (same order as input)
-        """
-        return [self.remember(entry) for entry in entries]
-
-    @abstractmethod
-    def recall(
-        self,
-        query: str,
-        filters: Optional[Dict[str, Any]] = None,
-        limit: int = 20,
-        update_access: bool = True,
-    ) -> List[StoredMemory]:
-        """Retrieve memories matching a query.
-
-        Args:
-            query: Search query (keywords or natural language)
-            filters: Optional filters (e.g., {"type": "user_preference", "tier": 1})
-            limit: Maximum number of results
-            update_access: If True, update access_count/importance_score/last_accessed_at.
-                           Set to False for internal reads (build_context/build_qa_prompt)
-                           to avoid write side effects during prompt construction.
-
-        Returns:
-            List of StoredMemory objects matching the query
-        """
-        ...
-
-    @abstractmethod
-    def forget(self, storage_key: str) -> bool:
-        """Delete a memory by its storage key.
-
-        Args:
-            storage_key: The storage_key from StoredMemory
-
-        Returns:
-            True if deleted, False if not found
-        """
-        ...
-
-    def forget_expired(self) -> int:
-        """Delete all expired memories.
-
-        Override if adapter supports TTL/expiry.
-
-        Returns:
-            Number of memories deleted
-        """
-        return 0
-
-    def get_stats(self) -> Dict[str, Any]:
-        """Get storage system statistics.
-
-        Returns:
-            Dict with stats like total_count, by_type breakdown, etc.
-        """
-        return {
-            "adapter": self.name,
-            "total_count": 0,
-            "by_type": {},
-            "capabilities": self.capabilities,
-        }
-
-    def get_profile(self) -> Dict[str, Any]:
-        """Get user memory profile — structured summary for display.
-
-        Returns aggregated statistics and representative content highlights.
-        Used by CarryMem.get_memory_profile() to show users what AI remembers.
-
-        Returns:
-            Dict with:
-            - summary: Human-readable string
-            - total_memories: Total count
-            - highlights: Top N representative memories by type
-            - stats: Aggregated statistics (by_type, by_tier, confidence_avg)
-            - last_updated: ISO timestamp
-        """
-        return {
-            "summary": "No memories yet",
-            "total_memories": 0,
-            "highlights": {},
-            "stats": {
-                "by_type": {},
-                "by_tier": {},
-                "confidence_avg": 0.0,
-            },
-            "last_updated": None,
-        }
-
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """Human-readable adapter name (e.g., 'sqlite', 'supermemory')."""
-        ...
-
-    @property
-    def capabilities(self) -> Dict[str, bool]:
-        """Declare what this adapter supports.
-
-        Default capabilities (override as needed):
-        - vector_search: Semantic similarity search
-        - fts: Full-text search
-        - ttl: Time-to-live / auto-expiry
-        - batch: Atomic batch operations
-        - graph: Graph-based relationships
-        """
-        return {
-            "vector_search": False,
-            "fts": False,
-            "ttl": False,
-            "batch": False,
-            "graph": False,
-        }
-
-    # ── Standardized Adapter Interface (P2-8) ──────────────────────────
-    # These methods provide a uniform interface across all adapters.
-    # Adapters must implement the abstract methods; optional methods
-    # have default implementations that raise NotImplementedError.
+    # ── Standardized Adapter Interface (abstract) ──────────────────────
 
     @abstractmethod
     def initialize(self, config: dict) -> None:
@@ -551,6 +420,164 @@ class StorageAdapter(ABC):
         should not be used for further operations.
         """
         ...
+
+    @abstractmethod
+    def recall(
+        self,
+        query: str,
+        filters: Optional[Dict[str, Any]] = None,
+        limit: int = 20,
+        update_access: bool = True,
+    ) -> List[StoredMemory]:
+        """Retrieve memories matching a query.
+
+        Args:
+            query: Search query (keywords or natural language)
+            filters: Optional filters (e.g., {"type": "user_preference", "tier": 1})
+            limit: Maximum number of results
+            update_access: If True, update access_count/importance_score/last_accessed_at.
+                           Set to False for internal reads (build_context/build_qa_prompt)
+                           to avoid write side effects during prompt construction.
+
+        Returns:
+            List of StoredMemory objects matching the query
+        """
+        ...
+
+    # ── Legacy Interface (deprecated, with default implementations) ─────
+
+    def remember(self, entry: MemoryEntry) -> StoredMemory:
+        """Store a memory entry.
+
+        .. deprecated:: 0.4.0
+            Use ``store()`` instead. Will be removed in v0.5.0.
+
+        Args:
+            entry: The MemoryEntry to persist
+
+        Returns:
+            StoredMemory with storage metadata attached
+        """
+        warnings.warn(
+            "remember() is deprecated, use store() instead. "
+            "Will be removed in v0.5.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        result_key = self.store(entry.to_dict())
+        return StoredMemory.from_memory_entry(entry, storage_key=result_key)
+
+    def remember_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:
+        """Store multiple memory entries.
+
+        Default implementation calls store() for each entry.
+        Override for atomic batch operations.
+
+        Args:
+            entries: List of MemoryEntry objects to persist
+
+        Returns:
+            List of StoredMemory objects (same order as input)
+        """
+        results = []
+        for entry in entries:
+            result_key = self.store(entry.to_dict())
+            results.append(StoredMemory.from_memory_entry(entry, storage_key=result_key))
+        return results
+
+    def forget(self, storage_key: str) -> bool:
+        """Delete a memory by its storage key.
+
+        .. deprecated:: 0.4.0
+            Use ``delete()`` instead. Will be removed in v0.5.0.
+
+        Args:
+            storage_key: The storage_key from StoredMemory
+
+        Returns:
+            True if deleted, False if not found
+        """
+        warnings.warn(
+            "forget() is deprecated, use delete() instead. "
+            "Will be removed in v0.5.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.delete(storage_key)
+
+    def forget_expired(self) -> int:
+        """Delete all expired memories.
+
+        Override if adapter supports TTL/expiry.
+
+        Returns:
+            Number of memories deleted
+        """
+        return 0
+
+    def get_stats(self) -> Dict[str, Any]:
+        """Get storage system statistics.
+
+        Returns:
+            Dict with stats like total_count, by_type breakdown, etc.
+        """
+        return {
+            "adapter": self.name,
+            "total_count": 0,
+            "by_type": {},
+            "capabilities": self.capabilities,
+        }
+
+    def get_profile(self) -> Dict[str, Any]:
+        """Get user memory profile — structured summary for display.
+
+        Returns aggregated statistics and representative content highlights.
+        Used by CarryMem.get_memory_profile() to show users what AI remembers.
+
+        Returns:
+            Dict with:
+            - summary: Human-readable string
+            - total_memories: Total count
+            - highlights: Top N representative memories by type
+            - stats: Aggregated statistics (by_type, by_tier, confidence_avg)
+            - last_updated: ISO timestamp
+        """
+        return {
+            "summary": "No memories yet",
+            "total_memories": 0,
+            "highlights": {},
+            "stats": {
+                "by_type": {},
+                "by_tier": {},
+                "confidence_avg": 0.0,
+            },
+            "last_updated": None,
+        }
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Human-readable adapter name (e.g., 'sqlite', 'supermemory')."""
+        ...
+
+    @property
+    def capabilities(self) -> Dict[str, bool]:
+        """Declare what this adapter supports.
+
+        Default capabilities (override as needed):
+        - vector_search: Semantic similarity search
+        - fts: Full-text search
+        - ttl: Time-to-live / auto-expiry
+        - batch: Atomic batch operations
+        - graph: Graph-based relationships
+        """
+        return {
+            "vector_search": False,
+            "fts": False,
+            "ttl": False,
+            "batch": False,
+            "graph": False,
+        }
 
     # ── Optional methods (default: raise NotImplementedError) ────────────
 

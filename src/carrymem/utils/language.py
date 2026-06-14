@@ -531,7 +531,7 @@ class LanguageManager:
                     language_code = self._map_language_code(language_code)
                     return language_code, confidence
             except (ValueError, TypeError, RuntimeError) as e:
-                logger.debug(f"Failed to process language detection with CLD2: {e}")
+                logger.debug("Failed to process language detection with CLD2: %s", e)
 
         if _LANGDETECT_AVAILABLE:
             try:

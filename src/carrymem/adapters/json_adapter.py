@@ -18,6 +18,7 @@ Limitations:
 import json
 import os
 import threading
+import warnings
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -79,7 +80,8 @@ class JSONAdapter(StorageAdapter):
             "semantic_recall": False,
         }
 
-    def remember(self, entry: MemoryEntry, _skip_commit: bool = False) -> StoredMemory:
+    def _store_entry(self, entry: MemoryEntry, _skip_commit: bool = False) -> StoredMemory:
+        """Internal store implementation (shared by store() and remember())."""
         with self._lock:
             memories = self._get_memories()
             c_hash = content_hash(entry.content, entry.type)
@@ -130,6 +132,20 @@ class JSONAdapter(StorageAdapter):
                 self._save()
 
             return StoredMemory.from_dict(stored_dict)
+
+    def remember(self, entry: MemoryEntry, _skip_commit: bool = False) -> StoredMemory:
+        """Store a memory entry.
+
+        .. deprecated:: 0.4.0
+            Use ``store()`` instead. Will be removed in v0.5.0.
+        """
+        warnings.warn(
+            "remember() is deprecated, use store() instead. "
+            "Will be removed in v0.5.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._store_entry(entry, _skip_commit)
 
     def recall(
         self,
@@ -208,7 +224,8 @@ class JSONAdapter(StorageAdapter):
             return False
         return True
 
-    def forget(self, storage_key: str) -> bool:
+    def _delete_entry(self, storage_key: str) -> bool:
+        """Internal delete implementation (shared by delete() and forget())."""
         with self._lock:
             memories = self._get_memories()
             to_delete = None
@@ -221,6 +238,20 @@ class JSONAdapter(StorageAdapter):
                 self._save()
                 return True
             return False
+
+    def forget(self, storage_key: str) -> bool:
+        """Delete a memory by its storage key.
+
+        .. deprecated:: 0.4.0
+            Use ``delete()`` instead. Will be removed in v0.5.0.
+        """
+        warnings.warn(
+            "forget() is deprecated, use delete() instead. "
+            "Will be removed in v0.5.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._delete_entry(storage_key)
 
     def get_stats(self) -> Dict[str, Any]:
         with self._lock:
@@ -271,12 +302,12 @@ class JSONAdapter(StorageAdapter):
             The storage_key of the stored memory.
         """
         mem_entry = MemoryEntry.from_dict(entry)
-        stored = self.remember(mem_entry)
+        stored = self._store_entry(mem_entry)
         return stored.storage_key
 
     def delete(self, entry_id: str) -> bool:
         """Delete a memory by its storage_key."""
-        return self.forget(entry_id)
+        return self._delete_entry(entry_id)
 
     def count(self, filter_: Optional[dict] = None) -> int:
         """Count stored memories with optional filtering.
@@ -309,7 +340,7 @@ class JSONAdapter(StorageAdapter):
                 file_size = os.path.getsize(self._path) if file_exists else 0
         except Exception as e:
             from ..utils.logger import logger
-            logger.warning(f"JSONAdapter health check failed: {e}")
+            logger.warning("JSONAdapter health check failed: %s", e)
             status_detail = "unhealthy"
             total = -1
             file_exists = False

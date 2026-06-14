@@ -110,13 +110,13 @@ class LLMClient:
                     timeout=self._timeout,
                 )
             except (ImportError, ValueError, OSError) as e:
-                logger.error(f"Failed to initialize OpenAI client: {e}")
+                logger.error("Failed to initialize OpenAI client: %s", e)
                 return None
         if _BACKEND == "zhipuai" and _ZHIPUAI_CLIENT is not None:
             try:
                 return _ZHIPUAI_CLIENT(api_key=self._api_key)
             except (ImportError, ValueError) as e:
-                logger.error(f"Failed to initialize ZhipuAI client: {e}")
+                logger.error("Failed to initialize ZhipuAI client: %s", e)
                 return None
         logger.warning("No LLM backend available (openai/zhipuai not installed)")
         return None
@@ -161,7 +161,7 @@ class LLMClient:
                     return None
                 return response.choices[0].message.content
         except (RuntimeError, ValueError, TypeError, OSError) as e:
-            logger.error(f"LLM chat failed: {e}")
+            logger.error("LLM chat failed: %s", e)
         return None
 
     def count_tokens(self, text: str) -> int:

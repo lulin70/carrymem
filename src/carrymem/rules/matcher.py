@@ -216,7 +216,7 @@ class RuleMatcher:
                 matched_rules = self.storage.search(scene, limit=limit)
                 fts_results = [(r, 0.0) for r in matched_rules]
             except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
-                _logger.warning(f"FTS5 match failed for scene '{scene[:50]}': {e}")
+                _logger.warning("FTS5 match failed for scene '%s': %s", scene[:50], e)
                 return []
 
         results = []

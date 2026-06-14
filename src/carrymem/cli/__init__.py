@@ -13,33 +13,33 @@ def show_help():
     print(f"""
   {_bold(f'CarryMem v{__version__}')} - Your Portable AI Memory Layer
 
-  {_dim('AI remembers you. Not the other way around.')}
+  {_dim(_t('cli.section.tagline'))}
 
-  {_bold('Commands:')}
-    add <message>        Store a memory
-    list                 List recent memories
-    search <query>       Search memories
-    show <key>           View memory details
-    edit <key> <text>    Edit a memory
-    forget <key>         Delete a memory
-    clean                Remove expired/low-quality
-    backup               Create/list/restore backups
-    export <path>        Export memories to file
-    import <path>        Import memories from file
-    pack                 Pack identity into .carry file
-    unpack <file.carry>  Unpack .carry file to restore identity
-    stats                Show memory statistics
-    check                Check memory quality & conflicts
-    whoami               Who your AI thinks you are
-    profile              Export/view your AI identity
-    doctor               Run diagnostics
-    setup-mcp            Configure MCP integration
+  {_bold(_t('cli.section.commands'))}
+    add <message>        {_t('cli.cmd.add')}
+    list                 {_t('cli.cmd.list')}
+    search <query>       {_t('cli.cmd.search')}
+    show <key>           {_t('cli.cmd.show')}
+    edit <key> <text>    {_t('cli.cmd.edit')}
+    forget <key>         {_t('cli.cmd.forget')}
+    clean                {_t('cli.cmd.clean')}
+    backup               {_t('cli.cmd.backup')}
+    export <path>        {_t('cli.cmd.export')}
+    import <path>        {_t('cli.cmd.import')}
+    pack                 {_t('cli.cmd.pack')}
+    unpack <file.carry>  {_t('cli.cmd.unpack')}
+    stats                {_t('cli.cmd.stats')}
+    check                {_t('cli.cmd.check')}
+    whoami               {_t('cli.cmd.whoami')}
+    profile              {_t('cli.cmd.profile')}
+    doctor               {_t('cli.cmd.doctor')}
+    setup-mcp            {_t('cli.cmd.setup_mcp')}
     setup-mcp --global   Configure MCP for all tools (global)
-    mcp                  Start MCP server (stdio)
-    tui                  Launch terminal UI
-    serve                Start MCP HTTP server
-    init                 Initialize CarryMem
-    version              Show version
+    mcp                  {_t('cli.cmd.mcp')}
+    tui                  {_t('cli.cmd.tui')}
+    serve                {_t('cli.cmd.serve')}
+    init                 {_t('cli.cmd.init')}
+    version              {_t('cli.cmd.version')}
 
   {_bold('Rules Engine:')}
     add-rule <action> --trigger <scene>   Create a behavioral rule
@@ -188,7 +188,7 @@ def main():
 
     handler = commands.get(command)
     if handler is None:
-        print(f"  {_red('Unknown command:')} {command}")
+        print(f"  {_red(_t('cli.error.unknown_command', command=command))}")
         help_tip = "Run 'carrymem help' for usage"
         print(f"  {_dim(help_tip)}")
         sys.exit(1)

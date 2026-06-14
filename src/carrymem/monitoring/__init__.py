@@ -421,7 +421,7 @@ class MonitoringHTTPServer:
             else:
                 await self._json_response(writer, 405, {"error": "Method not allowed"})
         except Exception as e:
-            logger.error(f"Monitoring request error: {e}", exc_info=True)
+            logger.error("Monitoring request error: %s", e, exc_info=True)
             try:
                 await self._json_response(writer, 500, {"error": "Internal server error"})
             except (OSError, ConnectionError):
@@ -464,7 +464,7 @@ class MonitoringHTTPServer:
             self._handle_request, self._host, self._port,
         )
         addrs = ", ".join(str(s.getsockname()) for s in self._server.sockets)
-        logger.info(f"Monitoring server running on {addrs}")
+        logger.info("Monitoring server running on %s", addrs)
         async with self._server:
             await self._server.serve_forever()
 
@@ -477,7 +477,7 @@ class MonitoringHTTPServer:
             self._handle_request, self._host, self._port,
         )
         addrs = ", ".join(str(s.getsockname()) for s in self._server.sockets)
-        logger.info(f"Monitoring server running on {addrs}")
+        logger.info("Monitoring server running on %s", addrs)
         # Run serve_forever in a background task so it doesn't block
         self._serve_task = asyncio.create_task(self._server.serve_forever())
 

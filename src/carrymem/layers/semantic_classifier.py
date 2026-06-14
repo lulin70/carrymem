@@ -90,7 +90,7 @@ class SemanticClassifier:
 
             return result
         except (json.JSONDecodeError, ValueError, TypeError, KeyError, AttributeError) as e:
-            logger.error(f"Semantic classification failed: {e}")
+            logger.error("Semantic classification failed: %s", e)
             return None
 
     def should_use_llm(self, message, context=None):

@@ -103,11 +103,11 @@ def _show_value_report(cm, parsed) -> int:
 
 def cmd_stats(args):
     parser = _make_parser("stats")
-    parser.add_argument("--namespace", "-n", default="default", help="Namespace")
-    parser.add_argument("--db", help="Database path")
-    parser.add_argument("--format", "-f", choices=["text", "json"], default="text", help="Output format")
+    parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
+    parser.add_argument("--format", "-f", choices=["text", "json"], default="text", help=_t("cli.arg.format"))
     parser.add_argument(
-        "--value", "-v", action="store_true", help="Show value perception report (memories, rules, tokens saved, etc.)"
+        "--value", "-v", action="store_true", help=_t("cli.arg.value_report")
     )
 
     parsed = parser.parse_args(args)
@@ -171,9 +171,9 @@ def cmd_stats(args):
 
 def cmd_whoami(args):
     parser = _make_parser("whoami")
-    parser.add_argument("--namespace", "-n", default="default", help="Namespace")
-    parser.add_argument("--db", help="Database path")
-    parser.add_argument("--json", action="store_true", help="Output as JSON")
+    parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
+    parser.add_argument("--json", action="store_true", help=_t("cli.arg.json"))
 
     parsed = parser.parse_args(args)
     cm = _get_carrymem(parsed.db, parsed.namespace)
@@ -239,10 +239,10 @@ def cmd_whoami(args):
 
 def cmd_profile(args):
     parser = _make_parser("profile")
-    parser.add_argument("action", choices=["export", "show"], default="show", nargs="?", help="Profile action")
-    parser.add_argument("--output", "-o", help="Output file path (for export)")
-    parser.add_argument("--namespace", "-n", default="default", help="Namespace")
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("action", choices=["export", "show"], default="show", nargs="?", help=_t("cli.arg.profile_action"))
+    parser.add_argument("--output", "-o", help=_t("cli.arg.output"))
+    parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
 
     parsed = parser.parse_args(args)
     cm = _get_carrymem(parsed.db, parsed.namespace)
@@ -264,12 +264,12 @@ def cmd_profile(args):
 
 def cmd_check(args):
     parser = _make_parser("check")
-    parser.add_argument("--namespace", "-n", default="default", help="Namespace")
-    parser.add_argument("--db", help="Database path")
-    parser.add_argument("--conflicts", action="store_true", help="Check for conflicts")
-    parser.add_argument("--quality", action="store_true", help="Check for low quality memories")
-    parser.add_argument("--expired", action="store_true", help="Check for expired memories")
-    parser.add_argument("--all", action="store_true", help="Run all checks")
+    parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
+    parser.add_argument("--conflicts", action="store_true", help=_t("cli.arg.check_conflicts"))
+    parser.add_argument("--quality", action="store_true", help=_t("cli.arg.check_quality"))
+    parser.add_argument("--expired", action="store_true", help=_t("cli.arg.check_expired"))
+    parser.add_argument("--all", action="store_true", help=_t("cli.arg.check_all"))
 
     parsed = parser.parse_args(args)
     cm = _get_carrymem(parsed.db, parsed.namespace)
@@ -341,9 +341,9 @@ def cmd_check(args):
 
 def cmd_doctor(args):
     parser = _make_parser("doctor")
-    parser.add_argument("--db", help="Database path")
-    parser.add_argument("--fix", action="store_true", help="Attempt to fix issues")
-    parser.add_argument("--json", action="store_true", help="Output as JSON")
+    parser.add_argument("--db", help=_t("cli.arg.db"))
+    parser.add_argument("--fix", action="store_true", help=_t("cli.arg.fix"))
+    parser.add_argument("--json", action="store_true", help=_t("cli.arg.json"))
 
     parsed = parser.parse_args(args)
     db_path = parsed.db or str(_DEFAULT_DB)
@@ -399,7 +399,7 @@ def cmd_doctor(args):
                 cm = CarryMem(db_path=db_path)
                 cm.close()
             except (sqlite3.OperationalError, OSError) as e:
-                _cli_logger.debug(f"Doctor: failed to create database: {e}")
+                _cli_logger.debug("Doctor: failed to create database: %s", e)
 
     if db.exists():
         try:
@@ -502,7 +502,7 @@ def cmd_doctor(args):
         test_conn.close()
         _record("fts5", "ok", "SQLite FTS5 support")
     except sqlite3.OperationalError as e:
-        _cli_logger.debug(f"FTS5 check failed: {e}")
+        _cli_logger.debug("FTS5 check failed: %s", e)
         _record("fts5", "fail", "SQLite FTS5 not available")
 
     try:

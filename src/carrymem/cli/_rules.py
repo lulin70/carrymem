@@ -38,18 +38,18 @@ def cmd_rules_hub(args):
 
 def cmd_add_rule(args):
     parser = _make_parser("add-rule")
-    parser.add_argument("action", nargs="?", help="Behavior instruction (what AI should do)")
-    parser.add_argument("--trigger", "-t", help="Scene description that activates this rule")
+    parser.add_argument("action", nargs="?", help=_t("cli.arg.rules.action"))
+    parser.add_argument("--trigger", "-t", help=_t("cli.arg.rules.trigger"))
     parser.add_argument(
         "--type",
         choices=["avoid", "always", "prefer", "forbid", "format"],
         default=None,
-        help="Rule type",
+        help=_t("cli.arg.rules.type"),
     )
-    parser.add_argument("--soft", action="store_true", help="Make this a soft suggestion (AI can ignore)")
-    parser.add_argument("--template", help="Use a rule template (see: carrymem list-templates)")
-    parser.add_argument("--interactive", "-i", action="store_true", help="Guided interactive creation")
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--soft", action="store_true", help=_t("cli.arg.rules.soft"))
+    parser.add_argument("--template", help=_t("cli.arg.rules.template"))
+    parser.add_argument("--interactive", "-i", action="store_true", help=_t("cli.arg.rules.interactive"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
     # Template mode
@@ -138,11 +138,11 @@ def cmd_add_rule(args):
 
 def cmd_list_rules(args):
     parser = _make_parser("list-rules")
-    parser.add_argument("--status", choices=["active", "paused", "deprecated"], help="Filter by status")
-    parser.add_argument("--type", choices=["avoid", "always", "prefer", "forbid", "format"], help="Filter by type")
-    parser.add_argument("--limit", type=int, default=20, help="Max results (default: 20)")
-    parser.add_argument("--format", choices=["detail", "table", "compact"], default="detail", help="Output format")
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--status", choices=["active", "paused", "deprecated"], help=_t("cli.arg.rules.filter_status"))
+    parser.add_argument("--type", choices=["avoid", "always", "prefer", "forbid", "format"], help=_t("cli.arg.rules.filter_type"))
+    parser.add_argument("--limit", type=int, default=20, help=_t("cli.arg.rules.limit_20"))
+    parser.add_argument("--format", choices=["detail", "table", "compact"], default="detail", help=_t("cli.arg.rules.format"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
     engine = _get_rule_engine(parsed.db)
@@ -202,21 +202,21 @@ def cmd_list_rules(args):
 
 def cmd_match_rules(args):
     parser = _make_parser("match-rules")
-    parser.add_argument("scene", help="Scene description to match against")
-    parser.add_argument("--limit", type=int, default=5, help="Max results (default: 5)")
+    parser.add_argument("scene", help=_t("cli.arg.rules.scene"))
+    parser.add_argument("--limit", type=int, default=5, help=_t("cli.arg.rules.limit_5"))
     parser.add_argument(
         "--format",
         choices=["text", "json", "compact", "anchored", "ddd"],
         default="text",
-        help="Output format",
+        help=_t("cli.arg.rules.format"),
     )
     parser.add_argument(
         "--context-budget",
         type=int,
         default=None,
-        help="Context budget in tokens (enables compression)",
+        help=_t("cli.arg.rules.context_budget"),
     )
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
     engine = _get_rule_engine(parsed.db)
@@ -270,8 +270,8 @@ def cmd_match_rules(args):
 
 def cmd_delete_rule(args):
     parser = _make_parser("delete-rule")
-    parser.add_argument("rule_id", help="Rule ID to delete")
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("rule_id", help=_t("cli.arg.rules.rule_id_delete"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
     engine = _get_rule_engine(parsed.db)
@@ -295,8 +295,8 @@ def cmd_delete_rule(args):
 
 def cmd_pause_rule(args):
     parser = _make_parser("pause-rule")
-    parser.add_argument("rule_id", help="Rule ID to pause")
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("rule_id", help=_t("cli.arg.rules.rule_id_pause"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
     engine = _get_rule_engine(parsed.db)
@@ -312,8 +312,8 @@ def cmd_pause_rule(args):
 
 def cmd_resume_rule(args):
     parser = _make_parser("resume-rule")
-    parser.add_argument("rule_id", help="Rule ID to resume")
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("rule_id", help=_t("cli.arg.rules.rule_id_resume"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
     engine = _get_rule_engine(parsed.db)
@@ -329,7 +329,7 @@ def cmd_resume_rule(args):
 
 def cmd_rules_stats(args):
     parser = _make_parser("rules-stats")
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
     engine = _get_rule_engine(parsed.db)
@@ -357,8 +357,8 @@ def cmd_rules_stats(args):
 
 def cmd_check_rules(args):
     parser = _make_parser("check-rules")
-    parser.add_argument("--db", help="Database path")
-    parser.add_argument("--json", action="store_true", help="Output as JSON")
+    parser.add_argument("--db", help=_t("cli.arg.db"))
+    parser.add_argument("--json", action="store_true", help=_t("cli.arg.rules.json"))
     parsed = parser.parse_args(args)
 
     engine = _get_rule_engine(parsed.db)
@@ -404,9 +404,9 @@ def cmd_check_rules(args):
 
 def cmd_export_rules(args):
     parser = _make_parser("export-rules")
-    parser.add_argument("path", help="Output file path (JSON)")
-    parser.add_argument("--status", choices=["active", "paused", "deprecated"], help="Filter by status")
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("path", help=_t("cli.arg.rules.output_path"))
+    parser.add_argument("--status", choices=["active", "paused", "deprecated"], help=_t("cli.arg.rules.filter_status"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
     import json
@@ -429,14 +429,14 @@ def cmd_export_rules(args):
 
 def cmd_import_rules(args):
     parser = _make_parser("import-rules")
-    parser.add_argument("path", help="Input file path (JSON)")
+    parser.add_argument("path", help=_t("cli.arg.rules.input_path"))
     parser.add_argument(
         "--mode",
         choices=["skip", "overwrite", "rename"],
         default="skip",
-        help="Conflict resolution (default: skip)",
+        help=_t("cli.arg.rules.mode"),
     )
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
     import json
@@ -474,20 +474,20 @@ def cmd_import_rules(args):
 
 def cmd_skill_pack(args):
     parser = _make_parser("skill-pack")
-    parser.add_argument("path", help="Output file path (JSON)")
-    parser.add_argument("--name", required=True, help="Skill name")
-    parser.add_argument("--version", default="1.0.0", help="Semantic version")
-    parser.add_argument("--author", default="", help="Author name")
-    parser.add_argument("--description", default="", help="Skill description")
+    parser.add_argument("path", help=_t("cli.arg.rules.output_path"))
+    parser.add_argument("--name", required=True, help=_t("cli.arg.rules.skill_name"))
+    parser.add_argument("--version", default="1.0.0", help=_t("cli.arg.rules.version"))
+    parser.add_argument("--author", default="", help=_t("cli.arg.rules.author"))
+    parser.add_argument("--description", default="", help=_t("cli.arg.rules.description"))
     parser.add_argument(
         "--scope",
         choices=["personal", "company", "negotiated"],
         default="personal",
-        help="Default scope (default: personal)",
+        help=_t("cli.arg.rules.scope_default"),
     )
-    parser.add_argument("--status", choices=["active", "paused", "deprecated"], help="Filter rules by status")
-    parser.add_argument("--tags", nargs="*", help="Categorization tags")
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--status", choices=["active", "paused", "deprecated"], help=_t("cli.arg.rules.filter_rules_status"))
+    parser.add_argument("--tags", nargs="*", help=_t("cli.arg.rules.tags"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
     import json
@@ -522,19 +522,19 @@ def cmd_skill_pack(args):
 
 def cmd_skill_install(args):
     parser = _make_parser("skill-install")
-    parser.add_argument("path", help="Skill bundle file path (JSON)")
+    parser.add_argument("path", help=_t("cli.arg.rules.skill_path"))
     parser.add_argument(
         "--scope",
         choices=["personal", "company", "negotiated"],
-        help="Override Skill's default scope",
+        help=_t("cli.arg.rules.scope_override"),
     )
     parser.add_argument(
         "--mode",
         choices=["skip", "overwrite", "rename"],
         default="skip",
-        help="Conflict resolution (default: skip)",
+        help=_t("cli.arg.rules.mode"),
     )
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
     import json
@@ -578,7 +578,7 @@ def cmd_skill_install(args):
 
 def cmd_skill_verify(args):
     parser = _make_parser("skill-verify")
-    parser.add_argument("path", help="Skill bundle file path (JSON)")
+    parser.add_argument("path", help=_t("cli.arg.rules.skill_path"))
     parsed = parser.parse_args(args)
 
     import json
@@ -617,13 +617,13 @@ def cmd_skill_verify(args):
 
 def cmd_edit_rule(args):
     parser = _make_parser("edit-rule")
-    parser.add_argument("rule_id", help="Rule ID to edit")
-    parser.add_argument("--trigger", help="New trigger")
-    parser.add_argument("--action", help="New action")
-    parser.add_argument("--type", choices=["avoid", "always", "prefer", "forbid", "format"], help="New rule type")
-    parser.add_argument("--soft", action="store_true", help="Change to soft rule")
-    parser.add_argument("--hard", action="store_true", help="Change to hard rule")
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("rule_id", help=_t("cli.arg.rules.rule_id_edit"))
+    parser.add_argument("--trigger", help=_t("cli.arg.rules.new_trigger"))
+    parser.add_argument("--action", help=_t("cli.arg.rules.new_action"))
+    parser.add_argument("--type", choices=["avoid", "always", "prefer", "forbid", "format"], help=_t("cli.arg.rules.new_type"))
+    parser.add_argument("--soft", action="store_true", help=_t("cli.arg.rules.change_soft"))
+    parser.add_argument("--hard", action="store_true", help=_t("cli.arg.rules.change_hard"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
     engine = _get_rule_engine(parsed.db)
@@ -689,16 +689,16 @@ def cmd_suggest_rules(args):
     parser.add_argument(
         "--type",
         choices=["correction", "decision", "user_preference", "sentiment_marker", "task_pattern"],
-        help="Filter by memory type",
+        help=_t("cli.arg.rules.filter_memory_type"),
     )
     parser.add_argument(
         "--min-count",
         type=int,
         default=3,
-        help="Minimum occurrences for pattern detection (default: 3)",
+        help=_t("cli.arg.rules.min_count"),
     )
-    parser.add_argument("--accept", action="store_true", help="Accept all suggestions (create rules)")
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--accept", action="store_true", help=_t("cli.arg.rules.accept_suggestions"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
     from carrymem.carrymem import CarryMem
@@ -787,16 +787,16 @@ def cmd_promote_rules(args):
     parser.add_argument(
         "--type",
         choices=["correction", "decision", "user_preference", "sentiment_marker", "task_pattern"],
-        help="Filter by memory type",
+        help=_t("cli.arg.rules.filter_memory_type"),
     )
-    parser.add_argument("--auto-accept", action="store_true", help="Auto-accept all candidates (with confirmation)")
+    parser.add_argument("--auto-accept", action="store_true", help=_t("cli.arg.rules.auto_accept"))
     parser.add_argument(
         "--expiry-days",
         type=int,
         default=7,
-        help="Days before pending candidates expire (default: 7)",
+        help=_t("cli.arg.rules.expiry_days_7"),
     )
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
     from carrymem.carrymem import CarryMem
@@ -840,15 +840,15 @@ def cmd_promote_rules(args):
 
 def cmd_review_promotions(args):
     parser = _make_parser("review-promotions")
-    parser.add_argument("--accept", help="Accept a specific candidate by ID")
-    parser.add_argument("--reject", help="Reject a specific candidate by ID")
+    parser.add_argument("--accept", help=_t("cli.arg.rules.accept_candidate"))
+    parser.add_argument("--reject", help=_t("cli.arg.rules.reject_candidate"))
     parser.add_argument(
         "--accept-all",
         action="store_true",
-        help="Accept all pending candidates (with confirmation)",
+        help=_t("cli.arg.rules.accept_all_candidates"),
     )
-    parser.add_argument("--note", help="Add a review note")
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--note", help=_t("cli.arg.rules.review_note"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
     engine = _get_rule_engine(parsed.db)
@@ -918,8 +918,8 @@ def cmd_review_promotions(args):
 
 def cmd_promotion_log(args):
     parser = _make_parser("promotion-log")
-    parser.add_argument("--limit", type=int, default=20, help="Number of entries to show")
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--limit", type=int, default=20, help=_t("cli.arg.rules.limit_entries"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
     engine = _get_rule_engine(parsed.db)
@@ -964,15 +964,15 @@ def cmd_promotion_log(args):
 
 def cmd_refine_rule(args):
     parser = _make_parser("refine-rule")
-    parser.add_argument("--trigger", default="", help="Rule trigger/scene (required for new session)")
-    parser.add_argument("--action", default="", help="Rule action (required for new session)")
-    parser.add_argument("--type", default="avoid", help="Rule type (default: avoid)")
-    parser.add_argument("--answer", help="Answer to current question (for advancing session)")
-    parser.add_argument("--option", help="Selected option for answer")
-    parser.add_argument("--session", help="Continue existing session")
-    parser.add_argument("--confirm", action="store_true", help="Confirm current session and create rule")
-    parser.add_argument("--cancel", action="store_true", help="Cancel current session")
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--trigger", default="", help=_t("cli.arg.rules.refine_trigger"))
+    parser.add_argument("--action", default="", help=_t("cli.arg.rules.refine_action"))
+    parser.add_argument("--type", default="avoid", help=_t("cli.arg.rules.refine_type"))
+    parser.add_argument("--answer", help=_t("cli.arg.rules.answer"))
+    parser.add_argument("--option", help=_t("cli.arg.rules.option"))
+    parser.add_argument("--session", help=_t("cli.arg.rules.session"))
+    parser.add_argument("--confirm", action="store_true", help=_t("cli.arg.rules.confirm"))
+    parser.add_argument("--cancel", action="store_true", help=_t("cli.arg.rules.cancel"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
     if not parsed.session and (not parsed.trigger or not parsed.action):
@@ -1058,7 +1058,7 @@ def cmd_refine_rule(args):
 
 def cmd_refinement_sessions(args):
     parser = _make_parser("refinement-sessions")
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
     engine = _get_rule_engine(parsed.db)
@@ -1094,15 +1094,15 @@ def cmd_learn_experience(args):
             "task_pattern",
             "fact_declaration",
         ],
-        help="Filter by memory type",
+        help=_t("cli.arg.rules.filter_memory_type"),
     )
     parser.add_argument(
         "--expiry-days",
         type=int,
         default=14,
-        help="Days before pending lessons expire (default: 14)",
+        help=_t("cli.arg.rules.expiry_days_14"),
     )
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
     from carrymem.carrymem import CarryMem
@@ -1148,13 +1148,13 @@ def cmd_learn_experience(args):
 
 def cmd_review_lessons(args):
     parser = _make_parser("review-lessons")
-    parser.add_argument("--accept", help="Accept a specific lesson by ID")
-    parser.add_argument("--reject", help="Reject a specific lesson by ID")
-    parser.add_argument("--accept-all", action="store_true", help="Accept all pending lessons")
-    parser.add_argument("--trigger", help="Override trigger when accepting")
-    parser.add_argument("--action", help="Override action when accepting")
-    parser.add_argument("--note", help="Add a review note")
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--accept", help=_t("cli.arg.rules.accept_lesson"))
+    parser.add_argument("--reject", help=_t("cli.arg.rules.reject_lesson"))
+    parser.add_argument("--accept-all", action="store_true", help=_t("cli.arg.rules.accept_all_lessons"))
+    parser.add_argument("--trigger", help=_t("cli.arg.rules.trigger_override"))
+    parser.add_argument("--action", help=_t("cli.arg.rules.action_override"))
+    parser.add_argument("--note", help=_t("cli.arg.rules.review_note"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
     engine = _get_rule_engine(parsed.db)
@@ -1224,8 +1224,8 @@ def cmd_review_lessons(args):
 
 def cmd_lesson_log(args):
     parser = _make_parser("lesson-log")
-    parser.add_argument("--limit", type=int, default=20, help="Number of entries to show")
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--limit", type=int, default=20, help=_t("cli.arg.rules.limit_entries"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
 
     engine = _get_rule_engine(parsed.db)

@@ -98,14 +98,14 @@ class ClassificationMixin:
                 try:
                     recent_mems = self.recall_memories(query="", limit=COREFERENCE_RECALL_LIMIT, update_access=False)
                 except (KeyError, ValueError, RuntimeError) as e:
-                    logger.debug(f"Coreference recall skipped (non-critical): {e}")
+                    logger.debug("Coreference recall skipped (non-critical): %s", e)
                 resolved_message, coreference_resolved = resolve_coreference(
                     message,
                     context=context_str,
                     recent_memories=recent_mems,
                 )
                 if coreference_resolved:
-                    logger.debug(f"Coreference resolved: '{message}' → '{resolved_message}'")
+                    logger.debug("Coreference resolved: '%s' → '%s'", message, resolved_message)
             except (ValueError, TypeError, ImportError, RuntimeError) as e:
                 logger.debug("Coreference resolution failed (non-critical), using original message: %s", e)
 
@@ -136,7 +136,7 @@ class ClassificationMixin:
                     }
                     return (resolved_message, False, redact_result, coreference_resolved)
             except (ImportError, ValueError, TypeError, RuntimeError) as e:
-                logger.warning(f"Auto-redaction check failed, allowing storage as precaution: {e}")
+                logger.warning("Auto-redaction check failed, allowing storage as precaution: %s", e)
 
         return (resolved_message, True, None, coreference_resolved)
 
@@ -207,14 +207,14 @@ class ClassificationMixin:
                     stored_memories.append(stored.to_dict())
                     storage_keys.append(stored.storage_key)
                 except (ValueError, KeyError, TypeError, RuntimeError) as e:
-                    logger.warning(f"Failed to store memory: {e}")
+                    logger.warning("Failed to store memory: %s", e)
                     continue
 
         auto_rules = []
         try:
             auto_rules = self._auto_suggest_rules(stored_memories)
         except (ImportError, KeyError, ValueError, TypeError, RuntimeError) as e:
-            logger.debug(f"Auto rule suggestion skipped: {e}")
+            logger.debug("Auto rule suggestion skipped: %s", e)
 
         self._auto_backup()
 
@@ -262,10 +262,10 @@ class ClassificationMixin:
                                     "reason": reason,
                                 }
                             except (ValueError, KeyError, TypeError) as e:
-                                logger.warning(f"Correction update failed: {e}")
+                                logger.warning("Correction update failed: %s", e)
                         break
         except (ValueError, KeyError, TypeError, RuntimeError) as e:
-            logger.warning(f"Correction handling failed: {e}")
+            logger.warning("Correction handling failed: %s", e)
 
         try:
             engine = self.rule_engine
@@ -285,7 +285,7 @@ class ClassificationMixin:
                         else:
                             updated_info["rule_updated"] = rule.id
                     except (ValueError, KeyError, TypeError) as e:
-                        logger.warning(f"Rule update in correction handling failed: {e}")
+                        logger.warning("Rule update in correction handling failed: %s", e)
                     break
         except (ImportError, ValueError, KeyError, TypeError, RuntimeError) as e:
             logger.warning("Rule correction handling failed: %s", e)

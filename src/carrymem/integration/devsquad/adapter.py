@@ -35,10 +35,9 @@ class DevSquadAdapter:
         try:
             self._rule_engine = RuleEngine(self._db_path)
             self._audit = AuditLogger(
-                lambda: sqlite3.connect(self._db_path),
-                namespace=self._namespace,
+                persist_path=self._db_path,
             )
-        except (sqlite3.OperationalError, sqlite3.DatabaseError, OSError) as e:
+        except Exception as e:
             self._init_error = str(e)
             self._rule_engine = None
             self._audit = None
@@ -50,7 +49,7 @@ class DevSquadAdapter:
             self._rule_engine.count_rules()
             return True
         except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
-            logger.warning(f"Health check failed: {e}")
+            logger.warning("Health check failed: %s", e)
             return False
 
     def get_rules(self, user_id: str, context: Optional[Dict[str, Any]] = None) -> List[str]:
@@ -251,11 +250,9 @@ class DevSquadAdapter:
             try:
                 self._audit.log_operation(
                     operation=operation,
-                    namespace=user_id,
                     storage_key=storage_key,
                     success=success,
                     details=details,
-                    source="devsquad",
                 )
             except (ValueError, TypeError, sqlite3.Error):
                 pass

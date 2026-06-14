@@ -85,8 +85,8 @@ class TestE2ESQLiteToJSONSwitch:
 
             # Verify SQLite has data
             sqlite_recall = cm_sqlite.recall_memories(limit=10)
-            assert isinstance(sqlite_recall, list) and len(sqlite_recall) >= 2, (
-                "SQLite should have stored data before migration"
+            assert isinstance(sqlite_recall, list) and len(sqlite_recall) == len(original_memories), (
+                "SQLite should have stored all data before migration"
             )
         finally:
             cm_sqlite.close()
@@ -102,8 +102,16 @@ class TestE2ESQLiteToJSONSwitch:
 
             # Verify JSON has data
             json_recall = cm_json.recall_memories(limit=10)
-            assert isinstance(json_recall, list) and len(json_recall) >= 2, (
-                "JSON should have data after migration simulation"
+            assert isinstance(json_recall, list), "JSON recall should return list"
+            # TODO: JSON adapter may share underlying storage with other instances,
+            # so exact count cannot be asserted. Verify all original memories are present instead.
+            json_contents = [m.get("content", "") for m in json_recall if isinstance(m, dict)]
+            found_in_json = sum(
+                1 for orig in original_memories
+                if any(orig.lower() in jc.lower() or jc.lower() in orig.lower() for jc in json_contents)
+            )
+            assert found_in_json == len(original_memories), (
+                f"JSON should contain all migrated data. Found {found_in_json}/{len(original_memories)}"
             )
 
             # Verify content matches
@@ -112,7 +120,7 @@ class TestE2ESQLiteToJSONSwitch:
                 1 for orig in original_memories
                 if any(orig.lower() in jc.lower() or jc.lower() in orig.lower() for jc in json_contents)
             )
-            assert found_count >= 2, (
+            assert found_count == len(original_memories), (
                 f"Migrated data should be intact in JSON. Found {found_count}/{len(original_memories)}"
             )
         finally:
@@ -259,7 +267,7 @@ class TestE2EAdapterErrorHandling:
         try:
             cm = CarryMem()  # No arguments
             # If it succeeds, should still be usable
-            assert cm is not None
+            assert isinstance(cm, CarryMem), "Default CarryMem() should return a CarryMem instance"
             cm.close()
         except Exception:
             pass  # May raise error depending on configuration
@@ -341,12 +349,13 @@ class TestE2EMultiAdapterIsolation:
             sqlite_results = cm_sqlite.recall_memories(query="Only", limit=5)
             json_results = cm_json.recall_memories(query="Only", limit=5)
 
-            assert isinstance(sqlite_results, list) and len(sqlite_results) >= 1, (
-                "SQLite should have its own data"
-            )
-            assert isinstance(json_results, list) and len(json_results) >= 1, (
-                "JSON should have its own data"
-            )
+            assert isinstance(sqlite_results, list), "SQLite recall should return list"
+            assert isinstance(json_results, list), "JSON recall should return list"
+            # Verify each adapter can find its own data
+            sqlite_contents = [m.get("content", "") for m in sqlite_results]
+            json_contents = [m.get("content", "") for m in json_results]
+            assert any("SQLite" in c for c in sqlite_contents), "SQLite should find its own data"
+            assert any("JSON" in c for c in json_contents), "JSON should find its own data"
 
             # Verify isolation: each contains only its own data
             sqlite_contents = [m.get("content", "") for m in sqlite_results]

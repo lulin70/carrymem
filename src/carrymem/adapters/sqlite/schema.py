@@ -221,7 +221,7 @@ class SchemaManager:
                 conn.execute("INSERT INTO memories_fts(memories_fts) VALUES('rebuild')")
                 conn.commit()
         except _OpError as e:
-            logger.debug(f"FTS5 tokenizer migration skipped: {e}")
+            logger.debug("FTS5 tokenizer migration skipped: %s", e)
 
     def migrate_v050(self):
         conn = self._conn_mgr.get_connection()
@@ -238,7 +238,7 @@ class SchemaManager:
                         pass
                 conn.commit()
             except sqlite3.Error as e:
-                logger.warning(f"Failed to migrate v0.5.0 columns: {e}")
+                logger.warning("Failed to migrate v0.5.0 columns: %s", e)
 
         for sql in _V050_INDEX_SQL:
             try:
@@ -278,7 +278,7 @@ class SchemaManager:
                 )
                 conn.commit()
         except sqlite3.Error as e:
-            logger.warning(f"Failed to recalculate importance scores: {e}")
+            logger.warning("Failed to recalculate importance scores: %s", e)
             return 0
         return len(updates)
 
@@ -297,7 +297,7 @@ class SchemaManager:
                         pass
                 conn.commit()
             except sqlite3.Error as e:
-                logger.warning(f"Failed to migrate v0.6.0 raw_text column: {e}")
+                logger.warning("Failed to migrate v0.6.0 raw_text column: %s", e)
 
         fts_needs_raw_text = False
         try:
@@ -315,7 +315,7 @@ class SchemaManager:
                 conn.commit()
                 logger.info("FTS5 rebuilt with raw_text column")
             except sqlite3.Error as e:
-                logger.warning(f"Failed to rebuild FTS5: {e}")
+                logger.warning("Failed to rebuild FTS5: %s", e)
 
     def init_vec_schema(self, embedding_dim: int = 384):
         conn = self._conn_mgr.get_connection()
@@ -328,7 +328,7 @@ class SchemaManager:
             """)
             conn.commit()
         except sqlite3.Error as e:
-            logger.warning(f"Failed to create memory_vectors table: {e}")
+            logger.warning("Failed to create memory_vectors table: %s", e)
 
     def migrate_v070(self):
         conn = self._conn_mgr.get_connection()

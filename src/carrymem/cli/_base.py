@@ -13,6 +13,8 @@ __all__ = [
     # Logger & validator
     "_cli_logger",
     "_cli_validator",
+    # i18n
+    "_t",
     # Defaults
     "_DEFAULT_DB",
     "_DEFAULT_CONFIG_DIR",
@@ -70,6 +72,18 @@ except ImportError:
     import logging
 
     logging.getLogger(__name__).warning("InputValidator not available — input validation disabled")
+
+# ── i18n initialization ──────────────────────────────────────────
+from carrymem.i18n import I18nManager
+
+_cli_i18n = I18nManager()
+
+# Read locale from CARRYMEM_LANG env var (e.g. "zh-CN" or "zh_CN")
+_cli_lang = os.environ.get("CARRYMEM_LANG", "").replace("_", "-")
+if _cli_lang and _cli_lang in I18nManager.available_locales():
+    I18nManager.set_locale(_cli_lang)
+
+_t = I18nManager.t
 
 
 _DEFAULT_DB = DB_PATH
@@ -148,7 +162,7 @@ def _format_time(iso_str: Optional[str]) -> str:
                 return f"{delta.days}d ago"
             return dt.strftime("%Y-%m-%d")
     except (ValueError, TypeError) as e:
-        _cli_logger.debug(f"Failed to format time '{iso_str}': {e}")
+        _cli_logger.debug("Failed to format time '%s': %s", iso_str, e)
     return str(iso_str)[:16]
 
 

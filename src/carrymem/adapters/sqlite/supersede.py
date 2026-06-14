@@ -163,10 +163,11 @@ class SupersedeManager:
                     (chain_id, new_version, new_storage_key),
                 )
             except sqlite3.Error as e:
-                logger.debug(f"Auto-supersede update failed: {e}")
+                logger.debug("Auto-supersede update failed: %s", e)
             logger.debug(
-                f"Auto-superseded memory {row['id'][:16]} with new {entry.type} "
-                f"(jaccard={jaccard:.2f}, update_marker={has_update_marker})"
+                "Auto-superseded memory %s with new %s "
+                "(jaccard=%.2f, update_marker=%s)",
+                row['id'][:16], entry.type, jaccard, has_update_marker
             )
             break
 

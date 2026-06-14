@@ -107,7 +107,7 @@ class PatternAnalyzer:
         try:
             language, _ = language_manager.detect_language(message)
         except (ValueError, RuntimeError) as e:
-            logger.warning(f"Failed to detect language, defaulting to 'en': {e}")
+            logger.warning("Failed to detect language, defaulting to 'en': %s", e)
             language = "en"
 
         # Run all detectors (Phase B Fix #4: task/decision BEFORE fact)

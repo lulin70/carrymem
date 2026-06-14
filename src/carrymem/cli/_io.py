@@ -17,19 +17,19 @@ from carrymem.cli._base import *
 def cmd_consolidate(args):
     """Run or schedule memory consolidation (dedup, decay, cleanup)."""
     parser = _make_parser("consolidate")
-    parser.add_argument("--namespace", "-n", default="default", help="Namespace")
-    parser.add_argument("--db", help="Database path")
-    parser.add_argument("--dry-run", action="store_true", help="Show what would be done without making changes")
-    parser.add_argument("--no-p1", action="store_true", help="Skip P1 pattern recognition")
-    parser.add_argument("--no-p2", action="store_true", help="Skip P2 semantic consolidation")
+    parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
+    parser.add_argument("--dry-run", action="store_true", help=_t("cli.arg.dry_run"))
+    parser.add_argument("--no-p1", action="store_true", help=_t("cli.arg.no_p1"))
+    parser.add_argument("--no-p2", action="store_true", help=_t("cli.arg.no_p2"))
     parser.add_argument(
         "--schedule",
         type=float,
         default=0,
         metavar="HOURS",
-        help="Schedule periodic consolidation (e.g., --schedule 1 for hourly)",
+        help=_t("cli.arg.schedule"),
     )
-    parser.add_argument("--stop", action="store_true", help="Stop scheduled consolidation")
+    parser.add_argument("--stop", action="store_true", help=_t("cli.arg.stop"))
 
     parsed = parser.parse_args(args)
     cm = _get_carrymem(parsed.db, parsed.namespace)
@@ -97,10 +97,10 @@ def cmd_consolidate(args):
 
 def cmd_export(args):
     parser = _make_parser("export")
-    parser.add_argument("output", help="Output file path")
-    parser.add_argument("--format", "-f", choices=["json", "markdown"], default="json", help="Export format")
-    parser.add_argument("--namespace", "-n", default="default", help="Namespace")
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("output", help=_t("cli.arg.output_path"))
+    parser.add_argument("--format", "-f", choices=["json", "markdown"], default="json", help=_t("cli.arg.export_format"))
+    parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
 
     parsed = parser.parse_args(args)
     cm = _get_carrymem(parsed.db, parsed.namespace)
@@ -110,9 +110,9 @@ def cmd_export(args):
     if result.get("exported"):
         total = result.get("total_memories", 0)
         fmt = result.get("format", "json")
-        print(f"  {_green('Exported')} {total} memories to {_cyan(parsed.output)} ({fmt})")
+        print(f"  {_green(_t('cli.success.exported', count=total, path=parsed.output, format=fmt))}")
     else:
-        print(f"  {_red('Export failed:')} {result}")
+        print(f"  {_red(_t('cli.error.export_failed', detail=result))}")
         cm.close()
         return 1
 
@@ -122,15 +122,15 @@ def cmd_export(args):
 
 def cmd_import(args):
     parser = _make_parser("import")
-    parser.add_argument("input", help="Input file path")
-    parser.add_argument("--namespace", "-n", default="default", help="Target namespace")
+    parser.add_argument("input", help=_t("cli.arg.input_path"))
+    parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
     parser.add_argument(
         "--merge",
         choices=["skip_existing", "overwrite"],
         default="skip_existing",
-        help="Merge strategy",
+        help=_t("cli.arg.merge_strategy"),
     )
-    parser.add_argument("--db", help="Database path")
+    parser.add_argument("--db", help=_t("cli.arg.db"))
 
     parsed = parser.parse_args(args)
     cm = _get_carrymem(parsed.db, parsed.namespace)
@@ -146,8 +146,8 @@ def cmd_import(args):
     errors = result.get("errors", 0)
     total = result.get("total_processed", 0)
 
-    _msg = _green("Import complete:")
-    print(f"  {_msg} {imported} imported, {skipped} skipped, {errors} errors ({total} total)")
+    _msg = _green(_t('cli.success.imported', imported=imported, skipped=skipped, errors=errors, total=total))
+    print(f"  {_msg}")
 
     if errors > 0:
         cm.close()
@@ -162,15 +162,15 @@ def cmd_pack(args):
     import os
 
     parser = _make_parser("pack")
-    parser.add_argument("--output", "-o", help="Output file path (default: ./carrymem_identity_YYYYMMDD.carry)")
-    parser.add_argument("--include-rules", action="store_true", default=True, help="Include rules (default: True)")
-    parser.add_argument("--no-rules", action="store_true", help="Exclude rules from pack")
-    parser.add_argument("--include-config", action="store_true", default=True, help="Include config (default: True)")
-    parser.add_argument("--no-config", action="store_true", help="Exclude config from pack")
-    parser.add_argument("--key", help="Encryption key to include encrypted entries")
-    parser.add_argument("--encrypt", action="store_true", help="Encrypt the .carry file with a password (prompted)")
-    parser.add_argument("--db", help="Database path")
-    parser.add_argument("--namespace", "-n", default="default", help="Namespace to pack")
+    parser.add_argument("--output", "-o", help=_t("cli.arg.output_file"))
+    parser.add_argument("--include-rules", action="store_true", default=True, help=_t("cli.arg.include_rules"))
+    parser.add_argument("--no-rules", action="store_true", help=_t("cli.arg.no_rules"))
+    parser.add_argument("--include-config", action="store_true", default=True, help=_t("cli.arg.include_config"))
+    parser.add_argument("--no-config", action="store_true", help=_t("cli.arg.no_config"))
+    parser.add_argument("--key", help=_t("cli.arg.encryption_key"))
+    parser.add_argument("--encrypt", action="store_true", help=_t("cli.arg.encrypt"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
+    parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
 
     parsed = parser.parse_args(args)
 
@@ -357,16 +357,16 @@ def cmd_unpack(args):
     import os
 
     parser = _make_parser("unpack")
-    parser.add_argument("file", help="Path to .carry file to unpack")
+    parser.add_argument("file", help=_t("cli.arg.carry_file"))
     parser.add_argument(
         "--merge",
         action="store_true",
         default=True,
-        help="Keep existing memories, add only new ones (default)",
+        help=_t("cli.arg.merge_mode"),
     )
-    parser.add_argument("--replace", action="store_true", help="Overwrite existing memories")
-    parser.add_argument("--db", help="Database path")
-    parser.add_argument("--namespace", "-n", default="default", help="Target namespace")
+    parser.add_argument("--replace", action="store_true", help=_t("cli.arg.replace"))
+    parser.add_argument("--db", help=_t("cli.arg.db"))
+    parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
 
     parsed = parser.parse_args(args)
 
@@ -470,7 +470,7 @@ def cmd_unpack(args):
         else:
             packed_display = "unknown"
     except ValueError as e:
-        _cli_logger.debug(f"Failed to parse packed_at date '{packed_at}': {e}")
+        _cli_logger.debug("Failed to parse packed_at date '%s': %s", packed_at, e)
         packed_display = str(packed_at)[:10]
 
     print(f"  Source: {source_machine}, packed {packed_display}, CarryMem v{carrymem_ver}")

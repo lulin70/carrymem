@@ -71,8 +71,8 @@ class TestE2EBatchInsert:
 
             elapsed = time.time() - start_time
 
-            assert len(errors) < 50, (
-                f"Too many errors during 1000 inserts: {len(errors)} errors. Sample: {errors[:5]}"
+            assert len(errors) == 0, (
+                f"All 1000 inserts should succeed, got {len(errors)} errors. Sample: {errors[:5]}"
             )
             assert elapsed < 120, (  # Should complete within 2 minutes
                 f"1000 inserts took too long: {elapsed:.1f}s"
@@ -130,8 +130,8 @@ class TestE2EBatchInsert:
                   f"success={success_count}, errors={len(errors)}, "
                   f"peak_memory={peak / 1024 / 1024:.1f}MB")
 
-            assert success_count >= 4500, (
-                f"Expected >= 90% success rate, got {success_count}/5000"
+            assert success_count == 5000, (
+                f"Expected all 5000 inserts to succeed, got {success_count}/5000"
             )
             assert elapsed < 300, (  # 5 minute upper bound
                 f"5000 inserts exceeded time limit: {elapsed:.1f}s"
@@ -242,14 +242,16 @@ class TestE2ERecallUnderLoad:
             results = cm.recall_memories(query=specific_query, limit=10)
 
             assert isinstance(results, list), "Recall should return list"
-            # With 1000 entries containing PostgreSQL references, should find some
-            if len(results) > 0:
-                contents = [r.get("content", "").lower() for r in results]
-                has_relevant = any(specific_query.lower() in c for c in contents)
-                # Soft assertion - relevance depends on search implementation
-                assert has_relevant or len(results) > 0, (
-                    "Results should be relevant or at least returned"
-                )
+            # With 1000 entries containing PostgreSQL references, should find relevant results
+            assert len(results) > 0, (
+                f"Should find results for specific query '{specific_query}' in 1000-record dataset"
+            )
+            contents = [r.get("content", "").lower() for r in results]
+            has_relevant = any(specific_query.lower() in c for c in contents)
+            assert has_relevant, (
+                f"Results for '{specific_query}' should contain relevant content, "
+                f"got contents: {contents[:3]}"
+            )
         finally:
             cm.close()
 
@@ -279,8 +281,8 @@ class TestE2EConsolidationUnderLoad:
             # Run consolidation (dry run first)
             dry_run_result = cm.consolidate(dry_run=True)
             assert isinstance(dry_run_result, dict), "Dry run consolidate should return dict"
-            assert "stats" in dry_run_result or "summary" in dry_run_result or len(dry_run_result) > 0, (
-                "Consolidate should return meaningful stats"
+            assert "stats" in dry_run_result or "summary" in dry_run_result, (
+                "Consolidate dry run should return stats or summary"
             )
 
             # Run actual consolidation
@@ -325,8 +327,8 @@ class TestE2EConsolidationUnderLoad:
                 if any(uniq in ac or ac.startswith(uniq.split(":")[0]) for ac in after_contents)
             )
 
-            assert found_unique >= len(unique_memories) * 0.8, (
-                f"Consolidation should preserve unique memories. Found {found_unique}/{len(unique_memories)}"
+            assert found_unique == len(unique_memories), (
+                f"Consolidation should preserve all unique memories. Found {found_unique}/{len(unique_memories)}"
             )
         finally:
             cm.close()

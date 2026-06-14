@@ -68,4 +68,284 @@ EN_MESSAGES: dict[str, str] = {
     "ui.expires": "Expires",
     "ui.access_count": "Accesses",
     "ui.tier": "Tier",
+
+    # ── CLI command descriptions (cli.cmd.*) ──────────────────
+    "cli.cmd.add": "Store a memory",
+    "cli.cmd.list": "List recent memories",
+    "cli.cmd.search": "Search memories",
+    "cli.cmd.show": "View memory details",
+    "cli.cmd.edit": "Edit a memory",
+    "cli.cmd.forget": "Delete a memory",
+    "cli.cmd.clean": "Remove expired/low-quality",
+    "cli.cmd.backup": "Create/list/restore backups",
+    "cli.cmd.export": "Export memories to file",
+    "cli.cmd.import": "Import memories from file",
+    "cli.cmd.pack": "Pack identity into .carry file",
+    "cli.cmd.unpack": "Unpack .carry file to restore identity",
+    "cli.cmd.stats": "Show memory statistics",
+    "cli.cmd.check": "Check memory quality & conflicts",
+    "cli.cmd.whoami": "Who your AI thinks you are",
+    "cli.cmd.profile": "Export/view your AI identity",
+    "cli.cmd.doctor": "Run diagnostics",
+    "cli.cmd.setup_mcp": "Configure MCP integration",
+    "cli.cmd.mcp": "Start MCP server (stdio)",
+    "cli.cmd.tui": "Launch terminal UI",
+    "cli.cmd.serve": "Start MCP HTTP server",
+    "cli.cmd.init": "Initialize CarryMem",
+    "cli.cmd.version": "Show version",
+
+    # ── CLI success messages (cli.success.*) ──────────────────
+    "cli.success.stored": "Stored (forced) {count} item(s)",
+    "cli.success.remembered": "Remembered {count} item(s)",
+    "cli.success.forgotten": "Forgotten: {key}",
+    "cli.success.updated": "Updated: {key}",
+    "cli.success.backup_created": "Backup created: {path}",
+    "cli.success.restored": "Restored from backup: {path}",
+    "cli.success.exported": "Exported {count} memories to {path} ({format})",
+    "cli.success.imported": "Import complete: {imported} imported, {skipped} skipped, {errors} errors ({total} total)",
+    "cli.success.initialized": "CarryMem is ready!",
+    "cli.success.nothing_to_clean": "Nothing to clean — all memories are healthy",
+    "cli.success.cleaned": "Cleaned: {removed} removed, {errors} errors",
+
+    # ── CLI error messages (cli.error.*) ──────────────────────
+    "cli.error.not_found": "Memory not found: {key}",
+    "cli.error.no_memories": "No memories found",
+    "cli.error.no_matching": "No memories matching {query}",
+    "cli.error.store_failed": "Failed to store memory",
+    "cli.error.update_failed": "Failed to update: {key}",
+    "cli.error.forget_failed": "Failed to forget: {key}",
+    "cli.error.export_failed": "Export failed: {detail}",
+    "cli.error.import_failed": "Import failed",
+    "cli.error.backup_failed": "Backup failed: {detail}",
+    "cli.error.restore_failed": "Restore failed: {detail}",
+    "cli.error.backup_not_found": "Backup not found: {name}",
+    "cli.error.validation": "Validation Error: {detail}",
+    "cli.error.unknown_command": "Unknown command: {command}",
+    "cli.error.json_invalid": "Invalid JSON context: {detail}",
+
+    # ── CLI status/info messages (cli.status.*) ──────────────
+    "cli.status.not_classified": "Not classified as memorable (noise or too vague)",
+    "cli.status.cancelled": "Cancelled",
+    "cli.status.dry_run": "Dry run — no changes made",
+    "cli.status.confirm_edit": "Confirm edit? [y/N]",
+    "cli.status.confirm_delete": "Confirm? [y/N]",
+    "cli.status.confirm_restore": "Proceed? [y/N]",
+    "cli.status.confirm_clean": "Remove {count} memories? [y/N]",
+    "cli.status.warning_restore": "WARNING: This will replace your current database with the backup.",
+
+    # ── CLI help section headers (cli.section.*) ─────────────
+    "cli.section.commands": "Commands:",
+    "cli.section.rules_engine": "Rules Engine:",
+    "cli.section.examples": "Examples:",
+    "cli.section.quick_start": "Quick Start:",
+    "cli.section.documentation": "Documentation: https://github.com/lulin70/carrymem",
+    "cli.section.tagline": "AI remembers you. Not the other way around.",
+
+    # ── CLI argument help text (cli.arg.*) ────────────────────
+    # Common arguments
+    "cli.arg.db": "Database path",
+    "cli.arg.namespace": "Namespace",
+    "cli.arg.namespace_default": "Namespace (default: default)",
+    "cli.arg.format": "Output format",
+    "cli.arg.limit": "Number of items to show",
+    "cli.arg.force": "Skip confirmation",
+    "cli.arg.json": "Output as JSON",
+    
+    # add command
+    "cli.arg.message": "Message to remember",
+    "cli.arg.context": "Additional context (JSON)",
+    "cli.arg.force_store": "Force store without classification",
+    "cli.arg.type_override": "Override memory type (with --force)",
+    
+    # list command
+    "cli.arg.limit_memories": "Number of memories to show",
+    "cli.arg.type_filter": "Filter by memory type",
+    "cli.arg.format_table": "Output format",
+    
+    # search command
+    "cli.arg.query": "Search query",
+    "cli.arg.limit_results": "Max results",
+    
+    # show command
+    "cli.arg.key": "Storage key of the memory",
+    
+    # edit command
+    "cli.arg.key_edit": "Storage key of the memory to edit",
+    "cli.arg.content": "New content",
+    
+    # forget command
+    "cli.arg.key_forget": "Storage key of the memory to delete",
+    
+    # clean command
+    "cli.arg.expired": "Remove expired memories",
+    "cli.arg.quality": "Remove memories below quality threshold",
+    "cli.arg.dry_run": "Show what would be removed",
+    
+    # backup command
+    "cli.arg.list_backups": "List all backups",
+    "cli.arg.restore": "Restore from a backup file",
+    
+    # export command
+    "cli.arg.output_path": "Output file path",
+    "cli.arg.export_format": "Export format",
+    
+    # import command
+    "cli.arg.input_path": "Input file path",
+    "cli.arg.merge_strategy": "Merge strategy (skip/overwrite/merge)",
+    
+    # pack command
+    "cli.arg.output_file": "Output file path (default: ./carrymem_identity_YYYYMMDD.carry)",
+    "cli.arg.include_rules": "Include rules (default: True)",
+    "cli.arg.no_rules": "Exclude rules from pack",
+    "cli.arg.include_config": "Include config (default: True)",
+    "cli.arg.no_config": "Exclude config from pack",
+    "cli.arg.encryption_key": "Encryption key to include encrypted entries",
+    "cli.arg.encrypt": "Encrypt the .carry file with a password (prompted)",
+    
+    # unpack command
+    "cli.arg.carry_file": "Path to .carry file to unpack",
+    "cli.arg.merge_mode": "Merge mode (skip/replace/merge)",
+    "cli.arg.replace": "Overwrite existing memories",
+    
+    # stats command
+    "cli.arg.value_report": "Show value perception report (memories, rules, tokens saved, etc.)",
+    
+    # whoami command
+    "cli.arg.json_output": "Output as JSON",
+    
+    # profile command
+    "cli.arg.profile_action": "Profile action",
+    "cli.arg.output": "Output file path (for export)",
+    
+    # check command
+    "cli.arg.check_conflicts": "Check for conflicts",
+    "cli.arg.check_quality": "Check for low quality memories",
+    "cli.arg.check_expired": "Check for expired memories",
+    "cli.arg.check_all": "Run all checks",
+    
+    # doctor command
+    "cli.arg.fix": "Attempt to fix issues",
+    
+    # setup-mcp command
+    "cli.arg.tool": "Tool name (cursor/windsurf/zed/trae/cline/roo)",
+    "cli.arg.project": "Project directory (default: current)",
+    "cli.arg.global": "Configure MCP globally (system-level)",
+    "cli.arg.force_overwrite": "Overwrite existing config",
+    "cli.arg.uninstall": "Remove CarryMem MCP config from specified tool(s)",
+    
+    # serve command
+    "cli.arg.host": "Host to bind",
+    "cli.arg.port": "Port to listen",
+    "cli.arg.api_key": "API key for authentication",
+    
+    # consolidate command
+    "cli.arg.no_p1": "Skip P1 pattern recognition",
+    "cli.arg.no_p2": "Skip P2 semantic consolidation",
+    "cli.arg.schedule": "Schedule consolidation runs (daily/weekly/monthly)",
+    "cli.arg.stop": "Stop scheduled consolidation",
+    
+    # Rules command arguments
+    # add-rule command
+    "cli.arg.rule_action": "Behavior instruction (what AI should do)",
+    "cli.arg.trigger": "Scene description that activates this rule",
+    "cli.arg.rule_type": "Rule type",
+    "cli.arg.soft_rule": "Make this a soft suggestion (AI can ignore)",
+    "cli.arg.template": "Use a rule template (see: carrymem list-templates)",
+    "cli.arg.interactive": "Guided interactive creation",
+    
+    # list-rules command
+    "cli.arg.status_filter": "Filter by status",
+    "cli.arg.type_filter_rules": "Filter by type",
+    "cli.arg.limit_rules": "Max results (default: 20)",
+    "cli.arg.format_rules": "Output format",
+    
+    # match-rules command
+    "cli.arg.scene": "Scene description to match against",
+    "cli.arg.limit_match": "Max results (default: 5)",
+    "cli.arg.format_match": "Output format",
+    "cli.arg.context_budget": "Context budget (token count, default: 2000)",
+    
+    # delete-rule command
+    "cli.arg.rule_id": "Rule ID to delete",
+    
+    # pause-rule command
+    "cli.arg.rule_id_pause": "Rule ID to pause",
+    
+    # resume-rule command
+    "cli.arg.rule_id_resume": "Rule ID to resume",
+    
+    # export-rules command
+    "cli.arg.rules_output": "Output file path (JSON)",
+    "cli.arg.status_export": "Filter by status",
+    
+    # import-rules command
+    "cli.arg.rules_input": "Input file path (JSON)",
+    "cli.arg.import_mode": "Import mode (skip/overwrite/merge)",
+    
+    # skill-pack command
+    "cli.arg.skill_output": "Output file path (JSON)",
+    "cli.arg.skill_name": "Skill name",
+    "cli.arg.skill_version": "Semantic version",
+    "cli.arg.skill_author": "Author name",
+    "cli.arg.skill_description": "Skill description",
+    "cli.arg.skill_scope": "Skill scope (personal/team/global)",
+    "cli.arg.status_skill": "Filter rules by status",
+    "cli.arg.tags": "Categorization tags",
+    
+    # skill-install command
+    "cli.arg.skill_file": "Skill bundle file path (JSON)",
+    "cli.arg.install_scope": "Installation scope (personal/team/global)",
+    "cli.arg.install_mode": "Installation mode (skip/overwrite/merge)",
+    
+    # skill-verify command
+    "cli.arg.skill_verify": "Skill bundle file path (JSON)",
+    
+    # edit-rule command
+    "cli.arg.rule_id_edit": "Rule ID to edit",
+    "cli.arg.new_trigger": "New trigger",
+    "cli.arg.new_action": "New action",
+    "cli.arg.new_type": "New rule type",
+    "cli.arg.make_soft": "Change to soft rule",
+    "cli.arg.make_hard": "Change to hard rule",
+    
+    # suggest-rules command
+    "cli.arg.suggest_type": "Suggestion type",
+    "cli.arg.min_count": "Minimum occurrence count (default: 3)",
+    "cli.arg.accept_suggestions": "Accept all suggestions (create rules)",
+    
+    # promote-rules command
+    "cli.arg.promote_type": "Promotion type",
+    "cli.arg.auto_accept": "Auto-accept all candidates (with confirmation)",
+    "cli.arg.expiry_days": "Rule expiry days (0 = never expires)",
+    
+    # review-promotions command
+    "cli.arg.accept_promo": "Accept a specific candidate by ID",
+    "cli.arg.reject_promo": "Reject a specific candidate by ID",
+    "cli.arg.accept_all_promo": "Accept all pending promotions (with confirmation)",
+    "cli.arg.review_note": "Add a review note",
+    
+    # promotion-log command
+    "cli.arg.log_limit": "Number of entries to show",
+    
+    # refine-rule command
+    "cli.arg.refine_trigger": "Rule trigger/scene (required for new session)",
+    "cli.arg.refine_action": "Rule action (required for new session)",
+    "cli.arg.refine_type": "Rule type (default: avoid)",
+    "cli.arg.refine_answer": "Answer to current question (for advancing session)",
+    "cli.arg.refine_option": "Selected option for answer",
+    "cli.arg.refine_session": "Continue existing session",
+    "cli.arg.refine_confirm": "Confirm current session and create rule",
+    "cli.arg.refine_cancel": "Cancel current session",
+    
+    # learn-experience command
+    "cli.arg.learn_type": "Experience type",
+    "cli.arg.learn_expiry": "Rule expiry days (0 = never expires)",
+    
+    # review-lessons command
+    "cli.arg.accept_lesson": "Accept a specific lesson by ID",
+    "cli.arg.reject_lesson": "Reject a specific lesson by ID",
+    "cli.arg.accept_all_lessons": "Accept all pending lessons",
+    "cli.arg.override_trigger": "Override trigger when accepting",
+    "cli.arg.override_action": "Override action when accepting",
+    "cli.arg.lesson_note": "Add a review note",
 }

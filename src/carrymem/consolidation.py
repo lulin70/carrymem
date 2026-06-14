@@ -300,7 +300,7 @@ def consolidate_p1(
         result.update(p1_result)
     except (ValueError, TypeError, RuntimeError, Exception) as e:
         result["p1_error"] = str(e)
-        logger.warning(f"P1 consolidation failed: {e}")
+        logger.warning("P1 consolidation failed: %s", e)
 
     return result
 

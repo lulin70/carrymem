@@ -125,7 +125,7 @@ class ConnectionManager:
                             conn.enable_load_extension(True)
                             sqlite_vec.load(conn)
                         except (OSError, AttributeError, ImportError, RuntimeError) as e:
-                            logger.debug(f"sqlite_vec extension loading failed: {e}")
+                            logger.debug("sqlite_vec extension loading failed: %s", e)
                     self._local.conn = conn
                     with self._conn_lock:
                         self._all_connections[id(conn)] = conn
@@ -200,12 +200,12 @@ class ConnectionManager:
         elapsed_ms = (time.perf_counter() - start) * 1000
 
         sql_display = sql[:80] + "..." if sql and len(sql) > 80 else sql
-        logger.debug(f"Query executed in {elapsed_ms:.2f}ms | {sql_display}")
+        logger.debug("Query executed in %.2fms | %s", elapsed_ms, sql_display)
 
         if elapsed_ms > _SLOW_QUERY_THRESHOLD_MS:
             logger.warning(
-                f"Slow query detected ({elapsed_ms:.2f}ms > {_SLOW_QUERY_THRESHOLD_MS}ms): "
-                f"{sql_display}"
+                "Slow query detected (%.2fms > %dms): "
+                "%s", elapsed_ms, _SLOW_QUERY_THRESHOLD_MS, sql_display
             )
 
     def close(self):
@@ -216,7 +216,7 @@ class ConnectionManager:
                 try:
                     conn.close()
                 except (sqlite3.ProgrammingError, sqlite3.InterfaceError) as e:
-                    logger.debug(f"Failed to close connection {conn_id}: {e}")
+                    logger.debug("Failed to close connection %s: %s", conn_id, e)
             self._all_connections.clear()
         if hasattr(self._local, "conn"):
             self._local.conn = None
@@ -229,7 +229,7 @@ class ConnectionManager:
             try:
                 self._local.conn.close()
             except (sqlite3.ProgrammingError, sqlite3.InterfaceError) as e:
-                logger.debug(f"Failed to close existing connection for vector switch: {e}")
+                logger.debug("Failed to close existing connection for vector switch: %s", e)
             with self._conn_lock:
                 self._all_connections.pop(id(self._local.conn), None)
             self._local.conn = None

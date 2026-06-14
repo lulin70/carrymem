@@ -2,10 +2,13 @@
 Tests for AuditLogger - security audit logging module.
 
 Covers: log_operation, query with filters (AuditFilter),
-get_stats, error handling, export/clear.
+get_stats, error handling, export/clear, SQLite persistence.
 """
 
-from datetime import datetime, timezone
+import json
+import os
+import tempfile
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -225,3 +228,187 @@ class TestThreadSafety:
 
         assert len(errors) == 0, f"Concurrent log errors: {errors}"
         assert len(audit_logger.query()) == 20
+
+
+# ── SQLite persistence tests ────────────────────────────────────────
+
+
+@pytest.fixture
+def sqlite_logger(tmp_path):
+    """Create an AuditLogger with SQLite persistence backed by a temp file."""
+    db_path = str(tmp_path / "audit_test.db")
+    logger = AuditLogger(persist_path=db_path)
+    yield logger
+    # Cleanup: close the DB connection if still open
+    if logger._db_conn is not None:
+        logger._db_conn.close()
+
+
+class TestSQLitePersistLogAndQuery:
+    def test_log_writes_to_memory_and_sqlite(self, sqlite_logger, tmp_path):
+        sqlite_logger.log_operation("remember", storage_key="mem_001")
+        # In-memory query
+        results = sqlite_logger.query()
+        assert len(results) == 1
+        assert results[0].action == "remember"
+        assert results[0].resource == "mem_001"
+
+        # Verify SQLite directly
+        cursor = sqlite_logger._db_conn.execute("SELECT COUNT(*) FROM audit_log")
+        assert cursor.fetchone()[0] == 1
+
+    def test_query_falls_back_to_sqlite(self, tmp_path):
+        db_path = str(tmp_path / "audit_fallback.db")
+        logger = AuditLogger(persist_path=db_path)
+        logger.log_operation("remember", storage_key="mem_001")
+        logger.log_operation("forget", storage_key="mem_002")
+
+        # Clear in-memory only (simulate restart scenario)
+        with logger._lock:
+            logger._events.clear()
+
+        # query should fall back to SQLite
+        results = logger.query()
+        assert len(results) == 2
+        actions = {r.action for r in results}
+        assert actions == {"remember", "forget"}
+        logger._db_conn.close()
+
+    def test_query_with_filter_on_sqlite(self, sqlite_logger):
+        sqlite_logger.log_operation("remember")
+        sqlite_logger.log_operation("forget")
+        sqlite_logger.log_operation("remember")
+
+        # Clear memory to force SQLite fallback
+        with sqlite_logger._lock:
+            sqlite_logger._events.clear()
+
+        results = sqlite_logger.query(AuditFilter(action="remember"))
+        assert len(results) == 2
+        assert all(r.action == "remember" for r in results)
+
+    def test_log_with_details_persisted(self, sqlite_logger):
+        details = {"key": "value", "nested": {"a": 1}}
+        sqlite_logger.log_operation("remember", details=details)
+        results = sqlite_logger.query()
+        assert results[0].details == details
+
+    def test_sqlite_file_created(self, tmp_path):
+        db_path = str(tmp_path / "subdir" / "audit.db")
+        logger = AuditLogger(persist_path=db_path)
+        assert os.path.exists(db_path)
+        logger._db_conn.close()
+
+
+class TestSQLitePersistStats:
+    def test_stats_from_sqlite(self, sqlite_logger):
+        sqlite_logger.log_operation("remember")
+        sqlite_logger.log_operation("remember")
+        sqlite_logger.log_operation("forget", success=False)
+
+        stats = sqlite_logger.get_stats()
+        assert stats["total_events"] == 3
+        assert stats["by_action"]["remember"] == 2
+        assert stats["by_action"]["forget"] == 1
+        assert stats["by_result"]["SUCCESS"] == 2
+        assert stats["by_result"]["FAILURE"] == 1
+        assert stats["last_event"] is not None
+
+    def test_stats_empty_sqlite(self, sqlite_logger):
+        stats = sqlite_logger.get_stats()
+        assert stats["total_events"] == 0
+        assert stats["by_action"] == {}
+        assert stats["last_event"] is None
+
+
+class TestSQLitePersistExport:
+    def test_export_json_from_sqlite(self, sqlite_logger):
+        sqlite_logger.log_operation("test_export", details={"k": "v"})
+        json_str = sqlite_logger.export("json")
+        data = json.loads(json_str)
+        assert len(data) == 1
+        assert data[0]["action"] == "test_export"
+        assert data[0]["details"]["k"] == "v"
+
+    def test_export_csv_from_sqlite(self, sqlite_logger):
+        sqlite_logger.log_operation("test_csv")
+        csv_str = sqlite_logger.export("csv")
+        lines = csv_str.strip().split("\n")
+        assert len(lines) >= 2  # header + data row
+
+    def test_export_json_includes_all_sqlite_rows(self, sqlite_logger):
+        for i in range(5):
+            sqlite_logger.log_operation(f"op_{i}")
+
+        # Clear memory to verify export comes from SQLite
+        with sqlite_logger._lock:
+            sqlite_logger._events.clear()
+
+        json_str = sqlite_logger.export("json")
+        data = json.loads(json_str)
+        assert len(data) == 5
+
+
+class TestSQLitePersistClear:
+    def test_clear_all_from_memory_and_sqlite(self, sqlite_logger):
+        sqlite_logger.log_operation("remember")
+        sqlite_logger.log_operation("forget")
+
+        removed = sqlite_logger.clear()
+        assert removed == 2
+
+        # Memory should be empty
+        assert len(sqlite_logger.query()) == 0
+
+        # SQLite should be empty
+        cursor = sqlite_logger._db_conn.execute("SELECT COUNT(*) FROM audit_log")
+        assert cursor.fetchone()[0] == 0
+
+    def test_clear_older_than_from_both(self, sqlite_logger):
+        sqlite_logger.log_operation("old_event")
+        sqlite_logger.log_operation("new_event")
+
+        # Clear events older than 1 day — none should be removed since
+        # both events were just created (they are only seconds old).
+        removed = sqlite_logger.clear(older_than=timedelta(days=1))
+        assert removed == 0
+        assert len(sqlite_logger.query()) == 2
+
+
+class TestMemoryModeUnchanged:
+    """Verify that the default in-memory mode is completely unchanged."""
+
+    def test_default_is_memory_only(self):
+        logger = AuditLogger()
+        assert logger._db_conn is None
+        assert logger._persist_path is None
+
+    def test_memory_log_and_query(self):
+        logger = AuditLogger()
+        logger.log_operation("remember")
+        results = logger.query()
+        assert len(results) == 1
+        assert results[0].action == "remember"
+
+    def test_memory_stats(self):
+        logger = AuditLogger()
+        logger.log_operation("remember")
+        logger.log_operation("forget")
+        stats = logger.get_stats()
+        assert stats["total_events"] == 2
+        assert stats["by_action"]["remember"] == 1
+        assert stats["by_action"]["forget"] == 1
+
+    def test_memory_export_json(self):
+        logger = AuditLogger()
+        logger.log_operation("test")
+        json_str = logger.export("json")
+        data = json.loads(json_str)
+        assert len(data) == 1
+
+    def test_memory_clear(self):
+        logger = AuditLogger()
+        logger.log_operation("test")
+        removed = logger.clear()
+        assert removed == 1
+        assert len(logger.query()) == 0
