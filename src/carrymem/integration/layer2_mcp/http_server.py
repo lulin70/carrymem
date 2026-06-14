@@ -2,10 +2,12 @@
 
 HTTP+SSE transport for MCP protocol, enabling multi-client access.
 
-Protocol:
+Endpoints:
 - GET /sse → Server-Sent Events stream (server pushes events to client)
 - POST /message → Client sends JSON-RPC requests
-- GET /health → Health check endpoint
+- GET /health → Basic health check (version info)
+- GET /healthz → Detailed health check with SLO metrics (JSON)
+- GET /metrics → Prometheus-format metrics
 
 Usage:
     carrymem serve --host 127.0.0.1 --port 8765
@@ -14,6 +16,8 @@ Security:
 - Binds to localhost by default (not 0.0.0.0)
 - Optional API key authentication via --api-key or CARRYMEM_API_KEY env var
 - CORS headers for browser-based clients
+- Monitoring endpoints (/health, /healthz, /metrics) are public (no auth)
+- MCP endpoints (/sse, /message) require authentication if API key is set
 """
 
 import asyncio
@@ -26,6 +30,7 @@ import uuid
 from typing import Any, Dict, Optional
 
 from carrymem.__version__ import __version__ as _version
+from carrymem.monitoring import MetricsCollector, HealthChecker
 
 from .server import MCPServer
 
@@ -68,6 +73,9 @@ class MCPHTTPServer:
         self._clients: Dict[str, SSEClient] = {}
         self._server = None
         self._mcq_server = None
+        # Monitoring components
+        self._metrics = MetricsCollector()
+        self._health_checker = HealthChecker(metrics_collector=self._metrics)
 
     def _check_auth(self, headers: Dict[str, str]) -> bool:
         if not self._api_key:
@@ -158,10 +166,21 @@ class MCPHTTPServer:
                     return
                 body = await reader.readexactly(content_length)
 
+            # Public endpoints (no auth required)
             if path == "/health":
                 await self._send_response(writer, 200, {"status": "ok", "version": _version}, request_origin)
                 return
+            elif path == "/healthz":
+                health_status = self._health_checker.check()
+                status_code = 200 if health_status["status"] == "ok" else 503
+                await self._send_response(writer, status_code, health_status, request_origin)
+                return
+            elif path == "/metrics":
+                metrics_text = self._metrics.to_prometheus()
+                await self._send_text_response(writer, 200, metrics_text, request_origin)
+                return
 
+            # Protected endpoints (require auth)
             if not self._check_auth(headers):
                 await self._send_response(writer, 401, {"error": "Unauthorized"}, request_origin)
                 return
@@ -284,15 +303,36 @@ class MCPHTTPServer:
         writer.write(headers.encode() + body_bytes)
         await writer.drain()
 
+    async def _send_text_response(self, writer, status_code: int, text: str, request_origin: str = ""):
+        """Send a plain text HTTP response (for Prometheus metrics)."""
+        status_messages = {200: "OK", 500: "Internal Server Error"}
+        status_msg = status_messages.get(status_code, "Unknown")
+        body_bytes = text.encode("utf-8")
+        cors_origin = self._get_cors_origin(request_origin)
+        headers = (
+            f"HTTP/1.1 {status_code} {status_msg}\r\n"
+            "Content-Type: text/plain; version=0.0.4; charset=utf-8\r\n"
+            f"Content-Length: {len(body_bytes)}\r\n"
+            f"Access-Control-Allow-Origin: {cors_origin}\r\n"
+            "X-Content-Type-Options: nosniff\r\n"
+            "\r\n"
+        )
+        writer.write(headers.encode() + body_bytes)
+        await writer.drain()
+
     async def start(self):
         self._server = await asyncio.start_server(self._handle_request, self._host, self._port)
         addrs = ", ".join(str(s.getsockname()) for s in self._server.sockets)
         print(f"CarryMem MCP HTTP Server running on {addrs}")
+        print(f"  - MCP endpoints: /sse, /message")
+        print(f"  - Monitoring: /health, /healthz, /metrics")
         if self._api_key:
             print("API key authentication enabled")
         else:
             print("⚠️  WARNING: No API key set — server is open to all connections!")
             print("   Set CARRYMEM_API_KEY env var or use --api-key flag")
+        
+        self._health_checker.set_ready(True)
 
         async with self._server:
             await self._server.serve_forever()
