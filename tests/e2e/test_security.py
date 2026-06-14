@@ -209,26 +209,29 @@ class TestPermissionBypass:
     def test_namespace_isolation(self):
         """Test that memories in other namespaces are isolated."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            cm = CarryMem(db_path=os.path.join(tmpdir, "test.db"))
-            
+            # Create separate CarryMem instances with different namespaces
+            cm1 = CarryMem(db_path=os.path.join(tmpdir, "test.db"), namespace="namespace1")
+            cm2 = CarryMem(db_path=os.path.join(tmpdir, "test.db"), namespace="namespace2")
+
             # Store in different namespaces
-            cm.classify_and_remember("Secret data in ns1", namespace="namespace1")
-            cm.classify_and_remember("Public data in ns2", namespace="namespace2")
-            
+            cm1.classify_and_remember("Secret data in ns1")
+            cm2.classify_and_remember("Public data in ns2")
+
             # Query in namespace1 should not return namespace2 data
-            results_ns1 = cm.recall_memories(query="data", namespace="namespace1", limit=10)
+            results_ns1 = cm1.recall_memories(query="data", limit=10)
             for result in results_ns1:
                 # Verify namespace isolation if namespace info is available
                 if isinstance(result, dict) and "namespace" in result:
                     assert result["namespace"] == "namespace1"
-            
+
             # Query in namespace2 should not return namespace1 data
-            results_ns2 = cm.recall_memories(query="data", namespace="namespace2", limit=10)
+            results_ns2 = cm2.recall_memories(query="data", limit=10)
             for result in results_ns2:
                 if isinstance(result, dict) and "namespace" in result:
                     assert result["namespace"] == "namespace2"
-            
-            cm.close()
+
+            cm1.close()
+            cm2.close()
 
     def test_delete_with_invalid_id(self):
         """Test that delete operations handle invalid IDs safely."""

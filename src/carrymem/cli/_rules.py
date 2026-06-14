@@ -5,6 +5,16 @@ import json
 from carrymem.cli._base import *
 
 
+def _deprecated_wrapper(old_cmd, new_sub, handler):
+    """Create a wrapper that prints a deprecation notice and delegates to the handler."""
+
+    def wrapper(args):
+        print(f"  {_yellow(f'[DEPRECATED]')} {_dim(f'Use `carrymem rules {new_sub}` instead of `carrymem {old_cmd}`')}")
+        return handler(args)
+
+    return wrapper
+
+
 def cmd_rules_hub(args):
     if not args:
         return cmd_list_rules([])
@@ -21,7 +31,16 @@ def cmd_rules_hub(args):
         "check": cmd_check_rules,
         "export": cmd_export_rules,
         "import": cmd_import_rules,
+        "templates": cmd_list_templates,
         "suggest": cmd_suggest_rules,
+        "promote": cmd_promote_rules,
+        "review-promotions": cmd_review_promotions,
+        "promotion-log": cmd_promotion_log,
+        "learn": cmd_learn_experience,
+        "review-lessons": cmd_review_lessons,
+        "lesson-log": cmd_lesson_log,
+        "refine": cmd_refine_rule,
+        "refinement-sessions": cmd_refinement_sessions,
     }
 
     sub = args[0]
@@ -31,9 +50,36 @@ def cmd_rules_hub(args):
         return handler(sub_args)
 
     print(f"  {_red('Unknown rules sub-command:')} {sub}")
-    _available = _dim("Available: list, add, delete, match, edit, pause, resume, stats, check, export, import, suggest")
+    _available = _dim(
+        "Available: list, add, delete, match, edit, pause, resume, stats, check, "
+        "export, import, templates, suggest, promote, learn, refine"
+    )
     print(f"  {_available}")
     return 1
+
+
+# Deprecated wrappers — old flat commands still work but warn
+cmd_add_rule_deprecated = _deprecated_wrapper("add-rule", "add", lambda a: cmd_add_rule(a))
+cmd_list_rules_deprecated = _deprecated_wrapper("list-rules", "list", lambda a: cmd_list_rules(a))
+cmd_match_rules_deprecated = _deprecated_wrapper("match-rules", "match", lambda a: cmd_match_rules(a))
+cmd_edit_rule_deprecated = _deprecated_wrapper("edit-rule", "edit", lambda a: cmd_edit_rule(a))
+cmd_delete_rule_deprecated = _deprecated_wrapper("delete-rule", "delete", lambda a: cmd_delete_rule(a))
+cmd_pause_rule_deprecated = _deprecated_wrapper("pause-rule", "pause", lambda a: cmd_pause_rule(a))
+cmd_resume_rule_deprecated = _deprecated_wrapper("resume-rule", "resume", lambda a: cmd_resume_rule(a))
+cmd_rules_stats_deprecated = _deprecated_wrapper("rules-stats", "stats", lambda a: cmd_rules_stats(a))
+cmd_check_rules_deprecated = _deprecated_wrapper("check-rules", "check", lambda a: cmd_check_rules(a))
+cmd_export_rules_deprecated = _deprecated_wrapper("export-rules", "export", lambda a: cmd_export_rules(a))
+cmd_import_rules_deprecated = _deprecated_wrapper("import-rules", "import", lambda a: cmd_import_rules(a))
+cmd_list_templates_deprecated = _deprecated_wrapper("list-templates", "templates", lambda a: cmd_list_templates(a))
+cmd_suggest_rules_deprecated = _deprecated_wrapper("suggest-rules", "suggest", lambda a: cmd_suggest_rules(a))
+cmd_promote_rules_deprecated = _deprecated_wrapper("promote-rules", "promote", lambda a: cmd_promote_rules(a))
+cmd_review_promotions_deprecated = _deprecated_wrapper("review-promotions", "review-promotions", lambda a: cmd_review_promotions(a))
+cmd_promotion_log_deprecated = _deprecated_wrapper("promotion-log", "promotion-log", lambda a: cmd_promotion_log(a))
+cmd_learn_experience_deprecated = _deprecated_wrapper("learn-experience", "learn", lambda a: cmd_learn_experience(a))
+cmd_review_lessons_deprecated = _deprecated_wrapper("review-lessons", "review-lessons", lambda a: cmd_review_lessons(a))
+cmd_lesson_log_deprecated = _deprecated_wrapper("lesson-log", "lesson-log", lambda a: cmd_lesson_log(a))
+cmd_refine_rule_deprecated = _deprecated_wrapper("refine-rule", "refine", lambda a: cmd_refine_rule(a))
+cmd_refinement_sessions_deprecated = _deprecated_wrapper("refinement-sessions", "refinement-sessions", lambda a: cmd_refinement_sessions(a))
 
 
 def cmd_add_rule(args):
@@ -104,9 +150,9 @@ def cmd_add_rule(args):
     else:
         if not parsed.action or not parsed.trigger:
             _usage_hint = _red("Missing required arguments. Use:")
-            print(f"\n  {_usage_hint} carrymem add-rule <action> --trigger <scene>")
-            print(f"  {_dim('Or use:')} carrymem add-rule --interactive")
-            print(f"  {_dim('Or use:')} carrymem add-rule --template <name>")
+            print(f"\n  {_usage_hint} carrymem rules add <action> --trigger <scene>")
+            print(f"  {_dim('Or use:')} carrymem rules add --interactive")
+            print(f"  {_dim('Or use:')} carrymem rules add --template <name>")
             return 1
 
         trigger = parsed.trigger
@@ -150,7 +196,7 @@ def cmd_list_rules(args):
 
     if not rules:
         print(f"\n  {_dim('No rules found.')}")
-        print("  Create one with: carrymem add-rule <action> --trigger <scene>")
+        print("  Create one with: carrymem rules add <action> --trigger <scene>")
         print()
         return 0
 
@@ -679,7 +725,7 @@ def cmd_list_templates(args):
         print(f"    {desc}")
         print()
 
-    print(f"  {_dim('Usage: carrymem add-rule --template <name>')}")
+    print(f"  {_dim('Usage: carrymem rules add --template <name>')}")
     print()
     return 0
 
@@ -775,8 +821,8 @@ def cmd_suggest_rules(args):
                 print(f"  {_red(f'Skipped:')} {e}")
         print(f"\n  {_green(f'{len(accepted)} rules created from suggestions')}")
     else:
-        print(f"\n  {_dim('To accept: carrymem suggest-rules --accept')}")
-        print(f"  {_dim('To accept one: carrymem add-rule ACTION --trigger SCENE')}")
+        print(f"\n  {_dim('To accept: carrymem rules suggest --accept')}")
+        print(f"  {_dim('To accept one: carrymem rules add ACTION --trigger SCENE')}")
 
     print()
     return 0
@@ -833,7 +879,7 @@ def cmd_promote_rules(args):
         pending = engine.list_pending_promotions()
         if pending:
             print(f"\n  {_yellow(f'{len(pending)} pending candidates awaiting review:')}")
-            print(f"  {_dim('Use: carrymem review-promotions')}")
+            print(f"  {_dim('Use: carrymem rules review-promotions')}")
     print()
     return 0
 
@@ -910,7 +956,7 @@ def cmd_review_promotions(args):
         print(f"    Action:  {entry.candidate_action}")
         print(f"    Type:    {entry.candidate_rule_type} | Confidence: {entry.confidence:.0%}")
         print(f"    {_dim(f'From {len(entry.source_memory_ids)} memories | Created: {entry.created_at[:10]}')}")
-        print(f"    {_dim(f'Accept: carrymem review-promotions --accept ' + entry.id)}")
+        print(f"    {_dim(f'Accept: carrymem rules review-promotions --accept ' + entry.id)}")
 
     print()
     return 0
@@ -977,7 +1023,7 @@ def cmd_refine_rule(args):
 
     if not parsed.session and (not parsed.trigger or not parsed.action):
         print(f"\n  {_red('Error: --trigger and --action are required for new sessions')}")
-        print(f"  {_dim('Use: carrymem refine-rule --trigger <scene> --action <action>')}")
+        print(f"  {_dim('Use: carrymem rules refine --trigger <scene> --action <action>')}")
         return 1
 
     engine = _get_rule_engine(parsed.db)
@@ -1018,11 +1064,11 @@ def cmd_refine_rule(args):
             print(f"\n  {_bold('Next Question:')} {next_q.get('question_text', '')}")
             for i, opt in enumerate(next_q.get("options", []), 1):
                 print(f"    {i}. {opt}")
-            answer_hint = f'carrymem refine-rule --session {parsed.session} --answer "your answer"'
+            answer_hint = f'carrymem rules refine --session {parsed.session} --answer "your answer"'
             print(f"\n  {_dim(f'Answer: {answer_hint}')}")
         else:
             _ready_msg = _yellow("Ready to confirm.")
-            _confirm_cmd = _dim(f"carrymem refine-rule --session {parsed.session} --confirm")
+            _confirm_cmd = _dim(f"carrymem rules refine --session {parsed.session} --confirm")
             print(f"\n  {_ready_msg} {_confirm_cmd}")
         print()
         return 0
@@ -1050,7 +1096,7 @@ def cmd_refine_rule(args):
         print(f"\n  {_bold('Question (Round 1):')} {question.get('question_text', '')}")
         for i, opt in enumerate(question.get("options", []), 1):
             print(f"    {i}. {opt}")
-        answer_hint_start = f'carrymem refine-rule --session {session_id} --answer "your answer"'
+        answer_hint_start = f'carrymem rules refine --session {session_id} --answer "your answer"'
         print(f"\n  {_dim(f'Answer: {answer_hint_start}')}")
     print()
     return 0
@@ -1066,7 +1112,7 @@ def cmd_refinement_sessions(args):
 
     if not sessions:
         print(f"\n  {_yellow('No active refinement sessions.')}")
-        print(f"  {_dim('Use: carrymem refine-rule --trigger <scene> --action <action>')}")
+        print(f"  {_dim('Use: carrymem rules refine --trigger <scene> --action <action>')}")
         return 0
 
     print(f"\n  {_bold('Active Refinement Sessions')} ({len(sessions)})")
@@ -1076,7 +1122,7 @@ def cmd_refinement_sessions(args):
         print(f"    Original: {s.original_trigger} \u2192 {s.original_action}")
         print(f"    Current:  {s.current_trigger} \u2192 {s.current_action}")
         print(f"    {_dim(f'Created: {s.created_at[:19]}')}")
-        continue_hint = f'carrymem refine-rule --session {s.id} --answer "..."'
+        continue_hint = f'carrymem rules refine --session {s.id} --answer "..."'
         print(f"    {_dim(f'Continue: {continue_hint}')}")
     print()
     return 0
@@ -1141,7 +1187,7 @@ def cmd_learn_experience(args):
             print(f"    {_dim(p.id)} [{signal}] {lesson_preview}")
         if len(pending) > 5:
             print(f"    {_dim(f'... and {len(pending) - 5} more')}")
-        print(f"\n  {_dim('Use: carrymem review-lessons')}")
+        print(f"\n  {_dim('Use: carrymem rules review-lessons')}")
     print()
     return 0
 
@@ -1196,7 +1242,7 @@ def cmd_review_lessons(args):
     pending = engine.list_pending_lessons()
     if not pending:
         print(f"\n  {_yellow('No pending lessons to review.')}")
-        print(f"  {_dim('Use: carrymem learn-experience')}")
+        print(f"  {_dim('Use: carrymem rules learn')}")
         return 0
 
     print(f"\n  {_bold('Pending Failure Lessons')} ({len(pending)})")
@@ -1215,8 +1261,8 @@ def cmd_review_lessons(args):
         print(f"    Trigger: {trigger}")
         print(f"    Action:  {action}")
         print(f"    {_dim(f'Created: {entry.created_at[:19]}')}")
-        print(f"    {_dim(f'Accept: carrymem review-lessons --accept {entry.id}')}")
-        print(f"    {_dim(f'Reject: carrymem review-lessons --reject {entry.id}')}")
+        print(f"    {_dim(f'Accept: carrymem rules review-lessons --accept {entry.id}')}")
+        print(f"    {_dim(f'Reject: carrymem rules review-lessons --reject {entry.id}')}")
 
     print()
     return 0
@@ -1233,7 +1279,7 @@ def cmd_lesson_log(args):
 
     if not entries:
         print(f"\n  {_yellow('No experience learning history.')}")
-        print(f"  {_dim('Use: carrymem learn-experience')}")
+        print(f"  {_dim('Use: carrymem rules learn')}")
         return 0
 
     print(f"\n  {_bold('Experience Learning Log')}")

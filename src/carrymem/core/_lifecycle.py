@@ -6,7 +6,8 @@ import logging
 import os
 import sqlite3
 from threading import Timer
-from typing import Any, Dict, Optional, TYPE_CHECKING, Union
+from types import TracebackType
+from typing import Any, Dict, Optional, TYPE_CHECKING, Type, Union
 
 from carrymem.adapters.base import MemoryEntry, StorageAdapter
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
@@ -29,6 +30,9 @@ StorageType = Optional[Union[str, StorageAdapter]]
 
 
 def _validate_file_path(path: str, allowed_base: Optional[str] = None) -> str:
+    # Reject path traversal patterns in the raw input
+    if ".." in path.split(os.sep) or ".." in path.split("/"):
+        raise ValueError(f"Path traversal not allowed: {path}")
     resolved = os.path.realpath(os.path.expanduser(path))
     if allowed_base:
         allowed = os.path.realpath(allowed_base)
@@ -82,6 +86,12 @@ class LifecycleMixin:
 
         if db_path is None:
             db_path = os.environ.get("CARRYMEM_DB_PATH")
+
+        if db_path is not None and db_path != ":memory:":
+            try:
+                _validate_file_path(db_path)
+            except ValueError:
+                raise
 
         if storage is None:
             self._adapter: Optional[StorageAdapter] = None
@@ -184,7 +194,7 @@ class LifecycleMixin:
     def __enter__(self) -> "LifecycleMixin":
         return self
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> bool:
+    def __exit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]) -> bool:
         self.close()
         return False
 

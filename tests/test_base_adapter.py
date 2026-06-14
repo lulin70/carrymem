@@ -2,7 +2,7 @@
 Tests for base adapter module.
 
 Covers: MemoryEntry, StoredMemory.from_dict/to_dict,
-StorageAdapter base defaults, StorageAdapterProtocol.
+StorageAdapter base defaults.
 """
 
 from dataclasses import dataclass
@@ -14,7 +14,6 @@ from carrymem.adapters.base import (
     MemoryEntry,
     StoredMemory,
     StorageAdapter,
-    StorageAdapterProtocol,
 )
 
 
@@ -256,9 +255,9 @@ class TestStorageAdapterDefaults:
 
 
 class TestStorageAdapterProtocol:
-    """Verify StorageAdapterProtocol is compatible with real adapters."""
+    """Verify StorageAdapter ABC is compatible with real adapters."""
 
     def test_protocol_compliance(self):
         adapter = _MinimalAdapter()
-        # runtime_checkable protocol check
-        assert isinstance(adapter, StorageAdapterProtocol)
+        # StorageAdapter is an ABC, so concrete subclasses are instances
+        assert isinstance(adapter, StorageAdapter)

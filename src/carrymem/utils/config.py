@@ -22,7 +22,7 @@ class ConfigManager:
         self.config_path = config_path or os.environ.get("CARRYMEM_CONFIG_PATH", _DEFAULT_CONFIG_PATH)
         self.config = self.load_config()
 
-    def get(self, key: str, default: Any = None) -> Any:
+    def get(self, key: str, default: object = None) -> object:
         """Get a configuration value by key.
 
         Args:
@@ -90,7 +90,7 @@ class ConfigManager:
             _logger.debug("Rules file not found: %s", rules_path)
             return {}
 
-    def set(self, key: str, value: Any):
+    def set(self, key: str, value: object) -> None:
         """Set a configuration value by key.
 
         Args:

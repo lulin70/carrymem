@@ -21,7 +21,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
   ├── v0.2.8  Rules Engine Beta    (Context Engineering + Hardened)      ✅
   │
   ├── v0.3.0  GA Release           (Production Ready + Knowledge Adapter) ✅
-  ├── v0.4.0  Enterprise           (Scopes + Skill + Merge + VS Code)     ✅
+  ├── v0.4.0  Protocol & Maturity Sprint (Scopes + Skill + Merge + VS Code)     ✅
   └── v0.4.1  Core Loop Fix        (Auto Rule Suggestion + Security)      ✅
 ```
 
@@ -255,9 +255,9 @@ CarryMem 개념을 DDD 개념에 매핑하여 엔터프라이즈 아키텍트 �
 
 ---
 
-## v0.4.0 Enterprise Features — DONE ✅
+## v0.4.0 Protocol & Maturity Sprint — DONE ✅
 
-### v0.4.0 — Enterprise Features
+### v0.4.0 — Protocol & Maturity Sprint
 
 **테마**: 멀티 스코프 규칙, 휴대 가능 Skill 형식, 에디터 통합
 **선행 조건**: v0.3.0 GA 릴리스

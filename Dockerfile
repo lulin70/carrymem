@@ -22,9 +22,15 @@ RUN mkdir -p /data
 
 VOLUME ["/data"]
 
-EXPOSE 8000
+# EXPOSE 8765 for HTTP+SSE mode (carrymem serve).
+# Default CMD uses stdio transport which does NOT listen on any HTTP port.
+# To use HTTP mode, override CMD: docker run carrymem python -m carrymem serve
+# Monitoring endpoints in HTTP mode: /health, /healthz, /metrics
+EXPOSE 8765
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "from carrymem.integration.layer2_mcp.server import MCPServer; print('OK')" || exit 1
+    CMD python -c "from carrymem import CarryMem; print('OK')" || exit 1
 
+# Default: stdio transport (for MCP clients like Claude Code, Cursor, etc.)
+# This mode communicates via stdin/stdout, not HTTP.
 CMD ["python", "-m", "carrymem", "mcp"]

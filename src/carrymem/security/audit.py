@@ -498,13 +498,35 @@ _global_logger: Optional[AuditLogger] = None
 _global_lock = threading.Lock()
 
 
-def get_audit_logger() -> AuditLogger:
-    """Get or create the global AuditLogger singleton."""
+def get_audit_logger(disable_persist: bool = False) -> AuditLogger:
+    """Get or create the global AuditLogger singleton.
+
+    By default, the logger uses SQLite persistence at ``~/.carrymem/audit.db``.
+    If SQLite initialization fails, it falls back to pure in-memory mode.
+
+    Args:
+        disable_persist: If True, create a pure in-memory logger without
+                         SQLite persistence. Useful for tests that need
+                         isolation from the filesystem.
+    """
     global _global_logger
     if _global_logger is None:
         with _global_lock:
             if _global_logger is None:
-                _global_logger = AuditLogger()
+                if disable_persist:
+                    _global_logger = AuditLogger()
+                else:
+                    persist_path = str(Path.home() / ".carrymem" / "audit.db")
+                    try:
+                        _global_logger = AuditLogger(persist_path=persist_path)
+                    except Exception:
+                        _audit_logger.warning(
+                            "Failed to initialize SQLite persistence at %s, "
+                            "falling back to in-memory mode",
+                            persist_path,
+                            exc_info=True,
+                        )
+                        _global_logger = AuditLogger()
     return _global_logger
 
 

@@ -330,7 +330,7 @@ carrymem pack -o my_memories.carry
 carrymem pack -o my_memories.carry --encrypt
 ```
 
-When using `--encrypt`, you will be prompted for a password (minimum 4 characters). The password is used to derive an encryption key via PBKDF2-HMAC-SHA256 (100,000 iterations), and the .carry file is encrypted using MemoryEncryption (AES-128 Fernet).
+When using `--encrypt`, you will be prompted for a password (minimum 4 characters). The password is used to derive an encryption key via PBKDF2-HMAC-SHA256 (260,000 iterations), and the .carry file is encrypted using MemoryEncryption (AES-128 Fernet).
 
 ### Unpack (Import from .carry file)
 

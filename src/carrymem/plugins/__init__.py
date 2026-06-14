@@ -14,7 +14,7 @@ import sys
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Protocol, Type, runtime_checkable, TYPE_CHECKING
+from typing import Callable, Dict, List, Optional, Protocol, Type, runtime_checkable, TYPE_CHECKING
 
 from carrymem.utils.logger import logger
 
@@ -277,7 +277,7 @@ class PluginManager:
             return []
         return list(self._hooks[hook_name])
 
-    def dispatch(self, hook_name: str, **kwargs: Any) -> List[Optional[Any]]:
+    def dispatch(self, hook_name: str, **kwargs: object) -> List[Optional[object]]:
         """Dispatch an event to all plugins subscribed to a hook.
 
         Args:
@@ -287,7 +287,7 @@ class PluginManager:
         Returns:
             List of results from each plugin handler.
         """
-        results: List[Optional[Any]] = []
+        results: List[Optional[object]] = []
         for plugin in self.get_hooks(hook_name):
             handler = getattr(plugin, hook_name, None)
             if callable(handler):

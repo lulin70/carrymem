@@ -14,7 +14,7 @@ Usage:
 """
 
 import asyncio
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from .adapters.base import StorageAdapter
 from .carrymem import CarryMem
@@ -25,7 +25,7 @@ class AsyncCarryMem:
 
     def __init__(
         self,
-        storage: Optional[Any] = "sqlite",
+        storage: Optional[Union[str, StorageAdapter]] = "sqlite",
         db_path: Optional[str] = None,
         knowledge_adapter: Optional[StorageAdapter] = None,
         namespace: str = "default",

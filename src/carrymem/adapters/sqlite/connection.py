@@ -215,7 +215,10 @@ class ConnectionManager:
             for conn_id, conn in self._all_connections.items():
                 try:
                     conn.close()
-                except (sqlite3.ProgrammingError, sqlite3.InterfaceError) as e:
+                except Exception as e:
+                    # Catch all exceptions during cleanup, including pysqlite3
+                    # thread-safety errors (pysqlite3.dbapi2.ProgrammingError is
+                    # a different class than sqlite3.ProgrammingError).
                     logger.debug("Failed to close connection %s: %s", conn_id, e)
             self._all_connections.clear()
         if hasattr(self._local, "conn"):

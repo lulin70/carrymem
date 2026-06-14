@@ -13,9 +13,12 @@ from __future__ import annotations
 import hashlib
 import re
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 
 from carrymem.utils.logger import Logger
+
+if TYPE_CHECKING:
+    from carrymem.rules.storage import RuleStorage
 
 logger = Logger("carrymem.consolidation")
 
@@ -257,7 +260,7 @@ def consolidate(
 
 def consolidate_p1(
     memories: List[Dict[str, Any]],
-    rule_storage: Any = None,
+    rule_storage: Optional[RuleStorage] = None,
     auto_accept: bool = False,
 ) -> Dict[str, Any]:
     """P1: Pattern recognition + auto-promotion.

@@ -167,6 +167,9 @@ jobs:
       - name: isort
         run: isort --check-only --diff src/ tests/
 
+      - name: mypy
+        run: mypy src/ --config-file mypy.ini || true
+
   # ═══════════════════════════════════════
   # ADVISORY: i18n Compliance (non-blocking)
   # ═══════════════════════════════════════
@@ -226,6 +229,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install security tools
+        run: pip install bandit
+
       - name: Check secrets
         run: |
           grep -rnE "(api_key|secret_key|password|token)\s*=\s*['\"][^']{8,}" src/ --include="*.py" | \
@@ -236,6 +242,9 @@ jobs:
         run: |
           grep -rn "except:" src/ --include="*.py" | grep -v "except Exception" | grep -v "except (" && \
             echo "WARNING: bare except found" || echo "OK: no bare except"
+
+      - name: bandit scan
+        run: bandit -r src/ -ll -ii --format=txt || true
 
   # ═══════════════════════════════════════
   # ADVISORY: Docs Check (non-blocking)

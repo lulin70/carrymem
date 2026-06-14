@@ -1,5 +1,7 @@
 """CarryMem CLI - Shared infrastructure: constants, color functions, utilities, factories."""
 
+from __future__ import annotations
+
 import json
 import logging
 import os
@@ -7,7 +9,10 @@ import sqlite3
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from carrymem.security.input_validator import InputValidator
 
 __all__ = [
     # Logger & validator
@@ -63,7 +68,7 @@ except ImportError:
     print("Try: pip install -e .")
     sys.exit(1)
 
-_cli_validator: Any = None
+_cli_validator: Optional[InputValidator] = None
 try:
     from carrymem.security.input_validator import InputValidator
 

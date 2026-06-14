@@ -115,7 +115,7 @@ setup(
             "mypy>=1.0",
         ],
         "encryption": [
-            "cryptography>=41.0",
+            "cryptography>=42.0",
         ],
         "tui": [
             "textual>=0.40",
@@ -123,7 +123,7 @@ setup(
         "full": [
             "pycld2>=0.41",
             "langdetect>=1.0.9",
-            "cryptography>=41.0",
+            "cryptography>=42.0",
             "textual>=0.40",
             "sqlite-vec>=0.1.0",
             "pysqlite3>=0.6.0",

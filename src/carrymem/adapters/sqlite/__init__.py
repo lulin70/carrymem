@@ -82,7 +82,7 @@ class SQLiteAdapter(StorageAdapter):
         encryption_key: Optional[str] = None,
         enable_vector_search: bool = True,
         embedding_model: str = "all-MiniLM-L6-v2",
-        _external_embedding_model: Any = None,
+        _external_embedding_model: Optional[object] = None,
         rrf_config: Optional[Dict[str, Any]] = None,
     ):
         # --- Connection management ---

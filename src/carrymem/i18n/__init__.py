@@ -16,7 +16,7 @@ Usage::
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 
 class I18nManager:
@@ -74,7 +74,7 @@ class I18nManager:
     # ── 翻译 ────────────────────────────────────────────────────
 
     @classmethod
-    def t(cls, msg_key: str, **kwargs: Any) -> str:
+    def t(cls, msg_key: str, **kwargs: object) -> str:
         """翻译一条消息，支持变量插值。
 
         查找顺序：当前语言 → 默认语言(en) → 返回 key 本身。

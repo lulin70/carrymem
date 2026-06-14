@@ -443,7 +443,7 @@ class PromptBuilder:
         max_knowledge: int = 5,
         max_tokens: int = 2000,
         language: str = "en",
-        budget: Optional[Any] = None,
+        budget: Optional[RecallBudget] = None,
         include_question: bool = True,
     ) -> str:
         """Build a QA prompt with memories, knowledge, and rules."""

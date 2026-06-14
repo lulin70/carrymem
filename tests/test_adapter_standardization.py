@@ -1,13 +1,13 @@
 """Test adapter standardization - P2-4.
 
-Verifies that all storage adapters conform to the StorageAdapterProtocol interface.
-Tests runtime Protocol compliance and method signatures.
+Verifies that all storage adapters conform to the StorageAdapter interface.
+Tests runtime ABC compliance and method signatures.
 """
 
 import pytest
 from typing import TYPE_CHECKING
 
-from carrymem.adapters.base import MemoryEntry, StorageAdapterProtocol, StoredMemory
+from carrymem.adapters.base import MemoryEntry, StorageAdapter, StoredMemory
 from carrymem.adapters.json_adapter import JSONAdapter
 from carrymem.adapters.sqlite import SQLiteAdapter
 
@@ -16,28 +16,28 @@ if TYPE_CHECKING:
 
 
 class TestStorageAdapterProtocolCompliance:
-    """Test that all adapters conform to StorageAdapterProtocol."""
+    """Test that all adapters conform to StorageAdapter."""
 
     def test_sqlite_adapter_protocol_compliance(self):
-        """SQLiteAdapter must conform to StorageAdapterProtocol."""
+        """SQLiteAdapter must conform to StorageAdapter."""
         adapter = SQLiteAdapter(":memory:")
         try:
-            assert isinstance(adapter, StorageAdapterProtocol), (
-                "SQLiteAdapter does not conform to StorageAdapterProtocol"
+            assert isinstance(adapter, StorageAdapter), (
+                "SQLiteAdapter does not conform to StorageAdapter"
             )
         finally:
             adapter.close()
 
     def test_json_adapter_protocol_compliance(self):
-        """JSONAdapter must conform to StorageAdapterProtocol."""
+        """JSONAdapter must conform to StorageAdapter."""
         import tempfile
         import os
 
         with tempfile.TemporaryDirectory() as tmpdir:
             path = os.path.join(tmpdir, "test_memories.json")
             adapter = JSONAdapter(path=path)
-            assert isinstance(adapter, StorageAdapterProtocol), (
-                "JSONAdapter does not conform to StorageAdapterProtocol"
+            assert isinstance(adapter, StorageAdapter), (
+                "JSONAdapter does not conform to StorageAdapter"
             )
             adapter.close()
 

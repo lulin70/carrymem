@@ -9,12 +9,14 @@ MCP Tool handlers for CarryMem.
   Prompt handlers: get_system_prompt
 """
 
+from __future__ import annotations
+
 import asyncio
 import os
 import time
 from datetime import datetime, timezone
 from functools import wraps
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from carrymem.__version__ import __version__ as _version
 
@@ -22,6 +24,7 @@ from .tools import (
     CLASSIFICATION_SCHEMA,
     CONSOLIDATION_TOOL_NAMES,
     CORE_TOOL_NAMES,
+    HEALTH_CHECK_TOOL_NAMES,
     KNOWLEDGE_TOOL_NAMES,
     OPTIONAL_TOOL_NAMES,
     PROFILE_TOOL_NAMES,
@@ -30,7 +33,10 @@ from .tools import (
     TOOL_NAMES,
 )
 
-_validator: Any = None
+if TYPE_CHECKING:
+    from carrymem.security.input_validator import InputValidator
+
+_validator: Optional[InputValidator] = None
 try:
     from carrymem.security.input_validator import InputValidator
 
@@ -821,6 +827,45 @@ def handle_onboard(carrymem, args: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+@mcp_tool_handler
+def handle_health_check(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Lightweight health check via MCP tool (no HTTP service started)."""
+    result: Dict[str, Any] = {"version": _version}
+
+    # Adapter health
+    try:
+        adapter_health = carrymem.health_check()
+        result["adapter"] = adapter_health
+    except Exception as e:
+        result["adapter"] = {"status": "error", "error": str(e)}
+
+    # Audit logger stats
+    try:
+        audit = getattr(carrymem, "_audit", None)
+        if audit is not None and hasattr(audit, "get_stats"):
+            result["audit"] = audit.get_stats()
+        else:
+            result["audit"] = {"status": "not_available"}
+    except Exception as e:
+        result["audit"] = {"status": "error", "error": str(e)}
+
+    # Memory count
+    try:
+        memories = carrymem.recall_memories(limit=1)
+        result["memory_count"] = len(carrymem.recall_memories(limit=1000))
+    except Exception:
+        result["memory_count"] = "unavailable"
+
+    # Uptime
+    result["uptime_seconds"] = round(time.time() - getattr(carrymem, "_start_time", time.time()), 1)
+
+    # Overall status
+    adapter_status = result.get("adapter", {}).get("status", "unknown")
+    result["status"] = "ok" if adapter_status in ("ok", "degraded") else "unhealthy"
+
+    return result
+
+
 handler_map = {
     "classify_message": (handle_classify_message, "engine"),
     "get_classification_schema": (handle_get_classification_schema, "engine"),
@@ -850,6 +895,7 @@ handler_map = {
     "update_rule": (handle_update_rule, "rule_engine"),
     "my_profile": (handle_my_profile, "carrymem"),
     "onboard": (handle_onboard, "carrymem"),
+    "health_check": (handle_health_check, "carrymem"),
 }
 
 _TARGET_MAP = {
@@ -916,6 +962,7 @@ class Handlers:
             # all errors and return standardized error responses to MCP clients.
             return {"success": False, "error": _safe_error(e)}
 
-    async def cleanup(self):
+    def cleanup(self):
+        """Cleanup resources (synchronous — safe to call from sync or async code)."""
         if self._carrymem:
             self._carrymem.close()

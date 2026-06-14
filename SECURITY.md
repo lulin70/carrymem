@@ -40,8 +40,8 @@ CarryMem stores all data locally in `~/.carrymem/`. Each user has an independent
 ### Encryption
 
 - **At-rest encryption**: Optional Fernet-based encryption for stored memories
-- **USB carry encryption**: AES-256-like stream cipher with HMAC-SHA256 authentication for portable `.carry` files
-- **Key management**: Keys derived via PBKDF2-HMAC-SHA256 with 100,000 iterations
+- **USB carry encryption**: HMAC-CTR fallback (HMAC-SHA256 + CTR) for portable `.carry` files
+- **Key management**: Keys derived via PBKDF2-HMAC-SHA256 with 260,000 iterations
 
 ### Input Validation
 

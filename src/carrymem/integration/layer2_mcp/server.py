@@ -291,7 +291,7 @@ class MCPServer:
     async def cleanup(self):
         """Cleanup resources."""
         logger.info("Cleaning up resources...")
-        await self.handlers.cleanup()
+        self.handlers.cleanup()
 
 
 async def main():

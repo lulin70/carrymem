@@ -184,6 +184,176 @@ else:
         }}
         """
 
+    # ── Delete Confirmation Dialog ────────────────────────────────────
+
+    class DeleteConfirmScreen(ModalScreen[bool]):
+        """Modal dialog to confirm memory deletion."""
+
+        BINDINGS = [
+            Binding("y", "confirm_delete", "Yes"),
+            Binding("n", "cancel_delete", "No"),
+            Binding("escape", "cancel_delete", "No"),
+        ]
+
+        def __init__(self, memory: Dict[str, Any]):
+            super().__init__()
+            self.memory = memory
+
+        def compose(self) -> ComposeResult:
+            mtype = self.memory.get("type", "unknown")
+            icon = _TYPE_ICONS.get(mtype, "❓")
+            content = self.memory.get("content", "")
+            key = self.memory.get("storage_key", "")
+
+            yield Static("  ⚠  Confirm Deletion", id="delete-title")
+            yield Static("", id="delete-sep")
+            yield Static(
+                f"  {icon} [{mtype}] {content[:80]}",
+                id="delete-content",
+            )
+            yield Static(f"  Key: {key}", id="delete-key")
+            yield Static("", id="delete-sep2")
+            yield Static(
+                "  This action cannot be undone.\n"
+                "  Press [bold]y[/bold] to delete, [bold]n[/bold] or [bold]Esc[/bold] to cancel.",
+                id="delete-hint",
+            )
+
+        def action_confirm_delete(self) -> None:
+            self.dismiss(True)
+
+        def action_cancel_delete(self) -> None:
+            self.dismiss(False)
+
+        CSS = f"""
+        DeleteConfirmScreen {{
+            align: center middle;
+            background: {_MORANDI['bg_dark']}99;
+        }}
+
+        #delete-title {{
+            text-style: bold;
+            color: {_MORANDI['error']};
+            width: 70%;
+            padding: 1 0;
+            text-align: center;
+        }}
+
+        #delete-sep, #delete-sep2 {{
+            width: 70%;
+            height: 1;
+            border-bottom: solid {_MORANDI['border']};
+            margin: 0 0 1 0;
+        }}
+
+        #delete-content {{
+            width: 70%;
+            padding: 1 2;
+            color: {_MORANDI['text_primary']};
+            max-height: 6;
+            overflow-y: auto;
+        }}
+
+        #delete-key {{
+            width: 70%;
+            padding: 0 2;
+            color: {_MORANDI['text_muted']};
+        }}
+
+        #delete-hint {{
+            width: 70%;
+            padding: 1 2;
+            color: {_MORANDI['warning']};
+            text-align: center;
+        }}
+        """
+
+    # ── Edit Dialog ──────────────────────────────────────────────────
+
+    class EditMemoryScreen(ModalScreen[Optional[str]]):
+        """Modal dialog to edit memory content."""
+
+        BINDINGS = [
+            Binding("escape", "cancel_edit", "Cancel"),
+        ]
+
+        def __init__(self, memory: Dict[str, Any]):
+            super().__init__()
+            self.memory = memory
+
+        def compose(self) -> ComposeResult:
+            mtype = self.memory.get("type", "unknown")
+            icon = _TYPE_ICONS.get(mtype, "❓")
+            content = self.memory.get("content", "")
+            key = self.memory.get("storage_key", "")
+
+            yield Static(f"  {icon}  Edit Memory", id="edit-title")
+            yield Static("", id="edit-sep")
+            yield Static(f"  Key: {key}", id="edit-key")
+            yield Input(value=content, id="edit-input")
+            yield Static(
+                "  Press [bold]Enter[/bold] to save, [bold]Esc[/bold] to cancel.",
+                id="edit-hint",
+            )
+
+        def on_mount(self) -> None:
+            try:
+                edit_input = self.query_one("#edit-input", Input)
+                edit_input.focus()
+            except (AttributeError, ValueError):
+                pass
+
+        def on_input_submitted(self, event: Input.Submitted) -> None:
+            if event.input.id == "edit-input":
+                new_content = event.value.strip()
+                if new_content:
+                    self.dismiss(new_content)
+                else:
+                    self.dismiss(None)
+
+        def action_cancel_edit(self) -> None:
+            self.dismiss(None)
+
+        CSS = f"""
+        EditMemoryScreen {{
+            align: center middle;
+            background: {_MORANDI['bg_dark']}99;
+        }}
+
+        #edit-title {{
+            text-style: bold;
+            color: {_MORANDI['accent']};
+            width: 70%;
+            padding: 1 0;
+            text-align: center;
+        }}
+
+        #edit-sep {{
+            width: 70%;
+            height: 1;
+            border-bottom: solid {_MORANDI['border']};
+            margin: 0 0 1 0;
+        }}
+
+        #edit-key {{
+            width: 70%;
+            padding: 0 2;
+            color: {_MORANDI['text_muted']};
+        }}
+
+        #edit-input {{
+            width: 70%;
+            padding: 1 2;
+        }}
+
+        #edit-hint {{
+            width: 70%;
+            padding: 1 2;
+            color: {_MORANDI['text_muted']};
+            text-align: center;
+        }}
+        """
+
     # ── Help Screen ─────────────────────────────────────────────────
 
     class HelpScreen(ModalScreen[None]):
@@ -216,7 +386,8 @@ else:
                 ("  Actions:", "section"),
                 ("    a           Add new memory", "item"),
                 ("    r           Refresh memory list", "item"),
-                ("    d           Delete selected (future)", "item"),
+                ("    d           Delete selected", "item"),
+                ("    e           Edit selected", "item"),
                 ("", ""),
                 ("  System:", "section"),
                 ("    ?           Show this help screen", "item"),
@@ -543,6 +714,8 @@ else:
             Binding("?", "show_help", "Help"),
             Binding("a", "add_memory", "Add"),
             Binding("r", "refresh", "Refresh"),
+            Binding("d", "delete_memory", "Delete"),
+            Binding("e", "edit_memory", "Edit"),
             Binding("0", "view_all", "All"),
             Binding("1", "view_all", "All"),
             Binding("2", "view_preferences", "Prefs"),
@@ -580,6 +753,8 @@ else:
                     yield Static("  [5]  Decisions", classes="sidebar-item", id="filter-decisions")
                     yield Static("  \u2500\u2500 Actions \u2500\u2500", classes="sidebar-section")
                     yield Static("  [a]  Add Memory", classes="sidebar-item")
+                    yield Static("  [d]  Delete Memory", classes="sidebar-item")
+                    yield Static("  [e]  Edit Memory", classes="sidebar-item")
                     yield Static("  [r]  Refresh List", classes="sidebar-item")
                     yield Static("  [/]  Search", classes="sidebar-item")
                     yield Static("  [?]  Help", classes="sidebar-item")
@@ -748,6 +923,55 @@ else:
 
         def action_show_help(self) -> None:
             self.push_screen(HelpScreen())
+
+        def action_delete_memory(self) -> None:
+            """Delete the currently selected memory after confirmation."""
+            if not (0 <= self.selected_index < len(self.memories)):
+                self._set_status("No memory selected")
+                return
+            memory = self.memories[self.selected_index]
+            key = memory.get("storage_key", "")
+
+            def _on_delete_result(confirmed: bool) -> None:
+                if confirmed:
+                    try:
+                        result = self.cm.forget_memory(key)
+                        if result:
+                            self._clear_error()
+                            self._load_memories()
+                            self._set_status(f"Deleted: {key[:30]}")
+                        else:
+                            self._set_status(f"Failed to delete: {key[:30]}")
+                    except (ValueError, TypeError, KeyError, RuntimeError, sqlite3.Error) as e:
+                        self._show_error(e)
+                        self._set_status("Delete failed")
+
+            self.push_screen(DeleteConfirmScreen(memory), _on_delete_result)
+
+        def action_edit_memory(self) -> None:
+            """Edit the currently selected memory."""
+            if not (0 <= self.selected_index < len(self.memories)):
+                self._set_status("No memory selected")
+                return
+            memory = self.memories[self.selected_index]
+            key = memory.get("storage_key", "")
+
+            def _on_edit_result(new_content: Optional[str]) -> None:
+                if new_content is not None:
+                    try:
+                        result = self.cm.update_memory(key, new_content, reason="TUI edit")
+                        if result.get("updated"):
+                            self._clear_error()
+                            self._load_memories()
+                            self._set_status(f"Updated: {key[:30]} (v{result.get('version', '?')})")
+                        else:
+                            error_msg = result.get("error", "Unknown error")
+                            self._set_status(f"Update failed: {error_msg}")
+                    except (ValueError, TypeError, KeyError, RuntimeError, sqlite3.Error) as e:
+                        self._show_error(e)
+                        self._set_status("Edit failed")
+
+            self.push_screen(EditMemoryScreen(memory), _on_edit_result)
 
         def action_cancel_action(self) -> None:
             if self._add_mode:

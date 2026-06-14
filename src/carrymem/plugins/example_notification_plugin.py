@@ -9,7 +9,7 @@ Usage:
     This plugin is auto-discovered by PluginManager when placed in the plugin directory.
 """
 
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from carrymem.plugins import HookPoint, PluginProtocol, PluginManager
 
@@ -42,7 +42,7 @@ class ExampleNotificationPlugin(PluginProtocol):
               f"logged {self._error_count} errors.")
 
     def on_memory_stored(self, memory_id: str = "", content: str = "",
-                         classification: str = "", **kwargs: Any) -> None:
+                         classification: str = "", **kwargs: object) -> None:
         """Called after a memory is stored.
 
         Prints a notification if the memory looks sensitive.
@@ -70,17 +70,17 @@ class ExampleNotificationPlugin(PluginProtocol):
                   f"{self._notification_count} memories processed so far.")
 
     def on_memory_recalled(self, query: str = "", results_count: int = 0,
-                           **kwargs: Any) -> None:
+                           **kwargs: object) -> None:
         """Called after a memory recall operation."""
         pass  # No-op for this example; could log recall stats
 
     def on_classified(self, raw_text: str = "", classification: str = "",
-                      **kwargs: Any) -> None:
+                      **kwargs: object) -> None:
         """Called after classification completes."""
         pass  # No-op for this example
 
     def on_error(self, error_type: str = "", error_message: str = "",
-                 **kwargs: Any) -> None:
+                 **kwargs: object) -> None:
         """Called when an error occurs in CarryMem."""
         self._error_count += 1
         print(

@@ -20,7 +20,8 @@ Design principles:
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List, Optional, Protocol, TYPE_CHECKING, Union, runtime_checkable
+from types import TracebackType
+from typing import Any, Callable, Dict, List, Optional, Protocol, TYPE_CHECKING, Type, Union
 
 if TYPE_CHECKING:
     from carrymem.adapters.base import StorageAdapter
@@ -63,7 +64,6 @@ class HasSharedState(Protocol):
 # ---------------------------------------------------------------------------
 
 
-@runtime_checkable
 class LifecycleOps(Protocol):
     """Contract for LifecycleMixin — object lifecycle and shared state."""
 
@@ -110,7 +110,7 @@ class LifecycleOps(Protocol):
 
     def __enter__(self) -> CarryMem: ...
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> bool: ...
+    def __exit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]) -> bool: ...
 
 
 # ---------------------------------------------------------------------------
@@ -118,7 +118,6 @@ class LifecycleOps(Protocol):
 # ---------------------------------------------------------------------------
 
 
-@runtime_checkable
 class BackupOps(Protocol):
     """Contract for BackupMixin — backup creation, restoration, audit log."""
 
@@ -165,7 +164,6 @@ class BackupOps(Protocol):
 # ---------------------------------------------------------------------------
 
 
-@runtime_checkable
 class RecallOps(Protocol):
     """Contract for RecallMixin — search across memories, knowledge, rules."""
 
@@ -226,7 +224,6 @@ class RecallOps(Protocol):
 # ---------------------------------------------------------------------------
 
 
-@runtime_checkable
 class ClassificationOps(Protocol):
     """Contract for ClassificationMixin — classify & resolve pipeline.
 
@@ -305,7 +302,6 @@ class ClassificationOps(Protocol):
 # ---------------------------------------------------------------------------
 
 
-@runtime_checkable
 class MemoryCRUDOps(Protocol):
     """Contract for MemoryCRUDMixin — remember, declare, forget, update, merge."""
 
@@ -376,7 +372,6 @@ class MemoryCRUDOps(Protocol):
 # ---------------------------------------------------------------------------
 
 
-@runtime_checkable
 class ProfileExportOps(Protocol):
     """Contract for ProfileExportMixin — user profile, statistics, I/O."""
 
@@ -421,7 +416,6 @@ class ProfileExportOps(Protocol):
 # ---------------------------------------------------------------------------
 
 
-@runtime_checkable
 class MaintenanceOps(Protocol):
     """Contract for MaintenanceMixin — quality checks, conflict detection, consolidation."""
 
@@ -466,7 +460,6 @@ class MaintenanceOps(Protocol):
 # ---------------------------------------------------------------------------
 
 
-@runtime_checkable
 class PromptDelegateOps(Protocol):
     """Contract for PromptDelegateMixin — prompt construction & LLM features."""
 
@@ -531,7 +524,6 @@ class PromptDelegateOps(Protocol):
 # ---------------------------------------------------------------------------
 
 
-@runtime_checkable
 class CarryMemOps(
     LifecycleOps,
     BackupOps,

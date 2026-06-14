@@ -42,29 +42,29 @@ def show_help():
     version              {_t('cli.cmd.version')}
 
   {_bold('Rules Engine:')}
-    add-rule <action> --trigger <scene>   Create a behavioral rule
-    add-rule --interactive                Guided rule creation
-    add-rule --template <name>            Create from template
-    list-rules                            List all rules
-    match-rules <scene>                   Find rules matching a scene
-    edit-rule <id>                        Edit an existing rule
-    delete-rule <id>                      Delete a rule
-    pause-rule <id>                       Pause a rule
-    resume-rule <id>                      Resume a paused rule
-    rules-stats                           Show rules statistics
-    check-rules                           Check rules health & conflicts
-    export-rules <path>                   Export rules to JSON
-    import-rules <path>                   Import rules from JSON
-    list-templates                        List available rule templates
-    suggest-rules                         Analyze memories for rule suggestions
-    promote-rules                         Run promotion pipeline on memories
-    review-promotions                     Review and accept/reject pending promotions
-    promotion-log                         View promotion audit log
-    learn-experience                      Extract failure lessons from memories
-    review-lessons                        Review and accept/reject pending lessons
-    lesson-log                            View experience learning audit log
-    refine-rule                           Start/continue a rule refinement session
-    refinement-sessions                   List active refinement sessions
+    rules add <action> --trigger <scene>   Create a behavioral rule
+    rules add --interactive                Guided rule creation
+    rules add --template <name>            Create from template
+    rules list                             List all rules
+    rules match <scene>                    Find rules matching a scene
+    rules edit <id>                        Edit an existing rule
+    rules delete <id>                      Delete a rule
+    rules pause <id>                       Pause a rule
+    rules resume <id>                      Resume a paused rule
+    rules stats                            Show rules statistics
+    rules check                            Check rules health & conflicts
+    rules export <path>                    Export rules to JSON
+    rules import <path>                    Import rules from JSON
+    rules templates                        List available rule templates
+    rules suggest                          Analyze memories for rule suggestions
+    rules promote                          Run promotion pipeline on memories
+    rules review-promotions                Review and accept/reject pending promotions
+    rules promotion-log                    View promotion audit log
+    rules learn                            Extract failure lessons from memories
+    rules review-lessons                   Review and accept/reject pending lessons
+    rules lesson-log                       View experience learning audit log
+    rules refine                           Start/continue a rule refinement session
+    rules refinement-sessions              List active refinement sessions
 
   {_bold('Examples:')}
     carrymem add "I prefer dark mode"
@@ -84,27 +84,27 @@ def show_help():
     carrymem setup-mcp --global
     carrymem setup-mcp --global --tool trae
     carrymem doctor --fix
-    carrymem add-rule "keep within 3 pages" --trigger "writing reports" --type format
-    carrymem add-rule --interactive
-    carrymem add-rule --template code-review
-    carrymem match-rules "competitive analysis"
-    carrymem match-rules "code review" --format anchored
-    carrymem match-rules "security" --format ddd
-    carrymem match-rules "report" --format anchored --context-budget 500
-    carrymem export-rules rules.json
-    carrymem import-rules rules.json --mode overwrite
-    carrymem suggest-rules
-    carrymem suggest-rules --type correction --accept
-    carrymem promote-rules
-    carrymem review-promotions --accept promo_20260430
-    carrymem promotion-log
-    carrymem learn-experience
-    carrymem learn-experience --type correction
-    carrymem review-lessons --accept exp_20260430
-    carrymem lesson-log
-    carrymem refine-rule --trigger "db selection" --action "avoid MongoDB"
-    carrymem refine-rule --session ref_xxx --answer "all document DBs"
-    carrymem refine-rule --session ref_xxx --confirm
+    carrymem rules add "keep within 3 pages" --trigger "writing reports" --type format
+    carrymem rules add --interactive
+    carrymem rules add --template code-review
+    carrymem rules match "competitive analysis"
+    carrymem rules match "code review" --format anchored
+    carrymem rules match "security" --format ddd
+    carrymem rules match "report" --format anchored --context-budget 500
+    carrymem rules export rules.json
+    carrymem rules import rules.json --mode overwrite
+    carrymem rules suggest
+    carrymem rules suggest --type correction --accept
+    carrymem rules promote
+    carrymem rules review-promotions --accept promo_20260430
+    carrymem rules promotion-log
+    carrymem rules learn
+    carrymem rules learn --type correction
+    carrymem rules review-lessons --accept exp_20260430
+    carrymem rules lesson-log
+    carrymem rules refine --trigger "db selection" --action "avoid MongoDB"
+    carrymem rules refine --session ref_xxx --answer "all document DBs"
+    carrymem rules refine --session ref_xxx --confirm
 
   {_dim('Documentation: https://github.com/lulin70/carrymem')}
 """)
@@ -156,31 +156,31 @@ def main():
         "version": cmd_version,
         "--version": cmd_version,
         "-v": cmd_version,
-        "add-rule": cmd_add_rule,
-        "list-rules": cmd_list_rules,
+        "add-rule": cmd_add_rule_deprecated,
+        "list-rules": cmd_list_rules_deprecated,
         "rules": cmd_rules_hub,
-        "match-rules": cmd_match_rules,
-        "delete-rule": cmd_delete_rule,
-        "pause-rule": cmd_pause_rule,
-        "resume-rule": cmd_resume_rule,
-        "rules-stats": cmd_rules_stats,
-        "check-rules": cmd_check_rules,
-        "export-rules": cmd_export_rules,
-        "import-rules": cmd_import_rules,
+        "match-rules": cmd_match_rules_deprecated,
+        "delete-rule": cmd_delete_rule_deprecated,
+        "pause-rule": cmd_pause_rule_deprecated,
+        "resume-rule": cmd_resume_rule_deprecated,
+        "rules-stats": cmd_rules_stats_deprecated,
+        "check-rules": cmd_check_rules_deprecated,
+        "export-rules": cmd_export_rules_deprecated,
+        "import-rules": cmd_import_rules_deprecated,
         "skill-pack": cmd_skill_pack,
         "skill-install": cmd_skill_install,
         "skill-verify": cmd_skill_verify,
-        "edit-rule": cmd_edit_rule,
-        "list-templates": cmd_list_templates,
-        "suggest-rules": cmd_suggest_rules,
-        "promote-rules": cmd_promote_rules,
-        "review-promotions": cmd_review_promotions,
-        "promotion-log": cmd_promotion_log,
-        "learn-experience": cmd_learn_experience,
-        "review-lessons": cmd_review_lessons,
-        "lesson-log": cmd_lesson_log,
-        "refine-rule": cmd_refine_rule,
-        "refinement-sessions": cmd_refinement_sessions,
+        "edit-rule": cmd_edit_rule_deprecated,
+        "list-templates": cmd_list_templates_deprecated,
+        "suggest-rules": cmd_suggest_rules_deprecated,
+        "promote-rules": cmd_promote_rules_deprecated,
+        "review-promotions": cmd_review_promotions_deprecated,
+        "promotion-log": cmd_promotion_log_deprecated,
+        "learn-experience": cmd_learn_experience_deprecated,
+        "review-lessons": cmd_review_lessons_deprecated,
+        "lesson-log": cmd_lesson_log_deprecated,
+        "refine-rule": cmd_refine_rule_deprecated,
+        "refinement-sessions": cmd_refinement_sessions_deprecated,
         "help": lambda _: show_help(),
         "--help": lambda _: show_help(),
         "-h": lambda _: show_help(),

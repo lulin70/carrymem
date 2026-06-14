@@ -404,7 +404,7 @@ class TestHandlersClass:
             namespace="default",
         )
         assert handlers._carrymem is not None
-        await handlers.cleanup()
+        handlers.cleanup()
 
     @pytest.mark.asyncio
     async def test_handle_tool_classify(self, temp_db):
@@ -418,7 +418,7 @@ class TestHandlersClass:
             {"message": "I prefer dark mode"},
         )
         assert result.get("success") is True
-        await handlers.cleanup()
+        handlers.cleanup()
 
     @pytest.mark.asyncio
     async def test_handle_tool_recall(self, temp_db):
@@ -433,7 +433,7 @@ class TestHandlersClass:
             {"query": "dark mode"},
         )
         assert result.get("success") is True
-        await handlers.cleanup()
+        handlers.cleanup()
 
     @pytest.mark.asyncio
     async def test_handle_tool_unknown(self, temp_db):
@@ -444,7 +444,7 @@ class TestHandlersClass:
         )
         result = await handlers.handle_tool("unknown_tool", {})
         assert "error" in result
-        await handlers.cleanup()
+        handlers.cleanup()
 
     @pytest.mark.asyncio
     async def test_handle_tool_schema(self, temp_db):
@@ -458,7 +458,7 @@ class TestHandlersClass:
             {"format": "json"},
         )
         assert result.get("success") is True
-        await handlers.cleanup()
+        handlers.cleanup()
 
     @pytest.mark.asyncio
     async def test_handle_tool_status(self, temp_db):
@@ -469,7 +469,7 @@ class TestHandlersClass:
         )
         result = await handlers.handle_tool("mce_status", {})
         assert result.get("success") is True
-        await handlers.cleanup()
+        handlers.cleanup()
 
     @pytest.mark.asyncio
     async def test_handle_tool_batch(self, temp_db):
@@ -483,7 +483,7 @@ class TestHandlersClass:
             {"messages": [{"message": "I prefer dark mode"}]},
         )
         assert result.get("success") is True
-        await handlers.cleanup()
+        handlers.cleanup()
 
     @pytest.mark.asyncio
     async def test_handle_tool_forget(self, temp_db):
@@ -497,7 +497,7 @@ class TestHandlersClass:
             {"memory_id": "nonexistent"},
         )
         assert result.get("success") is True
-        await handlers.cleanup()
+        handlers.cleanup()
 
     @pytest.mark.asyncio
     async def test_handle_tool_declare(self, temp_db):
@@ -511,7 +511,7 @@ class TestHandlersClass:
             {"message": "I prefer dark mode"},
         )
         assert result.get("success") is True
-        await handlers.cleanup()
+        handlers.cleanup()
 
     @pytest.mark.asyncio
     async def test_handle_tool_profile(self, temp_db):
@@ -522,7 +522,7 @@ class TestHandlersClass:
         )
         result = await handlers.handle_tool("get_memory_profile", {})
         assert result.get("success") is True
-        await handlers.cleanup()
+        handlers.cleanup()
 
     @pytest.mark.asyncio
     async def test_handle_tool_system_prompt(self, temp_db):
@@ -533,7 +533,7 @@ class TestHandlersClass:
         )
         result = await handlers.handle_tool("get_system_prompt", {})
         assert result.get("success") is True
-        await handlers.cleanup()
+        handlers.cleanup()
 
     @pytest.mark.asyncio
     async def test_handle_tool_knowledge(self, temp_db):
@@ -547,7 +547,7 @@ class TestHandlersClass:
             {},
         )
         assert result.get("success") is True
-        await handlers.cleanup()
+        handlers.cleanup()
 
     @pytest.mark.asyncio
     async def test_handle_tool_recall_from_knowledge(self, temp_db):
@@ -561,7 +561,7 @@ class TestHandlersClass:
             {"query": "test"},
         )
         assert result.get("success") is True
-        await handlers.cleanup()
+        handlers.cleanup()
 
     @pytest.mark.asyncio
     async def test_handle_tool_recall_all(self, temp_db):
@@ -575,7 +575,7 @@ class TestHandlersClass:
             {"query": "test"},
         )
         assert result.get("success") is True
-        await handlers.cleanup()
+        handlers.cleanup()
 
     @pytest.mark.asyncio
     async def test_cleanup(self, temp_db):
@@ -584,7 +584,7 @@ class TestHandlersClass:
             data_path=temp_db,
             namespace="default",
         )
-        await handlers.cleanup()
+        handlers.cleanup()
 
 
 class TestHandleSummarizeAndStore:

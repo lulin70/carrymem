@@ -102,7 +102,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **cli.py modularization**: Split 4031-line monolith into 8 focused modules
   (_base/_memory/_io/_stats/_mcp/_backup/_rules/__init__) plus a 17-line facade.
- - Zero behavioral change, full backward compatibility## [Unreleased]
+ - Zero behavioral change, full backward compatibility
 
 ## [0.4.0] - 2026-06-11 (Protocol & Maturity Sprint — 26 Improvements)
 

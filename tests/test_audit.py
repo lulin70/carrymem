@@ -412,3 +412,51 @@ class TestMemoryModeUnchanged:
         removed = logger.clear()
         assert removed == 1
         assert len(logger.query()) == 0
+
+
+# ── get_audit_logger() default persistence tests ──────────────────
+
+
+class TestDefaultAuditLoggerPersistence:
+    """Verify get_audit_logger() defaults to SQLite persistence."""
+
+    def setup_method(self):
+        """Reset global singleton before each test."""
+        from carrymem.security.audit import reset_audit_logger
+        reset_audit_logger()
+
+    def teardown_method(self):
+        """Reset global singleton after each test to avoid side effects."""
+        from carrymem.security.audit import reset_audit_logger
+        reset_audit_logger()
+
+    def test_default_audit_logger_has_sqlite_backend(self):
+        from carrymem.security.audit import get_audit_logger
+        logger = get_audit_logger()
+        assert logger._db_conn is not None, (
+            "Default get_audit_logger() should have SQLite backend"
+        )
+        assert logger._persist_path is not None
+
+    def test_default_audit_logger_creates_db_file(self, tmp_path, monkeypatch):
+        from carrymem.security.audit import get_audit_logger, reset_audit_logger
+        # Point HOME to tmp_path so ~/.carrymem/audit.db lands inside tmp_path
+        monkeypatch.setenv("HOME", str(tmp_path))
+        reset_audit_logger()
+        logger = get_audit_logger()
+        expected_db = str(tmp_path / ".carrymem" / "audit.db")
+        assert os.path.exists(expected_db), (
+            f"Default get_audit_logger() should create db file at {expected_db}"
+        )
+        # Cleanup
+        if logger._db_conn is not None:
+            logger._db_conn.close()
+        reset_audit_logger()
+
+    def test_disable_persist_creates_memory_only(self):
+        from carrymem.security.audit import get_audit_logger
+        logger = get_audit_logger(disable_persist=True)
+        assert logger._db_conn is None, (
+            "get_audit_logger(disable_persist=True) should be memory-only"
+        )
+        assert logger._persist_path is None

@@ -745,7 +745,20 @@ RULE_TOOLS: List[Dict[str, Any]] = [
     },
 ]
 
-TOOLS = CORE_TOOLS + OPTIONAL_TOOLS + KNOWLEDGE_TOOLS + PROFILE_TOOLS + PROMPT_TOOLS + CONSOLIDATION_TOOLS + RULE_TOOLS
+HEALTH_CHECK_TOOLS: List[Dict[str, Any]] = [
+    {
+        "name": "health_check",
+        "description": (
+            "Check CarryMem system health. Returns adapter health, audit "
+            "logger stats, memory count, and uptime. Lightweight check "
+            "that does not start any HTTP service — use this from MCP "
+            "clients to verify CarryMem is operational."
+        ),
+        "inputSchema": {"type": "object", "properties": {}, "required": []},
+    },
+]
+
+TOOLS = CORE_TOOLS + OPTIONAL_TOOLS + KNOWLEDGE_TOOLS + PROFILE_TOOLS + PROMPT_TOOLS + CONSOLIDATION_TOOLS + RULE_TOOLS + HEALTH_CHECK_TOOLS
 TOOL_NAMES = {tool["name"] for tool in TOOLS}
 CORE_TOOL_NAMES = {tool["name"] for tool in CORE_TOOLS}
 OPTIONAL_TOOL_NAMES = {tool["name"] for tool in OPTIONAL_TOOLS}
@@ -754,6 +767,7 @@ PROFILE_TOOL_NAMES = {tool["name"] for tool in PROFILE_TOOLS}
 PROMPT_TOOL_NAMES = {tool["name"] for tool in PROMPT_TOOLS}
 CONSOLIDATION_TOOL_NAMES = {tool["name"] for tool in CONSOLIDATION_TOOLS}
 RULE_TOOL_NAMES = {tool["name"] for tool in RULE_TOOLS}
+HEALTH_CHECK_TOOL_NAMES = {tool["name"] for tool in HEALTH_CHECK_TOOLS}
 
 CLASSIFICATION_SCHEMA = {
     "schema_version": "1.0.0",

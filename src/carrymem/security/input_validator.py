@@ -159,6 +159,27 @@ class InputValidator:
 
         return self._sanitize_content(query)
 
+    def sanitize_namespace(self, namespace: str) -> str:
+        """
+        Sanitize and validate namespace input.
+
+        This is a convenience wrapper around validate_namespace that
+        returns a sanitized namespace or raises ValueError for invalid input.
+
+        Args:
+            namespace: Namespace to sanitize
+
+        Returns:
+            Sanitized namespace
+
+        Raises:
+            ValueError: If namespace is invalid
+        """
+        try:
+            return self.validate_namespace(namespace)
+        except ValidationError as e:
+            raise ValueError(str(e)) from e
+
     def validate_namespace(self, namespace: str) -> str:
         """
         Validate namespace
@@ -174,6 +195,10 @@ class InputValidator:
         """
         if not isinstance(namespace, str):
             raise ValidationError("Namespace must be a string")
+
+        # Check for empty or whitespace-only
+        if not namespace.strip():
+            raise ValidationError("Namespace cannot be empty")
 
         # Check length
         if len(namespace) > self.MAX_NAMESPACE_LENGTH:

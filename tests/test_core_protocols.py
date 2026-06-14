@@ -200,13 +200,23 @@ _UNSAFE_STANDALONE_MIXINS = {
 
 
 class TestStructuralConformance:
-    """Verify each *safe* Mixin structurally satisfies its Protocol."""
+    """Verify each *safe* Mixin structurally satisfies its Protocol.
+
+    Since @runtime_checkable was removed (it only checked method names,
+    not signatures, providing limited value), we verify conformance by
+    checking that every Protocol method exists on the Mixin instance.
+    """
 
     @pytest.mark.parametrize("mixin_cls,proto_cls", list(_SAFE_STANDALONE_MIXINS.items()))
     def test_standalone_mixin_satisfies_protocol(
         self, mixin_cls: type, proto_cls: type
     ):
-        assert isinstance(mixin_cls(), proto_cls)
+        proto_members = _protocol_members(proto_cls)
+        instance = mixin_cls()
+        for name in proto_members:
+            assert hasattr(instance, name), (
+                f"{mixin_cls.__name__} missing Protocol method {proto_cls.__name__}.{name}"
+            )
 
     def test_lifecycle_mixin_satisfies_lifecycle_ops_via_carrymem(self):
         """LifecycleMixin can only be tested via full CarryMem composition."""
@@ -214,7 +224,12 @@ class TestStructuralConformance:
             from carrymem import CarryMem
         except Exception:
             pytest.skip("Cannot import CarryMem (missing dependencies)")
-        assert isinstance(CarryMem(), LifecycleOps)
+        proto_members = _protocol_members(LifecycleOps)
+        instance = CarryMem()
+        for name in proto_members:
+            assert hasattr(instance, name), (
+                f"CarryMem missing LifecycleOps method: {name}"
+            )
 
     def test_classification_mixin_satisfies_classification_ops_via_carrymem(self):
         """ClassificationMixin can only be tested via full CarryMem composition."""
@@ -222,7 +237,12 @@ class TestStructuralConformance:
             from carrymem import CarryMem
         except Exception:
             pytest.skip("Cannot import CarryMem (missing dependencies)")
-        assert isinstance(CarryMem(), ClassificationOps)
+        proto_members = _protocol_members(ClassificationOps)
+        instance = CarryMem()
+        for name in proto_members:
+            assert hasattr(instance, name), (
+                f"CarryMem missing ClassificationOps method: {name}"
+            )
 
 
 # ===========================================================================
@@ -253,20 +273,21 @@ class TestCompositeProtocol:
 
         assert issubclass(CarryMemOps, Protocol)
 
-    def test_carrymem_ops_is_runtime_checkable(self):
-        # runtime_checkable protocols support isinstance()
-        try:
-            isinstance(object(), CarryMemOps)
-        except TypeError:
-            pytest.fail("CarryMemOps is not runtime_checkable")
-
     def test_carrymem_satisfies_carrymem_ops(self):
         """Full CarryMem instance must satisfy composite CarryMemOps."""
         try:
             from carrymem import CarryMem
         except Exception:
             pytest.skip("Cannot import CarryMem (missing dependencies)")
-        assert isinstance(CarryMem(), CarryMemOps)
+        # Verify every method from all sub-Protocols exists on CarryMem
+        instance = CarryMem()
+        for sub_proto in CarryMemOps.__bases__:
+            if sub_proto.__name__ == "Protocol":
+                continue
+            for name in _protocol_members(sub_proto):
+                assert hasattr(instance, name), (
+                    f"CarryMem missing {sub_proto.__name__}.{name}"
+                )
 
 
 # ===========================================================================

@@ -149,7 +149,7 @@ def format_tui_error(error: Exception) -> Dict[str, str]:
     return format_tui_error(friendly)
 
 
-def success_response(data: Any = None, message: str = "Operation successful") -> Dict[str, Any]:
+def success_response(data: object = None, message: str = "Operation successful") -> Dict[str, object]:
     """创建标准成功响应.
 
     Args:

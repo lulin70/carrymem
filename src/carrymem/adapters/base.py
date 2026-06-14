@@ -658,114 +658,6 @@ class AsyncStorageAdapter(Protocol):
     def capabilities(self) -> Dict[str, bool]: ...
 
 
-@runtime_checkable
-class StorageAdapterProtocol(Protocol):
-    """Standardized Protocol for all storage adapters (P2-4).
-
-    This Protocol defines the minimal interface that all storage adapters must implement.
-    It provides a runtime-checkable contract using Python's typing.Protocol.
-
-    All official adapters (SQLiteAdapter, JSONAdapter, ObsidianAdapter, etc.) must
-    conform to this Protocol. Use isinstance() with this Protocol to verify compliance.
-
-    Interface methods:
-    - initialize(): Initialize adapter with configuration
-    - store(): Store a memory entry (dict-based)
-    - recall(): Retrieve memories matching query
-    - delete(): Delete a memory by ID
-    - count(): Count stored memories
-    - health_check(): Run health check on backend
-    - close(): Release all resources
-
-    Example:
-        from carrymem.adapters.base import StorageAdapterProtocol
-
-        def use_adapter(adapter: StorageAdapterProtocol):
-            adapter.initialize({"path": "/data"})
-            entry_id = adapter.store({"content": "test", "type": "fact_declaration"})
-            results = adapter.recall("test")
-            adapter.close()
-
-        # Runtime check
-        assert isinstance(sqlite_adapter, StorageAdapterProtocol)
-    """
-
-    @abstractmethod
-    def initialize(self, config: dict) -> None:
-        """Initialize the adapter with configuration.
-
-        Args:
-            config: Adapter-specific configuration dictionary.
-        """
-        ...
-
-    @abstractmethod
-    def store(self, entry: dict) -> str:
-        """Store a memory entry and return its unique ID.
-
-        Args:
-            entry: Dictionary containing memory data. Must include at minimum
-                   ``content`` and ``type`` fields.
-
-        Returns:
-            The unique entry_id (storage_key) of the stored memory.
-        """
-        ...
-
-    @abstractmethod
-    def recall(self, query: str, limit: int = 20) -> list[dict]:
-        """Retrieve memories matching a query.
-
-        Args:
-            query: Search query string.
-            limit: Maximum number of results to return.
-
-        Returns:
-            List of matching memory entry dicts.
-        """
-        ...
-
-    @abstractmethod
-    def delete(self, entry_id: str) -> bool:
-        """Delete a memory by its entry ID.
-
-        Args:
-            entry_id: The storage_key/ID returned by store().
-
-        Returns:
-            True if the entry was deleted, False if not found.
-        """
-        ...
-
-    @abstractmethod
-    def count(self) -> int:
-        """Count total stored memories.
-
-        Returns:
-            Total number of stored memories.
-        """
-        ...
-
-    @abstractmethod
-    def health_check(self) -> dict:
-        """Run health check on the adapter's backend.
-
-        Returns:
-            Dict with at least:
-            - ``status`` (str): ``"healthy"``, ``"degraded"``, or ``"unhealthy"``
-            - ``latency_ms`` (float): Round-trip time for the check
-        """
-        ...
-
-    @abstractmethod
-    def close(self) -> None:
-        """Release all resources held by this adapter.
-
-        Must be safe to call multiple times.
-        """
-        ...
-
-
 class TestStorageAdapterContract:
     """Base class for adapter contract tests.
 
@@ -864,8 +756,6 @@ __all__ = [
     "StorageAdapter",
     # Async protocol
     "AsyncStorageAdapter",
-    # Standardized protocol
-    "StorageAdapterProtocol",
     # Test contract
     "TestStorageAdapterContract",
 ]

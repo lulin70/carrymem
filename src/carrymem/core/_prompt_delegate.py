@@ -1,8 +1,10 @@
 """Prompt delegation and LLM-powered features."""
 
+from __future__ import annotations
+
 import logging
 import warnings
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from carrymem.adapters.base import MemoryEntry
 from carrymem.core._lifecycle import StorageNotConfiguredError
@@ -11,6 +13,9 @@ from carrymem.constants import (
     SESSION_SUMMARIZER_LIMIT,
     AGGREGATE_MEMORIES_LIMIT,
 )
+
+if TYPE_CHECKING:
+    from carrymem.scoring import RecallBudget
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +66,7 @@ class PromptDelegateMixin:
         max_knowledge: int = CONTEXT_BUILD_DEFAULTS["max_knowledge"],
         max_tokens: int = CONTEXT_BUILD_DEFAULTS["max_tokens_qa_prompt"],
         language: str = "en",
-        budget: Optional[Any] = None,
+        budget: Optional[RecallBudget] = None,
         include_question: bool = True,
     ) -> str:
         return self.prompt_builder.build_qa_prompt(

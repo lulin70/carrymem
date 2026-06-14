@@ -1,4 +1,9 @@
-"""CarryMem DevSquad Integration Adapter.
+"""CarryMem DevSquad Integration Adapter (EXPERIMENTAL).
+
+⚠️  This module is experimental. The API surface may change without notice.
+    It is intended for evaluation and prototyping with the DevSquad
+    multi-agent orchestration framework. Stability is not guaranteed
+    until a future release announces promotion from experimental status.
 
 Provides MemoryProvider and CarryMemAdapter Protocol implementations
 for DevSquad multi-agent orchestration.

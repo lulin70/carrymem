@@ -3,14 +3,17 @@
 This module provides LLM client abstraction for CarryMem's AI-powered features
 (session summarization, semantic aggregation, etc.).
 
-Currently supports OpenAI and ZhipuAI backends. Future enhancements may include:
+Currently supports OpenAI and ZhipuAI backends. Future enhancements (v0.5.0+)
+may include:
 - Additional LLM provider support (Anthropic, Google, etc.)
 - Streaming response support
 - Token budget management
 - Prompt template management
 
-This module is a future placeholder — the API surface may change as more
-LLM features are added. For now, LLMClient is the primary entry point.
+LLMClient is the primary entry point. LLM features are opt-in (disabled by
+default); set CARRYMEM_LLM_ENABLED=true and configure an API key to activate.
+The API surface is stable for the current feature set but may expand in future
+versions as additional LLM capabilities are integrated.
 """
 
 import os
