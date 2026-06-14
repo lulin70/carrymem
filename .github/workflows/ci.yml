@@ -162,7 +162,7 @@ jobs:
         run: flake8 src/ tests/ --count --max-line-length=120 --statistics
 
       - name: Black
-        run: black --check --diff --color src/ tests/
+        run: black --check --diff --color --line-length=120 src/ tests/
 
       - name: isort
         run: isort --check-only --diff src/ tests/
