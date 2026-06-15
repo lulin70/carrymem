@@ -1,6 +1,6 @@
 # CarryMem Core 架构文档 — Mixin 耦合治理 (P0-1)
 
-> **版本**: v0.4.1 | **日期**: 2026-06-15 | **状态**: ✅ 已完成
+> **版本**: v0.4.0 | **日期**: 2026-06-15 | **状态**: ✅ 已完成
 
 ## 1. 概述
 
@@ -204,5 +204,5 @@ src/carrymem/core/
 
 | 日期 | 变更内容 | 作者 |
 |------|---------|------|
-| 2026-06-15 | v0.4.1: Removed @runtime_checkable, merged StorageAdapterProtocol, added health_check MCP tool | v0.4.1 更新 |
+| 2026-06-15 | v0.4.0: Removed @runtime_checkable, merged StorageAdapterProtocol, added health_check MCP tool | v0.4.0 更新 |
 | 2026-06-11 | 初始版本 — P0-1 Mixin 耦合治理完成；新增 `_protocols.py`、更新 `__init__.py`、本文档、测试 | P0-1 任务 |

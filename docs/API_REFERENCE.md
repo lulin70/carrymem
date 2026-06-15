@@ -1,6 +1,6 @@
 # CarryMem API 参考手册（中文版）
 
-**版本**: v0.4.1
+**版本**: v0.4.0
 **最后更新**: 2026-06-11
 **源码位置**: `src/carrymem/`
 
@@ -118,7 +118,7 @@ with CarryMem() as cm:
 
 ```python
 >>> cm.version
-'0.4.1'
+'0.4.0'
 ```
 
 #### `namespace` → `str`

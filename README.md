@@ -942,12 +942,12 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 
 ## Project Status
 
-**Current Version**: v0.4.1
+**Current Version**: v0.4.0
 **Tests**: 3521+ passing
 **Coverage**: 82%+
 
 **Changelog**:
-- **v0.4.1**: Quality Sprint — 134 unit tests for core Mixins, health_check MCP tool (28 total), TUI delete/edit, CLI rules subcommand grouping, audit SQLite persistence, removed @runtime_checkable, merged StorageAdapterProtocol, all Any types replaced (24→0), mypy+bandit CI
+- **v0.4.0**: Quality Sprint — 134 unit tests for core Mixins, health_check MCP tool (28 total), TUI delete/edit, CLI rules subcommand grouping, audit SQLite persistence, removed @runtime_checkable, merged StorageAdapterProtocol, all Any types replaced (24→0), mypy+bandit CI
 - **v0.4.0**: Protocol & Maturity Sprint — Mixin+Facade+Protocol 三层架构, 10个 Protocol 接口, 错误码体系 (CM-001~999), SQLite 连接池 (WAL+线程缓存), 加密升级 (PBKDF2 260K), E2E 测试补全 (+78), 监控框架 MVP, 插件系统 MVP, 权限系统 MVP, i18n 框架, 类型注解 ~82%, 72 new tests
 - **v0.3.0**: Maturity & Architecture Sprint — God Class→8 Mixin, exception narrowing (173→15), TUI enhancement (+453 lines, Morandi palette), constants.py (28 named), lazy import cache, ghost feature audit, 71 new tests
 - **v0.2.5**: Integration/E2E audit, ghost feature deprecation warnings, version chain validation, 83 new tests
