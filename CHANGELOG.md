@@ -12,6 +12,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-06-15
+
+### Added
+- 134 unit tests for 7 core Mixins (tests/core/)
+- health_check MCP tool (28 tools total)
+- TUI delete (d) and edit (e) functionality
+- CLI rules subcommand grouping (carrymem rules add/list/match...)
+- Audit logger defaults to SQLite persistence (~/.carrymem/audit.db)
+- mypy type check and bandit security scan in CI
+
+### Changed
+- StorageAdapterProtocol merged into StorageAdapter (interface simplified)
+- Removed 9 @runtime_checkable decorators (zero runtime overhead)
+- All Any types replaced with specific types (24→0)
+- CLI old flat commands (add-rule etc.) deprecated, use rules subcommands
+
+### Fixed
+- handlers.cleanup() async→sync (RuntimeWarning)
+- ConnectionManager.close() pysqlite3 exception handling
+- Path traversal validation in CarryMem.__init__
+- InputValidator.sanitize_namespace() + empty namespace check
+- Black/flake8 CI configuration (line-length=120 alignment)
+
 ### Performance (P0-4: SQLite Connection Management Optimization)
 
 - **Connection reuse optimization**: Thread-local connection caching via `threading.local()`.

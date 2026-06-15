@@ -1,6 +1,6 @@
 # CarryMem API 参考手册（中文版）
 
-**版本**: v0.4.0
+**版本**: v0.4.1
 **最后更新**: 2026-06-11
 **源码位置**: `src/carrymem/`
 
@@ -118,7 +118,7 @@ with CarryMem() as cm:
 
 ```python
 >>> cm.version
-'0.4.0'
+'0.4.1'
 ```
 
 #### `namespace` → `str`
@@ -564,7 +564,7 @@ print(result["total_count"]) # 总数
 
 #### `get_audit_log(operation, since, until, source, limit)` → `List[AuditLogEntry]`
 
-查询审计日志。
+查询审计日志。审计日志默认持久化至 ~/.carrymem/audit.db。
 
 **参数:**
 
@@ -735,7 +735,7 @@ LLM 驱动的语义聚合（实验性功能）。
 
 #### `health_check()` → `HealthCheckResult`
 
-返回所有组件的健康状态。
+返回所有组件的健康状态。Also available as MCP tool.
 
 **返回:** `HealthCheckResult`
 ```python

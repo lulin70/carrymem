@@ -1,6 +1,6 @@
 # CarryMem Core 架构文档 — Mixin 耦合治理 (P0-1)
 
-> **版本**: v0.4.0 | **日期**: 2026-06-11 | **状态**: ✅ 已完成
+> **版本**: v0.4.1 | **日期**: 2026-06-15 | **状态**: ✅ 已完成
 
 ## 1. 概述
 
@@ -145,14 +145,13 @@ src/carrymem/core/
 1. **每个 Mixin 一个 Protocol** — 1:1 映射，便于追踪
 2. **公共方法 + 关键私有方法** — 私有方法如果构成跨 Mixin 契约也纳入
 3. **Composite Protocol** — `CarryMemOps` 组合所有子 Protocol
-4. **`@runtime_checkable`** — 支持 `isinstance()` 检查（可选）
-5. **零运行时开销** — `type: ignore` 注解避免运行时冲突
+4. **纯结构性类型** — 零运行时开销，无 isinstance() 检查；`type: ignore` 注解避免运行时冲突
 
 ### 6.2 Protocol 映射表
 
 | Protocol 名 | 对应 Mixin | 方法数 | 用途 |
 |------------|-----------|--------|------|
-| `HasSharedState` | — | 5 (属性) | 共享状态基础契约 |
+| `HasSharedState` | 无对应 Mixin，共享状态基础契约 | 5 (属性) | 共享状态基础契约 |
 | `LifecycleOps` | LifecycleMixin | ~12 | 生命周期管理 |
 | `BackupOps` | BackupMixin | ~9 | 备份与审计 |
 | `RecallOps` | RecallMixin | ~7 | 检索操作 |
@@ -205,4 +204,5 @@ src/carrymem/core/
 
 | 日期 | 变更内容 | 作者 |
 |------|---------|------|
+| 2026-06-15 | v0.4.1: Removed @runtime_checkable, merged StorageAdapterProtocol, added health_check MCP tool | v0.4.1 更新 |
 | 2026-06-11 | 初始版本 — P0-1 Mixin 耦合治理完成；新增 `_protocols.py`、更新 `__init__.py`、本文档、测试 | P0-1 任务 |

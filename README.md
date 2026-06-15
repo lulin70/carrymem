@@ -28,7 +28,7 @@ CarryMem fixes this. It's a lightweight, zero-dependency memory system that stor
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-3387-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-3521-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-82%25%2B-green" alt="Coverage">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval Academic Benchmark"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
@@ -287,11 +287,13 @@ carrymem backup --list                  # List backups
 carrymem backup --restore <file>        # Restore from backup
 carrymem version                        # Show version
 # Rule Engine commands
-carrymem add-rule "use SSL" --trigger "database" --type avoid  # Add a rule
-carrymem list-rules --status active                      # List active rules
-carrymem skill-pack rules.json --name team-conventions   # Pack rules as Skill
-carrymem skill-install team-conventions.json --scope company  # Install Skill
-carrymem skill-verify team-conventions.json              # Verify Skill integrity
+carrymem rules add "use SSL" --trigger "database" --type avoid  # Add a rule
+carrymem rules list --status active                              # List active rules
+carrymem rules suggest                                           # Suggest rules
+# Also available: carrymem add-rule, carrymem list-rules (legacy aliases)
+carrymem rules pack rules.json --name team-conventions   # Pack rules as Skill
+carrymem rules install team-conventions.json --scope company  # Install Skill
+carrymem rules verify team-conventions.json              # Verify Skill integrity
 ```
 
 ---
@@ -443,7 +445,7 @@ Automatically detects and redacts API keys, passwords, tokens, and 21 other sens
 | **Encrypted .carry files** | `pack --encrypt` for password-encrypted portable files |
 | **Auto-Backup** | Every 20 writes, VACUUM INTO backup, max 5 retained |
 | **Backup/Restore** | Manual backup, list, and restore via `carrymem backup` |
-| **Audit Log** | Append-only operation history |
+| **Audit Log** | SQLite-persisted operation history (~/.carrymem/audit.db) |
 | **Version History** | Every edit tracked, rollback supported |
 | **Input Validation** | SQL injection, XSS, path traversal protection |
 
@@ -626,7 +628,7 @@ carrymem setup-mcp --tool claude-code
 carrymem setup-mcp --tool all
 ```
 
-27 MCP tools available: Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11)
+28 MCP tools available: Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11) · Health (1)
 
 **Client Compatibility:**
 
@@ -712,7 +714,7 @@ pip install textual
 carrymem tui
 ```
 
-Interactive terminal interface with sidebar filters, search, and add mode.
+Interactive terminal interface with sidebar filters, search, add, delete (d), and edit (e).
 
 ### VS Code Extension
 
@@ -940,11 +942,12 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 
 ## Project Status
 
-**Current Version**: v0.4.0
-**Tests**: 3387+ passing
+**Current Version**: v0.4.1
+**Tests**: 3521+ passing
 **Coverage**: 82%+
 
 **Changelog**:
+- **v0.4.1**: Quality Sprint — 134 unit tests for core Mixins, health_check MCP tool (28 total), TUI delete/edit, CLI rules subcommand grouping, audit SQLite persistence, removed @runtime_checkable, merged StorageAdapterProtocol, all Any types replaced (24→0), mypy+bandit CI
 - **v0.4.0**: Protocol & Maturity Sprint — Mixin+Facade+Protocol 三层架构, 10个 Protocol 接口, 错误码体系 (CM-001~999), SQLite 连接池 (WAL+线程缓存), 加密升级 (PBKDF2 260K), E2E 测试补全 (+78), 监控框架 MVP, 插件系统 MVP, 权限系统 MVP, i18n 框架, 类型注解 ~82%, 72 new tests
 - **v0.3.0**: Maturity & Architecture Sprint — God Class→8 Mixin, exception narrowing (173→15), TUI enhancement (+453 lines, Morandi palette), constants.py (28 named), lazy import cache, ghost feature audit, 71 new tests
 - **v0.2.5**: Integration/E2E audit, ghost feature deprecation warnings, version chain validation, 83 new tests

@@ -1,6 +1,6 @@
 # CarryMem 入口点功能对照表
 
-> 版本: v0.4.0 | 更新日期: 2026-06-11
+> 版本: v0.4.1 | 更新日期: 2026-06-15
 > 目标: 确保 CLI/TUI/MCP 三入口功能对等、文案一致
 
 ## 一、入口概述
@@ -21,8 +21,8 @@
 | **列出记忆** | `list` / `ls` | ✅ (主界面) | `recall_memories` | 三入口均支持 |
 | **搜索记忆** | `search` / `find` | ✅ (/ 或 s 键) | `recall_memories` (带 query) | 三入口均支持 |
 | **查看详情** | `show` / `get` | ✅ (Enter 键) | ❌ (返回完整数据) | TUI 有弹窗展示 |
-| **编辑记忆** | `edit` / `update` | ❌ | ❌ | **仅 CLI** |
-| **删除记忆** | `forget` / `delete` / `rm` | ⚠️ (d 键, 未实现) | `forget_memory` | TUI 标注为 future |
+| **编辑记忆** | `edit` / `update` | ✅ (e 键) | ❌ | **仅 CLI/TUI** |
+| **删除记忆** | `forget` / `delete` / `rm` | ✅ (d 键) | `forget_memory` | 三入口均支持 |
 | **清理过期** | `clean` / `consolidate` | ❌ | `consolidate_memories` | **仅 CLI/MCP** |
 
 ### 2.2 规则引擎 (Rules Engine)
@@ -287,6 +287,7 @@ carrymem stats           # 查看统计
 | `update_rule` | Rules | rule_engine | ✅ |
 | `my_profile` | Profile | carrymem | ✅ |
 | `onboard` | Guide | carrymem | ✅ |
+| `health_check` | Health | carrymem | ✅ |
 
 **总计**: 28 个 MCP 工具
 
