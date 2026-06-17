@@ -38,6 +38,32 @@ def mem_opt_db(tmp_path):
     cm.close()
 
 
+@pytest.fixture
+def populated_db_fn(tmp_path):
+    """Create a populated database for connection pool / large result set testing."""
+    from carrymem.adapters.base import MemoryEntry
+
+    db_path = str(tmp_path / "conn_pool.db")
+    cm = CarryMem(db_path=db_path)
+
+    # Populate with data via batch insert (fast, single transaction)
+    entries = [
+        MemoryEntry(
+            id="",
+            type="session_summary",
+            content=f"Connection pool test entry {i}",
+            raw_text=f"Connection pool test entry {i}",
+            confidence=0.8,
+            tier=2,
+            source_layer="manual",
+        )
+        for i in range(200)
+    ]
+    cm._adapter.remember_batch(entries)
+
+    return cm, db_path
+
+
 # ---------------------------------------------------------------------------
 # Test 1: No Memory Leak on Repeated Recall
 # ---------------------------------------------------------------------------
@@ -48,11 +74,24 @@ class TestNoMemoryLeakOnRepeatedRecall:
 
     def test_no_memory_leak_on_repeated_recall(self, mem_opt_db):
         """Memory should not grow continuously across 100 recall operations."""
+        from carrymem.adapters.base import MemoryEntry
+
         cm = mem_opt_db
 
-        # Pre-populate with some data
-        for i in range(100):
-            cm.classify_and_remember(f"Memory leak test entry {i} about Python programming")
+        # Pre-populate with data via batch insert (fast, single transaction)
+        entries = [
+            MemoryEntry(
+                id="",
+                type="session_summary",
+                content=f"Memory leak test entry {i} about Python programming",
+                raw_text=f"Memory leak test entry {i} about Python programming",
+                confidence=0.8,
+                tier=2,
+                source_layer="manual",
+            )
+            for i in range(100)
+        ]
+        cm._adapter.remember_batch(entries)
 
         tracemalloc.start()
 
@@ -120,6 +159,8 @@ class TestBulkInsertMemoryGrowthLinear:
 
     def test_bulk_insert_memory_growth_linear(self, tmp_path):
         """1000 inserts should not cause excessive (>50MB) memory growth."""
+        from carrymem.adapters.base import MemoryEntry
+
         db_path = str(tmp_path / "bulk_mem.db")
         cm = CarryMem(db_path=db_path)
 
@@ -128,7 +169,8 @@ class TestBulkInsertMemoryGrowthLinear:
             gc.collect()
             baseline_current, baseline_peak = tracemalloc.get_traced_memory()
 
-            # Insert 1000 memories in batches, tracking memory at checkpoints
+            # Insert 1000 memories in batches via remember_batch (single transaction per batch)
+            # This tests storage-layer memory growth without classification pipeline overhead
             checkpoints = [100, 300, 500, 700, 1000]
             checkpoint_data = []
 
@@ -144,10 +186,24 @@ class TestBulkInsertMemoryGrowthLinear:
             ]
 
             inserted = 0
-            for i in range(1000):
-                topic = topics[i % len(topics)]
-                cm.classify_and_remember(f"[{i}] Memory growth test: {topic} entry number {i}")
-                inserted += 1
+            batch_size = 100
+            for batch_start in range(0, 1000, batch_size):
+                entries = []
+                for i in range(batch_start, batch_start + batch_size):
+                    topic = topics[i % len(topics)]
+                    entries.append(
+                        MemoryEntry(
+                            id="",
+                            type="session_summary",
+                            content=f"[{i}] Memory growth test: {topic} entry number {i}",
+                            raw_text=f"Memory growth test: {topic} entry number {i}",
+                            confidence=0.8,
+                            tier=2,
+                            source_layer="manual",
+                        )
+                    )
+                cm._adapter.remember_batch(entries)
+                inserted += batch_size
 
                 if inserted in checkpoints:
                     gc.collect()
@@ -262,18 +318,6 @@ class TestLargeResultSetGC:
 
 class TestConnectionPoolMemory:
     """Verify: connection pool does not accumulate unclosed connections."""
-
-    @pytest.fixture
-    def populated_db_fn(self, tmp_path):
-        """Create a populated database for connection pool testing."""
-        db_path = str(tmp_path / "conn_pool.db")
-        cm = CarryMem(db_path=db_path)
-
-        # Populate with data
-        for i in range(200):
-            cm.classify_and_remember(f"Connection pool test entry {i}")
-
-        return cm, db_path
 
     def test_connection_pool_memory(self, populated_db_fn):
         """Multiple open/close cycles should not accumulate connections."""

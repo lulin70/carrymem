@@ -10,7 +10,6 @@ Architecture:
     query → tokenize → synonym_expand → spell_correct → cross_lang_map → expanded_queries
 """
 
-from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -54,6 +53,10 @@ class SemanticExpander:
         self._edit_threshold = edit_distance_threshold
         self._vocabulary: Set[str] = set()
         self._loaded = False
+        # Instance-level cache (NOT lru_cache on method — that would pin self
+        # and prevent garbage collection of SemanticExpander instances)
+        self._expand_cache: Dict[Tuple[str, str], Tuple[str, ...]] = {}
+        self._expand_cache_maxsize = 1000
 
         self._load_builtin_synonyms()
 
@@ -140,7 +143,6 @@ class SemanticExpander:
         result = self._expand_cached(query.strip(), language or "auto")
         return list(result)
 
-    @lru_cache(maxsize=1000)
     def _expand_cached(
         self,
         query: str,
@@ -149,7 +151,13 @@ class SemanticExpander:
         """Cached version of expand for performance.
 
         Returns tuple instead of list for hashability.
+        Uses instance-level dict cache to avoid pinning self via lru_cache.
         """
+        cache_key = (query, language)
+        cached = self._expand_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         expansions: Set[str] = set()
         expansions.add(query)
 
@@ -185,7 +193,16 @@ class SemanticExpander:
             result.remove(query)
         result.insert(0, query)
 
-        return tuple(result[: self._max_expansions])
+        result_tuple = tuple(result[: self._max_expansions])
+
+        # Simple FIFO eviction when cache is full
+        if len(self._expand_cache) >= self._expand_cache_maxsize:
+            # Remove oldest entry (first inserted)
+            oldest_key = next(iter(self._expand_cache))
+            del self._expand_cache[oldest_key]
+        self._expand_cache[cache_key] = result_tuple
+
+        return result_tuple
 
     def _tokenize(self, text: str) -> List[str]:
         """Tokenize text with CJK awareness.

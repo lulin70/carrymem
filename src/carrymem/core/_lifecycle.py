@@ -188,6 +188,12 @@ class LifecycleMixin:
     def close(self) -> None:
         if self._rule_engine:
             self._rule_engine = None
+        if self._engine:
+            self._engine = None
+        if self._prompt_builder:
+            self._prompt_builder = None
+        if self._candidate_generator:
+            self._candidate_generator = None
         if self._adapter and hasattr(self._adapter, "close"):
             self._adapter.close()
         if self._knowledge_adapter and hasattr(self._knowledge_adapter, "close"):
