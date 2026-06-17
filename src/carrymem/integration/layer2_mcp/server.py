@@ -77,11 +77,16 @@ class MCPServer:
         """Start the MCP server and listen for requests."""
         logger.info("MCP Server starting (request_timeout=%ds)...", self.request_timeout)
 
+        loop = asyncio.get_event_loop()
+        reader = asyncio.StreamReader()
+        protocol = asyncio.StreamReaderProtocol(reader)
+        await loop.connect_read_pipe(lambda: protocol, sys.stdin)
+
         try:
             while True:
                 try:
                     line = await asyncio.wait_for(
-                        asyncio.get_event_loop().run_in_executor(None, sys.stdin.readline),
+                        reader.readline(),
                         timeout=self.DEFAULT_READLINE_TIMEOUT,
                     )
                 except asyncio.TimeoutError:
@@ -144,7 +149,8 @@ class MCPServer:
 
         if method == "initialize":
             return await self.handle_initialize(request_id, params)
-        elif method == "initialized":
+        elif method == "notifications/initialized":
+            logger.debug("Received initialized notification")
             return None
         elif method == "tools/list":
             return await self.handle_tools_list(request_id)
@@ -156,7 +162,11 @@ class MCPServer:
             return None
         else:
             logger.warning("Unknown method: %s", method)
+            if request_id is None:
+                return None
             return await self.send_error(request_id, -32601, "Method not found")
+
+    SUPPORTED_PROTOCOL_VERSIONS = {"2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"}
 
     async def handle_initialize(self, request_id: Union[str, int, None], params: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -171,17 +181,19 @@ class MCPServer:
         """
         logger.info("Handling initialize request")
 
-        protocol_version = params.get("protocolVersion", "2024-11-05")
+        client_version = params.get("protocolVersion", "2024-11-05")
         client_info = params.get("clientInfo", {})
 
         logger.info("Client: %s v%s", client_info.get("name", "unknown"), client_info.get("version", "unknown"))
-        logger.info("Protocol version: %s", protocol_version)
+        logger.info("Protocol version: %s", client_version)
+
+        negotiated_version = client_version if client_version in self.SUPPORTED_PROTOCOL_VERSIONS else "2024-11-05"
 
         return {
             "jsonrpc": "2.0",
             "id": request_id,
             "result": {
-                "protocolVersion": "2024-11-05",
+                "protocolVersion": negotiated_version,
                 "serverInfo": {"name": "carrymem-mcp", "version": _version},
                 "capabilities": {"tools": {"listChanged": False}},
             },
@@ -260,7 +272,8 @@ class MCPServer:
             response: The response dictionary
         """
         response_json = json.dumps(response, ensure_ascii=False)
-        print(response_json, flush=True)
+        sys.stdout.write(response_json + "\n")
+        sys.stdout.flush()
         logger.debug("Sent response: %s...", response_json[:200])
 
     async def send_error(

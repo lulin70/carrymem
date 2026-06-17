@@ -151,6 +151,20 @@ class TestMCPServer:
         await server.cleanup()
 
     @pytest.mark.asyncio
+    async def test_handle_initialize_new_protocol(self, tmp_path):
+        server = MCPServer(data_path=str(tmp_path))
+        result = await server.handle_initialize(
+            1,
+            {
+                "protocolVersion": "2025-11-25",
+                "clientInfo": {"name": "Trae", "version": "1.107.1"},
+            },
+        )
+        assert result["id"] == 1
+        assert result["result"]["protocolVersion"] == "2025-11-25"
+        await server.cleanup()
+
+    @pytest.mark.asyncio
     async def test_handle_tools_list(self, tmp_path):
         server = MCPServer(data_path=str(tmp_path))
         result = await server.handle_tools_list(2)
@@ -201,7 +215,7 @@ class TestMCPServer:
         result = await server.handle_request(
             {
                 "jsonrpc": "2.0",
-                "method": "initialized",
+                "method": "notifications/initialized",
             }
         )
         assert result is None
