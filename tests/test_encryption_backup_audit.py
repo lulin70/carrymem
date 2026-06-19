@@ -19,7 +19,7 @@ import pytest
 from carrymem import CarryMem
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.backup import BackupManager
-from carrymem.security.audit import AuditLogger
+from carrymem.security.audit import AuditFilter, AuditLogger
 from carrymem.security.encryption import (
     EncryptionError,
     MemoryEncryption,
@@ -194,12 +194,10 @@ class TestBackupManager(unittest.TestCase):
 
 class TestAuditLogger(unittest.TestCase):
     def setUp(self):
-        self.conn = sqlite3.connect(":memory:")
-        self.conn.row_factory = sqlite3.Row
-        self.audit = AuditLogger(lambda: self.conn, namespace="default")
+        self.audit = AuditLogger()
 
     def tearDown(self):
-        self.conn.close()
+        pass
 
     def test_log_operation(self):
         self.audit.log_operation(
@@ -208,40 +206,40 @@ class TestAuditLogger(unittest.TestCase):
             memory_type="user_preference",
             success=True,
         )
-        log = self.audit.query(limit=10)
+        log = self.audit.query(AuditFilter(limit=10))
         self.assertEqual(len(log), 1)
-        self.assertEqual(log[0]["operation"], "remember")
-        self.assertTrue(log[0]["success"])
+        self.assertEqual(log[0].action, "remember")
+        self.assertEqual(log[0].result, "SUCCESS")
 
     def test_query_by_operation(self):
         self.audit.log_operation(operation="remember")
         self.audit.log_operation(operation="forget")
-        log = self.audit.query(operation="remember")
+        log = self.audit.query(AuditFilter(action="remember"))
         self.assertEqual(len(log), 1)
-        self.assertEqual(log[0]["operation"], "remember")
+        self.assertEqual(log[0].action, "remember")
 
     def test_query_with_details(self):
         self.audit.log_operation(
             operation="remember",
             details={"confidence": 0.9, "tier": 2},
         )
-        log = self.audit.query(limit=1)
-        self.assertIsNotNone(log[0]["details"])
-        self.assertEqual(log[0]["details"]["confidence"], 0.9)
+        log = self.audit.query(AuditFilter(limit=1))
+        self.assertIsNotNone(log[0].details)
+        self.assertEqual(log[0].details["confidence"], 0.9)
 
     def test_get_stats(self):
         self.audit.log_operation(operation="remember")
         self.audit.log_operation(operation="remember")
         self.audit.log_operation(operation="forget")
         stats = self.audit.get_stats()
-        self.assertEqual(stats["total_operations"], 3)
-        self.assertEqual(stats["by_operation"]["remember"], 2)
-        self.assertEqual(stats["by_operation"]["forget"], 1)
+        self.assertEqual(stats["total_events"], 3)
+        self.assertEqual(stats["by_action"]["remember"], 2)
+        self.assertEqual(stats["by_action"]["forget"], 1)
 
     def test_failed_operation(self):
         self.audit.log_operation(operation="forget", storage_key="nonexistent", success=False)
-        log = self.audit.query(limit=1)
-        self.assertFalse(log[0]["success"])
+        log = self.audit.query(AuditFilter(limit=1))
+        self.assertEqual(log[0].result, "FAILURE")
 
 
 class TestCarryMemV060(unittest.TestCase):

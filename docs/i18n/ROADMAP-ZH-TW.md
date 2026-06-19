@@ -30,7 +30,7 @@ v0.3.0 ─── 設計基線 (記憶基礎 + 規則設計文件)
 - 第二位數字：GA里程碑（API穩定性保證）
 - 不跳v1.0.0——透過實際生產使用贏得
 
-> **註**：上方列出的 v0.3.0–v0.4.1 版本代表專案的開發歷史。當前版本為 **v0.2.5**，包含自動備份、加密 .carry 檔案、並行安全、E2E 測試、PrefEval **83.0%**(canonical)、狀態/事件版本鏈、安全加固、偏好注入最佳化、context.py 模組化、整合排程等改進。
+> **註**：上方列出的 v0.3.0–v0.4.1 版本代表專案的開發歷史。當前版本為 **v0.4.0**，包含自動備份、加密 .carry 檔案、並行安全、E2E 測試、PrefEval **83.0%**(canonical)、狀態/事件版本鏈、安全加固、偏好注入最佳化、context.py 模組化、整合排程等改進。
 
 ---
 
@@ -58,7 +58,7 @@ v0.3.0 ─── 設計基線 (記憶基礎 + 規則設計文件)
 │  │  "你偏好X，決定了Y，糾正過Z"                       │    │
 │  │  • 7種記憶類型 + 4級層次                           │    │
 │  │  • 跨語意語意召回 (FTS5)                           │    │
-│  │|  •  3244個測試通過, 80%覆蓋率                       |│    │
+│  │|  •  4198個測試通過, 80%覆蓋率                       |│    │
 │  └──────────────────────────────────────────────────┘    │
 │              ↑ 讀取自          ↑ 注入到                    │
 │  第一層: 知識 (你知道什麼)         ← v0.3.0 規劃          │
@@ -148,7 +148,7 @@ CarryMem概念對應到DDD概念，實現與企業架構師的對話：
 **已實現功能**:
 - [x] PromotionPipeline: 5階段管線 (收集→偵測→生成→佇列→確認)
 - [x] 審計追蹤: `promotion_audit` 表完整記錄所有操作
-- [x] CLI: `promote-rules`, `review-promotions`, `promotion-log`
+- [x] CLI: `rules promote`, `rules review-promotions`, `rules promotion-log`
 - [x] 佇列大小限制 (50), 可設定過期時間 (7天)
 - [x] `_count_pending()` 高效COUNT查詢
 
@@ -161,7 +161,7 @@ CarryMem概念對應到DDD概念，實現與企業架構師的對話：
 - [x] 雙語模式匹配 (英文 + 中文)
 - [x] ExperienceRuleBridge: 確認工作流 + `experience_audit` 表
 - [x] 領域推斷: 7個領域
-- [x] CLI: `learn-experience`, `review-lessons`, `lesson-log`
+- [x] CLI: `rules learn`, `rules review-lessons`, `rules lesson-log`
 
 ---
 
@@ -171,7 +171,7 @@ CarryMem概念對應到DDD概念，實現與企業架構師的對話：
 - [x] RuleRefiner: 4階段精煉 (範圍→泛化→例外→確認)
 - [x] 特異性分析: 偵測專案/工具/時間特定規則
 - [x] RefinementSessionManager: 會話持久化 + 對話追蹤
-- [x] CLI: `refine-rule`, `refinement-sessions`
+- [x] CLI: `rules refine`, `rules refinement-sessions`
 - [x] 最大5輪，自動強制確認
 
 ---
@@ -239,7 +239,7 @@ CarryMem概念對應到DDD概念，實現與企業架構師的對話：
 ### v0.5.0 — 智慧增強
 - [x] 記憶整合引擎（P0: 去重+衰減，P1: 模式→規則，P2: 語意合併）
 - [x] PrefEval 96.0% 偏好遵守率（50 樣本，ICLR 2025 Oral）
-- [x] 27 個 MCP 工具（新增 consolidate_memories）
+- [x] 28 個 MCP 工具（新增 consolidate_memories）
 - 向量語意匹配 (可選嵌入模型)
 - 規則推薦引擎
 - 跨使用者規則共享 (匿名化)
@@ -370,7 +370,7 @@ CarryMem概念對應到DDD概念，實現與企業架構師的對話：
 **最後更新**: 2026-05-02
 **維護者**: CarryMem 團隊
 **下一里程碑**: v0.5.0 智慧增強 (自動調優 + 跨作用域學習)
-**狀態**: ✅ **v0.2.5已完成 (3244測試, 80%+覆蓋率, Memory+Rules+Knowledge+Enterprise)**
+**狀態**: ✅ **v0.4.0已完成 (4198測試, 80%+覆蓋率, Memory+Rules+Knowledge+Enterprise)**
 
 ---
 

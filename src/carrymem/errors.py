@@ -15,9 +15,10 @@ from __future__ import annotations
 from typing import Any, Dict, Optional, Type
 
 from carrymem.error_messages import ERROR_MESSAGES, ErrorTemplate
+from carrymem.exceptions import CarryMemError as _BaseCarryMemError
 
 
-class CarryMemError(Exception):
+class CarryMemError(_BaseCarryMemError):
     """Base error class with error code, user-friendly message, hint, and cause chain."""
 
     def __init__(

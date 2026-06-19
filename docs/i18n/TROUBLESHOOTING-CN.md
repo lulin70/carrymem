@@ -645,7 +645,7 @@ export CARRYMEM_AUTO_INJECT=true
 
 2. 验证规则匹配:
    ```bash
-   carrymem match-rules "你的场景描述"
+   carrymem rules match "你的场景描述"
    ```
 
 3. 永久启用自动注入:
@@ -701,7 +701,7 @@ carrymem rules list
 
 2. 在适当作用域创建规则:
    ```bash
-   carrymem add-rule --trigger "编码风格" --action "使用4空格缩进"
+   carrymem rules add --trigger "编码风格" --action "使用4空格缩进"
    ```
 
 3. 检查冲突:
@@ -733,7 +733,7 @@ carrymem doctor
 **严重度**: 🟡 警告  
 **doctor 检查项**: `security`
 
-**问题**: `skill-verify` 返回签名不匹配
+**问题**: `rules verify` 返回签名不匹配
 
 **错误示例**:
 ```
@@ -744,7 +744,7 @@ Skill signature mismatch: expected abc123..., got def456...
 
 **快速修复**:
 ```bash
-carrymem skill-verify <skill文件>
+carrymem rules verify <skill文件>
 # 查看输出详情
 ```
 
@@ -752,12 +752,12 @@ carrymem skill-verify <skill文件>
 
 1. 验证 skill 文件未被篡改:
    ```bash
-   carrymem skill-verify <skill文件>
+   carrymem rules verify <skill文件>
    ```
 
 2. 如果你是 skill 创建者，重新打包:
    ```bash
-   carrymem skill-pack my-skill.json --name "my-skill"
+   carrymem rules pack my-skill.json --name "my-skill"
    ```
 
 3. 检查版本兼容性:
@@ -774,7 +774,7 @@ sha256sum <skill文件>
 
 **验证**:
 ```bash
-carrymem skill-verify <skill文件>
+carrymem rules verify <skill文件>
 # 应显示: valid
 ```
 
@@ -785,33 +785,33 @@ carrymem skill-verify <skill文件>
 **严重度**: 🔵 信息  
 **doctor 检查项**: `rules_engine`
 
-**问题**: `suggest-rules` 产生低质量或不相关的建议
+**问题**: `rules suggest` 产生低质量或不相关的建议
 
 **根因**: 检测到的记忆模式不足，或 `--min-count` 阈值过低。
 
 **快速修复**:
 ```bash
-carrymem suggest-rules --min-count 5
+carrymem rules suggest --min-count 5
 ```
 
 **标准修复**:
 
 1. 提高最低出现次数阈值:
    ```bash
-   carrymem suggest-rules --min-count 5
+   carrymem rules suggest --min-count 5
    ```
 
 2. 按记忆类型过滤:
    ```bash
-   carrymem suggest-rules --type user_preference
-   carrymem suggest-rules --type correction
+   carrymem rules suggest --type user_preference
+   carrymem rules suggest --type correction
    ```
 
 3. 审核并选择性接受:
    ```bash
-   carrymem suggest-rules
+   carrymem rules suggest
    # 审核每条建议，然后:
-   carrymem suggest-rules --accept  # 接受全部
+   carrymem rules suggest --accept  # 接受全部
    ```
 
 **深度修复** — 改善建议质量:
@@ -823,7 +823,7 @@ carrymem suggest-rules --min-count 5
 
 **验证**:
 ```bash
-carrymem suggest-rules --min-count 5
+carrymem rules suggest --min-count 5
 # 应显示相关建议
 ```
 

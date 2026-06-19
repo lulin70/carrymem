@@ -1,10 +1,8 @@
-"""CarryMem Monitoring & Alerting Framework (MVP).
+"""CarryMem Monitoring Framework (MVP).
 
 Provides:
 - HealthChecker: /healthz, /readyz endpoint logic
 - MetricsCollector: counters, latency histograms, Prometheus export
-- AlertManager: SLO threshold checking with console alerts
-- MonitoringHTTPServer: lightweight HTTP server for monitoring endpoints
 
 SLO Targets:
 - classify_and_remember P99 < 200ms
@@ -12,15 +10,11 @@ SLO Targets:
 - startup time < 2s
 """
 
-import asyncio
-import json
 import threading
 import time
-from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 
-from carrymem.utils.logger import logger
 
 # ── Data Classes ──────────────────────────────────────────────────────────
 
@@ -29,28 +23,6 @@ class AlertSeverity(str, Enum):
     INFO = "info"
     WARNING = "warning"
     CRITICAL = "critical"
-
-
-@dataclass
-class Alert:
-    """Represents a single alert."""
-
-    severity: AlertSeverity
-    metric_name: str
-    message: str
-    threshold: float
-    actual_value: float
-    timestamp: float = field(default_factory=time.time)
-
-
-@dataclass
-class PluginStatus:
-    """Status of a loaded plugin."""
-
-    name: str
-    version: str = ""
-    loaded: bool = False
-    error: Optional[str] = None
 
 
 # ── SLO Definitions ───────────────────────────────────────────────────────
@@ -270,283 +242,10 @@ class HealthChecker:
         }
 
 
-# ── Alert Manager ─────────────────────────────────────────────────────────
-
-
-class AlertManager:
-    """Alert manager (MVP: console-only output).
-
-    Checks metrics against SLO thresholds and generates alerts.
-    """
-
-    def __init__(
-        self,
-        slo_targets: Optional[List[SLOTarget]] = None,
-    ):
-        self._slo_targets = slo_targets or _DEFAULT_SLOS
-        self._alert_history: List[Alert] = []
-        self._lock = threading.Lock()
-
-    def check_alerts(self, metrics_snapshot: Dict[str, Any]) -> List[Alert]:
-        """Check metrics snapshot against SLO thresholds.
-
-        Args:
-            metrics_snapshot: Output of MetricsCollector.get_snapshot().
-
-        Returns:
-            List of triggered Alerts.
-        """
-        alerts: List[Alert] = []
-        lat_data = metrics_snapshot.get("latency", {})
-
-        for slo in self._slo_targets:
-            stats = lat_data.get(slo.operation, {})
-            p99_val = stats.get("p99")
-            if p99_val is not None and p99_val > slo.p99_threshold_ms:
-                alert = Alert(
-                    severity=slo.severity,
-                    metric_name=f"{slo.operation}_p99_latency",
-                    message=(
-                        f"SLO violation: {slo.operation} P99 latency "
-                        f"{p99_val:.1f}ms exceeds threshold {slo.p99_threshold_ms:.0f}ms"
-                    ),
-                    threshold=slo.p99_threshold_ms,
-                    actual_value=p99_val,
-                )
-                alerts.append(alert)
-
-        with self._lock:
-            self._alert_history.extend(alerts)
-
-        for alert in alerts:
-            formatted = self.format_alert(alert)
-            if alert.severity == AlertSeverity.CRITICAL:
-                logger.critical(formatted)
-            elif alert.severity == AlertSeverity.WARNING:
-                logger.warning(formatted)
-            else:
-                logger.info(formatted)
-
-        return alerts
-
-    @staticmethod
-    def format_alert(alert: Alert) -> str:
-        """Format an alert as a human-readable string."""
-        return (
-            f"[ALERT:{alert.severity.value.upper()}] "
-            f"{alert.metric_name}: {alert.message} "
-            f"(threshold={alert.threshold:.0f}ms, actual={alert.actual_value:.1f}ms)"
-        )
-
-    def get_alert_history(self) -> List[Alert]:
-        """Return all recorded alerts."""
-        with self._lock:
-            return list(self._alert_history)
-
-    def clear_history(self) -> None:
-        """Clear alert history (for testing)."""
-        with self._lock:
-            self._alert_history.clear()
-
-
-# ── Monitoring HTTP Server ────────────────────────────────────────────────
-
-
-class MonitoringHTTPServer:
-    """Lightweight async HTTP server for monitoring endpoints.
-
-    Endpoints:
-        GET /healthz  → JSON health status
-        GET /metrics  → Prometheus text format
-        GET /readyz   → Readiness probe
-    """
-
-    def __init__(
-        self,
-        host: str = "127.0.0.1",
-        port: int = 8766,
-        health_checker: Optional[HealthChecker] = None,
-        metrics_collector: Optional[MetricsCollector] = None,
-        alert_manager: Optional[AlertManager] = None,
-    ):
-        self._host = host
-        self._port = port
-        self._health_checker = health_checker or HealthChecker()
-        self._metrics = metrics_collector or MetricsCollector()
-        self._alert_manager = alert_manager or AlertManager()
-        # Wire shared instances
-        if health_checker is None:
-            self._health_checker = HealthChecker(
-                metrics_collector=self._metrics,
-            )
-        self._server = None
-
-    async def _handle_request(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
-        """Handle a single HTTP request."""
-        try:
-            request_line = await reader.readline()
-            if not request_line:
-                writer.close()
-                return
-
-            request_str = request_line.decode("utf-8", errors="replace").strip()
-            parts = request_str.split(" ")
-            if len(parts) < 2:
-                writer.close()
-                return
-
-            method = parts[0]
-            path = parts[1].split("?")[0]  # strip query string
-
-            # Consume headers
-            while True:
-                line = await reader.readline()
-                if not line or line == b"\r\n":
-                    break
-
-            # Route
-            if method == "GET":
-                if path == "/healthz":
-                    body = self._health_checker.check()
-                    # Also run alert check
-                    snapshot = self._metrics.get_snapshot()
-                    self._alert_manager.check_alerts(snapshot)
-                    await self._json_response(writer, 200, body)
-                elif path == "/metrics":
-                    text = self._metrics.to_prometheus()
-                    await self._text_response(writer, 200, text)
-                elif path == "/readyz":
-                    body = self._health_checker.readyz()
-                    await self._json_response(writer, 200, body if body["ready"] else (body, 503))
-                else:
-                    await self._json_response(writer, 404, {"error": "Not found"})
-            else:
-                await self._json_response(writer, 405, {"error": "Method not allowed"})
-        except Exception as e:
-            logger.error("Monitoring request error: %s", e, exc_info=True)
-            try:
-                await self._json_response(writer, 500, {"error": "Internal server error"})
-            except (OSError, ConnectionError):
-                pass
-        finally:
-            try:
-                writer.close()
-            except (OSError, ConnectionError):
-                pass
-
-    async def _json_response(self, writer, status_code: int, body) -> None:
-        """Send a JSON HTTP response."""
-        actual_body = body[0] if isinstance(body, tuple) else body
-        actual_status = body[1] if isinstance(body, tuple) else status_code
-        body_bytes = json.dumps(actual_body).encode("utf-8")
-        headers = (
-            f"HTTP/1.1 {actual_status} {'OK' if actual_status == 200 else 'Error'}\r\n"
-            "Content-Type: application/json\r\n"
-            f"Content-Length: {len(body_bytes)}\r\n"
-            "\r\n"
-        )
-        writer.write(headers.encode() + body_bytes)
-        await writer.drain()
-
-    async def _text_response(self, writer, status_code: int, text: str) -> None:
-        """Send a plain text HTTP response."""
-        body_bytes = text.encode("utf-8")
-        headers = (
-            f"HTTP/1.1 {status_code} OK\r\n"
-            "Content-Type: text/plain; version=0.0.4; charset=utf-8\r\n"
-            f"Content-Length: {len(body_bytes)}\r\n"
-            "\r\n"
-        )
-        writer.write(headers.encode() + body_bytes)
-        await writer.drain()
-
-    async def start(self) -> None:
-        """Start the monitoring HTTP server (blocks until stop())."""
-        self._server = await asyncio.start_server(
-            self._handle_request,
-            self._host,
-            self._port,
-        )
-        addrs = ", ".join(str(s.getsockname()) for s in self._server.sockets)
-        logger.info("Monitoring server running on %s", addrs)
-        async with self._server:
-            await self._server.serve_forever()
-
-    async def start_nonblocking(self) -> None:
-        """Start the monitoring HTTP server without blocking.
-
-        The server runs as a background task. Use stop() to shut it down.
-        """
-        self._server = await asyncio.start_server(
-            self._handle_request,
-            self._host,
-            self._port,
-        )
-        addrs = ", ".join(str(s.getsockname()) for s in self._server.sockets)
-        logger.info("Monitoring server running on %s", addrs)
-        # Run serve_forever in a background task so it doesn't block
-        self._serve_task = asyncio.create_task(self._server.serve_forever())
-
-    async def stop(self) -> None:
-        """Stop the monitoring HTTP server."""
-        if self._server:
-            self._server.close()
-            await self._server.wait_closed()
-        if hasattr(self, "_serve_task") and self._serve_task:
-            self._serve_task.cancel()
-            try:
-                await self._serve_task
-            except asyncio.CancelledError:
-                pass
-        logger.info("Monitoring server stopped")
-
-    @property
-    def health_checker(self) -> HealthChecker:
-        return self._health_checker
-
-    @property
-    def metrics_collector(self) -> MetricsCollector:
-        return self._metrics
-
-    @property
-    def alert_manager(self) -> AlertManager:
-        return self._alert_manager
-
-
-# ── Convenience: context manager for latency tracking ──────────────────────
-
-
-class LatencyTimer:
-    """Context manager to record operation latency."""
-
-    def __init__(self, collector: MetricsCollector, operation: str):
-        self._collector = collector
-        self._operation = operation
-        self._start: float = 0.0
-
-    def __enter__(self):
-        self._start = time.monotonic()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        ms = (time.monotonic() - self._start) * 1000
-        self._collector.record_latency(self._operation, ms)
-        return False
-
-
 __all__ = [
-    # Data classes
     "AlertSeverity",
-    "Alert",
-    "PluginStatus",
-    # SLO
     "SLOTarget",
     "_DEFAULT_SLOS",
-    # Core components
     "MetricsCollector",
     "HealthChecker",
-    "AlertManager",
-    "MonitoringHTTPServer",
-    # Utilities
-    "LatencyTimer",
 ]

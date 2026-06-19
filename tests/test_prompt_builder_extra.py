@@ -22,6 +22,7 @@ from unittest.mock import MagicMock, PropertyMock, patch
 import pytest
 
 from carrymem import CarryMem
+from carrymem.errors import CarryMemError
 from carrymem.prompt_builder import PromptBuilder
 from carrymem.scoring import RecallBudget
 
@@ -1000,10 +1001,10 @@ class TestCarryMemExtra:
             pass
 
     def test_carrymem_invalid_storage_type(self):
-        """Lines 142-145: invalid storage type raises ValueError."""
+        """Lines 142-145: invalid storage type raises CarryMemError."""
         from carrymem import CarryMem
 
-        with pytest.raises(ValueError, match="Invalid storage type"):
+        with pytest.raises(CarryMemError, match="无效"):
             CarryMem(storage=12345)
 
     def test_carrymem_close_no_adapter(self):
@@ -1023,11 +1024,26 @@ class TestCarryMemExtra:
             def name(self):
                 return "dummy"
 
-            def remember(self, *a, **kw):
-                return None
+            def initialize(self, config):
+                pass
+
+            def store(self, entry):
+                return ""
 
             def recall(self, *a, **kw):
                 return []
+
+            def delete(self, entry_id):
+                return False
+
+            def count(self, filter_=None):
+                return 0
+
+            def health_check(self):
+                return {"status": "healthy", "latency_ms": 0.0}
+
+            def remember(self, *a, **kw):
+                return None
 
             def forget(self, *a, **kw):
                 return False
@@ -1050,11 +1066,26 @@ class TestCarryMemExtra:
             def name(self):
                 return "dummy"
 
-            def remember(self, *a, **kw):
-                return None
+            def initialize(self, config):
+                pass
+
+            def store(self, entry):
+                return ""
 
             def recall(self, *a, **kw):
                 return []
+
+            def delete(self, entry_id):
+                return False
+
+            def count(self, filter_=None):
+                return 0
+
+            def health_check(self):
+                return {"status": "healthy", "latency_ms": 0.0}
+
+            def remember(self, *a, **kw):
+                return None
 
             def forget(self, *a, **kw):
                 return False
@@ -1077,11 +1108,26 @@ class TestCarryMemExtra:
             def name(self):
                 return "dummy"
 
-            def remember(self, *a, **kw):
-                return None
+            def initialize(self, config):
+                pass
+
+            def store(self, entry):
+                return ""
 
             def recall(self, *a, **kw):
                 return []
+
+            def delete(self, entry_id):
+                return False
+
+            def count(self, filter_=None):
+                return 0
+
+            def health_check(self):
+                return {"status": "healthy", "latency_ms": 0.0}
+
+            def remember(self, *a, **kw):
+                return None
 
             def forget(self, *a, **kw):
                 return False

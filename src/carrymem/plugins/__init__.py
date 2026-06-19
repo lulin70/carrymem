@@ -1,4 +1,8 @@
-"""CarryMem Plugin System (MVP).
+"""CarryMem Plugin System (EXPERIMENTAL).
+
+WARNING: This module is experimental and NOT integrated into the main CarryMem
+class. PluginManager is fully implemented but never instantiated by CarryMem.
+API surface may change without notice.
 
 Provides:
 - PluginProtocol: Interface that all plugins must implement

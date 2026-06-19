@@ -30,7 +30,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 - 두 번째 자리: GA 마일스톤 (API 안정성 보장)
 - "v1.0.0 점프" 없음 — 실제 프로덕션 사용으로 획득
 
-> **참고**: 위에 나열된 v0.3.0–v0.4.1 버전은 프로젝트의 개발 이력을 나타냅니다. 현재 버전은 v0.2.5이며, 자동 백업, 암호화 .carry 파일, 동시성 안전, E2E 테스트, **PrefEval 83.0%** (200샘플, 3조건 정식), 상태/이벤트 버전 체인, 보안 강화, 선호 주입 최적화, context.py 모듈화, 통합 스케줄링 등을 포함합니다. 다음 마일스톤: v0.3.0 (GA).
+> **참고**: 위에 나열된 v0.3.0–v0.4.1 버전은 프로젝트의 개발 이력을 나타냅니다. 현재 버전은 v0.4.0이며, 자동 백업, 암호화 .carry 파일, 동시성 안전, E2E 테스트, **PrefEval 83.0%** (200샘플, 3조건 정식), 상태/이벤트 버전 체인, 보안 강화, 선호 주입 최적화, context.py 모듈화, 통합 스케줄링 등을 포함합니다. 다음 마일스톤: v0.3.0 (GA).
 
 ---
 
@@ -60,7 +60,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 │  │  • Cross-language semantic recall (FTS5)          │    │
 │  │  • Session-aware storage + knowledge supersession (v0.1.7)   │    │
 │  │  • Time reasoning + structured prompt injection (v0.1.7)     │    │
-│  │|  •  3244 tests passing, 80%+ coverage           ││    │
+│  │|  •  4198 tests passing, 80%+ coverage           ││    │
 │  └──────────────────────────────────────────────────┘    │
 │              ↑ reads from          ↑ injects into         │
 │  Layer 1: Knowledge (WHAT you know) ← v0.3.0 계획         │
@@ -150,7 +150,7 @@ CarryMem 개념을 DDD 개념에 매핑하여 엔터프라이즈 아키텍트 �
 **구현된 기능**:
 - [x] PromotionPipeline: 5단계 파이프라인 (Collect→Detect→Generate→Queue→Confirm)
 - [x] 감사 추적: `promotion_audit` 테이블에 전체 작업 로깅
-- [x] CLI: `promote-rules`, `review-promotions`, `promotion-log`
+- [x] CLI: `rules promote`, `rules review-promotions`, `rules promotion-log`
 - [x] 큐 크기 제한 (50), 설정 가능한 만료 (7일)
 - [x] `_count_pending()` 효율적 COUNT 쿼리
 
@@ -163,7 +163,7 @@ CarryMem 개념을 DDD 개념에 매핑하여 엔터프라이즈 아키텍트 �
 - [x] 이중언어 패턴 매칭 (EN + ZH)
 - [x] ExperienceRuleBridge: 확인 워크플로우 + `experience_audit` 테이블
 - [x] 도메인 추론: 7개 도메인
-- [x] CLI: `learn-experience`, `review-lessons`, `lesson-log`
+- [x] CLI: `rules learn`, `rules review-lessons`, `rules lesson-log`
 
 ---
 
@@ -173,7 +173,7 @@ CarryMem 개념을 DDD 개념에 매핑하여 엔터프라이즈 아키텍트 �
 - [x] RuleRefiner: 4단계 정제 (Scope→Generality→Exception→Confirm)
 - [x] 특이성 분석: 프로젝트/도구/시간별 규칙 탐지
 - [x] RefinementSessionManager: 세션 지속성 + 대화 추적
-- [x] CLI: `refine-rule`, `refinement-sessions`
+- [x] CLI: `rules refine`, `rules refinement-sessions`
 - [x] 최대 5라운드, 자동 강제 확인
 
 ---
@@ -283,9 +283,9 @@ CarryMem 개념을 DDD 개념에 매핑하여 엔터프라이즈 아키텍트 �
   - 구조: rules + templates + config 단일 JSON 번들
   - 서명: 무결성 검증용 콘텐츠 해시
 - [x] Skill CLI 명령어
-  - `carrymem skill-pack <path>` — 규칙을 Skill 번들로 내보내기
-  - `carrymem skill-install <path>` — Skill import 및 scope 할당
-  - `carrymem skill-verify <path>` — Skill 무결성 검증
+  - `carrymem rules pack <path>` — 규칙을 Skill 번들로 내보내기
+  - `carrymem rules install <path>` — Skill import 및 scope 할당
+  - `carrymem rules verify <path>` — Skill 무결성 검증
 - [x] Skill export/import 업그레이드
   - 기존 `export_rules()` / `import_rules()`를 Skill 형식으로 확장
   - 하위 호환: `carrymem-rules-v1` import 지원
@@ -361,7 +361,7 @@ CarryMem 개념을 DDD 개념에 매핑하여 엔터프라이즈 아키텍트 �
 - [x] Conditional preference support — `condition` field for if-then rules
 - [x] Implicit preference inference — `_detect_implicit_preferences()` from memory patterns
 
-**MCP Tools** (27 tools):
+**MCP Tools** (28 tools):
 - Core (3): classify_message, get_classification_schema, batch_classify
 - Storage (3): classify_and_remember, recall_memories, forget_memory
 - Knowledge (3): index_knowledge, recall_from_knowledge, recall_all
@@ -405,7 +405,7 @@ CarryMem 개념을 DDD 개념에 매핑하여 엔터프라이즈 아키텍트 �
 > **상태**: 부분 완료 — Consolidation Engine과 PrefEval은 pre-reset 주기에서 달성됨. 나머지 항목은 v0.6.0+로 연기.
 - [x] Consolidation Engine (P0: dedup+decay, P1: pattern→rules, P2: semantic merge)
 - [x] PrefEval 96.0% preference adherence (50 items, ICLR 2025 Oral)
-- [x] 27 MCP tools (added consolidate_memories)
+- [x] 28 MCP tools (added consolidate_memories)
 
 > **PrefEval 수치 참고**: 샘플 크기와 seed에 따라 결과가 다릅니다. 정식 결과는 **83.0%** (200 items, 3-condition comparison: CarryMem 83.0% > reminder 80.0% > zero-shot 71.5%)이며, README에 문서화되어 있습니다. 그 외 수치(85.0%, 87.9%, 96.0%)는 다른 평가 설정을 반영하며 직접 비교해서는 안 됩니다.
 - [ ] Consolidation scheduled trigger (auto dedup+decay)
@@ -662,7 +662,7 @@ carrymem unpack team-identity.carry
 | v0.3.0 (pre-reset) | 1900+ | ~85% | +Knowledge CJK +relevance scoring |
 | v0.4.0 (pre-reset) | 1814 | ~77% | +Rule Scopes +Skill Format +VS Code Extension |
 | v0.4.1 (pre-reset) | 2056 | 79% | +Core Loop Fix +Auto Rule Suggestion +Security |
-| **v0.2.5 (current)** | **3244 tests** | **79%+** | **+Recall Purity +Scope Injection +PrefEval **83.0%** +8-client MCP** |
+| **v0.4.0 (current)** | **4198 tests** | **79%+** | **+Recall Purity +Scope Injection +PrefEval **83.0%** +8-client MCP** |
 
 ---
 
@@ -741,4 +741,4 @@ carrymem unpack team-identity.carry
 ---
 
 **Next Milestone**: v0.3.0 GA (General Availability)
-**Status**: ✅ **v0.2.5 complete (3244 tests, 80%+ coverage, Memory + Rules + Knowledge + Enterprise)**
+**Status**: ✅ **v0.4.0 complete (4198 tests, 80%+ coverage, Memory + Rules + Knowledge + Enterprise)**

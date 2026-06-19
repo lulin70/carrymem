@@ -50,6 +50,15 @@ from carrymem.security.encryption import (
     NoEncryption,
 )
 
+
+def _has_cryptography():
+    try:
+        import cryptography  # noqa
+        return True
+    except ImportError:
+        return False
+
+
 # ==============================================================================
 # Mutation Test Runner 框架核心
 # ==============================================================================
@@ -615,6 +624,10 @@ class TestEncryptionParameterTampering:
         # 验证派生的密钥长度正确
         assert len(standard_key) == 32, f"Derived key should be 32 bytes, got {len(standard_key)}"
 
+    @pytest.mark.skipif(
+        not _has_cryptography(),
+        reason="Requires cryptography library for integrity check",
+    )
     def test_mutation_9_encryption_integrity_check_disabled(self, encryption_instance):
         """MUTATION #9: 禁用密钥完整性验证
 
@@ -832,6 +845,10 @@ class TestEncryptionParameterTampering:
 class TestCombinedMutationScenarios:
     """综合多个变异点的端到端测试"""
 
+    @pytest.mark.skipif(
+        not _has_cryptography(),
+        reason="Requires cryptography library for full encryption support",
+    )
     def test_mutation_13_end_to_end_classification_storage_recall(self):
         """MUTATION #13: 端到端流程 - 分类→存储→召回 完整性
 

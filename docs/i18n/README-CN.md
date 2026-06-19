@@ -10,7 +10,7 @@
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI 版本"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-3244-brightgreen" alt="测试">
+  <img src="https://img.shields.io/badge/tests-4198-brightgreen" alt="测试">
   <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="覆盖率">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval 学术基准"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
@@ -67,9 +67,9 @@
 
 ```
 1. 创建团队规范为规则："始终使用 SSL""绝不在周五部署"
-2. 打包为 Skill：carrymem skill-pack rules.json --name team-conventions
+2. 打包为 Skill：carrymem rules pack rules.json --name team-conventions
 3. 与团队分享 .json 文件
-4. 每个成员：carrymem skill-install team-conventions.json --scope company
+4. 每个成员：carrymem rules install team-conventions.json --scope company
 5. 所有 Agent 现在自动执行公司规范
 ```
 
@@ -277,11 +277,11 @@ carrymem export backup.json             # 导出所有记忆
 carrymem import backup.json             # 导入记忆
 carrymem version                        # 显示版本
 # 规则引擎命令
-carrymem add-rule "始终使用SSL" --trigger "数据库" --type avoid   # 添加规则
-carrymem list-rules --status active                      # 列出活跃规则
-carrymem skill-pack rules.json --name team-conventions   # 打包规则为 Skill
-carrymem skill-install team-conventions.json --scope company  # 安装 Skill
-carrymem skill-verify team-conventions.json              # 验证 Skill 完整性
+carrymem rules add "始终使用SSL" --trigger "数据库" --type avoid   # 添加规则
+carrymem rules list --status active                      # 列出活跃规则
+carrymem rules pack rules.json --name team-conventions   # 打包规则为 Skill
+carrymem rules install team-conventions.json --scope company  # 安装 Skill
+carrymem rules verify team-conventions.json              # 验证 Skill 完整性
 # 备份与携带
 carrymem pack --encrypt                                 # 加密打包身份文件
 carrymem unpack identity.carry                          # 恢复身份
@@ -409,7 +409,7 @@ carrymem setup-mcp --tool claude-code
 carrymem setup-mcp --tool all
 ```
 
-27 个 MCP 工具：Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11)
+28 个 MCP 工具：Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11)
 
 **客户端兼容性：**
 
@@ -650,8 +650,8 @@ cm.import_memories(input_path="backup.json")
 
 ## 项目状态
 
-**当前版本**：v0.2.5 (Beta)
-**测试**：3244 passing
+**当前版本**：v0.4.0 (Beta)
+**测试**：4198 passing
 **覆盖率**：80%+
 
 **更新日志**：

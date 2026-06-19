@@ -1,8 +1,8 @@
 # CarryMem API Stability Policy
 
 **Version**: 1.1
-**Effective**: v0.1.6+
-**Last Updated**: 2026-05-02
+**Effective**: v0.4.0+
+**Last Updated**: 2026-06-18
 
 ## 1. API Classification
 
@@ -144,11 +144,11 @@ CarryMem.recall_from_knowledge(query, filters=None, limit=20) -> List
 CarryMem.recall_all(query, filters=None, limit=20, namespaces=None, include_rules=True) -> Dict
 
 # Experimental - CLI Rules commands
-carrymem add-rule / edit-rule / delete-rule / list-rules / ...
-carrymem suggest-rules / promote-rules / review-promotions / ...
-carrymem learn-experience / review-lessons / lesson-log / ...
-carrymem refine-rule / refinement-sessions / ...
-carrymem skill-pack / skill-install / skill-verify
+carrymem rules add / rules edit / rules delete / rules list / ...
+carrymem rules suggest / rules promote / rules review-promotions / ...
+carrymem rules learn / rules review-lessons / rules lesson-log / ...
+carrymem rules refine / rules refinement-sessions / ...
+carrymem rules pack / rules install / rules verify
 ```
 
 ## 4. Internal API
@@ -198,7 +198,7 @@ CarryMem follows Semantic Versioning (SemVer) with the following convention:
 
 ### Historical Note
 
-Early development used various version numbering schemes. The current v0.2.0 is a version reset that consolidates all features with security hardening and quality improvements.
+Early development used various version numbering schemes. The current v0.4.0 is a version reset that consolidates all features with security hardening and quality improvements.
 
 ## 7. Conditional Imports
 

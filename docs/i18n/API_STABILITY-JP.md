@@ -69,8 +69,8 @@ carrymem init
 carrymem tutorial
 carrymem version|--version|-v
 carrymem rules [list|add|delete|match|edit|pause|resume|stats|check|export|import|suggest]
-carrymem match-rules
-carrymem suggest-rules
+carrymem rules match
+carrymem rules suggest
 ```
 
 ### Stable - データ形式

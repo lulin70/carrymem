@@ -29,20 +29,20 @@
 
 | 功能 | CLI 命令 | TUI 支持 | MCP 工具 | 说明 |
 |------|----------|----------|----------|------|
-| **添加规则** | `add-rule` | ❌ | `add_rule` | **仅 CLI/MCP** |
-| **列出规则** | `list-rules` / `rules` | ❌ | `list_rules` / `my_rules` | **仅 CLI/MCP** |
-| **匹配规则** | `match-rules` | ❌ | `match_rules` / `inject_rules` | **仅 CLI/MCP** |
-| **编辑规则** | `edit-rule` | ❌ | `update_rule` | **仅 CLI/MCP** |
-| **删除规则** | `delete-rule` | ❌ | `delete_rule` | **仅 CLI/MCP** |
-| **暂停/恢复** | `pause-rule` / `resume-rule` | ❌ | ❌ | **仅 CLI** |
-| **规则统计** | `rules-stats` | ❌ | ❌ | **仅 CLI** |
-| **规则检查** | `check-rules` | ❌ | ❌ | **仅 CLI** |
-| **导出/导入** | `export-rules` / `import-rules` | ❌ | ❌ | **仅 CLI** |
-| **模板列表** | `list-templates` | ❌ | ❌ | **仅 CLI** |
-| **建议规则** | `suggest-rules` | ❌ | `suggest_rules` | **仅 CLI/MCP** |
-| **规则提升** | `promote-rules` | ❌ | `promote_rules` | **仅 CLI/MCP** |
-| **经验学习** | `learn-experience` | ❌ | ❌ | **仅 CLI** |
-| **规则精炼** | `refine-rule` | ❌ | ❌ | **仅 CLI** |
+| **添加规则** | `rules add` | ❌ | `add_rule` | **仅 CLI/MCP** |
+| **列出规则** | `rules list` / `rules` | ❌ | `list_rules` / `my_rules` | **仅 CLI/MCP** |
+| **匹配规则** | `rules match` | ❌ | `match_rules` / `inject_rules` | **仅 CLI/MCP** |
+| **编辑规则** | `rules edit` | ❌ | `update_rule` | **仅 CLI/MCP** |
+| **删除规则** | `rules delete` | ❌ | `delete_rule` | **仅 CLI/MCP** |
+| **暂停/恢复** | `rules pause` / `rules resume` | ❌ | ❌ | **仅 CLI** |
+| **规则统计** | `rules stats` | ❌ | ❌ | **仅 CLI** |
+| **规则检查** | `rules check` | ❌ | ❌ | **仅 CLI** |
+| **导出/导入** | `rules export` / `rules import` | ❌ | ❌ | **仅 CLI** |
+| **模板列表** | `rules templates` | ❌ | ❌ | **仅 CLI** |
+| **建议规则** | `rules suggest` | ❌ | `suggest_rules` | **仅 CLI/MCP** |
+| **规则提升** | `rules promote` | ❌ | `promote_rules` | **仅 CLI/MCP** |
+| **经验学习** | `rules learn` | ❌ | ❌ | **仅 CLI** |
+| **规则精炼** | `rules refine` | ❌ | ❌ | **仅 CLI** |
 
 ### 2.3 身份与统计 (Identity & Stats)
 
@@ -92,7 +92,7 @@
 | **合并计划** | `consolidate schedule` | ❌ | `schedule_consolidation` | **仅 CLI/MCP** |
 | **停止合并** | `consolidate stop` | ❌ | `stop_consolidation` | **仅 CLI/MCP** |
 | **会话摘要** | ❌ | ❌ | `summarize_and_store` | **仅 MCP** |
-| **技能包** | `skill-pack` / `skill-install` / `skill-verify` | ❌ | ❌ | **仅 CLI** |
+| **技能包** | `rules pack` / `rules install` / `rules verify` | ❌ | ❌ | **仅 CLI** |
 
 ## 三、功能覆盖统计
 

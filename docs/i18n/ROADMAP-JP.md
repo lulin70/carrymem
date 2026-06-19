@@ -30,7 +30,7 @@ v0.3.0 ─── 設計ベースライン (メモリ基盤 + ルール設計ド�
 - 第2桁：GAマイルストーン（API安定性保証）
 - v1.0.0へのジャンプなし — 実績で獲得
 
-> **注**: 上記の v0.3.0–v0.4.1 バージョンはプロジェクトの開発履歴を表しています。現在のバージョンは **v0.2.5** で、自動バックアップ、暗号化 .carry ファイル、同時安全性、E2E テスト、PrefEval **83.0%**(canonical)、状態/イベントバージョンチェーン、セキュリティ強化、偏好注入最適化、context.py モジュール化、統合スケジューリングなどの改善が含まれています。
+> **注**: 上記の v0.3.0–v0.4.1 バージョンはプロジェクトの開発履歴を表しています。現在のバージョンは **v0.4.0** で、自動バックアップ、暗号化 .carry ファイル、同時安全性、E2E テスト、PrefEval **83.0%**(canonical)、状態/イベントバージョンチェーン、セキュリティ強化、偏好注入最適化、context.py モジュール化、統合スケジューリングなどの改善が含まれています。
 
 ---
 
@@ -58,7 +58,7 @@ v0.3.0 ─── 設計ベースライン (メモリ基盤 + ルール設計ド�
 │  │  "Xを好む、Yを決定、Zを修正"                       │    │
 │  │  • 7種メモリタイプ + 4階層                         │    │
 │  │  • クロス言語意味的リコール (FTS5)                  │    │
-│  │|  •  3244テスト通過, 80%+カバレッジ                   ││    │
+│  │|  •  4198テスト通過, 80%+カバレッジ                   ││    │
 │  └──────────────────────────────────────────────────┘    │
 │              ↑ 読み取り          ↑ 注入                    │
 │  第1層: ナレッジ (何を知っているか)  ← v0.3.0 計画        │
@@ -148,7 +148,7 @@ CarryMemの概念をDDD概念にマッピング、エンタープライズアー
 **実装済み機能**:
 - [x] PromotionPipeline: 5段階パイプライン (収集→検出→生成→キュー→確認)
 - [x] 監査証跡: `promotion_audit` テーブルで全操作を記録
-- [x] CLI: `promote-rules`, `review-promotions`, `promotion-log`
+- [x] CLI: `rules promote`, `rules review-promotions`, `rules promotion-log`
 - [x] キューサイズ制限 (50), 設定可能な有効期限 (7日)
 - [x] `_count_pending()` 効率的COUNTクエリ
 
@@ -161,7 +161,7 @@ CarryMemの概念をDDD概念にマッピング、エンタープライズアー
 - [x] バイリンガルパターンマッチング (英語 + 中国語)
 - [x] ExperienceRuleBridge: 確認ワークフロー + `experience_audit` テーブル
 - [x] ドメイン推論: 7ドメイン
-- [x] CLI: `learn-experience`, `review-lessons`, `lesson-log`
+- [x] CLI: `rules learn`, `rules review-lessons`, `rules lesson-log`
 
 ---
 
@@ -171,7 +171,7 @@ CarryMemの概念をDDD概念にマッピング、エンタープライズアー
 - [x] RuleRefiner: 4段階精製 (スコープ→一般性→例外→確認)
 - [x] 特異性分析: プロジェクト/ツール/時間固有ルールの検出
 - [x] RefinementSessionManager: セッション永続化 + 会話追跡
-- [x] CLI: `refine-rule`, `refinement-sessions`
+- [x] CLI: `rules refine`, `rules refinement-sessions`
 - [x] 最大5ラウンド、自動強制確認
 
 ---
@@ -230,7 +230,7 @@ CarryMemの概念をDDD概念にマッピング、エンタープライズアー
 ### v0.5.0 — インテリジェンス強化
 - [x] 記憶統合エンジン（P0: 重複排除+減衰、P1: パターン→ルール、P2: 意味マージ）
 - [x] PrefEval 96.0% 嗜好遵守率（50項目、ICLR 2025 Oral）
-- [x] 27のMCPツール（consolidate_memories 追加）
+- [x] 28のMCPツール（consolidate_memories 追加）
 - ベクトル意味マッチング (オプションの埋め込みモデル)
 - ルール推薦エンジン
 - クロスユーザールール共有 (匿名化)
@@ -359,7 +359,7 @@ CarryMemの概念をDDD概念にマッピング、エンタープライズアー
 **最終更新**: 2026-05-01
 **メンテナ**: CarryMemチーム
 **次のマイルストーン**: v0.2.8 ルールエンジンBeta (コンテキスト工学 + 堅牢化)
-**ステータス**: ✅ **v0.2.5完了 (3244テスト, 80%+カバレッジ, Memory+Rules+Knowledge+Enterprise)**
+**ステータス**: ✅ **v0.4.0完了 (4198テスト, 80%+カバレッジ, Memory+Rules+Knowledge+Enterprise)**
 
 ---
 

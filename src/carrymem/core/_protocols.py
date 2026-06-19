@@ -241,7 +241,11 @@ class ClassificationOps(Protocol):
         context: Optional[Dict[str, Any]] = None,
         language: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Classify a message into memory types without storing."""
+        """Classify a message into memory types without storing.
+
+        Note: implementation lives on MemoryCRUDMixin (see MemoryCRUDOps);
+        declared here as well to preserve the classification-pipeline contract.
+        """
         ...
 
     # -- internal (cross-Mixin contract) --
@@ -307,6 +311,15 @@ class ClassificationOps(Protocol):
 class MemoryCRUDOps(Protocol):
     """Contract for MemoryCRUDMixin — remember, declare, forget, update, merge."""
 
+    def classify_message(
+        self,
+        message: str,
+        context: Optional[Dict[str, Any]] = None,
+        language: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Classify a message into memory types without storing."""
+        ...
+
     def classify_and_remember(
         self,
         message: str,
@@ -314,18 +327,16 @@ class MemoryCRUDOps(Protocol):
         language: Optional[str] = None,
         session_id: Optional[str] = None,
         force_type: Optional[str] = None,
+        user_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Full pipeline: validate → classify → store."""
         ...
-
-    # Note: classify_message() is defined in ClassificationOps Protocol.
-    # MemoryCRUDMixin delegates to ClassificationMixin for this method.
-    # See ClassificationOps.classify_message for the full contract.
 
     def declare(
         self,
         message: str,
         context: Optional[Dict[str, Any]] = None,
+        user_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Explicitly declare a user preference / decision as memory."""
         ...
@@ -334,11 +345,12 @@ class MemoryCRUDOps(Protocol):
         self,
         message: str,
         context: Optional[Dict[str, Any]] = None,
+        user_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Alias for declare() — semantic sugar."""
         ...
 
-    def forget_memory(self, memory_id: str) -> bool:
+    def forget_memory(self, memory_id: str, user_id: Optional[str] = None) -> bool:
         """Delete a single memory by ID."""
         ...
 
@@ -347,6 +359,7 @@ class MemoryCRUDOps(Protocol):
         storage_key: str,
         new_content: str,
         reason: Optional[str] = None,
+        user_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Update memory content with versioning (SQLite only)."""
         ...

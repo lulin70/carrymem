@@ -16,6 +16,7 @@ import json
 import re
 import sqlite3
 import threading
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
@@ -202,6 +203,57 @@ class ObsidianAdapter(StorageAdapter):
     @property
     def vault_path(self) -> str:
         return str(self._vault_path)
+
+    # ── Standardized Adapter Interface (abstract method implementations) ──
+
+    def initialize(self, config: dict) -> None:
+        """Initialize the adapter with configuration.
+
+        ObsidianAdapter is configured at construction time (vault_path, db_path),
+        so ``config`` is accepted for interface compatibility but ignored.
+
+        If the vault has not been indexed yet (no notes in the index), this
+        triggers an initial ``index_vault()`` run.
+        """
+        if self.count() == 0:
+            self.index_vault()
+
+    def store(self, entry: dict) -> str:
+        """ObsidianAdapter is read-only — storing is not supported."""
+        raise NotImplementedError("ObsidianAdapter is read-only")
+
+    def delete(self, entry_id: str) -> bool:
+        """ObsidianAdapter is read-only — deleting is not supported."""
+        raise NotImplementedError("ObsidianAdapter is read-only")
+
+    def count(self, filter_: Optional[dict] = None) -> int:
+        """Count indexed notes, optionally filtered by tags."""
+        with self._lock:
+            conn = self._get_connection()
+            if filter_ and filter_.get("tags"):
+                tag_list = filter_["tags"] if isinstance(filter_["tags"], list) else [filter_["tags"]]
+                conditions = []
+                params = []
+                for tag in tag_list:
+                    conditions.append("tags LIKE ? ESCAPE '\\'")
+                    params.append(f'%"{escape_like(tag)}"%')
+                where_clause = "WHERE " + " AND ".join(conditions)
+                return conn.execute(
+                    f"SELECT COUNT(*) FROM notes {where_clause}", params
+                ).fetchone()[0]
+            return conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
+
+    def health_check(self) -> dict:
+        """Check vault directory availability."""
+        start = time.perf_counter()
+        vault_exists = self._vault_path.exists()
+        latency_ms = (time.perf_counter() - start) * 1000
+        return {
+            "status": "healthy" if vault_exists else "unhealthy",
+            "latency_ms": latency_ms,
+            "vault_path": str(self._vault_path),
+            "vault_exists": vault_exists,
+        }
 
     def index_vault(self) -> Dict[str, int]:
         with self._lock:

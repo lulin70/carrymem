@@ -117,6 +117,10 @@ setup(
         "encryption": [
             "cryptography>=42.0",
         ],
+        "llm": [
+            "openai>=1.0",
+            "zhipuai>=2.0",
+        ],
         "tui": [
             "textual>=0.40",
         ],
@@ -128,6 +132,8 @@ setup(
             "sqlite-vec>=0.1.0",
             "pysqlite3>=0.6.0",
             "sentence-transformers>=2.2.2",
+            "openai>=1.0",
+            "zhipuai>=2.0",
         ],
     },
     entry_points={

@@ -79,7 +79,7 @@ MemEval（ProsusAI 2026.03）提供了**其他 benchmark 都无法提供的对�
 
 ### 1.6 盲点：没有 Benchmark 测试规则引擎
 
-CarryMem 的 **rules engine**（add-rule, match-rules）是所有对比系统中**完全没有的功能**。但现有 benchmark 都不测试"系统能否遵循用户定义的规则"。
+CarryMem 的 **rules engine**（rules add, rules match）是所有对比系统中**完全没有的功能**。但现有 benchmark 都不测试"系统能否遵循用户定义的规则"。
 
 **建议**：设计一个自定义评测——给系统注入规则（如"always use Python 3"、"never suggest REST"），然后测试系统是否遵循。这个评测可以成为 CarryMem 的**独有卖点证据**。
 

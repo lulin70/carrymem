@@ -1,8 +1,8 @@
 # CarryMem Product Roadmap
 
-**Last Updated**: 2026-05-29
+**Last Updated**: 2026-06-18
 **Product Positioning**: AI Identity Layer — Memory + Rules + Knowledge
-**Version Scheme**: v0.2.x (Incremental) → v0.3.0 (GA Milestone)
+**Version Scheme**: v0.4.x (Incremental) → v0.5.0 (GA Milestone)
 
 ---
 
@@ -30,7 +30,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 - Second digit changes for GA milestones (API stability guarantee)
 - No "v1.0.0 jump" — earn it through proven production usage
 
-> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. Current version is v0.2.5, including auto-backup, encrypted .carry files, concurrent safety, E2E tests, **PrefEval 83.0%** (200-sample, 3-condition canonical), state/event version chain, security hardening, preference injection optimization, context.py modularization, and consolidation scheduling. Next milestones: v0.3.0 (GA).
+> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. Current version is v0.4.0, including auto-backup, encrypted .carry files, concurrent safety, E2E tests, **PrefEval 83.0%** (200-sample, 3-condition canonical), state/event version chain, security hardening, preference injection optimization, context.py modularization, and consolidation scheduling. Next milestones: v0.3.0 (GA).
 
 ---
 
@@ -60,7 +60,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 │  │  • Cross-language semantic recall (FTS5)          │    │
 │  │  • Session-aware storage + knowledge supersession (v0.1.7)    │    │
 │  │  • Time reasoning + structured prompt injection (v0.1.7)      │    │
-│  │|  •  3244 tests passing, 80%+ coverage           ││    │
+│  │|  •  4198 tests passing, 80%+ coverage           ││    │
 │  └──────────────────────────────────────────────────┘    │
 │              ↑ reads from          ↑ injects into         │
 │  Layer 1: Knowledge (WHAT you know) ← v0.3.0 PLANNED     │
@@ -150,7 +150,7 @@ See CHANGELOG.md for detailed history.
 **Implemented Features**:
 - [x] PromotionPipeline: 5-stage pipeline (Collect→Detect→Generate→Queue→Confirm)
 - [x] Audit trail: `promotion_audit` table with full action logging
-- [x] CLI: `promote-rules`, `review-promotions`, `promotion-log`
+- [x] CLI: `rules promote`, `rules review-promotions`, `rules promotion-log`
 - [x] Queue size limit (50), configurable expiry (7 days)
 - [x] `_count_pending()` efficient COUNT query
 
@@ -163,7 +163,7 @@ See CHANGELOG.md for detailed history.
 - [x] Bilingual pattern matching (EN + ZH)
 - [x] ExperienceRuleBridge: confirmation workflow with `experience_audit` table
 - [x] Domain inference: 7 domains
-- [x] CLI: `learn-experience`, `review-lessons`, `lesson-log`
+- [x] CLI: `rules learn`, `rules review-lessons`, `rules lesson-log`
 
 ---
 
@@ -173,7 +173,7 @@ See CHANGELOG.md for detailed history.
 - [x] RuleRefiner: 4-phase refinement (Scope→Generality→Exception→Confirm)
 - [x] Specificity analysis: detect project/tool/time-specific rules
 - [x] RefinementSessionManager: session persistence + conversation tracking
-- [x] CLI: `refine-rule`, `refinement-sessions`
+- [x] CLI: `rules refine`, `rules refinement-sessions`
 - [x] Max 5 rounds, auto-forced confirm
 
 ---
@@ -283,9 +283,9 @@ See CHANGELOG.md for detailed history.
   - Structure: rules + templates + config in single JSON bundle
   - Signature: content hash for integrity verification
 - [x] Skill CLI commands
-  - `carrymem skill-pack <path>` — export rules as Skill bundle
-  - `carrymem skill-install <path>` — import Skill with scope assignment
-  - `carrymem skill-verify <path>` — verify Skill integrity
+  - `carrymem rules pack <path>` — export rules as Skill bundle
+  - `carrymem rules install <path>` — import Skill with scope assignment
+  - `carrymem rules verify <path>` — verify Skill integrity
 - [x] Skill export/import upgrade
   - Extend existing `export_rules()` / `import_rules()` to Skill format
   - Backward-compatible: `carrymem-rules-v1` still supported for import
@@ -361,7 +361,7 @@ See CHANGELOG.md for detailed history.
 - [x] Conditional preference support — `condition` field for if-then rules
 - [x] Implicit preference inference — `_detect_implicit_preferences()` from memory patterns
 
-**MCP Tools** (27 tools):
+**MCP Tools** (28 tools):
 - Core (3): classify_message, get_classification_schema, batch_classify
 - Storage (3): classify_and_remember, recall_memories, forget_memory
 - Knowledge (3): index_knowledge, recall_from_knowledge, recall_all
@@ -405,7 +405,7 @@ See CHANGELOG.md for detailed history.
 > **Status**: Partially complete — Consolidation Engine and PrefEval achieved in pre-reset cycle. Remaining items deferred to v0.6.0+.
 - [x] Consolidation Engine (P0: dedup+decay, P1: pattern→rules, P2: semantic merge)
 - [x] PrefEval 96.0% preference adherence (50 items, ICLR 2025 Oral)
-- [x] 27 MCP tools (added consolidate_memories)
+- [x] 28 MCP tools (added consolidate_memories)
 
 > **Note on PrefEval numbers**: Different sample sizes and seeds produce different results. The canonical result is **83.0%** (200 items, 3-condition comparison: CarryMem 83.0% > reminder 80.0% > zero-shot 71.5%), as documented in the README. Other figures (85.0%, 87.9%, 96.0%) reflect different evaluation configurations and should not be compared directly.
 - [ ] Consolidation scheduled trigger (auto dedup+decay)
@@ -662,7 +662,7 @@ carrymem unpack team-identity.carry
 | v0.3.0 (pre-reset) | 1900+ | ~85% | +Knowledge CJK +relevance scoring |
 | v0.4.0 (pre-reset) | 1814 | ~77% | +Rule Scopes +Skill Format +VS Code Extension |
 | v0.4.1 (pre-reset) | 2056 | 79% | +Core Loop Fix +Auto Rule Suggestion +Security |
-| **v0.2.5 (current)** | **3244 tests** | **80%+** | **+Recall Purity +Scope Injection +PrefEval **83.0%** +8-client MCP** |
+| **v0.4.0 (current)** | **4198 tests** | **80%+** | **+Recall Purity +Scope Injection +PrefEval **83.0%** +8-client MCP** |
 
 ---
 
@@ -740,5 +740,5 @@ carrymem unpack team-identity.carry
 
 ---
 
-**Next Milestone**: v0.3.0 GA (General Availability)
-**Status**: ✅ **v0.2.5 complete (3244 tests, 80%+ coverage, Memory + Rules + Knowledge + Enterprise)**
+**Next Milestone**: v0.5.0 GA (General Availability)
+**Status**: ✅ **v0.4.0 complete (4198 tests, 80%+ coverage, Memory + Rules + Knowledge + Enterprise)**

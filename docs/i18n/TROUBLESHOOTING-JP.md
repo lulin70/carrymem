@@ -636,7 +636,7 @@ export CARRYMEM_AUTO_INJECT=true
 
 2. ルールマッチングを確認:
    ```bash
-   carrymem match-rules "シーンの説明"
+   carrymem rules match "シーンの説明"
    ```
 
 3. 自動注入を恒久的に有効化:
@@ -692,7 +692,7 @@ carrymem rules list
 
 2. 適切なスコープでルールを作成:
    ```bash
-   carrymem add-rule --trigger "コーディングスタイル" --action "4スペースインデントを使用"
+   carrymem rules add --trigger "コーディングスタイル" --action "4スペースインデントを使用"
    ```
 
 3. 競合を確認:
@@ -724,7 +724,7 @@ carrymem doctor
 **重大度**: 🟡 警告  
 **doctor チェック**: `security`
 
-**問題**: `skill-verify` が署名の不一致を返す
+**問題**: `rules verify` が署名の不一致を返す
 
 **エラー例**:
 ```
@@ -735,7 +735,7 @@ Skill signature mismatch: expected abc123..., got def456...
 
 **クイック修正**:
 ```bash
-carrymem skill-verify <skillファイル>
+carrymem rules verify <skillファイル>
 # 出力の詳細を確認
 ```
 
@@ -743,12 +743,12 @@ carrymem skill-verify <skillファイル>
 
 1. Skill ファイルが改ざんされていないか確認:
    ```bash
-   carrymem skill-verify <skillファイル>
+   carrymem rules verify <skillファイル>
    ```
 
 2. Skill の作成者の場合、再パック:
    ```bash
-   carrymem skill-pack my-skill.json --name "my-skill"
+   carrymem rules pack my-skill.json --name "my-skill"
    ```
 
 3. バージョン互換性を確認:
@@ -759,7 +759,7 @@ carrymem skill-verify <skillファイル>
 
 **検証**:
 ```bash
-carrymem skill-verify <skillファイル>
+carrymem rules verify <skillファイル>
 # valid を表示
 ```
 
@@ -770,33 +770,33 @@ carrymem skill-verify <skillファイル>
 **重大度**: 🔵 情報  
 **doctor チェック**: `rules_engine`
 
-**問題**: `suggest-rules` が低品質または無関係な提案を生成
+**問題**: `rules suggest` が低品質または無関係な提案を生成
 
 **原因**: 検出されたメモリパターンが不足、または `--min-count` 閾値が低すぎる。
 
 **クイック修正**:
 ```bash
-carrymem suggest-rules --min-count 5
+carrymem rules suggest --min-count 5
 ```
 
 **標準修正**:
 
 1. 最小出現回数閾値を上げる:
    ```bash
-   carrymem suggest-rules --min-count 5
+   carrymem rules suggest --min-count 5
    ```
 
 2. メモリタイプでフィルタ:
    ```bash
-   carrymem suggest-rules --type user_preference
-   carrymem suggest-rules --type correction
+   carrymem rules suggest --type user_preference
+   carrymem rules suggest --type correction
    ```
 
 3. レビューして選択的に承認:
    ```bash
-   carrymem suggest-rules
+   carrymem rules suggest
    # 各提案をレビュー、その後:
-   carrymem suggest-rules --accept  # 全て承認
+   carrymem rules suggest --accept  # 全て承認
    ```
 
 **詳細修正** — 提案品質の改善:
@@ -808,7 +808,7 @@ carrymem suggest-rules --min-count 5
 
 **検証**:
 ```bash
-carrymem suggest-rules --min-count 5
+carrymem rules suggest --min-count 5
 # 関連する提案を表示
 ```
 

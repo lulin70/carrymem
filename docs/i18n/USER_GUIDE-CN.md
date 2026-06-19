@@ -178,9 +178,9 @@ print(f"已安装：{result['installed']}，已跳过：{result['skipped']}")
 ### CLI 命令
 
 ```bash
-carrymem skill-pack rules.json --name my-rules --scope company
-carrymem skill-verify my-rules.skill.json
-carrymem skill-install my-rules.skill.json --scope company --mode skip
+carrymem rules pack rules.json --name my-rules --scope company
+carrymem rules verify my-rules.skill.json
+carrymem rules install my-rules.skill.json --scope company --mode skip
 ```
 
 ---
@@ -320,20 +320,20 @@ carrymem doctor                # 诊断安装
 ### 规则命令
 
 ```bash
-carrymem add-rule "动作" --trigger "触发器" [--type avoid] [--soft]
-carrymem list-rules [--status active] [--type avoid]
-carrymem edit-rule <id> [--trigger "新"] [--action "新"]
-carrymem delete-rule <id>
-carrymem match-rules "场景描述"
-carrymem rules-stats
-carrymem export-rules output.json
-carrymem import-rules input.json
+carrymem rules add "动作" --trigger "触发器" [--type avoid] [--soft]
+carrymem rules list [--status active] [--type avoid]
+carrymem rules edit <id> [--trigger "新"] [--action "新"]
+carrymem rules delete <id>
+carrymem rules match "场景描述"
+carrymem rules stats
+carrymem rules export output.json
+carrymem rules import input.json
 ```
 
 ### Skill 命令
 
 ```bash
-carrymem skill-pack <输出文件> --name <名称> [--scope company] [--author "名字"]
-carrymem skill-install <输入文件> [--scope company] [--mode skip|overwrite|rename]
-carrymem skill-verify <输入文件>
+carrymem rules pack <输出文件> --name <名称> [--scope company] [--author "名字"]
+carrymem rules install <输入文件> [--scope company] [--mode skip|overwrite|rename]
+carrymem rules verify <输入文件>
 ```

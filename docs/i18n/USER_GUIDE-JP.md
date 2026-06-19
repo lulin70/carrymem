@@ -178,9 +178,9 @@ print(f"Installed: {result['installed']}, Skipped: {result['skipped']}")
 ### CLI Commands
 
 ```bash
-carrymem skill-pack rules.json --name my-rules --scope company
-carrymem skill-verify my-rules.skill.json
-carrymem skill-install my-rules.skill.json --scope company --mode skip
+carrymem rules pack rules.json --name my-rules --scope company
+carrymem rules verify my-rules.skill.json
+carrymem rules install my-rules.skill.json --scope company --mode skip
 ```
 
 ---
@@ -320,20 +320,20 @@ carrymem doctor                   # Diagnose installation
 ### Rule Commands
 
 ```bash
-carrymem add-rule "action" --trigger "trigger" [--type avoid] [--soft]
-carrymem list-rules [--status active] [--type avoid]
-carrymem edit-rule <id> [--trigger "new"] [--action "new"]
-carrymem delete-rule <id>
-carrymem match-rules "scene description"
-carrymem rules-stats
-carrymem export-rules output.json
-carrymem import-rules input.json
+carrymem rules add "action" --trigger "trigger" [--type avoid] [--soft]
+carrymem rules list [--status active] [--type avoid]
+carrymem rules edit <id> [--trigger "new"] [--action "new"]
+carrymem rules delete <id>
+carrymem rules match "scene description"
+carrymem rules stats
+carrymem rules export output.json
+carrymem rules import input.json
 ```
 
 ### Skill Commands
 
 ```bash
-carrymem skill-pack <output> --name <name> [--scope company] [--author "name"]
-carrymem skill-install <input> [--scope company] [--mode skip|overwrite|rename]
-carrymem skill-verify <input>
+carrymem rules pack <output> --name <name> [--scope company] [--author "name"]
+carrymem rules install <input> [--scope company] [--mode skip|overwrite|rename]
+carrymem rules verify <input>
 ```

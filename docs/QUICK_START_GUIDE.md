@@ -13,7 +13,7 @@ CarryMem lets AI remember you, not the other way around.
 **Core Value**:
 - 🧠 AI automatically remembers your preferences, corrections, decisions
 - 🔄 Memories are portable - switch tools without losing data
-- ⚡ 60%+ zero-cost classification - no token waste
+- ⚡ 88% zero-cost classification - no token waste
 
 ---
 
@@ -322,7 +322,7 @@ with CarryMem() as cm:
 A: Chinese, English, Japanese, with cross-language search support.
 
 ### Q: Does it consume many tokens?
-A: No! 60%+ classifications are zero-cost, only complex cases call LLM.
+A: No! 88% classifications are zero-cost, only complex cases call LLM.
 
 ### Q: Can I use a different database?
 A: Yes! Supports SQLite (default), Obsidian, and custom adapters.

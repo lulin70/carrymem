@@ -10,7 +10,7 @@
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI バージョン"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-3244-brightgreen" alt="テスト">
+  <img src="https://img.shields.io/badge/tests-4198-brightgreen" alt="テスト">
   <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="カバレッジ">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval 学術ベンチマーク"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
@@ -67,9 +67,9 @@
 
 ```
 1. チーム規約をルールとして作成：「常にSSLを使用」「金曜日にデプロイしない」
-2. Skill としてパック：carrymem skill-pack rules.json --name team-conventions
+2. Skill としてパック：carrymem rules pack rules.json --name team-conventions
 3. .json ファイルをチームと共有
-4. 各メンバー：carrymem skill-install team-conventions.json --scope company
+4. 各メンバー：carrymem rules install team-conventions.json --scope company
 5. すべてのエージェントが会社の規約を自動適用
 ```
 
@@ -265,11 +265,11 @@ carrymem export backup.json             # 全メモリをエクスポート
 carrymem import backup.json             # メモリをインポート
 carrymem version                        # バージョン表示
 # ルールエンジンコマンド
-carrymem add-rule "常にSSLを使用" --trigger "データベース" --type avoid   # ルール追加
-carrymem list-rules --status active                            # アクティブルール一覧
-carrymem skill-pack rules.json --name team-conventions         # Skill としてパック
-carrymem skill-install team-conventions.json --scope company   # Skill インストール
-carrymem skill-verify team-conventions.json                    # Skill 検証
+carrymem rules add "常にSSLを使用" --trigger "データベース" --type avoid   # ルール追加
+carrymem rules list --status active                            # アクティブルール一覧
+carrymem rules pack rules.json --name team-conventions         # Skill としてパック
+carrymem rules install team-conventions.json --scope company   # Skill インストール
+carrymem rules verify team-conventions.json                    # Skill 検証
 # バックアップとポータビリティ
 carrymem pack --encrypt                                        # パスワード暗号化パック
 carrymem unpack identity.carry                                 # アイデンティティを復元
@@ -397,7 +397,7 @@ carrymem setup-mcp --tool claude-code
 carrymem setup-mcp --tool all
 ```
 
-27のMCPツール：Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11)
+28のMCPツール：Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11)
 
 **クライアント互換性：**
 
@@ -638,8 +638,8 @@ AI にはメモリが必要だと知っている。プロンプトファイル�
 
 ## プロジェクトステータス
 
-**現在のバージョン**: v0.2.5 (Beta)
-**テスト**: 3244 passing
+**現在のバージョン**: v0.4.0 (Beta)
+**テスト**: 4198 passing
 **カバレッジ**: 80%+
 
 **チェンジログ**:

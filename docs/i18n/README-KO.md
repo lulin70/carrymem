@@ -28,7 +28,7 @@ CarryMem이 이 문제를 해결합니다. 가볍고 의존성이 없는 기억 
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-3244-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-4198-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="Coverage">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval Academic Benchmark"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
@@ -87,9 +87,9 @@ CarryMem이 이 문제를 해결합니다. 가볍고 의존성이 없는 기억 
 
 ```
 1. 팀 규칙 생성: "항상 SSL 사용", "금요일에 배포 금지"
-2. Skill로 패킹: carrymem skill-pack rules.json --name team-conventions
+2. Skill로 패킹: carrymem rules pack rules.json --name team-conventions
 3. .json 파일을 팀과 공유
-4. 각 구성원: carrymem skill-install team-conventions.json --scope company
+4. 각 구성원: carrymem rules install team-conventions.json --scope company
 5. 모든 에이전트가 자동으로 회사 규칙을 적용함
 ```
 
@@ -287,11 +287,11 @@ carrymem backup --list                  # 백업 목록
 carrymem backup --restore <file>        # 백업에서 복원
 carrymem version                        # 버전 표시
 # 규칙 엔진 명령어
-carrymem add-rule "use SSL" --trigger "database" --type avoid  # 규칙 추가
-carrymem list-rules --status active                      # 활성 규칙 목록
-carrymem skill-pack rules.json --name team-conventions   # 규칙을 Skill로 패킹
-carrymem skill-install team-conventions.json --scope company  # Skill 설치
-carrymem skill-verify team-conversations.json            # Skill 무결성 검증
+carrymem rules add "use SSL" --trigger "database" --type avoid  # 규칙 추가
+carrymem rules list --status active                      # 활성 규칙 목록
+carrymem rules pack rules.json --name team-conventions   # 규칙을 Skill로 패킹
+carrymem rules install team-conventions.json --scope company  # Skill 설치
+carrymem rules verify team-conversations.json            # Skill 무결성 검증
 ```
 
 ---
@@ -504,7 +504,7 @@ carrymem setup-mcp --tool claude-code
 carrymem setup-mcp --tool all
 ```
 
-27개 MCP 도구 제공: Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11)
+28개 MCP 도구 제공: Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11)
 
 **클라이언트 호환성:**
 
@@ -766,8 +766,8 @@ AI에 기억이 필요하다는 건 이미 알고 있습니다. 프롬프트 파
 
 ## 프로젝트 상태
 
-**현재 버전**: v0.2.5 (Beta)
-**테스트**: 3244 passing
+**현재 버전**: v0.4.0 (Beta)
+**테스트**: 4198 passing
 **커버리지**: 80%+
 
 **변경 로그**:

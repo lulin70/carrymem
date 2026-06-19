@@ -943,15 +943,15 @@ carrymem doctor --db /path/to/db   # Custom database path
 }
 ```
 
-### carrymem match-rules
+### carrymem rules match
 
 Match rules against a scene description.
 
 ```bash
-carrymem match-rules "Design REST API"                  # Default structured format
-carrymem match-rules "Design REST API" --format anchored # Anchored layout
-carrymem match-rules "Design REST API" --format ddd      # DDD terminology view
-carrymem match-rules "Design REST API" --context-budget 2000  # Token-aware compression
+carrymem rules match "Design REST API"                  # Default structured format
+carrymem rules match "Design REST API" --format anchored # Anchored layout
+carrymem rules match "Design REST API" --format ddd      # DDD terminology view
+carrymem rules match "Design REST API" --context-budget 2000  # Token-aware compression
 ```
 
 ---

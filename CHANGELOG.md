@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Path traversal validation in CarryMem.__init__
 - InputValidator.sanitize_namespace() + empty namespace check
 - Black/flake8 CI configuration (line-length=120 alignment)
+- **MCP server**: Fixed `notifications/initialized` method name mismatch and added protocol version negotiation (2025-11-25 support)
+- **Memory leak**: Fixed `lru_cache` on instance method pinning `self` in `semantic/expander.py` (18% → 91% GC recovery)
+- **CI gate**: Fixed `| tee` swallowing pytest exit code and removed `--maxfail=10` limit
 
 ### Performance (P0-4: SQLite Connection Management Optimization)
 
@@ -189,7 +192,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 源代码行数 | ~35,000 | **41,340** | +18% |
 | 源文件数 | ~120 | **144** | +20% |
 | 测试文件数 | ~90 | **122** | +36% |
-| 测试用例数 | ~3,315 | **~3,387** | +72 |
+| 测试用例数 | ~3,315 | **~4,198** | +72 |
 | 类型注解覆盖率 | ~65% | **~82%** | +17% |
 | Docstring 覆盖率 | ~45% | **~61%** | +16% |
 | 异常处理广度 | 49 处 | **12 处** | -75% |

@@ -335,7 +335,7 @@ class MemoryCRUDMixin:
         self,
         namespaces: Optional[List[str]] = None,
         strategy: str = "latest_wins",
-        conflict_callback: Optional[Callable[[Any, Any], Any]] = None,
+        conflict_callback: Optional[Callable[[Dict[str, Any], Dict[str, Any]], Dict[str, Any]]] = None,
     ) -> MergeMemoriesResult:
         from carrymem.merge import merge_memories as _merge
 

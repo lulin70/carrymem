@@ -235,9 +235,20 @@ class AuditLogger:
             resource=storage_key or "unknown",
             user_id=None,
             result="SUCCESS" if success else "FAILURE",
-            details=details or {},
+            details=self._merge_operation_details(details, memory_type),
         )
         self.log(event)
+
+    @staticmethod
+    def _merge_operation_details(
+        details: Optional[Dict[str, Any]],
+        memory_type: Optional[str],
+    ) -> Dict[str, Any]:
+        """Merge caller-provided details with structured operation metadata."""
+        merged: Dict[str, Any] = dict(details or {})
+        if memory_type is not None:
+            merged["memory_type"] = memory_type
+        return merged
 
     def query(self, filter_: Optional[AuditFilter] = None) -> List[AuditEvent]:
         """Query audit events with optional filters.

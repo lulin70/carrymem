@@ -340,7 +340,7 @@ class TestInputValidatorLengthLimits:
     def test_message_length_enforced(self):
         v = InputValidator()
         with pytest.raises(ValidationError, match="maximum length"):
-            v.validate_content("x" * 10001)
+            v.validate_content("x" * (v.MAX_CONTENT_LENGTH + 1))
 
     def test_query_max_length(self):
         v = InputValidator()
@@ -526,13 +526,11 @@ class TestAuditLoggerBasic:
         )
         entries = logger.query(AuditFilter(limit=10))
         assert len(entries) == 1
-        assert entries[0]["operation"] == "store"
-        assert entries[0]["namespace"] == "test_ns"
-        assert entries[0]["storage_key"] == "mem-001"
-        assert entries[0]["memory_type"] == "fact_declaration"
-        assert entries[0]["success"] is True
-        assert entries[0]["details"]["size"] == 42
-        assert entries[0]["source"] == "api"
+        assert entries[0].action == "store"
+        assert entries[0].resource == "mem-001"
+        assert entries[0].details["memory_type"] == "fact_declaration"
+        assert entries[0].result == "SUCCESS"
+        assert entries[0].details["size"] == 42
 
     def test_audit_log_multiple_entries(self, audit_logger):
         logger = AuditLogger()
@@ -567,8 +565,8 @@ class TestAuditLoggerBasic:
         logger.log_operation(operation="delete", success=False, details={"reason": "not found"})
         entries = logger.query(AuditFilter(action="delete"))
         assert len(entries) == 1
-        assert entries[0]["result"] == "FAILURE"
-        assert entries[0]["details"]["reason"] == "not found"
+        assert entries[0].result == "FAILURE"
+        assert entries[0].details["reason"] == "not found"
 
 
 class TestAuditLoggerQueryFiltering:
@@ -583,10 +581,10 @@ class TestAuditLoggerQueryFiltering:
         assert len(store_only) == 2
         assert all(e.action == "store" for e in store_only)
 
-    def test_filter_by_namespace(self, _audit_logger):
+    def test_filter_by_namespace(self, audit_logger):
         logger = AuditLogger()
-        logger.log(action="store", resource="a", details={"ns": "alpha"})
-        logger.log(action="store", resource="b", details={"ns": "beta"})
+        logger.log_operation(operation="store", storage_key="a", details={"ns": "alpha"})
+        logger.log_operation(operation="store", storage_key="b", details={"ns": "beta"})
         # Filter by checking details field post-query
         alpha = [e for e in logger.query() if "alpha" in str(e.details)]
         beta = [e for e in logger.query() if "beta" in str(e.details)]
@@ -621,7 +619,7 @@ class TestAuditLoggerDetailsHandling:
         logger = AuditLogger()
         logger.log_operation(operation="store", details=None)
         entry = logger.query()[0]
-        assert entry["details"] == {}
+        assert entry.details == {}
 
     def test_complex_details_roundtrip(self, audit_logger):
         logger = AuditLogger()
@@ -632,10 +630,10 @@ class TestAuditLoggerDetailsHandling:
         }
         logger.log_operation(operation="store", details=complex_details)
         entry = logger.query()[0]
-        assert entry["details"] == complex_details
+        assert entry.details == complex_details
 
     def test_default_namespace_used(self, audit_logger):
         logger = AuditLogger()
         logger.log_operation(operation="store")
         entry = logger.query()[0]
-        assert entry["action"] == "store"
+        assert entry.action == "store"

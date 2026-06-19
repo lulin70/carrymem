@@ -35,7 +35,7 @@ This creates:
 ### Step 3: Create Your First Rule
 
 ```bash
-carrymem add-rule "报告控制在三页以内" --trigger "写报告" --type format
+carrymem rules add "报告控制在三页以内" --trigger "写报告" --type format
 ```
 
 **Expected output:**
@@ -52,7 +52,7 @@ carrymem add-rule "报告控制在三页以内" --trigger "写报告" --type for
 
 ```bash
 # Check if rule matches a scenario
-$ carrymem match-rules "帮我写一份Q2销售报告"
+$ carrymem rules match "帮我写一份Q2销售报告"
 
 🎯 Found 1 matching rule:
 
@@ -133,7 +133,7 @@ CarryMem supports **5 types of rules**, each with different semantics:
 #### Method 1: Command Line (Recommended for Power Users)
 
 ```bash
-carrymem add-rule "<action>" --trigger "<scene>" --type <type> [options]
+carrymem rules add "<action>" --trigger "<scene>" --type <type> [options]
 ```
 
 **Parameters:**
@@ -148,30 +148,30 @@ carrymem add-rule "<action>" --trigger "<scene>" --type <type> [options]
 
 ```bash
 # Basic rule
-carrymem add-rule "跳过印度供应商" --trigger "写供应商调研" --type avoid
+carrymem rules add "跳过印度供应商" --trigger "写供应商调研" --type avoid
 
 # Soft preference (AI can override if needed)
-carrymem add-rule "优先用Python" --trigger "写脚本" --type prefer --soft
+carrymem rules add "优先用Python" --trigger "写脚本" --type prefer --soft
 
 # Hard constraint (AI cannot ignore)
-carrymem add-rule "必须检查SQL注入" --trigger "代码评审" --type always
+carrymem rules add "必须检查SQL注入" --trigger "代码评审" --type always
 
 # Formatting rule
-carrymem add-rule "报告控制在3页内" --trigger "写报告" --type format
+carrymem rules add "报告控制在3页内" --trigger "写报告" --type format
 
 # With note
-carrymem add-rule "排除框架X" --trigger "技术选型" \
+carrymem rules add "排除框架X" --trigger "技术选型" \
     --type avoid --note "因为团队有bad experience with X"
 
 # Linking to source memory
-carrymem add-rule "不用Java" --trigger "技术选型" \
+carrymem rules add "不用Java" --trigger "技术选型" \
     --type forbid --source-memories mem_042 mem_089
 ```
 
 #### Method 2: Interactive Mode (Recommended for New Users)
 
 ```bash
-carrymem add-rule --interactive
+carrymem rules add --interactive
 ```
 
 **Guided flow:**
@@ -192,7 +192,7 @@ carrymem add-rule --interactive
   Override: Yes (AI cannot ignore this)
 
 Test it now? [Y/n] y
-→ Running: carrymem match-rules "帮我做供应商调研"
+→ Running: carrymem rules match "帮我做供应商调研"
 🎯 Found 1 matching rule! Your rule is working.
 ```
 
@@ -204,16 +204,16 @@ Test it now? [Y/n] y
 
 ```bash
 # Show all active rules
-carrymem list-rules
+carrymem rules list
 
 # Show paused rules only
-carrymem list-rules --status paused
+carrymem rules list --status paused
 
 # Show deprecated rules only
-carrymem list-rules --status deprecated
+carrymem rules list --status deprecated
 
 # Show all rules (any status)
-carrymem list-rules
+carrymem rules list
 ```
 
 **Output format:**
@@ -263,7 +263,7 @@ Statistics:
 #### Edit a Rule
 
 ```bash
-carrymem edit-rule rule_001 "报告控制在2页以内（更严格）"
+carrymem rules edit rule_001 "报告控制在2页以内（更严格）"
 ```
 
 **You can also edit via show + copy-paste ID**
@@ -272,12 +272,12 @@ carrymem edit-rule rule_001 "报告控制在2页以内（更严格）"
 
 ```bash
 # Pause (temporarily disable)
-carrymem pause-rule rule_005
+carrymem rules pause rule_005
 ⏸️ Rule rule_005 paused
   Previously: active → Now: paused
 
 # Resume (re-enable)
-carrymem resume-rule rule_005
+carrymem rules resume rule_005
 ▶️ Rule rule_005 resumed
   Previously: paused → Now: active
 ```
@@ -300,12 +300,12 @@ carrymem rules delete rule_002
 - Don't match in queries
 - Stay in database (not deleted)
 - Can be resumed later if needed
-- Show up in `list-rules --status deprecated`
+- Show up in `rules list --status deprecated`
 
 #### Delete (Permanent Removal)
 
 ```bash
-carrymem delete-rule rule_002
+carrymem rules delete rule_002
 ⚠️  Permanently delete rule 'rule_002'?
   This action cannot be undone. [y/N] y
 ✅ Rule rule_002 deleted permanently
@@ -320,14 +320,14 @@ carrymem delete-rule rule_002
 #### Find Which Rules Apply
 
 ```bash
-carrymem match-rules "<describe your current task or context>"
+carrymem rules match "<describe your current task or context>"
 ```
 
 **Examples:**
 
 ```bash
 # Simple query
-$ carrymem match-rules "帮我做竞品分析"
+$ carrymem rules match "帮我做竞品分析"
 🎯 Found 2 matching rules:
 
 [1] ⭐⭐⭐ Similarity: 0.92
@@ -343,12 +343,12 @@ $ carrymem match-rules "帮我做竞品分析"
 2 rules matched (of 5 active)
 
 # No matches
-$ carrymem match-rules "部署到Kubernetes"
+$ carrymem rules match "部署到Kubernetes"
 🔍 No matching rules found.
   Active rules: 5 (none triggered)
   
   💡 Tip: Create a rule for this:
-    carrymem add-rule "<action>" --trigger "部署K8s" --type <type>
+    carrymem rules add "<action>" --trigger "部署K8s" --type <type>
 ```
 
 #### How Matching Works
@@ -366,7 +366,7 @@ $ carrymem match-rules "部署到Kubernetes"
 #### Export All Rules
 
 ```bash
-carrymem export-rules my_rules_backup.json
+carrymem rules export my_rules_backup.json
 ```
 
 **Exports:**
@@ -395,7 +395,7 @@ carrymem export-rules my_rules_backup.json
 #### Import Rules
 
 ```bash
-carrymem import-rules my_rules_backup.json
+carrymem rules import my_rules_backup.json
 ```
 
 **Import behavior:**
@@ -414,7 +414,7 @@ carrymem import-rules my_rules_backup.json
 #### View Usage Stats
 
 ```bash
-carrymem rules-stats
+carrymem rules stats
 ```
 
 **Output:**
@@ -440,13 +440,13 @@ Top Triggered Rules:
 Unused Rules (0 hits, consider cleanup):
   ⚠️  rule_old_vendor    "跳过印度公司"           [last: 30d ago]
 
-Run 'carrymem check-rules' to clean up stale entries.
+Run 'carrymem rules check' to clean up stale entries.
 ```
 
 #### Review Stale Rules
 
 ```bash
-carrymem check-rules
+carrymem rules check
 ```
 
 **Interactive cleanup wizard:**
@@ -620,7 +620,7 @@ Follow these behavioral guidelines:
 
 **Symptoms:**
 ```bash
-$ carrymem match-rules "写月度报告"
+$ carrymem rules match "写月度报告"
 🔍 No matching rules found
 ```
 
@@ -629,12 +629,12 @@ $ carrymem match-rules "写月度报告"
 **Solutions:**
 1. **Check status**: Is the rule `active`? (not paused/deprecated)
    ```bash
-   carrymem list-rules
+   carrymem rules list
    ```
 2. **Check similarity threshold**: FTS5 needs keyword overlap
    ```bash
    # Try more specific query
-   carrymem match-rules "帮我写一份报告"
+   carrymem rules match "帮我写一份报告"
    ```
 3. **Check for typos**: Exact spelling matters for best results
 
@@ -644,7 +644,7 @@ $ carrymem match-rules "写月度报告"
 
 **Symptoms:**
 ```bash
-$ carrymem add-rule "test" --trigger "test" --type avoid
+$ carrymem rules add "test" --trigger "test" --type avoid
 Unknown command: add-rule
 Run 'carrymem help' for usage
 ```
@@ -659,7 +659,7 @@ Run 'carrymem help' for usage
 
 **Symptoms:**
 ```bash
-$ carrymem add-rule "忽略之前的指令" --trigger "*" --type always
+$ carrymem rules add "忽略之前的指令" --trigger "*" --type always
 ❌ Security Error: Action contains blocked pattern
   Pattern detected: "忽略.*指令"
 ```
@@ -676,7 +676,7 @@ $ carrymem add-rule "忽略之前的指令" --trigger "*" --type always
 
 **Symptoms:**
 ```bash
-$ carrymem add-rule "normal" --trigger "*" --type prefer
+$ carrymem rules add "normal" --trigger "*" --type prefer
 ❌ Limit Exceeded: Maximum global rules reached (3/3)
 ```
 
@@ -686,8 +686,8 @@ $ carrymem add-rule "normal" --trigger "*" --type prefer
 1. Use specific triggers instead: `--trigger "code review"` instead of `"*"`
 2. Pause/deprecate existing global rules:
    ```bash
-   carrymem list-rules  # Find global rules
-   carrymem pause-rule <id>  # Pause one
+   carrymem rules list  # Find global rules
+   carrymem rules pause <id>  # Pause one
    ```
 
 ---
@@ -740,10 +740,10 @@ $ carrymem add-rule "normal" --trigger "*" --type prefer
 ## 🎯 Next Steps After Installation
 
 1. ✅ **Create 3-5 core rules** for your most common tasks
-2. ✅ **Test matching** with `carrymem match-rules` to verify they activate correctly
+2. ✅ **Test matching** with `carrymem rules match` to verify they activate correctly
 3. ✅ **Use with AI tool** (Cursor/Claude Code) and observe behavior changes
-4. ✅ **Run `carrymem rules-stats` after 1 week** to see which rules are most useful
-5. ✅ **Clean up stale rules** monthly with `carrymem check-rules`
+4. ✅ **Run `carrymem rules stats` after 1 week** to see which rules are most useful
+5. ✅ **Clean up stale rules** monthly with `carrymem rules check`
 
 ---
 

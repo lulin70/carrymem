@@ -181,9 +181,9 @@ print(f"Installed: {result['installed']}, Skipped: {result['skipped']}")
 ### CLI Commands
 
 ```bash
-carrymem skill-pack rules.json --name my-rules --scope company
-carrymem skill-verify my-rules.skill.json
-carrymem skill-install my-rules.skill.json --scope company --mode skip
+carrymem rules pack rules.json --name my-rules --scope company
+carrymem rules verify my-rules.skill.json
+carrymem rules install my-rules.skill.json --scope company --mode skip
 ```
 
 ---

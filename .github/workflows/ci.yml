@@ -75,13 +75,12 @@ jobs:
 
       - name: Run tests
         run: |
+          set -o pipefail
           python -m pytest tests/ \
             --cov=carrymem \
             --cov-report=term-missing \
             --tb=long \
-            --maxfail=10 \
             -q 2>&1 | tee /tmp/test_output.txt
-          echo "TEST_EXIT_CODE: $?"
 
       - name: Upload test results
         if: always()

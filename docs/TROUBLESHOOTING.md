@@ -1,6 +1,6 @@
 # CarryMem Troubleshooting Guide
 
-**Version**: v0.2.5
+**Version**: v0.4.0
 
 ---
 
@@ -645,7 +645,7 @@ export CARRYMEM_AUTO_INJECT=true
 
 2. Verify rule matching:
    ```bash
-   carrymem match-rules "your scene description"
+   carrymem rules match "your scene description"
    ```
 
 3. Enable auto-inject permanently:
@@ -701,7 +701,7 @@ carrymem rules list
 
 2. Create a rule in the appropriate scope:
    ```bash
-   carrymem add-rule --trigger "coding style" --action "Use 4-space indentation"
+   carrymem rules add --trigger "coding style" --action "Use 4-space indentation"
    ```
 
 3. Check for conflicts:
@@ -733,7 +733,7 @@ carrymem doctor
 **Severity**: 🟡 Warning  
 **Doctor check**: `security`
 
-**Problem**: `skill-verify` returns signature mismatch
+**Problem**: `rules verify` returns signature mismatch
 
 **Error example**:
 ```
@@ -744,7 +744,7 @@ Skill signature mismatch: expected abc123..., got def456...
 
 **Quick Fix**:
 ```bash
-carrymem skill-verify <skill-file>
+carrymem rules verify <skill-file>
 # Check the output for details
 ```
 
@@ -752,12 +752,12 @@ carrymem skill-verify <skill-file>
 
 1. Verify the skill file hasn't been tampered with:
    ```bash
-   carrymem skill-verify <skill-file>
+   carrymem rules verify <skill-file>
    ```
 
 2. If you created the skill, re-pack it:
    ```bash
-   carrymem skill-pack my-skill.json --name "my-skill"
+   carrymem rules pack my-skill.json --name "my-skill"
    ```
 
 3. Check version compatibility:
@@ -774,7 +774,7 @@ sha256sum <skill-file>
 
 **Verification**:
 ```bash
-carrymem skill-verify <skill-file>
+carrymem rules verify <skill-file>
 # Should show: valid
 ```
 
@@ -785,33 +785,33 @@ carrymem skill-verify <skill-file>
 **Severity**: 🔵 Info  
 **Doctor check**: `rules_engine`
 
-**Problem**: `suggest-rules` produces low-quality or irrelevant suggestions
+**Problem**: `rules suggest` produces low-quality or irrelevant suggestions
 
 **Root Cause**: Not enough memory patterns detected, or `--min-count` threshold too low.
 
 **Quick Fix**:
 ```bash
-carrymem suggest-rules --min-count 5
+carrymem rules suggest --min-count 5
 ```
 
 **Standard Fix**:
 
 1. Increase the minimum occurrence threshold:
    ```bash
-   carrymem suggest-rules --min-count 5
+   carrymem rules suggest --min-count 5
    ```
 
 2. Filter by memory type:
    ```bash
-   carrymem suggest-rules --type user_preference
-   carrymem suggest-rules --type correction
+   carrymem rules suggest --type user_preference
+   carrymem rules suggest --type correction
    ```
 
 3. Review and selectively accept:
    ```bash
-   carrymem suggest-rules
+   carrymem rules suggest
    # Review each suggestion, then:
-   carrymem suggest-rules --accept  # accepts all
+   carrymem rules suggest --accept  # accepts all
    ```
 
 **Deep Fix** — improve suggestion quality:
@@ -823,7 +823,7 @@ Suggestions are generated from repeated memory patterns. To improve quality:
 
 **Verification**:
 ```bash
-carrymem suggest-rules --min-count 5
+carrymem rules suggest --min-count 5
 # Should show relevant suggestions
 ```
 
