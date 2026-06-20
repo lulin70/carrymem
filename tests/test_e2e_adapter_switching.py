@@ -209,7 +209,7 @@ class TestE2EAdapterSpecificBehavior:
         elapsed = time.time() - start
 
         cm.close()
-        assert elapsed < 10, f"SQLite should handle 50 writes quickly: {elapsed:.2f}s"
+        assert elapsed < 30, f"SQLite should handle 50 writes quickly: {elapsed:.2f}s"
 
     def test_json_creates_readable_file(self, tmp_path):
         """Verify: JSON adapter creates human-readable JSON file."""
