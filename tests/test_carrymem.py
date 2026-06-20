@@ -12,6 +12,8 @@ import sys
 import tempfile
 import unittest
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from carrymem import CarryMem, ObsidianAdapter, SQLiteAdapter
