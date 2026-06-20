@@ -46,16 +46,21 @@ class TestMCPToolsE2E(unittest.TestCase):
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
         self.server = _make_server(self.tmpdir)
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
 
     def tearDown(self):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.server.cleanup())
+        try:
+            self.loop.run_until_complete(self.server.cleanup())
+        finally:
+            self.loop.close()
+            asyncio.set_event_loop(None)
 
     # === Core Tools (must pass) ===
 
     def test_classify_message_tool(self):
         """Verify: classify_message tool returns valid classification."""
-        result = asyncio.get_event_loop().run_until_complete(
+        result = self.loop.run_until_complete(
             _call_tool(self.server, "classify_message", {"message": "I prefer dark mode for coding"})
         )
         self.assertTrue(result.get("success"), f"Expected success, got: {result}")
@@ -66,7 +71,7 @@ class TestMCPToolsE2E(unittest.TestCase):
 
     def test_classify_and_remember_tool(self):
         """Verify: classify_and_remember tool stores and classifies."""
-        result = asyncio.get_event_loop().run_until_complete(
+        result = self.loop.run_until_complete(
             _call_tool(self.server, "classify_and_remember", {"message": "I prefer Python over Java"})
         )
         self.assertTrue(result.get("success"), f"Expected success, got: {result}")
@@ -79,13 +84,11 @@ class TestMCPToolsE2E(unittest.TestCase):
     def test_recall_memories_tool(self):
         """Verify: recall_memories tool returns stored memories."""
         # First store something
-        asyncio.get_event_loop().run_until_complete(
+        self.loop.run_until_complete(
             _call_tool(self.server, "classify_and_remember", {"message": "We chose PostgreSQL for our database"})
         )
         # Then recall
-        result = asyncio.get_event_loop().run_until_complete(
-            _call_tool(self.server, "recall_memories", {"query": "PostgreSQL"})
-        )
+        result = self.loop.run_until_complete(_call_tool(self.server, "recall_memories", {"query": "PostgreSQL"}))
         self.assertTrue(result.get("success"), f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertIn("memories", data)
@@ -94,7 +97,7 @@ class TestMCPToolsE2E(unittest.TestCase):
     def test_forget_memory_tool(self):
         """Verify: forget_memory tool removes a memory."""
         # Store a memory first
-        store_result = asyncio.get_event_loop().run_until_complete(
+        store_result = self.loop.run_until_complete(
             _call_tool(self.server, "declare_preference", {"message": "I prefer using TypeScript for frontend"})
         )
         self.assertTrue(store_result.get("success"))
@@ -105,7 +108,7 @@ class TestMCPToolsE2E(unittest.TestCase):
         if storage_keys:
             memory_id = storage_keys[0]
             # Forget it
-            forget_result = asyncio.get_event_loop().run_until_complete(
+            forget_result = self.loop.run_until_complete(
                 _call_tool(self.server, "forget_memory", {"memory_id": memory_id})
             )
             self.assertTrue(forget_result.get("success"), f"Forget failed: {forget_result}")
@@ -114,9 +117,7 @@ class TestMCPToolsE2E(unittest.TestCase):
 
     def test_get_classification_schema_tool(self):
         """Verify: get_classification_schema returns valid schema."""
-        result = asyncio.get_event_loop().run_until_complete(
-            _call_tool(self.server, "get_classification_schema", {"format": "json"})
-        )
+        result = self.loop.run_until_complete(_call_tool(self.server, "get_classification_schema", {"format": "json"}))
         self.assertTrue(result.get("success"), f"Expected success, got: {result}")
         data = result.get("data", result)
         schema = data.get("schema", data)
@@ -131,9 +132,7 @@ class TestMCPToolsE2E(unittest.TestCase):
             {"message": "We decided to use Redis"},
             {"message": "No, that's wrong, use YAML not JSON"},
         ]
-        result = asyncio.get_event_loop().run_until_complete(
-            _call_tool(self.server, "batch_classify", {"messages": messages})
-        )
+        result = self.loop.run_until_complete(_call_tool(self.server, "batch_classify", {"messages": messages}))
         self.assertTrue(result.get("success"), f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertIn("results", data)
@@ -145,7 +144,7 @@ class TestMCPToolsE2E(unittest.TestCase):
 
     def test_declare_preference_tool(self):
         """Verify: declare_preference stores preference."""
-        result = asyncio.get_event_loop().run_until_complete(
+        result = self.loop.run_until_complete(
             _call_tool(self.server, "declare_preference", {"message": "My timezone is UTC+8"})
         )
         self.assertTrue(result.get("success"), f"Expected success, got: {result}")
@@ -156,11 +155,11 @@ class TestMCPToolsE2E(unittest.TestCase):
     def test_get_memory_profile_tool(self):
         """Verify: get_memory_profile returns user profile."""
         # First declare something
-        asyncio.get_event_loop().run_until_complete(
+        self.loop.run_until_complete(
             _call_tool(self.server, "declare_preference", {"message": "I prefer Vim over Emacs"})
         )
         # Get profile
-        result = asyncio.get_event_loop().run_until_complete(_call_tool(self.server, "get_memory_profile", {}))
+        result = self.loop.run_until_complete(_call_tool(self.server, "get_memory_profile", {}))
         self.assertTrue(result.get("success"), f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertIn("summary", data)
@@ -171,10 +170,10 @@ class TestMCPToolsE2E(unittest.TestCase):
     def test_get_system_prompt_tool(self):
         """Verify: get_system_prompt returns prompt with context."""
         # Store some memories first
-        asyncio.get_event_loop().run_until_complete(
+        self.loop.run_until_complete(
             _call_tool(self.server, "declare_preference", {"message": "I prefer concise code comments"})
         )
-        result = asyncio.get_event_loop().run_until_complete(
+        result = self.loop.run_until_complete(
             _call_tool(self.server, "get_system_prompt", {"context": "code review", "max_memories": 5})
         )
         self.assertTrue(result.get("success"), f"Expected success, got: {result}")
@@ -186,7 +185,7 @@ class TestMCPToolsE2E(unittest.TestCase):
 
     def test_get_system_prompt_chinese(self):
         """Verify: get_system_prompt supports Chinese language output."""
-        result = asyncio.get_event_loop().run_until_complete(
+        result = self.loop.run_until_complete(
             _call_tool(self.server, "get_system_prompt", {"language": "zh", "max_memories": 1})
         )
         self.assertTrue(result.get("success"))
@@ -197,7 +196,7 @@ class TestMCPToolsE2E(unittest.TestCase):
 
     def test_add_rule_tool(self):
         """Verify: add_rule creates a new rule."""
-        result = asyncio.get_event_loop().run_until_complete(
+        result = self.loop.run_until_complete(
             _call_tool(
                 self.server,
                 "add_rule",
@@ -219,7 +218,7 @@ class TestMCPToolsE2E(unittest.TestCase):
     def test_list_rules_tool(self):
         """Verify: list_rules returns stored rules."""
         # Add a rule first
-        asyncio.get_event_loop().run_until_complete(
+        self.loop.run_until_complete(
             _call_tool(
                 self.server,
                 "add_rule",
@@ -231,9 +230,7 @@ class TestMCPToolsE2E(unittest.TestCase):
             )
         )
         # List rules
-        result = asyncio.get_event_loop().run_until_complete(
-            _call_tool(self.server, "list_rules", {"status": "active"})
-        )
+        result = self.loop.run_until_complete(_call_tool(self.server, "list_rules", {"status": "active"}))
         self.assertTrue(result.get("success"), f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertIn("rules", data)
@@ -243,7 +240,7 @@ class TestMCPToolsE2E(unittest.TestCase):
     def test_match_rules_tool(self):
         """Verify: match_rules finds applicable rules for a scene."""
         # Add relevant rule
-        asyncio.get_event_loop().run_until_complete(
+        self.loop.run_until_complete(
             _call_tool(
                 self.server,
                 "add_rule",
@@ -255,7 +252,7 @@ class TestMCPToolsE2E(unittest.TestCase):
             )
         )
         # Match against scene
-        result = asyncio.get_event_loop().run_until_complete(
+        result = self.loop.run_until_complete(
             _call_tool(
                 self.server,
                 "match_rules",
@@ -272,7 +269,7 @@ class TestMCPToolsE2E(unittest.TestCase):
 
     def test_inject_rules_tool(self):
         """Verify: inject_rules generates formatted rules text."""
-        asyncio.get_event_loop().run_until_complete(
+        self.loop.run_until_complete(
             _call_tool(
                 self.server,
                 "add_rule",
@@ -283,7 +280,7 @@ class TestMCPToolsE2E(unittest.TestCase):
                 },
             )
         )
-        result = asyncio.get_event_loop().run_until_complete(
+        result = self.loop.run_until_complete(
             _call_tool(
                 self.server,
                 "inject_rules",
@@ -300,7 +297,7 @@ class TestMCPToolsE2E(unittest.TestCase):
 
     def test_my_rules_tool(self):
         """Verify: my_rules returns readable rule summary."""
-        asyncio.get_event_loop().run_until_complete(
+        self.loop.run_until_complete(
             _call_tool(
                 self.server,
                 "add_rule",
@@ -311,7 +308,7 @@ class TestMCPToolsE2E(unittest.TestCase):
                 },
             )
         )
-        result = asyncio.get_event_loop().run_until_complete(_call_tool(self.server, "my_rules", {"status": "active"}))
+        result = self.loop.run_until_complete(_call_tool(self.server, "my_rules", {"status": "active"}))
         self.assertTrue(result.get("success"), f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertIn("summary", data)
@@ -321,7 +318,7 @@ class TestMCPToolsE2E(unittest.TestCase):
     def test_update_rule_tool(self):
         """Verify: update_rule modifies an existing rule."""
         # Add a rule
-        add_result = asyncio.get_event_loop().run_until_complete(
+        add_result = self.loop.run_until_complete(
             _call_tool(
                 self.server,
                 "add_rule",
@@ -336,7 +333,7 @@ class TestMCPToolsE2E(unittest.TestCase):
         rule_id = add_data.get("rule_id")
         if rule_id:
             # Update it
-            update_result = asyncio.get_event_loop().run_until_complete(
+            update_result = self.loop.run_until_complete(
                 _call_tool(
                     self.server,
                     "update_rule",
@@ -354,7 +351,7 @@ class TestMCPToolsE2E(unittest.TestCase):
     def test_delete_rule_tool(self):
         """Verify: delete_rule removes a personal-scope rule."""
         # Add a personal rule
-        add_result = asyncio.get_event_loop().run_until_complete(
+        add_result = self.loop.run_until_complete(
             _call_tool(
                 self.server,
                 "add_rule",
@@ -369,7 +366,7 @@ class TestMCPToolsE2E(unittest.TestCase):
         rule_id = add_data.get("rule_id")
         if rule_id:
             # Delete it
-            del_result = asyncio.get_event_loop().run_until_complete(
+            del_result = self.loop.run_until_complete(
                 _call_tool(
                     self.server,
                     "delete_rule",
@@ -388,13 +385,13 @@ class TestMCPToolsE2E(unittest.TestCase):
     def test_consolidate_memories_dry_run(self):
         """Verify: consolidate_memories dry_run reports without changes."""
         # Store some memories
-        asyncio.get_event_loop().run_until_complete(
+        self.loop.run_until_complete(
             _call_tool(self.server, "classify_and_remember", {"message": "I prefer using Docker for containers"})
         )
-        asyncio.get_event_loop().run_until_complete(
+        self.loop.run_until_complete(
             _call_tool(self.server, "classify_and_remember", {"message": "I prefer using Docker for containers"})
         )
-        result = asyncio.get_event_loop().run_until_complete(
+        result = self.loop.run_until_complete(
             _call_tool(
                 self.server,
                 "consolidate_memories",
@@ -411,7 +408,7 @@ class TestMCPToolsE2E(unittest.TestCase):
 
     def test_schedule_consolidation_tool(self):
         """Verify: schedule_consolidation starts periodic consolidation."""
-        result = asyncio.get_event_loop().run_until_complete(
+        result = self.loop.run_until_complete(
             _call_tool(
                 self.server,
                 "schedule_consolidation",
@@ -428,12 +425,12 @@ class TestMCPToolsE2E(unittest.TestCase):
         self.assertTrue(data.get("scheduled"), "Consolidation should be scheduled")
 
         # Clean up: stop the scheduled timer
-        asyncio.get_event_loop().run_until_complete(_call_tool(self.server, "stop_consolidation", {}))
+        self.loop.run_until_complete(_call_tool(self.server, "stop_consolidation", {}))
 
     def test_stop_consolidation_tool(self):
         """Verify: stop_consolidation stops the scheduled timer."""
         # Schedule first
-        asyncio.get_event_loop().run_until_complete(
+        self.loop.run_until_complete(
             _call_tool(
                 self.server,
                 "schedule_consolidation",
@@ -445,7 +442,7 @@ class TestMCPToolsE2E(unittest.TestCase):
             )
         )
         # Stop
-        result = asyncio.get_event_loop().run_until_complete(_call_tool(self.server, "stop_consolidation", {}))
+        result = self.loop.run_until_complete(_call_tool(self.server, "stop_consolidation", {}))
         self.assertTrue(result.get("success"), f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertTrue(data.get("stopped"), "Consolidation should be stopped")
@@ -454,10 +451,8 @@ class TestMCPToolsE2E(unittest.TestCase):
 
     def test_my_profile_tool(self):
         """Verify: my_profile returns complete identity view."""
-        asyncio.get_event_loop().run_until_complete(
-            _call_tool(self.server, "declare_preference", {"message": "I work at a startup"})
-        )
-        result = asyncio.get_event_loop().run_until_complete(
+        self.loop.run_until_complete(_call_tool(self.server, "declare_preference", {"message": "I work at a startup"}))
+        result = self.loop.run_until_complete(
             _call_tool(
                 self.server,
                 "my_profile",
@@ -474,7 +469,7 @@ class TestMCPToolsE2E(unittest.TestCase):
 
     def test_onboard_tool(self):
         """Verify: onboard returns welcome message for new users."""
-        result = asyncio.get_event_loop().run_until_complete(_call_tool(self.server, "onboard", {"language": "en"}))
+        result = self.loop.run_until_complete(_call_tool(self.server, "onboard", {"language": "en"}))
         self.assertTrue(result.get("success"), f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertIn("welcome", data)
@@ -483,7 +478,7 @@ class TestMCPToolsE2E(unittest.TestCase):
 
     def test_onboard_tool_chinese(self):
         """Verify: onboard supports Chinese language."""
-        result = asyncio.get_event_loop().run_until_complete(_call_tool(self.server, "onboard", {"language": "zh"}))
+        result = self.loop.run_until_complete(_call_tool(self.server, "onboard", {"language": "zh"}))
         self.assertTrue(result.get("success"))
         data = result.get("data", result)
         self.assertEqual(data.get("language"), "zh")
@@ -513,13 +508,13 @@ class TestMCPToolsE2E(unittest.TestCase):
             ("get_memory_profile", {}),
         ]
         for tool_name, args in tools_to_test:
-            result = asyncio.get_event_loop().run_until_complete(_call_tool(self.server, tool_name, args))
+            result = self.loop.run_until_complete(_call_tool(self.server, tool_name, args))
             self.assertIn("success", result, f"{tool_name}: response missing 'success' key")
             self.assertTrue(result["success"], f"{tool_name}: expected success=True")
 
     def test_unknown_tool_returns_error(self):
         """Verify: Unknown tool name returns error response with available_tools hint."""
-        result = asyncio.get_event_loop().run_until_complete(_call_tool(self.server, "nonexistent_tool_xyz", {}))
+        result = self.loop.run_until_complete(_call_tool(self.server, "nonexistent_tool_xyz", {}))
         # Should either have success=False or indicate unknown tool
         if result.get("success"):
             data = result.get("data", {})
@@ -529,9 +524,7 @@ class TestMCPToolsE2E(unittest.TestCase):
 
     def test_empty_message_handled_gracefully(self):
         """Verify: Empty message to classify_message returns valid non-crashing response."""
-        result = asyncio.get_event_loop().run_until_complete(
-            _call_tool(self.server, "classify_message", {"message": ""})
-        )
+        result = self.loop.run_until_complete(_call_tool(self.server, "classify_message", {"message": ""}))
         # Should still return a valid structure, just empty entries
         self.assertIsNotNone(result)
         self.assertIn("success", result)
@@ -539,13 +532,13 @@ class TestMCPToolsE2E(unittest.TestCase):
     def test_full_roundtrip_classify_store_recall(self):
         """Verify: Complete roundtrip: classify → store → recall → prompt injection."""
         # Step 1: Classify and remember
-        store_result = asyncio.get_event_loop().run_until_complete(
+        store_result = self.loop.run_until_complete(
             _call_tool(self.server, "classify_and_remember", {"message": "Our team uses Kubernetes for orchestration"})
         )
         self.assertTrue(store_result.get("success"))
 
         # Step 2: Recall the memory
-        recall_result = asyncio.get_event_loop().run_until_complete(
+        recall_result = self.loop.run_until_complete(
             _call_tool(self.server, "recall_memories", {"query": "Kubernetes"})
         )
         self.assertTrue(recall_result.get("success"))
@@ -553,7 +546,7 @@ class TestMCPToolsE2E(unittest.TestCase):
         memories = recall_data.get("memories", [])
 
         # Step 3: Verify it appears in system prompt
-        prompt_result = asyncio.get_event_loop().run_until_complete(
+        prompt_result = self.loop.run_until_complete(
             _call_tool(self.server, "get_system_prompt", {"context": "deployment infrastructure", "max_memories": 10})
         )
         self.assertTrue(prompt_result.get("success"))
@@ -569,14 +562,10 @@ class TestMCPToolsE2E(unittest.TestCase):
             "We deploy to AWS us-east-1",
         ]
         for pref in preferences:
-            asyncio.get_event_loop().run_until_complete(
-                _call_tool(self.server, "declare_preference", {"message": pref})
-            )
+            self.loop.run_until_complete(_call_tool(self.server, "declare_preference", {"message": pref}))
 
         # Verify via recall that memories were stored
-        recall_result = asyncio.get_event_loop().run_until_complete(
-            _call_tool(self.server, "recall_memories", {"limit": 20})
-        )
+        recall_result = self.loop.run_until_complete(_call_tool(self.server, "recall_memories", {"limit": 20}))
         self.assertTrue(recall_result.get("success"))
         recall_data = recall_result.get("data", recall_result)
         memories = recall_data.get("memories", [])
@@ -587,17 +576,15 @@ class TestMCPToolsE2E(unittest.TestCase):
     def test_recall_with_filters(self):
         """Verify: recall_memories respects type filters."""
         # Store different types
-        asyncio.get_event_loop().run_until_complete(
-            _call_tool(self.server, "declare_preference", {"message": "I like TypeScript"})
-        )
-        asyncio.get_event_loop().run_until_complete(
+        self.loop.run_until_complete(_call_tool(self.server, "declare_preference", {"message": "I like TypeScript"}))
+        self.loop.run_until_complete(
             _call_tool(
                 self.server, "classify_and_remember", {"message": "We chose React for the frontend", "context": "{}"}
             )
         )
 
         # Filter by type
-        result = asyncio.get_event_loop().run_until_complete(
+        result = self.loop.run_until_complete(
             _call_tool(
                 self.server,
                 "recall_memories",
