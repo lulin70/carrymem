@@ -25,6 +25,9 @@ from carrymem.rules.models import Rule
 from carrymem.rules.skill import skill_install, skill_pack, skill_verify
 from carrymem.rules.storage import RuleStorage
 
+# Mark all tests in this file as slow (skipped in CI, run locally/nightly)
+pytestmark = [pytest.mark.slow]
+
 
 class TestRuleCreationPerformance:
     """Benchmark rule creation throughput"""

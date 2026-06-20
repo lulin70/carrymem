@@ -1526,6 +1526,7 @@ class TestBoundaryConditions(unittest.TestCase):
         self.assertIsInstance(results, list)
 
 
+@pytest.mark.slow
 class TestPerformanceBenchmark(unittest.TestCase):
     """Performance benchmarks for semantic recall (3 tests)."""
 

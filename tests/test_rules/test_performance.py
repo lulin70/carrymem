@@ -19,6 +19,9 @@ from carrymem.rules.injector import RuleInjector
 from carrymem.rules.matcher import RuleMatcher
 from carrymem.rules.storage import RuleStorage
 
+# Mark all tests in this file as slow (skipped in CI, run locally/nightly)
+pytestmark = [pytest.mark.slow]
+
 
 @pytest.fixture
 def temp_db():

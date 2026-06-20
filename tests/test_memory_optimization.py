@@ -24,6 +24,9 @@ import pytest
 from carrymem import CarryMem
 from carrymem.security.encryption import MemoryEncryption
 
+# Mark all tests in this file as slow (skipped in CI, run locally/nightly)
+pytestmark = [pytest.mark.slow]
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------

@@ -19,6 +19,9 @@ import pytest
 
 from carrymem import CarryMem
 
+# Mark all tests in this file as slow (skipped in CI, run locally/nightly)
+pytestmark = [pytest.mark.slow]
+
 
 @pytest.fixture
 def shared_carrymem(tmp_path):

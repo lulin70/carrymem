@@ -82,6 +82,7 @@ jobs:
             --cov-report=term-missing \
             --tb=long \
             --timeout=120 \
+            -m "not slow" \
             -q 2>&1 | tee /tmp/test_output.txt
 
       - name: Upload test results

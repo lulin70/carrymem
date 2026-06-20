@@ -32,6 +32,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from carrymem import CarryMem, SQLiteAdapter
 from carrymem.adapters.base import MemoryEntry
 
+# Mark all tests in this file as slow (skipped in CI, run locally/nightly)
+pytestmark = [pytest.mark.slow]
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
