@@ -109,22 +109,15 @@ class ClassificationMixin:
             except (ValueError, TypeError, ImportError, RuntimeError) as e:
                 logger.debug("Coreference resolution failed (non-critical), using original message: %s", e)
 
-        # Auto-redaction: redact sensitive content but still allow storage
-        # (redact-and-store instead of block-and-discard)
+        # Auto-redaction: block storage of sensitive content
         if not force_type:
             try:
-                from carrymem.security.redaction import redact_content, should_redact
+                from carrymem.security.redaction import should_redact
 
                 should_block, redact_reason = should_redact(resolved_message)
                 if should_block:
-                    redacted_message = redact_content(resolved_message)
-                    logger.warning(
-                        "Auto-redact applied to memory storage: %s (original len=%d, redacted len=%d)",
-                        redact_reason,
-                        len(resolved_message),
-                        len(redacted_message),
-                    )
-                    resolved_message = redacted_message
+                    logger.warning("Memory storage blocked by auto-redaction: %s", redact_reason)
+                    return (resolved_message, False, redact_reason, coreference_resolved)
             except (ImportError, ValueError, TypeError, RuntimeError) as e:
                 logger.warning("Auto-redaction check failed, allowing storage as precaution: %s", e)
 

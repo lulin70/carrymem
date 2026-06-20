@@ -7,7 +7,7 @@ from carrymem.adapters.base import MemoryEntry
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.constants import BATCH_RECALL_LIMIT, MAX_MESSAGE_LENGTH
 from carrymem.core._lifecycle import StorageNotConfiguredError
-from carrymem.exceptions import ClassificationError
+from carrymem.exceptions import ClassificationError, ValidationError
 from carrymem.types import (
     ClassificationResult,
     DeclareResult,
@@ -70,7 +70,19 @@ class MemoryCRUDMixin:
             message, context, force_type, session_id
         )
         if not should_continue:
-            return redact_result  # type: ignore[return-value]
+            return {
+                "stored": False,
+                "should_remember": False,
+                "entries": [],
+                "storage_keys": [],
+                "type": "auto_redacted",
+                "content": str(message)[:100] if message else "",
+                "error": redact_result or "Blocked by redaction",
+                "summary": {
+                    "redacted": True,
+                    "redact_reason": redact_result or "Sensitive content detected",
+                },
+            }
 
         # 2. Classify
         try:

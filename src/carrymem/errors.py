@@ -194,7 +194,7 @@ class QueryError(DatabaseError):
         super().__init__(message=message, code=code, hint=hint, cause=cause)
 
 
-class ValidationError(CarryMemError):
+class ValidationError(CarryMemError, ValueError):
     """Raised when input validation fails (CM-201)."""
 
     def __init__(

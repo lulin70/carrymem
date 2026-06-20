@@ -578,8 +578,8 @@ class TestLogicalOperatorReplacement:
         with pytest.raises((ValueError, Exception)):
             validate_limit(-1)
 
-        with pytest.raises((ValueError, Exception)):
-            validate_limit(0)
+        # limit=0 是合法的（返回空列表）
+        validate_limit(0)
 
         # 合法值不应报错
         validate_limit(10)
