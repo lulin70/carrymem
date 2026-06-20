@@ -552,10 +552,7 @@ class TestLogicalOperatorReplacement:
         # 可能会包含低质量记忆或排除高质量记忆
         for mem in filtered:
             individual_score = scorer.score(mem)
-            assert individual_score >= 0.5, (
-                f"Filtered memory has score {individual_score:.3f} "
-                f"below threshold 0.5"
-            )
+            assert individual_score >= 0.5, f"Filtered memory has score {individual_score:.3f} " f"below threshold 0.5"
 
         # 验证确实过滤掉了一些
         assert len(filtered) < len(memories), "Should filter out some low-quality memories"

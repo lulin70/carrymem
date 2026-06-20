@@ -54,6 +54,7 @@ from carrymem.security.encryption import (
 def _has_cryptography():
     try:
         import cryptography  # noqa
+
         return True
     except ImportError:
         return False

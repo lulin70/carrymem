@@ -20,6 +20,7 @@ def _has_cryptography() -> bool:
     """Check if cryptography library is available."""
     try:
         import cryptography  # noqa: F401
+
         return True
     except ImportError:
         return False

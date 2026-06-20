@@ -238,9 +238,7 @@ class ObsidianAdapter(StorageAdapter):
                     conditions.append("tags LIKE ? ESCAPE '\\'")
                     params.append(f'%"{escape_like(tag)}"%')
                 where_clause = "WHERE " + " AND ".join(conditions)
-                return conn.execute(
-                    f"SELECT COUNT(*) FROM notes {where_clause}", params
-                ).fetchone()[0]
+                return conn.execute(f"SELECT COUNT(*) FROM notes {where_clause}", params).fetchone()[0]
             return conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
 
     def health_check(self) -> dict:
