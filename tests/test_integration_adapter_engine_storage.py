@@ -178,7 +178,7 @@ class TestRecallEngineFullChain:
         memories = [
             "User prefers dark mode theme in all applications",
             "Team decided to migrate from REST to GraphQL",
-            "Database connection string: postgresql://db:5432/app",
+            "The database server runs on port 5432 with daily backups",
             "Run tests before every commit",
             "Use environment variables for configuration",
         ]

@@ -298,14 +298,16 @@ class MemoryEncryption:
         try:
             encrypted = self._fernet.encrypt(plaintext.encode("utf-8"))
             return encrypted.decode("ascii")
-        except (TypeError, ValueError, binascii.Error) as e:
+        except (TypeError, ValueError, AttributeError, binascii.Error) as e:
             raise EncryptionError(f"Fernet encryption failed: {e}") from e
 
     def _decrypt_fernet(self, ciphertext: str) -> str:
+        from cryptography.fernet import InvalidToken
+
         try:
             decrypted = self._fernet.decrypt(ciphertext.encode("ascii"))
             return decrypted.decode("utf-8")
-        except (TypeError, ValueError, binascii.Error) as e:
+        except (TypeError, ValueError, binascii.Error, InvalidToken) as e:
             raise EncryptionError(f"Fernet decryption failed: {e}") from e
 
     def _encrypt_stream(self, plaintext: str) -> str:

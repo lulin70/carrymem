@@ -8,6 +8,36 @@ import pytest
 from carrymem.integration.layer2_mcp.http_server import MCPHTTPServer
 
 
+async def _wait_for_server(host: str, port: int, timeout: float = 5.0) -> None:
+    """Poll until the server is accepting connections or timeout."""
+    deadline = asyncio.get_event_loop().time() + timeout
+    last_err: Exception | None = None
+    while asyncio.get_event_loop().time() < deadline:
+        try:
+            reader, writer = await asyncio.open_connection(host, port)
+            writer.close()
+            await writer.wait_closed()
+            return
+        except (ConnectionRefusedError, OSError) as e:
+            last_err = e
+            await asyncio.sleep(0.1)
+    raise RuntimeError(f"Server at {host}:{port} did not start within {timeout}s: {last_err}")
+
+
+async def _http_get(host: str, port: int, path: str) -> str:
+    """Send a GET request and return the response string."""
+    reader, writer = await asyncio.open_connection(host, port)
+    try:
+        request = f"GET {path} HTTP/1.1\r\nHost: localhost\r\n\r\n".encode()
+        writer.write(request)
+        await writer.drain()
+        response = await reader.read(4096)
+        return response.decode()
+    finally:
+        writer.close()
+        await writer.wait_closed()
+
+
 class TestMonitoringEndpoints:
     """Test monitoring endpoints integration."""
 
@@ -18,19 +48,10 @@ class TestMonitoringEndpoints:
 
         # Start server in background
         server_task = asyncio.create_task(server.start())
-        await asyncio.sleep(0.5)  # Give server time to start
+        await _wait_for_server("127.0.0.1", 18765)
 
         try:
-            # Make HTTP request
-            reader, writer = await asyncio.open_connection("127.0.0.1", 18765)
-
-            request = b"GET /healthz HTTP/1.1\r\nHost: localhost\r\n\r\n"
-            writer.write(request)
-            await writer.drain()
-
-            # Read response
-            response = await reader.read(4096)
-            response_str = response.decode()
+            response_str = await _http_get("127.0.0.1", 18765, "/healthz")
 
             # Verify status code
             assert "200 OK" in response_str or "503" in response_str
@@ -45,9 +66,6 @@ class TestMonitoringEndpoints:
             assert "status" in data
             assert data["status"] in ["ok", "degraded"]
             assert "uptime_seconds" in data
-
-            writer.close()
-            await writer.wait_closed()
         finally:
             await server.stop()
             server_task.cancel()
@@ -63,19 +81,10 @@ class TestMonitoringEndpoints:
 
         # Start server in background
         server_task = asyncio.create_task(server.start())
-        await asyncio.sleep(0.5)
+        await _wait_for_server("127.0.0.1", 18766)
 
         try:
-            # Make HTTP request
-            reader, writer = await asyncio.open_connection("127.0.0.1", 18766)
-
-            request = b"GET /metrics HTTP/1.1\r\nHost: localhost\r\n\r\n"
-            writer.write(request)
-            await writer.drain()
-
-            # Read response
-            response = await reader.read(4096)
-            response_str = response.decode()
+            response_str = await _http_get("127.0.0.1", 18766, "/metrics")
 
             # Verify status code and content type
             assert "200 OK" in response_str
@@ -88,9 +97,6 @@ class TestMonitoringEndpoints:
             # Verify Prometheus format
             assert "carrymem_uptime_seconds" in body
             assert "# TYPE" in body  # Prometheus type comments
-
-            writer.close()
-            await writer.wait_closed()
         finally:
             await server.stop()
             server_task.cancel()
@@ -106,30 +112,18 @@ class TestMonitoringEndpoints:
 
         # Start server in background
         server_task = asyncio.create_task(server.start())
-        await asyncio.sleep(0.5)
+        await _wait_for_server("127.0.0.1", 18767)
 
         try:
             # Test /healthz without auth
-            reader, writer = await asyncio.open_connection("127.0.0.1", 18767)
-            request = b"GET /healthz HTTP/1.1\r\nHost: localhost\r\n\r\n"
-            writer.write(request)
-            await writer.drain()
-            response = await reader.read(4096)
-            assert b"401" not in response  # Should not be unauthorized
-            assert b"200" in response or b"503" in response
-            writer.close()
-            await writer.wait_closed()
+            response = await _http_get("127.0.0.1", 18767, "/healthz")
+            assert "401" not in response  # Should not be unauthorized
+            assert "200" in response or "503" in response
 
             # Test /metrics without auth
-            reader, writer = await asyncio.open_connection("127.0.0.1", 18767)
-            request = b"GET /metrics HTTP/1.1\r\nHost: localhost\r\n\r\n"
-            writer.write(request)
-            await writer.drain()
-            response = await reader.read(4096)
-            assert b"401" not in response  # Should not be unauthorized
-            assert b"200" in response
-            writer.close()
-            await writer.wait_closed()
+            response = await _http_get("127.0.0.1", 18767, "/metrics")
+            assert "401" not in response  # Should not be unauthorized
+            assert "200" in response
         finally:
             await server.stop()
             server_task.cancel()

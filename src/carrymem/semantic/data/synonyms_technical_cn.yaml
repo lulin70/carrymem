@@ -1,0 +1,15 @@
+# Chinese technical terms → synonyms (CN/EN/JP)
+# Used by SemanticExpander for cross-language query expansion.
+# All terms are lowercased by _add_to_graph(); multi-word terms use spaces.
+深色模式: [dark mode, ダークモード, 暗色主题, dark theme, 夜间模式, night mode]
+数据库: [database, db, 数据库系统, postgresql, mysql, sqlite, redis, mongodb, 数据存储]
+偏好: [prefer, 喜欢, preference, 倾向, favorite, choice, 偏爱]
+编辑器: [editor, code editor, ide, vs code, vim, emacs, 编辑工具]
+终端: [terminal, ターミナル, 命令行, shell, console, bash, zsh, command line]
+框架: [framework, フレームワーク, django, react, vue, flask, spring, library]
+机器学习: [machine learning, ml, ai, 機械学習, 深度学习, deep learning, neural network]
+编程语言: [programming language, python, java, javascript, go, rust, 程序设计语言]
+暗色主题: [dark mode, 深色模式, ダークモード, dark theme]
+数据存储: [database, db, 数据库, storage, 存储]
+命令行: [terminal, 终端, command line, shell, ターミナル]
+深度学习: [deep learning, 机器学习, neural network, ディープラーニング]

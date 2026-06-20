@@ -59,6 +59,17 @@ class CarryMemError(Exception):
         if isinstance(exc, (OSError, IOError)):
             return _map_os_error(exc, exc_msg)
 
+        # Known CarryMem exceptions (check before ValueError since some
+        # CarryMem exceptions like ValidationError also inherit from ValueError)
+        for err_cls, template in _EXCEPTION_MAP.items():
+            if isinstance(exc, err_cls):
+                return CarryMemError(
+                    code=template.code,
+                    message=template.zh,
+                    hint=template.hint_zh,
+                    cause=exc,
+                )
+
         # ValueError / TypeError from our code
         if isinstance(exc, ValueError):
             return _map_value_error(exc, exc_msg)
@@ -71,16 +82,6 @@ class CarryMemError(Exception):
                 hint=ERROR_MESSAGES.get("CM-401", {}).get("hint_zh", "Check your encryption key configuration."),
                 cause=exc,
             )
-
-        # Known CarryMem exceptions
-        for err_cls, template in _EXCEPTION_MAP.items():
-            if isinstance(exc, err_cls):
-                return CarryMemError(
-                    code=template.code,
-                    message=template.zh,
-                    hint=template.hint_zh,
-                    cause=exc,
-                )
 
         # Fallback
         return CarryMemError(

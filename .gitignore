@@ -42,6 +42,10 @@ Thumbs.db
 # Data directories (user data)
 data/
 src/data/
+# Exception: semantic data files are package data, not user data
+!src/carrymem/semantic/data/
+!src/carrymem/semantic/data/*.yaml
+!src/carrymem/semantic/data/*.py
 
 # Python compiled files
 __pycache__/

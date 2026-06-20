@@ -1,0 +1,15 @@
+# Japanese terms → synonyms (JP/CN/EN)
+# Used by SemanticExpander for cross-language query expansion.
+# All terms are lowercased by _add_to_graph(); multi-word terms use spaces.
+ダークモード: [dark mode, 深色模式, 暗色テーマ, night mode]
+データベース: [database, db, 数据库, postgresql, mysql, sqlite, dbms]
+フレームワーク: [framework, 框架, django, react, vue, library]
+ターミナル: [terminal, 终端, 命令行, shell, console, bash]
+機械学習: [machine learning, ml, ai, 机器学习, deep learning]
+エディタ: [editor, code editor, ide, vs code, vim, 编辑器]
+プログラミング言語: [programming language, python, java, 编程语言]
+コンテナ: [container, docker, 容器, コンテナ技術]
+クラウド: [cloud, 云, aws, azure, gcp, cloud computing]
+テスト: [test, testing, pytest, テスト, 测试]
+バージョン管理: [version control, git, github, バージョンコントロール]
+ディープラーニング: [deep learning, 深度学习, 机器学习, neural network]

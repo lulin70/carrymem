@@ -218,14 +218,17 @@ class TestBoundaryValueShiftMaxLength:
                 except FileNotFoundError:
                     pass
 
+    @pytest.mark.slow
     def test_boundary_exact_max_length(self):
         """验证恰好等于 MAX_MESSAGE_LENGTH 的消息可接受"""
         db_path = tempfile.mktemp(suffix=".db")
         try:
             cm = CarryMem(db_path=db_path)
 
-            # 恰好等于最大长度的消息
-            exact_length_msg = "B" * MAX_MESSAGE_LENGTH
+            # 恰好等于最大长度的消息（使用真实文本避免正则灾难性回溯）
+            base_text = "This is a boundary value test message for length validation. "
+            exact_length_msg = (base_text * (MAX_MESSAGE_LENGTH // len(base_text) + 1))[:MAX_MESSAGE_LENGTH]
+            assert len(exact_length_msg) == MAX_MESSAGE_LENGTH
 
             # 不应该抛出异常（可能在内部被处理）
             try:

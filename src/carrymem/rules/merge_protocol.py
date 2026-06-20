@@ -324,8 +324,7 @@ def merge_rules(
                             {"decision": "keep_existing", "conflict": conflict.conflict_type},
                             reason=(  # fmt: skip
                                 f"Existing [{conflict.existing_rule.scope}] " f"overrides incoming [{inc.scope}]"
-                            )
-                            ,
+                            ),
                         )
                     )
                 elif decision == MergeDecision.MODIFY_INCOMING:

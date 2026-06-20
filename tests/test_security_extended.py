@@ -95,11 +95,11 @@ class TestEncryptionEdgeCases:
     def test_corrupted_ciphertext_detection(self, enc):
         ct = enc.encrypt("sensitive data")
         # Flip some bytes in the middle (after base64-decode)
-        raw = base64.b64decode(ct)
+        raw = base64.urlsafe_b64decode(ct)
         corrupted = bytearray(raw)
         mid = len(corrupted) // 2
         corrupted[mid] ^= 0xFF
-        bad_ct = base64.b64encode(bytes(corrupted)).decode()
+        bad_ct = base64.urlsafe_b64encode(bytes(corrupted)).decode()
         with pytest.raises(EncryptionError):
             enc.decrypt(bad_ct)
 
