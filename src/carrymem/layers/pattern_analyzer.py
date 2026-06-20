@@ -207,6 +207,8 @@ class PatternAnalyzer:
             # If it also has fact indicators, skip
             if reg.any_match_by_group("noise_fact_indicator", msg_lower, "en"):
                 pass  # has fact indicators, don't filter
+            elif self._has_substantive_content(msg, msg_lower):
+                pass  # has substantive content beyond command, don't filter
             else:
                 return True
         return False
@@ -230,6 +232,8 @@ class PatternAnalyzer:
         if reg.any_match_by_group("noise_instruction", msg_lower, "en") and len(msg) < 60:
             if reg.any_match_by_group("noise_workflow", msg_lower, "en"):
                 pass  # has workflow markers, don't filter
+            elif self._has_substantive_content(msg, msg_lower):
+                pass  # has substantive content beyond instruction, don't filter
             elif self.noise_filter_mode == "soft":
                 pass
             else:
@@ -239,6 +243,85 @@ class PatternAnalyzer:
     def _is_adversarial(self, msg_lower: str) -> bool:
         """C5: Detect adversarial/anti-memory patterns."""
         return self.registry.any_match_by_group("noise_adversarial", msg_lower, "en")
+
+    def _has_substantive_content(self, msg: str, msg_lower: str) -> bool:
+        """Check if message has substantive content beyond a command/instruction verb.
+
+        Returns True if the message is likely a statement/fact rather than
+        a pure command, based on technical content indicators. This prevents
+        legitimate technical statements (e.g., "Docker for containerization",
+        "Deploy to AWS") from being filtered as command/instruction noise.
+
+        Args:
+            msg: Original message (for case-sensitive checks like CamelCase).
+            msg_lower: Lowercased message (for keyword checks).
+
+        Returns:
+            True if the message contains substantive technical content.
+        """
+        words = msg.split()
+        if len(words) < 3:
+            return False
+
+        # CamelCase words (e.g., PostgreSQL, JavaScript)
+        if re.search(r"\b[A-Z][a-z]+[A-Z]\w*\b", msg):
+            return True
+
+        # All-caps acronyms (2+ chars, e.g., AWS, CI, API)
+        if re.search(r"\b[A-Z]{2,}\b", msg):
+            return True
+
+        # Underscore identifiers (e.g., recall_all, ns_alpha)
+        if re.search(r"\b\w+_\w+\b", msg):
+            return True
+
+        # Technical keywords (lowercase check)
+        tech_keywords = {
+            "docker",
+            "kubernetes",
+            "agile",
+            "methodology",
+            "containerization",
+            "microservices",
+            "devops",
+            "ci/cd",
+            "continuous",
+            "integration",
+            "deployment",
+            "monitoring",
+            "observability",
+            "architecture",
+            "framework",
+            "library",
+            "runtime",
+            "compiler",
+            "database",
+            "serverless",
+            "cloud",
+            "infrastructure",
+            "pipeline",
+            "orchestration",
+            "prometheus",
+            "grafana",
+            "elasticsearch",
+            "redis",
+            "nginx",
+            "python",
+            "javascript",
+            "typescript",
+            "golang",
+            "rust",
+            "java",
+        }
+        if any(kw in msg_lower for kw in tech_keywords):
+            return True
+
+        # Prepositional phrases indicating statements ("X for Y", "X with Y")
+        # with 4+ words suggest a statement, not a command
+        if len(words) >= 4 and any(prep in msg_lower for prep in [" for ", " with ", " using "]):
+            return True
+
+        return False
 
     def _is_noise(self, message: str) -> bool:
         """Detect if message is noise.

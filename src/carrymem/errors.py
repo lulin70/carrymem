@@ -15,10 +15,9 @@ from __future__ import annotations
 from typing import Any, Dict, Optional, Type
 
 from carrymem.error_messages import ERROR_MESSAGES, ErrorTemplate
-from carrymem.exceptions import CarryMemError as _BaseCarryMemError
 
 
-class CarryMemError(_BaseCarryMemError):
+class CarryMemError(Exception):
     """Base error class with error code, user-friendly message, hint, and cause chain."""
 
     def __init__(
@@ -107,10 +106,6 @@ class MemoryOperationError(CarryMemError):
     """Memory operation error (CM-200~299)."""
 
 
-class ClassificationError(CarryMemError):
-    """Classification / rule engine error (CM-300~399)."""
-
-
 class SecurityError(CarryMemError):
     """Security / encryption error (CM-400~499)."""
 
@@ -121,6 +116,138 @@ class ImportExportError(CarryMemError):
 
 class CLIEntryError(CarryMemError):
     """CLI / TUI / MCP entry point error (CM-600~699)."""
+
+
+# ── Exception classes migrated from carrymem.exceptions ─────────────
+# These accept a positional ``message`` (backwards compatible with the
+# original ``exceptions.XXX("message")`` call sites) and default to the
+# appropriate ``CM-xxx`` error code.
+
+
+class StorageError(CarryMemError):
+    """Raised when storage operations fail (CM-120)."""
+
+    def __init__(
+        self,
+        message: str = "A storage operation error occurred.",
+        *,
+        code: str = "CM-120",
+        hint: str = "",
+        cause: Optional[Exception] = None,
+    ) -> None:
+        super().__init__(code=code, message=message, hint=hint, cause=cause)
+
+
+class StorageNotConfiguredError(StorageError):
+    """Raised when storage adapter is not configured (CM-100)."""
+
+    def __init__(
+        self,
+        message: str = "Storage adapter is not configured.",
+        *,
+        code: str = "CM-100",
+        hint: str = "",
+        cause: Optional[Exception] = None,
+    ) -> None:
+        super().__init__(message=message, code=code, hint=hint, cause=cause)
+
+
+class DatabaseError(StorageError):
+    """Raised when database operations fail (CM-101)."""
+
+    def __init__(
+        self,
+        message: str = "Database operation failed.",
+        *,
+        code: str = "CM-101",
+        hint: str = "",
+        cause: Optional[Exception] = None,
+    ) -> None:
+        super().__init__(message=message, code=code, hint=hint, cause=cause)
+
+
+class DBConnectionError(DatabaseError):
+    """Raised when database connection fails (CM-111)."""
+
+    def __init__(
+        self,
+        message: str = "Unable to connect to the database.",
+        *,
+        code: str = "CM-111",
+        hint: str = "",
+        cause: Optional[Exception] = None,
+    ) -> None:
+        super().__init__(message=message, code=code, hint=hint, cause=cause)
+
+
+class QueryError(DatabaseError):
+    """Raised when database query fails (CM-112)."""
+
+    def __init__(
+        self,
+        message: str = "Database query execution failed.",
+        *,
+        code: str = "CM-112",
+        hint: str = "",
+        cause: Optional[Exception] = None,
+    ) -> None:
+        super().__init__(message=message, code=code, hint=hint, cause=cause)
+
+
+class ValidationError(CarryMemError):
+    """Raised when input validation fails (CM-201)."""
+
+    def __init__(
+        self,
+        message: str = "Input validation failed.",
+        *,
+        code: str = "CM-201",
+        hint: str = "",
+        cause: Optional[Exception] = None,
+    ) -> None:
+        super().__init__(code=code, message=message, hint=hint, cause=cause)
+
+
+class KnowledgeError(CarryMemError):
+    """Raised when knowledge base operations fail (CM-110)."""
+
+    def __init__(
+        self,
+        message: str = "Knowledge base operation failed.",
+        *,
+        code: str = "CM-110",
+        hint: str = "",
+        cause: Optional[Exception] = None,
+    ) -> None:
+        super().__init__(code=code, message=message, hint=hint, cause=cause)
+
+
+class KnowledgeNotConfiguredError(KnowledgeError):
+    """Raised when knowledge adapter is not configured (CM-110)."""
+
+    def __init__(
+        self,
+        message: str = "Knowledge base adapter is not configured.",
+        *,
+        code: str = "CM-110",
+        hint: str = "",
+        cause: Optional[Exception] = None,
+    ) -> None:
+        super().__init__(message=message, code=code, hint=hint, cause=cause)
+
+
+class ClassificationError(CarryMemError):
+    """Classification / rule engine error (CM-300~399)."""
+
+    def __init__(
+        self,
+        message: str = "Memory classification failed.",
+        *,
+        code: str = "CM-301",
+        hint: str = "",
+        cause: Optional[Exception] = None,
+    ) -> None:
+        super().__init__(code=code, message=message, hint=hint, cause=cause)
 
 
 # ── Internal mapping helpers ───────────────────────────────────────
@@ -253,81 +380,67 @@ def _map_value_error(exc: Exception, msg: str) -> CarryMemError:
 
 
 # ── Known exception → error-code mapping ──────────────────────────
+# Uses the locally-defined exception classes (no import from carrymem.exceptions
+# to avoid a circular import now that exceptions.py re-exports from here).
 
-_EXCEPTION_MAP: Dict[Type[Exception], ErrorTemplate] = {}
-
-try:
-    from carrymem.exceptions import ClassificationError as _ClassificationError
-    from carrymem.exceptions import DatabaseError as _DatabaseError
-    from carrymem.exceptions import DBConnectionError as _DBConnectionError
-    from carrymem.exceptions import KnowledgeNotConfiguredError as _KnowledgeNotConfiguredError
-    from carrymem.exceptions import QueryError as _QueryError
-    from carrymem.exceptions import StorageError as _StorageError
-    from carrymem.exceptions import StorageNotConfiguredError as _StorageNotConfiguredError
-    from carrymem.exceptions import ValidationError as _ValidationError
-
-    _EXCEPTION_MAP.update(
-        {
-            _StorageNotConfiguredError: ErrorTemplate(
-                code="CM-100",
-                zh="存储适配器未配置。",
-                en="Storage adapter is not configured.",
-                hint_zh="使用 CarryMem(storage='sqlite') 或传入 StorageAdapter 实例来启用存储功能。",
-                hint_en="Use CarryMem(storage='sqlite') or pass a StorageAdapter instance.",
-            ),
-            _KnowledgeNotConfiguredError: ErrorTemplate(
-                code="CM-110",
-                zh="知识库适配器未配置。",
-                en="Knowledge base adapter is not configured.",
-                hint_zh="使用 CarryMem(knowledge_adapter=ObsidianAdapter('/path')) 来启用知识库功能。",
-                hint_en="Use CarryMem(knowledge_adapter=ObsidianAdapter('/path')).",
-            ),
-            _DatabaseError: ErrorTemplate(
-                code="CM-101",
-                zh="数据库操作失败。",
-                en="Database operation failed.",
-                hint_zh="运行 'carrymem doctor' 进行诊断检查。",
-                hint_en="Run 'carrymem doctor' for diagnostics.",
-            ),
-            _DBConnectionError: ErrorTemplate(
-                code="CM-111",
-                zh="无法连接到数据库。",
-                en="Unable to connect to the database.",
-                hint_zh="检查数据库路径和文件权限。运行 'carrymem init' 初始化数据库。",
-                hint_en="Check DB path and permissions. Run 'carrymem init'.",
-            ),
-            _QueryError: ErrorTemplate(
-                code="CM-112",
-                zh="数据库查询执行失败。",
-                en="Database query execution failed.",
-                hint_zh="检查查询参数是否正确。运行 'carrymem doctor' 排查问题。",
-                hint_en="Check query parameters. Run 'carrymem doctor'.",
-            ),
-            _ClassificationError: ErrorTemplate(
-                code="CM-301",
-                zh="记忆分类失败。",
-                en="Memory classification failed.",
-                hint_zh="请检查记忆内容格式，确保文本不为空且长度合理。",
-                hint_en="Ensure memory content is non-empty and reasonably sized.",
-            ),
-            _ValidationError: ErrorTemplate(
-                code="CM-201",
-                zh="输入验证未通过。",
-                en="Input validation failed.",
-                hint_zh="请检查必填字段和数据格式是否符合要求。",
-                hint_en="Check required fields and data format.",
-            ),
-            _StorageError: ErrorTemplate(
-                code="CM-120",
-                zh="存储操作发生错误。",
-                en="A storage operation error occurred.",
-                hint_zh="检查存储配置和可用空间。运行 'carrymem doctor' 获取详细诊断。",
-                hint_en="Check storage config and available space. Run 'carrymem doctor'.",
-            ),
-        }
-    )
-except ImportError:
-    pass
+_EXCEPTION_MAP: Dict[Type[Exception], ErrorTemplate] = {
+    StorageNotConfiguredError: ErrorTemplate(
+        code="CM-100",
+        zh="存储适配器未配置。",
+        en="Storage adapter is not configured.",
+        hint_zh="使用 CarryMem(storage='sqlite') 或传入 StorageAdapter 实例来启用存储功能。",
+        hint_en="Use CarryMem(storage='sqlite') or pass a StorageAdapter instance.",
+    ),
+    KnowledgeNotConfiguredError: ErrorTemplate(
+        code="CM-110",
+        zh="知识库适配器未配置。",
+        en="Knowledge base adapter is not configured.",
+        hint_zh="使用 CarryMem(knowledge_adapter=ObsidianAdapter('/path')) 来启用知识库功能。",
+        hint_en="Use CarryMem(knowledge_adapter=ObsidianAdapter('/path')).",
+    ),
+    DBConnectionError: ErrorTemplate(
+        code="CM-111",
+        zh="无法连接到数据库。",
+        en="Unable to connect to the database.",
+        hint_zh="检查数据库路径和文件权限。运行 'carrymem init' 初始化数据库。",
+        hint_en="Check DB path and permissions. Run 'carrymem init'.",
+    ),
+    QueryError: ErrorTemplate(
+        code="CM-112",
+        zh="数据库查询执行失败。",
+        en="Database query execution failed.",
+        hint_zh="检查查询参数是否正确。运行 'carrymem doctor' 排查问题。",
+        hint_en="Check query parameters. Run 'carrymem doctor'.",
+    ),
+    DatabaseError: ErrorTemplate(
+        code="CM-101",
+        zh="数据库操作失败。",
+        en="Database operation failed.",
+        hint_zh="运行 'carrymem doctor' 进行诊断检查。",
+        hint_en="Run 'carrymem doctor' for diagnostics.",
+    ),
+    ClassificationError: ErrorTemplate(
+        code="CM-301",
+        zh="记忆分类失败。",
+        en="Memory classification failed.",
+        hint_zh="请检查记忆内容格式，确保文本不为空且长度合理。",
+        hint_en="Ensure memory content is non-empty and reasonably sized.",
+    ),
+    ValidationError: ErrorTemplate(
+        code="CM-201",
+        zh="输入验证未通过。",
+        en="Input validation failed.",
+        hint_zh="请检查必填字段和数据格式是否符合要求。",
+        hint_en="Check required fields and data format.",
+    ),
+    StorageError: ErrorTemplate(
+        code="CM-120",
+        zh="存储操作发生错误。",
+        en="A storage operation error occurred.",
+        hint_zh="检查存储配置和可用空间。运行 'carrymem doctor' 获取详细诊断。",
+        hint_en="Check storage config and available space. Run 'carrymem doctor'.",
+    ),
+}
 
 
 __all__ = [
@@ -341,6 +454,15 @@ __all__ = [
     "SecurityError",  # CM-400~499: Security
     "ImportExportError",  # CM-500~599: Import/Export
     "CLIEntryError",  # CM-600~699: CLI/TUI/MCP
+    # Migrated exception classes (backwards compat with carrymem.exceptions)
+    "StorageError",
+    "StorageNotConfiguredError",
+    "DatabaseError",
+    "DBConnectionError",
+    "QueryError",
+    "ValidationError",
+    "KnowledgeError",
+    "KnowledgeNotConfiguredError",
     # Internal mappers (exposed for testing)
     "_map_sqlite_error",
     "_map_os_error",

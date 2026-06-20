@@ -346,6 +346,21 @@ class TestSecurityLevelAttributes:
 class TestFallbackWarning:
     """Test that fallback cipher emits logger.warning on first use."""
 
+    @pytest.fixture(autouse=True)
+    def _enable_log_propagation(self):
+        """Temporarily enable propagation on the carrymem logger.
+
+        The carrymem logger disables propagation by default (see
+        utils/logger.py) to avoid duplicate console output. caplog attaches
+        its handler to the root logger and relies on propagation, so we
+        re-enable it here for the duration of each test in this class.
+        """
+        carry_logger = logging.getLogger("carrymem")
+        original_propagate = carry_logger.propagate
+        carry_logger.propagate = True
+        yield
+        carry_logger.propagate = original_propagate
+
     def test_warning_emitted_on_first_encrypt(self, caplog):
         """First encrypt call with fallback should log a warning."""
         with caplog.at_level(logging.WARNING, logger="carrymem.security.encryption"):

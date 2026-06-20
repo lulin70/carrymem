@@ -531,7 +531,7 @@ class TestErrorContextPreservation:
             "CM-401": "encryption_failed",
         }
 
-        for code, handler_name in error_scenarios:
+        for code, handler_name in error_scenarios.items():
             err = CarryMemError(
                 code=code,
                 message=f"Simulated {handler_name}",

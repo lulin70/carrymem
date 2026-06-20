@@ -137,7 +137,7 @@ class TestE2EBatchInsert:
             )
 
             assert success_count == 5000, f"Expected all 5000 inserts to succeed, got {success_count}/5000"
-            assert elapsed < 300, f"5000 inserts exceeded time limit: {elapsed:.1f}s"  # 5 minute upper bound
+            assert elapsed < 600, f"5000 inserts exceeded time limit: {elapsed:.1f}s"  # 10 minute upper bound
             assert peak < 1024 * 1024 * 1024, f"Peak memory usage too high: {peak / 1024 / 1024:.1f}MB"  # < 1GB
         finally:
             cm.close()

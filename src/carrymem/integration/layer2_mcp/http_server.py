@@ -323,14 +323,14 @@ class MCPHTTPServer:
     async def start(self):
         self._server = await asyncio.start_server(self._handle_request, self._host, self._port)
         addrs = ", ".join(str(s.getsockname()) for s in self._server.sockets)
-        print(f"CarryMem MCP HTTP Server running on {addrs}")
-        print(f"  - MCP endpoints: /sse, /message")
-        print(f"  - Monitoring: /health, /healthz, /metrics")
+        logger.info("CarryMem MCP HTTP Server running on %s", addrs)
+        logger.info("  - MCP endpoints: /sse, /message")
+        logger.info("  - Monitoring: /health, /healthz, /metrics")
         if self._api_key:
-            print("API key authentication enabled")
+            logger.info("API key authentication enabled")
         else:
-            print("⚠️  WARNING: No API key set — server is open to all connections!")
-            print("   Set CARRYMEM_API_KEY env var or use --api-key flag")
+            logger.warning("⚠️  WARNING: No API key set — server is open to all connections!")
+            logger.warning("   Set CARRYMEM_API_KEY env var or use --api-key flag")
 
         self._health_checker.set_ready(True)
 
@@ -344,7 +344,7 @@ class MCPHTTPServer:
         for client in self._clients.values():
             client.close()
         self._clients.clear()
-        print("CarryMem MCP HTTP Server stopped")
+        logger.info("CarryMem MCP HTTP Server stopped")
 
 
 def run_http_server(host: str = "127.0.0.1", port: int = 8765, api_key: Optional[str] = None):

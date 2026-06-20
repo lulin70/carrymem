@@ -1,41 +1,47 @@
-"""Custom exceptions for CarryMem."""
+"""Backwards compatibility shim — all exceptions now live in carrymem.errors.
 
+Historically this module defined a parallel ``CarryMemError`` hierarchy
+(subclassing ``Exception`` directly) which caused ``isinstance`` checks
+against ``carrymem.errors.CarryMemError`` to fail. The rich, error-code
+bearing versions now live in :mod:`carrymem.errors` and are re-exported
+here so existing ``from carrymem.exceptions import ...`` call sites keep
+working.
+"""
 
-class CarryMemError(Exception):
-    """Base exception for all CarryMem errors."""
+from carrymem.errors import (
+    CarryMemError,
+    ClassificationError,
+    CLIEntryError,
+    ConfigError,
+    DBConnectionError,
+    DatabaseError,
+    ImportExportError,
+    KnowledgeError,
+    KnowledgeNotConfiguredError,
+    MemoryOperationError,
+    QueryError,
+    SecurityError,
+    StorageAdapterError,
+    StorageError,
+    StorageNotConfiguredError,
+    ValidationError,
+)
 
-
-class StorageError(CarryMemError):
-    """Raised when storage operations fail."""
-
-
-class StorageNotConfiguredError(StorageError):
-    """Raised when storage adapter is not configured."""
-
-
-class ClassificationError(CarryMemError):
-    """Raised when classification fails."""
-
-
-class ValidationError(CarryMemError):
-    """Raised when input validation fails."""
-
-
-class KnowledgeError(CarryMemError):
-    """Raised when knowledge base operations fail."""
-
-
-class KnowledgeNotConfiguredError(KnowledgeError):
-    """Raised when knowledge adapter is not configured."""
-
-
-class DatabaseError(StorageError):
-    """Raised when database operations fail."""
-
-
-class DBConnectionError(DatabaseError):
-    """Raised when database connection fails."""
-
-
-class QueryError(DatabaseError):
-    """Raised when database query fails."""
+__all__ = [
+    "CarryMemError",
+    "StorageError",
+    "StorageNotConfiguredError",
+    "ClassificationError",
+    "ValidationError",
+    "KnowledgeError",
+    "KnowledgeNotConfiguredError",
+    "DatabaseError",
+    "DBConnectionError",
+    "QueryError",
+    "ConfigError",
+    "StorageAdapterError",
+    "MemoryOperationError",
+    "SecurityError",
+    "ImportExportError",
+    "CLIEntryError",
+]

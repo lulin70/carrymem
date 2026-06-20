@@ -56,6 +56,15 @@ def register_fact_patterns(registry: PatternRegistry) -> None:
             ("infra", r"\b(docker|kubernetes|aws|gcp|azure|linux|nginx|git|github|ci|cd)\b", "tech_term"),
             ("ai", r"\b(llm|gpt|claude|gemini|llama|rag|vector|embedding|pytorch|tensorflow|mcp)\b", "tech_term"),
             ("security", r"\b(oauth|jwt|encryption|2fa|mfa|rbac|sso|ssl|tls|api\s+key)\b", "tech_term"),
+            (
+                "system_terms",
+                r"\b(instance|namespace|agile|methodology|containerization|microservices|"
+                r"serverless|orchestration|deployment|monitoring|observability|"
+                r"infrastructure|pipeline|scrum|devops|database|connection)\b",
+                "tech_term",
+            ),
+            ("env_vars", r"\benvironment\s+variables?\b", "tech_term"),
+            ("identifier", r"\b[a-z]+_[a-z]+\b", "tech_term"),
             ("version_num", r"\d+(\.\d+)+", "version"),
             ("date_pattern", r"\d{4}[-/]\d{2}", "version"),
             ("v_version", r"\b(v?\d+\.\d+)\b", "version"),

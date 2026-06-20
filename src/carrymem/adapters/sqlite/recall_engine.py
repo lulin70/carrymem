@@ -170,7 +170,7 @@ class RecallEngine:
         else:
             rows = self._fts_search(query, where_clause, params, limit)
 
-        if not rows and has_cjk(query):
+        if not rows:
             rows = self._like_search(query, where_clause, params, limit)
 
         if not rows or len(rows) < max(3, limit // 4):

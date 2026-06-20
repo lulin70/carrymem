@@ -146,7 +146,7 @@ class TestLogLevelFiltering(unittest.TestCase):
         """测试 DEBUG 级别显示所有日志."""
         with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
             setup_logging(level=logging.DEBUG, console_output=True)
-            logger = get_logger("test.debug")
+            logger = get_logger("carrymem.test.debug")
 
             logger.debug("Debug message")
             logger.info("Info message")
@@ -163,7 +163,7 @@ class TestLogLevelFiltering(unittest.TestCase):
         """测试 INFO 级别过滤 DEBUG 日志."""
         with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
             setup_logging(level=logging.INFO, console_output=True)
-            logger = get_logger("test.info")
+            logger = get_logger("carrymem.test.info")
 
             logger.debug("Debug message")  # 不应该出现
             logger.info("Info message")  # 应该出现
@@ -176,7 +176,7 @@ class TestLogLevelFiltering(unittest.TestCase):
         """测试 WARNING 级别过滤 INFO 和 DEBUG 日志."""
         with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
             setup_logging(level=logging.WARNING, console_output=True)
-            logger = get_logger("test.warning")
+            logger = get_logger("carrymem.test.warning")
 
             logger.debug("Debug message")  # 不应该出现
             logger.info("Info message")  # 不应该出现
@@ -191,7 +191,7 @@ class TestLogLevelFiltering(unittest.TestCase):
         """测试 ERROR 级别只显示错误及以上."""
         with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
             setup_logging(level=logging.ERROR, console_output=True)
-            logger = get_logger("test.error")
+            logger = get_logger("carrymem.test.error")
 
             logger.debug("Debug")  # 不应该出现
             logger.info("Info")  # 不应该出现
@@ -415,12 +415,10 @@ class TestLogFileRotation(unittest.TestCase):
         log_file = os.path.join(self.tmpdir, "test.log")
 
         setup_logging(log_file=log_file, console_output=False)
-        logger = get_logger("test.file")
+        logger = get_logger("carrymem.test.file")
         logger.info("Test log message")
 
         # 强制刷新 handler
-        import logging
-
         root = logging.getLogger("carrymem")
         for handler in root.handlers:
             handler.flush()
@@ -436,12 +434,10 @@ class TestLogFileRotation(unittest.TestCase):
         log_file = os.path.join(self.tmpdir, "format_test.log")
 
         setup_logging(level=logging.INFO, log_file=log_file, console_output=False)
-        logger = get_logger("test.format")
+        logger = get_logger("carrymem.test.format")
         logger.info("Formatted message")
 
         # 刷新
-        import logging
-
         root = logging.getLogger("carrymem")
         for handler in root.handlers:
             handler.flush()

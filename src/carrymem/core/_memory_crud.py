@@ -1,11 +1,13 @@
 """Memory CRUD: classify_and_remember, declare, forget, update, merge, etc."""
 
+import logging
 from typing import Any, Callable, Dict, List, Optional
 
 from carrymem.adapters.base import MemoryEntry
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
-from carrymem.constants import BATCH_RECALL_LIMIT
+from carrymem.constants import BATCH_RECALL_LIMIT, MAX_MESSAGE_LENGTH
 from carrymem.core._lifecycle import StorageNotConfiguredError
+from carrymem.exceptions import ClassificationError
 from carrymem.types import (
     ClassificationResult,
     DeclareResult,
@@ -19,6 +21,8 @@ from carrymem.utils.validators import (
     validate_message,
     validate_storage_key,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class MemoryCRUDMixin:
@@ -53,6 +57,11 @@ class MemoryCRUDMixin:
     ) -> ClassificationResult:
         self._check_write_permission(user_id)
 
+        # Validate input BEFORE checking storage adapter so that invalid
+        # messages (empty / too long) raise ValidationError regardless of
+        # whether a storage adapter is configured.
+        validate_message(message, max_length=MAX_MESSAGE_LENGTH)
+
         if not self._adapter:
             raise StorageNotConfiguredError()
 
@@ -64,7 +73,19 @@ class MemoryCRUDMixin:
             return redact_result  # type: ignore[return-value]
 
         # 2. Classify
-        classify_result = self._classify_message(resolved_message, context, language, force_type, message)
+        try:
+            classify_result = self._classify_message(resolved_message, context, language, force_type, message)
+        except ClassificationError as e:
+            logger.warning("Classification failed: %s", e)
+            return {
+                "stored": False,
+                "should_remember": False,
+                "entries": [],
+                "storage_keys": [],
+                "type": "unknown",
+                "content": message,
+                "error": str(e),
+            }
         if isinstance(classify_result, list) and len(classify_result) == 0:
             base_result = self.classify_message(resolved_message, context=context, language=language)
             return {
@@ -109,7 +130,7 @@ class MemoryCRUDMixin:
         context: Optional[Dict[str, Any]] = None,
         language: Optional[str] = None,
     ) -> ClassificationResult:
-        validate_message(message)
+        validate_message(message, max_length=MAX_MESSAGE_LENGTH)
         validate_context(context)
         validate_language(language)
         result = self._engine.process_message(message, context=context, language=language)

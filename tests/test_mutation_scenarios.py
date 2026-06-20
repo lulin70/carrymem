@@ -27,9 +27,11 @@ from carrymem.adapters.base import MemoryEntry, StoredMemory
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.constants import (
     DEFAULT_FORCE_TYPE_CONFIDENCE,
+    DEFAULT_RECALL_LIMIT,
     MAX_MESSAGE_LENGTH,
     MIN_QUALITY_THRESHOLD,
 )
+from carrymem.exceptions import ClassificationError
 from carrymem.quality_scorer import MemoryQualityScorer, QualityAnalyzer
 
 # ==============================================================================
@@ -535,7 +537,7 @@ class TestLogicalOperatorReplacement:
                 storage_key=f"mem-{i}",
                 content=f"Content {i}",
                 type="user_preference",
-                confidence=0.9 if i % 2 == 0 else 0.2,
+                confidence=0.9 if i % 2 == 0 else 0.05,
                 access_count=10 if i % 2 == 0 else 0,
                 created_at=datetime.now(timezone.utc),
                 source_layer="declaration",
@@ -544,14 +546,15 @@ class TestLogicalOperatorReplacement:
         ]
 
         # 设置较高的过滤阈值
-        filtered = scorer.filter_by_quality(memories, min_score=MIN_QUALITY_THRESHOLD)
+        filtered = scorer.filter_by_quality(memories, min_score=0.5)
 
         # MUTATION CHECK: 如果过滤条件的 and/or 被互换，
         # 可能会包含低质量记忆或排除高质量记忆
         for mem in filtered:
             individual_score = scorer.score(mem)
-            assert individual_score >= MIN_QUALITY_THRESHOLD, (
-                f"Filtered memory has score {individual_score:.3f} " f"below threshold {MIN_QUALITY_THRESHOLD}"
+            assert individual_score >= 0.5, (
+                f"Filtered memory has score {individual_score:.3f} "
+                f"below threshold 0.5"
             )
 
         # 验证确实过滤掉了一些

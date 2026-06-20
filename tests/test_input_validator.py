@@ -124,7 +124,7 @@ class TestContentValidation:
 
     def test_too_long_rejected(self, validator):
         with pytest.raises(ValidationError, match="maximum length"):
-            validator.validate_content("x" * 10001)
+            validator.validate_content("x" * (validator.MAX_CONTENT_LENGTH + 1))
 
     def test_empty_rejected(self, validator):
         with pytest.raises(ValidationError, match="cannot be empty"):

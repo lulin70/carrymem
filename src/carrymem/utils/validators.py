@@ -171,8 +171,8 @@ def validate_limit(limit: int, max_limit: int = 100000) -> None:
     if not isinstance(limit, int):
         raise ValidationError(f"Limit must be an integer, got {type(limit).__name__}")
 
-    if limit < 0:
-        raise ValidationError(f"Limit cannot be negative: {limit}")
+    if limit < 1:
+        raise ValidationError(f"Limit must be at least 1, got: {limit}")
 
     if limit > max_limit:
         raise ValidationError(f"Limit too large: {limit} (max {max_limit})")

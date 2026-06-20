@@ -63,7 +63,7 @@ ERROR_MESSAGES: Dict[str, Dict[str, str]] = {
         "hint_en": "Run 'carrymem init' to initialize database schema.",
     },
     "CM-104": {
-        "zh": "数据库被其他进程锁定。",
+        "zh": "Database is locked (数据库被其他进程锁定)。",
         "en": "Database is locked by another process.",
         "hint_zh": "关闭其他 CarryMem 实例，稍后重试。",
         "hint_en": "Close other CarryMem instances or wait and retry.",
