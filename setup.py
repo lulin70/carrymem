@@ -103,6 +103,7 @@ setup(
             "pytest>=7.0",
             "pytest-cov>=4.0",
             "pytest-mock>=3.10",
+            "pytest-timeout>=2.0",
             "coverage[toml]>=7.0",
             "pre-commit>=3.0",
             "build>=0.10",
