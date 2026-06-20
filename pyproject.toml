@@ -21,6 +21,7 @@ markers = [
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
     "asyncio: marks tests as async (requires pytest-asyncio)",
+    "coverage: marks tests as type annotation coverage tests",
 ]
 asyncio_mode = "auto"
 
