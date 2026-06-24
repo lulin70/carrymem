@@ -28,7 +28,6 @@ class TestCheckConflicts:
         assert isinstance(conflicts, list)
         cm.close()
 
-    @pytest.mark.skip(reason="Conflict detector contradiction logic too narrow - needs redesign")
     def test_conflicts_with_contradictions(self, temp_db):
         cm = CarryMem(db_path=temp_db)
         cm.declare("I like using Vim for editing")

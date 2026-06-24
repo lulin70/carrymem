@@ -268,7 +268,6 @@ class TestCarryMemV060(unittest.TestCase):
         finally:
             cm.close()
 
-    @pytest.mark.skip(reason="Audit log not written for remember operations - needs investigation")
     def test_audit_log_on_remember(self):
         cm = CarryMem(storage="sqlite", db_path=self.db_path)
         try:
@@ -279,7 +278,6 @@ class TestCarryMemV060(unittest.TestCase):
         finally:
             cm.close()
 
-    @pytest.mark.skip(reason="Audit log not written for forget operations - needs investigation")
     def test_audit_log_on_forget(self):
         cm = CarryMem(storage="sqlite", db_path=self.db_path)
         try:

@@ -128,4 +128,10 @@ class BackupMixin:
             filter_.action = operation
 
         events = self._adapter._audit.query(filter_)
-        return [e.to_dict() for e in events]
+        # Map action→operation for API compatibility with legacy callers
+        result = []
+        for e in events:
+            d = e.to_dict()
+            d["operation"] = d.pop("action", "")
+            result.append(d)
+        return result

@@ -117,23 +117,22 @@ class MemoryCRUDMixin:
                 force_type,
                 session_id,
             )
-            from carrymem.security.audit import log_write
-
-            log_write(
-                resource="memory",
-                user_id=user_id,
-                details={"operation": "classify_and_remember", "message_preview": message[:100]},
-            )
+            if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:
+                self._adapter._audit.log_operation(
+                    "remember",
+                    storage_key=result.get("storage_keys", [None])[0] if result.get("storage_keys") else None,
+                    memory_type=classify_result.get("memory_type") if isinstance(classify_result, dict) else None,
+                    success=True,
+                    details={"message_preview": message[:100]},
+                )
             return result
         except Exception as exc:
-            from carrymem.security.audit import log_write
-
-            log_write(
-                resource="memory",
-                user_id=user_id,
-                details={"operation": "classify_and_remember", "error": str(exc)},
-                result="FAILURE",
-            )
+            if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:
+                self._adapter._audit.log_operation(
+                    "remember",
+                    success=False,
+                    details={"error": str(exc), "message_preview": message[:100]},
+                )
             raise
 
     def classify_message(
@@ -231,13 +230,13 @@ class MemoryCRUDMixin:
 
         self._auto_backup()
 
-        from carrymem.security.audit import log_write
-
-        log_write(
-            resource="memory",
-            user_id=user_id,
-            details={"operation": "declare", "storage_keys": storage_keys},
-        )
+        if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:
+            self._adapter._audit.log_operation(
+                "declare",
+                storage_key=storage_keys[0] if storage_keys else None,
+                success=True,
+                details={"storage_keys": storage_keys},
+            )
 
         return {
             "declared": True,
@@ -268,14 +267,12 @@ class MemoryCRUDMixin:
         result = self._adapter.forget(memory_id)
         self._auto_backup()
 
-        from carrymem.security.audit import log_delete
-
-        log_delete(
-            resource="memory",
-            user_id=user_id,
-            details={"operation": "forget_memory", "memory_id": memory_id},
-            result="SUCCESS" if result else "FAILURE",
-        )
+        if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:
+            self._adapter._audit.log_operation(
+                "forget",
+                storage_key=memory_id,
+                success=result,
+            )
         return result
 
     def update_memory(
@@ -295,14 +292,13 @@ class MemoryCRUDMixin:
 
         result = self._adapter.update_memory(storage_key, new_content, reason)
         if result is None:
-            from carrymem.security.audit import log_write
-
-            log_write(
-                resource="memory",
-                user_id=user_id,
-                details={"operation": "update_memory", "storage_key": storage_key, "error": "not found"},
-                result="FAILURE",
-            )
+            if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:
+                self._adapter._audit.log_operation(
+                    "update",
+                    storage_key=storage_key,
+                    success=False,
+                    details={"error": "not found"},
+                )
             return {"updated": False, "error": f"Memory not found: {storage_key}"}
 
         if self._adapter._cache:
@@ -310,13 +306,13 @@ class MemoryCRUDMixin:
 
         self._auto_backup()
 
-        from carrymem.security.audit import log_write
-
-        log_write(
-            resource="memory",
-            user_id=user_id,
-            details={"operation": "update_memory", "storage_key": storage_key, "version": result.version},
-        )
+        if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:
+            self._adapter._audit.log_operation(
+                "update",
+                storage_key=storage_key,
+                success=True,
+                details={"version": result.version},
+            )
 
         return {
             "updated": True,

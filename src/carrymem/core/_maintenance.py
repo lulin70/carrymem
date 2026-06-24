@@ -32,7 +32,8 @@ class MaintenanceMixin:
 
         all_conflicts: List[Dict[str, Any]] = []
 
-        all_memories = self._adapter.recall("", limit=BATCH_RECALL_LIMIT)
+        # Include superseded memories so contradictions between old and new can be detected
+        all_memories = self._adapter.recall("", limit=BATCH_RECALL_LIMIT, filters={"include_superseded": True})
         if all_memories:
             detector = ConflictDetector()
             memory_conflicts = detector.detect_conflicts(all_memories)
