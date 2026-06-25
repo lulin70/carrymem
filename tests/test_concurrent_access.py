@@ -72,6 +72,68 @@ def _make_entry(worker_id: int, op_idx: int, content: str) -> MemoryEntry:
 
 
 # ---------------------------------------------------------------------------
+# Torch warmup helpers
+# ---------------------------------------------------------------------------
+#
+# Root cause of macOS bus errors/segfaults: each CarryMem(db_path=...) call
+# creates a SQLiteAdapter which loads its own SentenceTransformer model
+# (backed by torch). When multiple threads do this concurrently on macOS,
+# torch's internal initialization conflicts with SQLite threading, causing
+# bus errors/segfaults.
+#
+# Fix: pre-load the SentenceTransformer model ONCE in the main thread and
+# share it across all worker threads via SQLiteAdapter's _external_embedding_model
+# parameter. This completely avoids concurrent torch model loading.
+
+_shared_embedding_model = None
+_warmup_lock = threading.Lock()
+
+
+def _get_shared_embedding_model():
+    """Load the SentenceTransformer model once (main thread) and cache it.
+
+    Returns the shared model instance, or None if dependencies are unavailable.
+    The caller should keep a reference alive for the test duration.
+    """
+    global _shared_embedding_model
+    if _shared_embedding_model is None:
+        with _warmup_lock:
+            if _shared_embedding_model is None:
+                try:
+                    os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+                    import torch
+
+                    # Limit torch internal threads to avoid OpenMP conflicts
+                    # with SQLite's threading model on macOS.
+                    torch.set_num_threads(1)
+                    from sentence_transformers import SentenceTransformer
+
+                    model = SentenceTransformer("all-MiniLM-L6-v2")
+                    # Force full model initialization (weights loaded, graph built)
+                    model.encode(["warmup"])
+                    _shared_embedding_model = model
+                except Exception:
+                    # Mark as unavailable so we don't retry on every call
+                    _shared_embedding_model = False
+    return _shared_embedding_model if _shared_embedding_model else None
+
+
+def _make_carrymem(db_path: str) -> CarryMem:
+    """Create a CarryMem instance that reuses the shared embedding model.
+
+    This avoids concurrent torch model loading in worker threads by passing
+    the pre-loaded model via SQLiteAdapter's _external_embedding_model.
+    Falls back to default CarryMem construction if the shared model is
+    unavailable (e.g. dependencies missing).
+    """
+    model = _get_shared_embedding_model()
+    if model is not None:
+        adapter = SQLiteAdapter(db_path=db_path, _external_embedding_model=model)
+        return CarryMem(storage=adapter)
+    return CarryMem(db_path=db_path)
+
+
+# ---------------------------------------------------------------------------
 # Test 1: Multi-threaded concurrent read/write via CarryMem
 # ---------------------------------------------------------------------------
 
@@ -81,7 +143,10 @@ class TestMultiThreadConcurrentReadWrite:
     each performing 30 operations. Verify: no 'database is locked' errors,
     all operations complete successfully."""
 
-    @pytest.mark.skip(reason="Bus error on macOS: concurrent RuleStorage DDL initialization with torch")
+    @pytest.mark.skipif(
+        sys.platform == "darwin",
+        reason="Segfault on macOS: concurrent torch inference + SQLite threading conflict",
+    )
     def test_concurrent_thread_read_write(self):
         db_path = _make_temp_db()
         lock_errors: List[str] = []
@@ -90,8 +155,10 @@ class TestMultiThreadConcurrentReadWrite:
         lock = threading.Lock()
 
         try:
-            # Pre-initialize schema so concurrent instances don't conflict on DDL
-            cm_init = CarryMem(db_path=db_path)
+            # Warmup torch in main thread + pre-initialize schema so concurrent
+            # instances don't conflict on DDL or torch model loading.
+            _ = _get_shared_embedding_model()
+            cm_init = _make_carrymem(db_path)
             cm_init.classify_and_remember("init")
             cm_init.close()
 
@@ -99,7 +166,7 @@ class TestMultiThreadConcurrentReadWrite:
                 local_success = 0
                 # Each thread creates its own CarryMem instance (SQLite requires
                 # connections to be used in the same thread where they were created)
-                cm = CarryMem(db_path=db_path)
+                cm = _make_carrymem(db_path)
                 try:
                     for i in range(num_ops):
                         try:
@@ -151,7 +218,7 @@ class TestMultiThreadConcurrentReadWrite:
             assert len(success_counts) == num_threads, f"Only {len(success_counts)}/{num_threads} threads completed"
 
             # Verify data was actually stored
-            cm_verify = CarryMem(db_path=db_path)
+            cm_verify = _make_carrymem(db_path)
             stats = cm_verify.get_stats()
             assert stats["total_count"] > 0, "No memories were stored"
 
@@ -297,7 +364,10 @@ class TestMixedReadWriteConcurrency:
     Read threads continuously recall_memories.
     Verify: reads don't block, writes don't get lost."""
 
-    @pytest.mark.skip(reason="Known segfault with concurrent torch model loading + SQLite on macOS")
+    @pytest.mark.skipif(
+        sys.platform == "darwin",
+        reason="Segfault on macOS: concurrent torch inference + SQLite threading conflict",
+    )
     def test_mixed_read_write(self):
         db_path = _make_temp_db()
         lock_errors: List[str] = []
@@ -309,14 +379,17 @@ class TestMixedReadWriteConcurrency:
         lock = threading.Lock()
 
         try:
-            # Pre-populate some data so reads have something to find
-            cm = CarryMem(db_path=db_path)
+            # Warmup torch in main thread + pre-populate data so reads have
+            # something to find. Using the shared model avoids concurrent
+            # torch loading in the writer/reader threads.
+            _ = _get_shared_embedding_model()
+            cm = _make_carrymem(db_path)
             for i in range(10):
                 cm.classify_and_remember(f"Initial preference {i}: I prefer Python")
             cm.close()
 
             def writer(writer_id: int):
-                cm_w = CarryMem(db_path=db_path)
+                cm_w = _make_carrymem(db_path)
                 while not stop_event.is_set():
                     try:
                         msg = f"Writer-{writer_id} at {time.time():.2f}: I prefer dark mode"
@@ -336,7 +409,7 @@ class TestMixedReadWriteConcurrency:
                 cm_w.close()
 
             def reader(reader_id: int):
-                cm_r = CarryMem(db_path=db_path)
+                cm_r = _make_carrymem(db_path)
                 while not stop_event.is_set():
                     try:
                         results = cm_r.recall_memories(query="dark mode")
@@ -393,7 +466,7 @@ class TestMixedReadWriteConcurrency:
             assert read_count["value"] > 0, "No reads completed during test"
 
             # Verify data can be read back
-            cm_verify = CarryMem(db_path=db_path)
+            cm_verify = _make_carrymem(db_path)
             stats = cm_verify.get_stats()
             assert stats["total_count"] > 10, f"Expected more than 10 memories, got {stats['total_count']}"
 
@@ -528,13 +601,17 @@ class TestSharedDbPathInstances:
         finally:
             _cleanup_db(db_path)
 
-    @pytest.mark.skip(reason="Bus error on macOS: concurrent CarryMem init with torch + SQLite")
+    @pytest.mark.skipif(
+        sys.platform == "darwin",
+        reason="Segfault on macOS: concurrent torch inference + SQLite threading conflict",
+    )
     def test_shared_db_path_carrymem_instances_sequential_init(self):
         """Test with CarryMem instances where schema is initialized first,
         then instances operate concurrently.
 
         This avoids the RuleStorage bus error by pre-initializing the
-        rule engine schema before concurrent access.
+        rule engine schema before concurrent access, and avoids concurrent
+        torch model loading by sharing a pre-loaded embedding model.
         """
         db_path = _make_temp_db()
         lock_errors: List[str] = []
@@ -543,16 +620,18 @@ class TestSharedDbPathInstances:
         lock = threading.Lock()
 
         try:
-            # Pre-initialize: create one CarryMem instance and trigger
-            # rule_engine to ensure schema is set up before concurrent access
-            cm_init = CarryMem(db_path=db_path)
+            # Warmup torch in main thread + pre-initialize: create one CarryMem
+            # instance and trigger rule_engine to ensure schema is set up before
+            # concurrent access.
+            _ = _get_shared_embedding_model()
+            cm_init = _make_carrymem(db_path)
             _ = cm_init.rule_engine  # Trigger RuleStorage schema init
             cm_init.close()
 
             def instance_worker(instance_id: int, num_ops: int = 20):
                 """Each worker creates its own CarryMem instance."""
                 try:
-                    cm = CarryMem(db_path=db_path)
+                    cm = _make_carrymem(db_path)
                     local_stored = 0
                     local_recalled = 0
 
@@ -619,7 +698,7 @@ class TestSharedDbPathInstances:
                 assert result["stored"] > 0, f"Instance-{iid} stored 0 memories"
 
             # Verify data can be read from a fresh instance
-            cm_verify = CarryMem(db_path=db_path)
+            cm_verify = _make_carrymem(db_path)
             stats = cm_verify.get_stats()
             assert stats["total_count"] > 0, "No memories found after shared-db test"
 

@@ -173,24 +173,33 @@ class TestE2EAdapterFeatureParity:
             finally:
                 cm.close()
 
-    def test_both_adapters_support_backup(self, tmp_path):
-        """Verify: backup works on both adapters (if supported)."""
-        for storage_type in ["sqlite", "json"]:
-            ext = ".db" if storage_type == "sqlite" else ".json"
-            db_path = str(tmp_path / f"backup_{storage_type}{ext}")
-            backup_dir = str(tmp_path / f"backup_{storage_type}_dir")
-            os.makedirs(backup_dir, exist_ok=True)
+    @pytest.mark.parametrize("storage_type", ["sqlite", "json"])
+    def test_both_adapters_support_backup(self, tmp_path, storage_type):
+        """Verify: backup works on SQLite; JSON adapter does not support backup.
 
-            cm = CarryMem(storage=storage_type, db_path=db_path)
-            try:
-                cm.classify_and_remember(f"Backup test {storage_type}")
-                try:
-                    backup_result = cm.backup(backup_dir=backup_dir)
-                    assert isinstance(backup_result, dict), f"{storage_type}: backup should return dict"
-                except (AttributeError, TypeError, NotImplementedError):
-                    pytest.skip(f"{storage_type} adapter may not support backup")
-            finally:
-                cm.close()
+        The CarryMem.backup() method is a SQLite-only feature (see BackupMixin).
+        For non-SQLite adapters it returns ``{"error": "Backup only supported with
+        SQLiteAdapter"}`` rather than raising. We therefore skip JSON specifically
+        (via parametrize, so the SQLite case still runs and is verified) and
+        verify SQLite backup returns a dict result.
+        """
+        # JSON adapter genuinely does not support backup — skip it specifically
+        # rather than relying on a generic exception handler.
+        if storage_type == "json":
+            pytest.skip("JSON adapter does not support backup (SQLite-only feature)")
+
+        ext = ".db" if storage_type == "sqlite" else ".json"
+        db_path = str(tmp_path / f"backup_{storage_type}{ext}")
+        backup_dir = str(tmp_path / f"backup_{storage_type}_dir")
+        os.makedirs(backup_dir, exist_ok=True)
+
+        cm = CarryMem(storage=storage_type, db_path=db_path)
+        try:
+            cm.classify_and_remember(f"Backup test {storage_type}")
+            backup_result = cm.backup(backup_dir=backup_dir)
+            assert isinstance(backup_result, dict), f"{storage_type}: backup should return dict"
+        finally:
+            cm.close()
 
 
 class TestE2EAdapterSpecificBehavior:
@@ -222,21 +231,18 @@ class TestE2EAdapterSpecificBehavior:
         finally:
             cm.close()
 
-        # File may be created at json_path or at a default location
-        # Check both possibilities
-        if os.path.exists(json_path):
-            check_path = json_path
-        else:
-            # JSONAdapter may use a default path like ~/.carrymem/memories.json
-            import os as _os
+        # CarryMem's loader instantiates JSONAdapter without forwarding db_path,
+        # so the adapter falls back to its default path
+        # (~/.carrymem/memories.json). Determine the actual file location by
+        # inspecting the adapter's _path attribute, then fall back to the
+        # requested json_path and the well-known default location.
+        adapter_path = getattr(getattr(cm, "_adapter", None), "_path", None)
+        default_path = os.path.join(os.path.expanduser("~"), ".carrymem", "memories.json")
 
-            default_path = _os.path.join(_os.path.expanduser("~"), ".carrymem", "memories.json")
-            if os.path.exists(default_path):
-                check_path = default_path
-            else:
-                # If no file was created, the data might be in-memory only
-                # This is acceptable if JSONAdapter doesn't persist in this mode
-                pytest.skip("JSON file not created at expected location")
+        candidate_paths = [p for p in [adapter_path, json_path, default_path] if p]
+        check_path = next((p for p in candidate_paths if os.path.exists(p)), None)
+
+        assert check_path is not None, f"JSON file not created at any expected location: {candidate_paths}"
 
         with open(check_path, "r", encoding="utf-8") as f:
             try:
