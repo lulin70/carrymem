@@ -507,9 +507,11 @@ class TestClassifyAndRememberStatementRemoval:
     def test_mutation_7_remove_audit_logging(self):
         """MUTATION #7: 移除审计日志记录
 
-        Original Logic (Line 81-87):
-            from carrymem.security.audit import log_write
-            log_write(resource="memory", user_id=user_id, details={...})
+        Original Logic (_memory_crud.py Line 120-127):
+            if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:
+                self._adapter._audit.log_operation(
+                    "remember", storage_key=..., memory_type=..., success=True, details={...}
+                )
             return result
 
         Mutated Logic:
@@ -523,7 +525,7 @@ class TestClassifyAndRememberStatementRemoval:
         cm, db_path = setup_carrymem()
 
         try:
-            with patch("carrymem.security.audit.log_write") as mock_log:
+            with patch.object(cm._adapter._audit, "log_operation") as mock_log:
                 cm.classify_and_remember(
                     "Auditable operation test",
                     user_id="test-user-123",
@@ -532,18 +534,21 @@ class TestClassifyAndRememberStatementRemoval:
                 # MUTATION CHECK: 如果审计日志被移除，
                 # mock_log 应该没有被调用
                 assert mock_log.called, (
-                    "log_write should be called for audit trail. " "Audit logging may have been removed (mutation)."
+                    "log_operation should be called for audit trail. " "Audit logging may have been removed (mutation)."
                 )
 
                 # 验证调用参数
                 call_args = mock_log.call_args
-                assert call_args is not None, "log_write was called but no args recorded"
+                assert call_args is not None, "log_operation was called but no args recorded"
 
+                # 新审计机制：log_operation("remember", storage_key=..., success=True, details={...})
+                args = call_args.args if call_args.args else ()
                 kwargs = call_args.kwargs if call_args.kwargs else {}
+                # 第一个位置参数应为操作名 "remember"
                 assert (
-                    kwargs.get("resource") == "memory"
-                ), f"Audit resource should be 'memory', got '{kwargs.get('resource')}'"
-                assert kwargs.get("user_id") == "test-user-123", f"user_id should be preserved in audit log"
+                    args and args[0] == "remember"
+                ), f"operation should be 'remember', got '{args[0] if args else None}'"
+                assert kwargs.get("success") is True, "audit should record success=True for stored memories"
         finally:
             teardown_carrymem(cm, db_path)
 
