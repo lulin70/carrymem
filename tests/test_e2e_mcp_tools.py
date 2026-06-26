@@ -486,12 +486,12 @@ class TestMCPToolsE2E(unittest.TestCase):
 
     # === Knowledge Tools (conditional — skip if no knowledge adapter) ===
 
-    @pytest.mark.skipif(True, reason="Knowledge adapter requires Obsidian vault; tested separately")
+    @pytest.mark.skip(reason="Requires Obsidian vault; tested separately in test_obsidian_adapter.py")
     def test_index_knowledge_tool(self):
         """Verify: index_knowledge indexes knowledge base (requires ObsidianAdapter)."""
         pass
 
-    @pytest.mark.skipif(True, reason="Knowledge adapter requires Obsidian vault; tested separately")
+    @pytest.mark.skip(reason="Requires Obsidian vault; tested separately in test_obsidian_adapter.py")
     def test_recall_from_knowledge_tool(self):
         """Verify: recall_from_knowledge searches knowledge base (requires ObsidianAdapter)."""
         pass

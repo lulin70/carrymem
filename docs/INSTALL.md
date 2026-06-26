@@ -121,7 +121,7 @@ This verifies:
 The PyPI package is `carrymem`, but the import name is `carrymem`:
 ```python
 from carrymem import CarryMem  # Correct
-from carrymem import CarryMem  # Wrong
+import carrymem                 # Also correct
 ```
 
 ### "carrymem command not found"

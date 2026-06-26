@@ -12,7 +12,13 @@ profile.out
 
 # Backups (contain user data)
 *.bak
+backups/
 backup/
+
+# Leaked in-memory DB files (regression guard)
+:memory:
+:memory:-shm
+:memory:-wal
 
 # Virtual environments
 .venv/
@@ -104,6 +110,7 @@ CODE_WALKTHROUGH_ISSUES_*.md
 # Benchmark results
 benchmarks/*.json
 mce_bench_*.json
+results/
 
 # Benchmark archive (old scripts with sensitive info)
 benchmarks/archive/

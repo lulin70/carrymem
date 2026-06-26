@@ -33,7 +33,6 @@ src/carrymem/
 │   ├── sqlite_adapter.py    # SQLiteAdapter 主入口
 │   ├── json_adapter.py      # JSONAdapter
 │   ├── obsidian_adapter.py  # ObsidianAdapter
-│   ├── coding_context_adapter.py
 │   ├── loader.py            # 动态加载器
 │   └── sqlite/              # SQLite 内部实现细节
 │       ├── connection.py, crud.py, query_builder.py
@@ -75,11 +74,9 @@ src/carrymem/
 │   ├── config.py            # ConfigManager 配置管理
 │   ├── helpers.py           # 通用辅助函数
 │   ├── logger.py            # 日志封装
-│   ├── logging_config.py    # 日志配置
 │   ├── validators.py        # 参数校验器集合
 │   ├── language.py          # 语言检测
-│   ├── confirmation.py      # 确认检测
-│   └── entry_point_helpers.py
+│   └── confirmation.py      # 确认检测
 │
 ├── cli/                     # CLI 命令行界面
 │   ├── __init__.py          # 命令路由主入口
@@ -193,7 +190,6 @@ src/carrymem/
 | `utils/config.py` | `constants` | 配置管理 |
 | `utils/helpers.py` | （基本无内部依赖） | 通用工具函数 |
 | `utils/logger.py` | （无内部依赖） | 日志封装 |
-| `utils/logging_config.py` | `utils.logger` | 日志配置 |
 | `utils/validators.py` | `constants` | 参数校验 |
 | `utils/language.py` | （无内部依赖） | 语言检测 |
 | `utils/confirmation.py` | （无内部依赖） | 确认检测 |

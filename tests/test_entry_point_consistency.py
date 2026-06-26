@@ -14,10 +14,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-# 测试前设置日志
-from carrymem.utils.logging_config import reset_logging, setup_logging
-
-setup_logging(level=logging.DEBUG, console_output=False)
+logging.basicConfig(level=logging.DEBUG)
 
 
 class TestEntryPointInitialization(unittest.TestCase):

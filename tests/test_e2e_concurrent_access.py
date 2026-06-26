@@ -357,7 +357,7 @@ class TestE2EDataConsistencyUnderConcurrency:
 class TestE2EProcessIsolation:
     """Scenario: Multiple processes accessing same database (if supported)."""
 
-    @pytest.mark.skipif(True, reason="Multi-process SQLite requires WAL mode; tested separately if needed")
+    @pytest.mark.skip(reason="Multi-process SQLite requires WAL mode; tested separately if needed")
     def test_multiprocess_access(self, tmp_path):
         """Verify: Multiple processes can access the database safely.
 

@@ -43,9 +43,12 @@ class RuleStorage:
         Initialize storage with database connection.
 
         Args:
-            db_path: Path to the SQLite database file
+            db_path: Path to the SQLite database file, or ":memory:" for in-memory
         """
-        self.db_path = str(Path(db_path).expanduser().resolve())
+        if db_path == ":memory:":
+            self.db_path = ":memory:"
+        else:
+            self.db_path = str(Path(db_path).expanduser().resolve())
         self._local = threading.local()
         self._ensure_schema()
 

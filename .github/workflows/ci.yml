@@ -80,6 +80,7 @@ jobs:
           python -m pytest tests/ \
             --cov=carrymem \
             --cov-report=term-missing \
+            --cov-fail-under=75 \
             --tb=long \
             --timeout=120 \
             -m "not slow" \
