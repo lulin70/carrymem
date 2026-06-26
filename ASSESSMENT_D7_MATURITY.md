@@ -233,6 +233,8 @@ CI 命令: -m "not slow"
 
 ## 六、成熟度判定总结
 
+### 修复前（2026-06-26 初评）
+
 | 维度 | 判定 |
 |------|------|
 | **功能完整性** | ✅ 核心管线可用，E2E 通过 |
@@ -244,7 +246,76 @@ CI 命令: -m "not slow"
 | **安全合规** | ⚠️ 基础良好但 `:memory:` 泄露 |
 | **生产就绪** | ❌ **未达到生产部署标准** |
 
-### **最终诚实结论**
+### 修复后（2026-06-26 复评）
+
+| 维度 | 修复前 | 修复后 | 变化 |
+|------|--------|--------|------|
+| **架构** | 75 | 78 | +3 (删除 1796 LOC 幽灵代码，减少架构噪声) |
+| **安全** | 80 | 85 | +5 (`:memory:` 泄露修复，消除数据完整性风险) |
+| **测试** | 65 | 75 | +10 (门禁强制执行，skipif 透明化) |
+| **性能** | 80 | 80 | 0 (未改动性能相关代码) |
+| **可维护性** | 55 | 60 | +5 (删除幽灵功能，减少 1075 LOC 源码) |
+| **文档** | 60 | 75 | +15 (14 个文档版本号统一，INSTALL bug 修复) |
+| **集成** | 70 | 75 | +5 (幽灵功能清理，无虚假集成) |
+| **CI/CD** | 50 | 75 | +25 (覆盖率门禁强制，CD pipeline 新增，nightly 测试新增) |
+
+### **修复后综合评分: 74/100 (B-)** (修复前 67/100 C+，+7 分)
+
+> **诚实判定**: 项目从 "功能原型成熟但工程化欠债" 提升到 **"工程化基本达标，可进入预生产验证"** 阶段。
+>
+> - **已修复**: `:memory:` 泄露、覆盖率门禁、3 个幽灵功能、版本号一致性、CD pipeline、nightly 测试
+> - **待改进**: PatternAnalyzer 1547 行 God Class 拆分、50% 函数 docstring 补充、mypy 542 错误修复
+> - **距生产部署**: 还需 P1-6 (docstring) 和 P1-7 (God Class 拆分) 完成后可达 85/100 (B+)
+
+### 修复后实测验证
+
+```bash
+# 1. :memory: 泄露已修复
+$ ls ":memory:"* 2>&1
+zsh: no matches found: :memory:*  # PASS
+
+# 2. 覆盖率门禁已强制
+$ grep "cov-fail-under" .github/workflows/ci.yml
+            --cov-fail-under=75 \
+
+# 3. 幽灵功能已删除 (1796 LOC)
+$ ls src/carrymem/adapters/coding_context_adapter.py 2>&1
+No such file or directory  # PASS
+$ ls src/carrymem/utils/entry_point_helpers.py 2>&1
+No such file or directory  # PASS
+$ ls src/carrymem/utils/logging_config.py 2>&1
+No such file or directory  # PASS
+
+# 4. 版本号统一
+$ grep -rn "v0.2.0" docs/ | grep -i "version\|当前\|current" | head -5
+(empty - only historical ROADMAP entries remain)
+
+# 5. skipif(True) 清零
+$ grep -rn "skipif(True" tests/
+(empty)  # PASS
+
+# 6. CD pipeline 新增
+$ ls .github/workflows/release.yml
+.github/workflows/release.yml  # PASS
+
+# 7. Nightly 测试新增
+$ ls .github/workflows/nightly.yml
+.github/workflows/nightly.yml  # PASS
+
+# 8. 源码精简
+$ find src -name "*.py" | wc -l
+141  (was 144, -3)
+$ find src -name "*.py" -exec wc -l {} + | tail -1
+41666  (was 42741, -1075 LOC)
+
+# 9. 测试精简
+$ find tests -name "*.py" | wc -l
+130  (was 132, -2)
+$ find tests -name "*.py" -exec wc -l {} + | tail -1
+50231  (was 50952, -721 LOC)
+```
+
+### 修复前初评结论（保留作为对照）
 
 > CarryMem v0.4.0 是一个 **功能原型成熟但工程化欠债** 的项目。
 >
