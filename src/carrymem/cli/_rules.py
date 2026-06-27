@@ -9,6 +9,7 @@ def _deprecated_wrapper(old_cmd, new_sub, handler):
     """Create a wrapper that prints a deprecation notice and delegates to the handler."""
 
     def wrapper(args):
+        """Print a deprecation notice and delegate to the wrapped handler."""
         print(f"  {_yellow(f'[DEPRECATED]')} {_dim(f'Use `carrymem rules {new_sub}` instead of `carrymem {old_cmd}`')}")
         return handler(args)
 
@@ -16,6 +17,7 @@ def _deprecated_wrapper(old_cmd, new_sub, handler):
 
 
 def cmd_rules_hub(args):
+    """Dispatch rules sub-commands (list, add, delete, match, edit, etc.)."""
     if not args:
         return cmd_list_rules([])
 
@@ -87,6 +89,7 @@ cmd_refinement_sessions_deprecated = _deprecated_wrapper(
 
 
 def cmd_add_rule(args):
+    """Add a new rule, optionally from a template or interactively."""
     parser = _make_parser("add-rule")
     parser.add_argument("action", nargs="?", help=_t("cli.arg.rules.action"))
     parser.add_argument("--trigger", "-t", help=_t("cli.arg.rules.trigger"))
@@ -187,6 +190,7 @@ def cmd_add_rule(args):
 
 
 def cmd_list_rules(args):
+    """List stored rules with optional status/type filters and formatting."""
     parser = _make_parser("list-rules")
     parser.add_argument("--status", choices=["active", "paused", "deprecated"], help=_t("cli.arg.rules.filter_status"))
     parser.add_argument(
@@ -255,6 +259,7 @@ def cmd_list_rules(args):
 
 
 def cmd_match_rules(args):
+    """Match rules against a scene and print the matching rules in the chosen format."""
     parser = _make_parser("match-rules")
     parser.add_argument("scene", help=_t("cli.arg.rules.scene"))
     parser.add_argument("--limit", type=int, default=5, help=_t("cli.arg.rules.limit_5"))
@@ -323,6 +328,7 @@ def cmd_match_rules(args):
 
 
 def cmd_delete_rule(args):
+    """Delete a rule by its ID after confirmation."""
     parser = _make_parser("delete-rule")
     parser.add_argument("rule_id", help=_t("cli.arg.rules.rule_id_delete"))
     parser.add_argument("--db", help=_t("cli.arg.db"))
@@ -348,6 +354,7 @@ def cmd_delete_rule(args):
 
 
 def cmd_pause_rule(args):
+    """Pause a rule by setting its status to 'paused'."""
     parser = _make_parser("pause-rule")
     parser.add_argument("rule_id", help=_t("cli.arg.rules.rule_id_pause"))
     parser.add_argument("--db", help=_t("cli.arg.db"))
@@ -365,6 +372,7 @@ def cmd_pause_rule(args):
 
 
 def cmd_resume_rule(args):
+    """Resume a paused rule by setting its status back to 'active'."""
     parser = _make_parser("resume-rule")
     parser.add_argument("rule_id", help=_t("cli.arg.rules.rule_id_resume"))
     parser.add_argument("--db", help=_t("cli.arg.db"))
@@ -382,6 +390,7 @@ def cmd_resume_rule(args):
 
 
 def cmd_rules_stats(args):
+    """Print statistics for the rules engine (counts, capacity, by-type)."""
     parser = _make_parser("rules-stats")
     parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
@@ -410,6 +419,7 @@ def cmd_rules_stats(args):
 
 
 def cmd_check_rules(args):
+    """Check rules engine health, optionally outputting JSON."""
     parser = _make_parser("check-rules")
     parser.add_argument("--db", help=_t("cli.arg.db"))
     parser.add_argument("--json", action="store_true", help=_t("cli.arg.rules.json"))
@@ -457,6 +467,7 @@ def cmd_check_rules(args):
 
 
 def cmd_export_rules(args):
+    """Export rules to a JSON file with optional status filter."""
     parser = _make_parser("export-rules")
     parser.add_argument("path", help=_t("cli.arg.rules.output_path"))
     parser.add_argument("--status", choices=["active", "paused", "deprecated"], help=_t("cli.arg.rules.filter_status"))
@@ -482,6 +493,7 @@ def cmd_export_rules(args):
 
 
 def cmd_import_rules(args):
+    """Import rules from a JSON file with a merge mode."""
     parser = _make_parser("import-rules")
     parser.add_argument("path", help=_t("cli.arg.rules.input_path"))
     parser.add_argument(
@@ -527,6 +539,7 @@ def cmd_import_rules(args):
 
 
 def cmd_skill_pack(args):
+    """Package rules into a portable skill bundle (JSON) with metadata."""
     parser = _make_parser("skill-pack")
     parser.add_argument("path", help=_t("cli.arg.rules.output_path"))
     parser.add_argument("--name", required=True, help=_t("cli.arg.rules.skill_name"))
@@ -577,6 +590,7 @@ def cmd_skill_pack(args):
 
 
 def cmd_skill_install(args):
+    """Install a skill bundle into the rules engine with a merge mode."""
     parser = _make_parser("skill-install")
     parser.add_argument("path", help=_t("cli.arg.rules.skill_path"))
     parser.add_argument(
@@ -633,6 +647,7 @@ def cmd_skill_install(args):
 
 
 def cmd_skill_verify(args):
+    """Verify a skill bundle's structure and rule validity without installing."""
     parser = _make_parser("skill-verify")
     parser.add_argument("path", help=_t("cli.arg.rules.skill_path"))
     parsed = parser.parse_args(args)
@@ -672,6 +687,7 @@ def cmd_skill_verify(args):
 
 
 def cmd_edit_rule(args):
+    """Edit an existing rule's trigger, action, type, or soft/hard flag."""
     parser = _make_parser("edit-rule")
     parser.add_argument("rule_id", help=_t("cli.arg.rules.rule_id_edit"))
     parser.add_argument("--trigger", help=_t("cli.arg.rules.new_trigger"))
@@ -722,6 +738,7 @@ def cmd_edit_rule(args):
 
 
 def cmd_list_templates(args):
+    """List available rule templates with their descriptions."""
     parser = _make_parser("list-templates")
     parser.parse_args(args)
 
@@ -743,6 +760,7 @@ def cmd_list_templates(args):
 
 
 def cmd_suggest_rules(args):
+    """Suggest rules from memory patterns, optionally auto-accepting them."""
     parser = _make_parser("suggest-rules")
     parser.add_argument(
         "--type",
@@ -841,6 +859,7 @@ def cmd_suggest_rules(args):
 
 
 def cmd_promote_rules(args):
+    """Promote recurring memory patterns into rule candidates."""
     parser = _make_parser("promote-rules")
     parser.add_argument(
         "--type",
@@ -897,6 +916,7 @@ def cmd_promote_rules(args):
 
 
 def cmd_review_promotions(args):
+    """Review pending rule promotion candidates, accepting or rejecting them."""
     parser = _make_parser("review-promotions")
     parser.add_argument("--accept", help=_t("cli.arg.rules.accept_candidate"))
     parser.add_argument("--reject", help=_t("cli.arg.rules.reject_candidate"))
@@ -975,6 +995,7 @@ def cmd_review_promotions(args):
 
 
 def cmd_promotion_log(args):
+    """Print the promotion audit log with optional limit."""
     parser = _make_parser("promotion-log")
     parser.add_argument("--limit", type=int, default=20, help=_t("cli.arg.rules.limit_entries"))
     parser.add_argument("--db", help=_t("cli.arg.db"))
@@ -1021,6 +1042,7 @@ def cmd_promotion_log(args):
 
 
 def cmd_refine_rule(args):
+    """Interactively refine a rule via a multi-round refinement session."""
     parser = _make_parser("refine-rule")
     parser.add_argument("--trigger", default="", help=_t("cli.arg.rules.refine_trigger"))
     parser.add_argument("--action", default="", help=_t("cli.arg.rules.refine_action"))
@@ -1115,6 +1137,7 @@ def cmd_refine_rule(args):
 
 
 def cmd_refinement_sessions(args):
+    """List active rule refinement sessions."""
     parser = _make_parser("refinement-sessions")
     parser.add_argument("--db", help=_t("cli.arg.db"))
     parsed = parser.parse_args(args)
@@ -1141,6 +1164,7 @@ def cmd_refinement_sessions(args):
 
 
 def cmd_learn_experience(args):
+    """Learn rules from experience by analyzing stored memories."""
     parser = _make_parser("learn-experience")
     parser.add_argument(
         "--type",
@@ -1205,6 +1229,7 @@ def cmd_learn_experience(args):
 
 
 def cmd_review_lessons(args):
+    """Review pending learned lessons, accepting or rejecting them."""
     parser = _make_parser("review-lessons")
     parser.add_argument("--accept", help=_t("cli.arg.rules.accept_lesson"))
     parser.add_argument("--reject", help=_t("cli.arg.rules.reject_lesson"))
@@ -1281,6 +1306,7 @@ def cmd_review_lessons(args):
 
 
 def cmd_lesson_log(args):
+    """Print the experience learning log with optional limit."""
     parser = _make_parser("lesson-log")
     parser.add_argument("--limit", type=int, default=20, help=_t("cli.arg.rules.limit_entries"))
     parser.add_argument("--db", help=_t("cli.arg.db"))

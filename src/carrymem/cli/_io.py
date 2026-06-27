@@ -1,12 +1,14 @@
 """CarryMem CLI - Import/export/pack commands: consolidate, export, import, pack, unpack."""
 
 import base64
+import binascii
 import getpass
 import gzip
 import hashlib
 import json
 import os
 import socket
+import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -96,6 +98,7 @@ def cmd_consolidate(args):
 
 
 def cmd_export(args):
+    """Export memories from the active namespace to a file."""
     parser = _make_parser("export")
     parser.add_argument("output", help=_t("cli.arg.output_path"))
     parser.add_argument(
@@ -123,6 +126,7 @@ def cmd_export(args):
 
 
 def cmd_import(args):
+    """Import memories from a file into the active namespace."""
     parser = _make_parser("import")
     parser.add_argument("input", help=_t("cli.arg.input_path"))
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))

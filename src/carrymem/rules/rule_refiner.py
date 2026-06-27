@@ -27,10 +27,12 @@ import re
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class RefinementPhase(str, Enum):
+    """Phases of the rule refinement conversation."""
+
     SCOPE = "scope"
     GENERALITY = "generality"
     EXCEPTION = "exception"
@@ -39,6 +41,8 @@ class RefinementPhase(str, Enum):
 
 
 class QuestionType(str, Enum):
+    """Kinds of questions asked during rule refinement."""
+
     SCOPE_BROADEN = "scope_broaden"
     SCOPE_NARROW = "scope_narrow"
     GENERALITY_UP = "generality_up"
@@ -48,6 +52,8 @@ class QuestionType(str, Enum):
 
 @dataclass
 class RefinementQuestion:
+    """A single question posed during rule refinement."""
+
     question_id: str
     session_id: str
     question_type: QuestionType
@@ -56,6 +62,7 @@ class RefinementQuestion:
     round_number: int = 1
 
     def to_dict(self) -> dict:
+        """Serialize the question to a plain dict."""
         return {
             "question_id": self.question_id,
             "session_id": self.session_id,
@@ -68,11 +75,14 @@ class RefinementQuestion:
 
 @dataclass
 class RefinementAnswer:
+    """A user's answer to a refinement question."""
+
     question_id: str
     answer_text: str
     selected_option: Optional[str] = None
 
     def to_dict(self) -> dict:
+        """Serialize the answer to a plain dict."""
         return {
             "question_id": self.question_id,
             "answer_text": self.answer_text,
@@ -82,6 +92,8 @@ class RefinementAnswer:
 
 @dataclass
 class RefinedRuleDraft:
+    """A candidate rule produced after refinement."""
+
     trigger: str
     action: str
     rule_type: str = "avoid"
@@ -90,6 +102,7 @@ class RefinedRuleDraft:
     scope_notes: str = ""
 
     def to_dict(self) -> dict:
+        """Serialize the refined rule draft to a plain dict."""
         return {
             "trigger": self.trigger,
             "action": self.action,
@@ -223,7 +236,7 @@ class RuleRefiner:
             Dictionary with specificity analysis
         """
         text = f"{trigger} {action}".lower()
-        findings = {
+        findings: Dict[str, Any] = {
             "is_project_specific": False,
             "has_tool_specifics": [],
             "is_time_specific": False,

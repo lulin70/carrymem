@@ -3,7 +3,7 @@ from typing import List, Tuple
 from carrymem.utils.logger import logger
 
 try:
-    from langdetect import LangDetectException, detect
+    from langdetect import LangDetectException, detect  # type: ignore[import-not-found]
 
     _LANGDETECT_AVAILABLE = True
 except ImportError:
@@ -11,7 +11,7 @@ except ImportError:
     LangDetectException = Exception
 
 try:
-    import pycld2 as cld2
+    import pycld2 as cld2  # type: ignore[import-not-found]
 
     _CLD2_AVAILABLE = True
 except ImportError:
@@ -510,7 +510,7 @@ class LanguageManager:
             A tuple of (language_code, confidence).
         """
         if text is None:
-            return "en", 0.5
+            return "en", 0.5  # type: ignore[unreachable]
 
         has_cjk = any("\u4e00" <= char <= "\u9fff" for char in text)
         has_hiragana = any("\u3040" <= char <= "\u309f" for char in text)

@@ -1,10 +1,10 @@
 import json
 import logging
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 try:
-    import yaml
+    import yaml  # type: ignore[import-untyped]
 
     YAML_AVAILABLE = True
 except ImportError:
@@ -18,7 +18,9 @@ _DEFAULT_CONFIG_PATH = str(CONFIG_FILE)
 
 
 class ConfigManager:
-    def __init__(self, config_path: str = None):
+    """Load and query configuration from JSON/YAML with env overrides."""
+
+    def __init__(self, config_path: Optional[str] = None):
         self.config_path = config_path or os.environ.get("CARRYMEM_CONFIG_PATH", _DEFAULT_CONFIG_PATH)
         self.config = self.load_config()
 
@@ -48,6 +50,7 @@ class ConfigManager:
         return value
 
     def load_config(self) -> Dict[str, Any]:
+        """Load and parse the configuration file, returning an empty dict on error."""
         try:
             with open(self.config_path, "r", encoding="utf-8") as f:
                 if self.config_path.endswith(".json"):
@@ -75,8 +78,12 @@ class ConfigManager:
         """Reload the configuration from file."""
         self.config = self.load_config()
 
-    def get_rules(self, rules_path: str = None) -> Dict[str, Any]:
-        rules_path = rules_path or self.get("rules.config_path", "./config/advanced_rules.json")
+    def get_rules(self, rules_path: Optional[str] = None) -> Dict[str, Any]:
+        """Load rule definitions from a JSON/YAML file path."""
+        rules_path = rules_path or self.get(
+            "rules.config_path", "./config/advanced_rules.json"
+        )  # type: ignore[assignment]
+        assert rules_path is not None
         try:
             with open(rules_path, "r", encoding="utf-8") as f:
                 if rules_path.endswith(".json"):

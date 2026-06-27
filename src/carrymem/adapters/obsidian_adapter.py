@@ -162,7 +162,7 @@ class ObsidianAdapter(StorageAdapter):
             self._local.conn = conn
             with self._conn_lock:
                 self._all_connections[id(conn)] = conn
-        return self._local.conn
+        return self._local.conn  # type: ignore[no-any-return]
 
     def _init_schema(self):
         conn = self._get_connection()
@@ -186,10 +186,12 @@ class ObsidianAdapter(StorageAdapter):
 
     @property
     def name(self) -> str:
+        """Human-readable adapter identifier."""
         return "obsidian"
 
     @property
     def capabilities(self) -> Dict[str, bool]:
+        """Feature flags for this adapter (FTS, batch, graph, etc.)."""
         return {
             "vector_search": False,
             "fts": True,
@@ -202,6 +204,7 @@ class ObsidianAdapter(StorageAdapter):
 
     @property
     def vault_path(self) -> str:
+        """Absolute path to the indexed Obsidian vault."""
         return str(self._vault_path)
 
     # ── Standardized Adapter Interface (abstract method implementations) ──
@@ -238,8 +241,9 @@ class ObsidianAdapter(StorageAdapter):
                     conditions.append("tags LIKE ? ESCAPE '\\'")
                     params.append(f'%"{escape_like(tag)}"%')
                 where_clause = "WHERE " + " AND ".join(conditions)
-                return conn.execute(f"SELECT COUNT(*) FROM notes {where_clause}", params).fetchone()[0]
-            return conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
+                result = conn.execute(f"SELECT COUNT(*) FROM notes {where_clause}", params).fetchone()
+                return result[0]  # type: ignore[no-any-return]
+            return conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]  # type: ignore[no-any-return]
 
     def health_check(self) -> dict:
         """Check vault directory availability."""
@@ -254,6 +258,7 @@ class ObsidianAdapter(StorageAdapter):
         }
 
     def index_vault(self) -> Dict[str, int]:
+        """Scan the vault and index new/changed Markdown files."""
         with self._lock:
             return self._index_vault_impl()
 
@@ -345,9 +350,11 @@ class ObsidianAdapter(StorageAdapter):
         }
 
     def remember(self, entry) -> Any:
+        """Store a memory entry (unsupported on read-only Obsidian adapter)."""
         raise NotImplementedError("ObsidianAdapter is read-only. Use SQLiteAdapter for storing memories.")
 
     def remember_batch(self, entries: list) -> list:
+        """Store multiple memory entries (unsupported on read-only Obsidian adapter)."""
         raise NotImplementedError("ObsidianAdapter is read-only. Use SQLiteAdapter for storing memories.")
 
     def recall(
@@ -359,6 +366,7 @@ class ObsidianAdapter(StorageAdapter):
         namespaces: Optional[List[str]] = None,
         **kwargs,
     ) -> list:
+        """Full-text search the indexed vault notes."""
         full_content = kwargs.get("full_content", False)
         with self._lock:
             filters = filters or {}
@@ -454,7 +462,7 @@ class ObsidianAdapter(StorageAdapter):
 
     def _fallback_search(self, query: str, filters: Dict[str, Any], limit: int) -> list:
         conditions = ["(title LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')"]
-        params = [f"%{escape_like(query)}%", f"%{escape_like(query)}%"]
+        params: List[Any] = [f"%{escape_like(query)}%", f"%{escape_like(query)}%"]
 
         if filters.get("tags"):
             tag_list = filters["tags"] if isinstance(filters["tags"], list) else [filters["tags"]]
@@ -470,7 +478,7 @@ class ObsidianAdapter(StorageAdapter):
 
     def _filtered_search(self, filters: Dict[str, Any], limit: int) -> list:
         conditions = []
-        params = []
+        params: List[Any] = []
 
         if filters.get("tags"):
             tag_list = filters["tags"] if isinstance(filters["tags"], list) else [filters["tags"]]
@@ -493,9 +501,11 @@ class ObsidianAdapter(StorageAdapter):
         return [self._row_to_dict(row) for row in rows]
 
     def forget(self, storage_key: str) -> bool:
+        """Delete a memory entry (unsupported on read-only Obsidian adapter)."""
         raise NotImplementedError("ObsidianAdapter is read-only. Delete notes from your vault directly.")
 
     def get_stats(self) -> Dict[str, Any]:
+        """Return summary statistics about the indexed vault."""
         with self._lock:
             conn = self._get_connection()
             total = conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
@@ -519,6 +529,7 @@ class ObsidianAdapter(StorageAdapter):
             }
 
     def get_tags(self) -> Dict[str, int]:
+        """Return all tags with their occurrence counts, sorted by frequency."""
         tag_rows = (
             self._get_connection().execute("SELECT tags FROM notes WHERE tags IS NOT NULL AND tags != '[]'").fetchall()
         )
@@ -535,6 +546,7 @@ class ObsidianAdapter(StorageAdapter):
         return dict(sorted(all_tags.items(), key=lambda x: -x[1]))
 
     def get_linked_notes(self, note_title: str) -> List[Dict[str, Any]]:
+        """Return notes that wiki-link to the given note title."""
         rows = (
             self._get_connection()
             .execute(
@@ -587,6 +599,7 @@ class ObsidianAdapter(StorageAdapter):
         return result
 
     def close(self):
+        """Close all database connections and mark the adapter as closed."""
         self._closed = True
         with self._conn_lock:
             for conn in self._all_connections.values():

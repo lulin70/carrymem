@@ -105,7 +105,7 @@ def calculate_memory_weight(confidence: float, days_since_last_access: int, acce
 
     weight = confidence * recency_score * frequency_score
 
-    return weight
+    return weight  # type: ignore[no-any-return]
 
 
 def format_memory(memory: Dict[str, Any]) -> str:
@@ -135,7 +135,7 @@ def load_json_file(file_path: str) -> Dict[str, Any]:
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        return data
+        return data  # type: ignore[no-any-return]
     except (FileNotFoundError, json.JSONDecodeError, PermissionError, OSError, ValueError, TypeError) as e:
         logger.warning("Error loading JSON file %s: %s", file_path, e)
         return {}

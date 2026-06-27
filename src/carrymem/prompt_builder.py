@@ -52,7 +52,7 @@ class PromptBuilder:
         self,
         query: str,
         limit: int,
-    ) -> List[Dict[str, Any]]:
+    ) -> tuple[List[Dict[str, Any]], Set[str]]:
         """Main recall + superseded + summaries + preferences.
 
         Returns (all_memories, seen_keys, pref_keys).
@@ -260,7 +260,7 @@ class PromptBuilder:
                 return ""
 
             if not override_only and context:
-                return rule_engine.inject(
+                return rule_engine.inject(  # type: ignore[no-any-return]
                     context,
                     format="anchored",
                     max_rules=max_rules,
@@ -430,7 +430,7 @@ class PromptBuilder:
             max_tokens=max_tokens,
             language=language,
         )
-        return result["system_prompt"]
+        return result["system_prompt"]  # type: ignore[no-any-return]
 
     # ------------------------------------------------------------------
     # Public: build_qa_prompt

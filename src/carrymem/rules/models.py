@@ -155,6 +155,7 @@ class Rule:
         }
 
     def is_expired(self) -> bool:
+        """Return True if this rule's expiry timestamp has passed."""
         if not self.expires_at:
             return False
         try:

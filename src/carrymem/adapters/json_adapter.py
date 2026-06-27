@@ -63,14 +63,16 @@ class JSONAdapter(StorageAdapter):
 
     def _get_memories(self) -> Dict[str, Any]:
         ns = self._get_namespace_data()
-        return ns.setdefault("memories", {})
+        return ns.setdefault("memories", {})  # type: ignore[no-any-return]
 
     @property
     def name(self) -> str:
+        """Human-readable adapter identifier."""
         return "json"
 
     @property
     def capabilities(self) -> Dict[str, bool]:
+        """Feature flags for this adapter."""
         return {
             "vector_search": False,
             "fts": False,
@@ -146,7 +148,7 @@ class JSONAdapter(StorageAdapter):
         )
         return self._store_entry(entry, _skip_commit)
 
-    def recall(
+    def recall(  # type: ignore[override]
         self,
         query: str,
         filters: Optional[Dict[str, Any]] = None,
@@ -154,6 +156,7 @@ class JSONAdapter(StorageAdapter):
         namespaces: Optional[List[str]] = None,
         update_access: bool = True,
     ) -> List[StoredMemory]:
+        """Recall stored memories matching the query."""
         with self._lock:
             results = []
             now = datetime.now(timezone.utc)
@@ -252,11 +255,12 @@ class JSONAdapter(StorageAdapter):
         return self._delete_entry(storage_key)
 
     def get_stats(self) -> Dict[str, Any]:
+        """Return summary statistics about stored memories."""
         with self._lock:
             memories = self._get_memories()
             total = len(memories)
-            by_type = {}
-            by_tier = {}
+            by_type: Dict[str, int] = {}
+            by_tier: Dict[str, int] = {}
             conf_sum = 0.0
             for m in memories.values():
                 t = m.get("type", "unknown")
@@ -319,8 +323,8 @@ class JSONAdapter(StorageAdapter):
         stats = self.get_stats()
         if filter_ and "type" in filter_:
             by_type = stats.get("by_type", {})
-            return by_type.get(filter_["type"], 0)
-        return stats.get("total_count", 0)
+            return by_type.get(filter_["type"], 0)  # type: ignore[no-any-return]
+        return stats.get("total_count", 0)  # type: ignore[no-any-return]
 
     def health_check(self) -> dict:
         """Run a health check on the JSON file backend.
@@ -405,4 +409,5 @@ class JSONAdapter(StorageAdapter):
         return [r.to_dict() for r in results]
 
     def close(self):
+        """Release resources held by the adapter (no-op for JSON)."""
         pass

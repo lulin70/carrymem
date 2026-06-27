@@ -26,7 +26,7 @@ class ClassificationPipeline:
         """
         self.config = config
 
-        rules = config.get_rules().get("rules", [])
+        rules = config.get_rules().get("rules", [])  # type: ignore[attr-defined]
         self.rule_matcher = RuleMatcher(rules)
         self.pattern_analyzer = PatternAnalyzer(noise_filter_mode=noise_filter_mode)
 
@@ -71,7 +71,7 @@ class ClassificationPipeline:
 
         if semantic_matches:
             logger.debug("Semantic classification found %d matches", len(semantic_matches))
-            return semantic_matches
+            return semantic_matches  # type: ignore[no-any-return]
 
         logger.debug("No classification matches found")
         return []
@@ -306,6 +306,7 @@ class ClassificationPipeline:
         }
 
         def sort_key(m):
+            """Return classification priority for sorting matched memories."""
             return type_priority.get(m.get("memory_type", ""), 99)
 
         matches.sort(key=sort_key)
@@ -330,7 +331,7 @@ class ClassificationPipeline:
 
         # Handle None message - P0-D: fail-closed, do not store
         if message is None:
-            return None
+            return None  # type: ignore[unreachable]
 
         message_lower = message.lower()
         msg_stripped = message.strip()

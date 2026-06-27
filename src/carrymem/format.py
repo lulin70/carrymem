@@ -57,6 +57,7 @@ def _extract_event_dates(text: str) -> str:
 
 
 def format_memory_entry(m: Dict[str, Any], language: str = "en") -> str:
+    """Render a single memory entry as a human-readable string."""
     labels = TYPE_LABELS.get(language, TYPE_LABELS["en"])
     label = labels.get(m.get("type", ""), m.get("type", "Info"))
     content = m.get("raw_text", "") or m.get("content", "")
@@ -129,6 +130,7 @@ def _build_superseded_notes(memories: List[Dict[str, Any]], language: str = "en"
 
 
 def format_knowledge_entry(k: Dict[str, Any]) -> str:
+    """Render a single knowledge entry as a human-readable string."""
     title = k.get("title", "Untitled")
     content = k.get("content", "")[:200]
     tags = k.get("tags", [])

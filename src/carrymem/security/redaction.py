@@ -158,7 +158,7 @@ def redact_content(text: str, replacement: str = "[REDACTED]") -> str:
 
     spans.sort(key=lambda s: s[0])
 
-    merged = []
+    merged: List[Tuple[int, int]] = []
     for start, end in spans:
         if merged and start <= merged[-1][1]:
             merged[-1] = (merged[-1][0], max(merged[-1][1], end))

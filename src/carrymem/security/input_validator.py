@@ -11,7 +11,7 @@ Version: 1.0.0
 
 import re
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from carrymem.constants import MAX_MESSAGE_LENGTH
 from carrymem.exceptions import ValidationError
@@ -347,7 +347,7 @@ class InputValidator:
                 raise ValidationError(f"Invalid filter key: {key}")
 
         # Validate individual filter values
-        validated = {}
+        validated: Dict[str, Any] = {}
 
         if "type" in filters:
             validated["type"] = self.validate_memory_type(filters["type"])
@@ -435,7 +435,7 @@ class InputValidator:
 
 
 # Global validator instance
-_default_validator = None
+_default_validator: Optional[InputValidator] = None
 
 
 def get_validator(strict_mode: bool = True) -> InputValidator:

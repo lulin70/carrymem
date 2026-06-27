@@ -292,7 +292,7 @@ class TestErrorCodeConsistency(unittest.TestCase):
             safe_type = _safe_error(error)
             # MCP 应该返回安全的错误类型
             self.assertIsInstance(safe_type, str)
-            self.assertTrue(len(safe_type) > 0)
+            self.assertGreater(len(safe_type), 0)
 
             # 测试 ValueError 转换
             safe_value = _safe_error(ValueError("Invalid input"))

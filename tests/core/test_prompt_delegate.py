@@ -66,7 +66,7 @@ class TestBuildSystemPrompt(unittest.TestCase):
         """build_system_prompt() works with empty/None context."""
         result = self.cm.build_system_prompt()
         self.assertIsInstance(result, str)
-        self.assertTrue(len(result) > 0)
+        self.assertGreater(len(result), 0)
 
     def test_build_system_prompt_with_language(self):
         """build_system_prompt() accepts language parameter."""
@@ -130,7 +130,7 @@ class TestSummarizeSession(unittest.TestCase):
                 pass  # May fail due to no LLM client, but warning should still emit
             # Check if DeprecationWarning was emitted
             deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
-            self.assertTrue(len(deprecation_warnings) > 0)
+            self.assertGreater(len(deprecation_warnings), 0)
 
 
 class TestAggregateMemories(unittest.TestCase):
@@ -163,7 +163,7 @@ class TestAggregateMemories(unittest.TestCase):
             except Exception:
                 pass  # May fail due to no LLM/embedding, but warning should still emit
             deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
-            self.assertTrue(len(deprecation_warnings) > 0)
+            self.assertGreater(len(deprecation_warnings), 0)
 
     def test_aggregate_memories_with_type_filter(self):
         """aggregate_memories() accepts memory_type parameter."""

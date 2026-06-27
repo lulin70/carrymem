@@ -165,7 +165,7 @@ class TestClassifyInternal(unittest.TestCase):
         """_infer_rule_type returns a valid rule type."""
         rule_type = self.cm._infer_rule_type("user_preference", "I like Python")
         self.assertIsInstance(rule_type, str)
-        self.assertTrue(len(rule_type) > 0)
+        self.assertGreater(len(rule_type), 0)
 
 
 if __name__ == "__main__":

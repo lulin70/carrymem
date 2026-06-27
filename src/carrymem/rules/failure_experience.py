@@ -27,6 +27,8 @@ from ..utils.language import has_cjk
 
 
 class FailureSignal(str, Enum):
+    """Signal types indicating a failure pattern in memories."""
+
     MISTAKE = "mistake"
     REGRET = "regret"
     NEGATIVE_OUTCOME = "negative_outcome"
@@ -35,6 +37,8 @@ class FailureSignal(str, Enum):
 
 
 class FailureConfidence(str, Enum):
+    """Confidence level for an extracted failure lesson."""
+
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
@@ -42,6 +46,8 @@ class FailureConfidence(str, Enum):
 
 @dataclass
 class ExtractedLesson:
+    """A lesson extracted from a failure-related memory."""
+
     source_memory_id: str
     source_content: str
     source_type: str
@@ -53,6 +59,7 @@ class ExtractedLesson:
     domain: str = ""
 
     def to_dict(self) -> dict:
+        """Serialize the extracted lesson to a dictionary."""
         return {
             "source_memory_id": self.source_memory_id,
             "source_content": self.source_content,

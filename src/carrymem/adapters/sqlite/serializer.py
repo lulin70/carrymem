@@ -123,7 +123,7 @@ class RowSerializer:
                 return val
 
             return StoredMemory(
-                id=d.get("id"),
+                id=d.get("id"),  # type: ignore[arg-type]
                 type=d.get("type", "unknown"),
                 content=d.get("content", ""),
                 raw_text=d.get("raw_text", ""),
@@ -134,7 +134,7 @@ class RowSerializer:
                 suggested_action=d.get("suggested_action", "store"),
                 recall_hint=recall_hint,
                 metadata=metadata,
-                storage_key=d.get("storage_key"),
+                storage_key=d.get("storage_key"),  # type: ignore[arg-type]
                 created_at=_get_dt("created_at"),
                 updated_at=_get_dt("updated_at"),
                 expires_at=_get_dt("expires_at"),

@@ -1,7 +1,9 @@
 """Classification pipeline internals + rule-delegate methods."""
 
+from __future__ import annotations
+
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from carrymem.adapters.base import MemoryEntry
 from carrymem.constants import (
@@ -29,11 +31,19 @@ from carrymem.utils.validators import (
     validate_message,
 )
 
+if TYPE_CHECKING:
+    from carrymem.adapters.base import StorageAdapter
+    from carrymem.rules.candidate_generator import RuleCandidateGenerator
+
 logger = logging.getLogger(__name__)
 
 
 class ClassificationMixin:
     """Internal classification pipeline and rule-candidate delegate methods."""
+
+    # Shared instance state provided by LifecycleMixin.__init__.
+    _adapter: Optional[StorageAdapter]
+    _candidate_generator: RuleCandidateGenerator
 
     def _validate_and_resolve(
         self,
@@ -96,7 +106,9 @@ class ClassificationMixin:
                     context_str = context.get("ai_reply", "") or context.get("previous_message", "")
                 recent_mems = []
                 try:
-                    recent_mems = self.recall_memories(query="", limit=COREFERENCE_RECALL_LIMIT, update_access=False)
+                    recent_mems = self.recall_memories(  # type: ignore[attr-defined]
+                        query="", limit=COREFERENCE_RECALL_LIMIT, update_access=False
+                    )
                 except (KeyError, ValueError, RuntimeError) as e:
                     logger.debug("Coreference recall skipped (non-critical): %s", e)
                 resolved_message, coreference_resolved = resolve_coreference(
@@ -117,7 +129,7 @@ class ClassificationMixin:
                 should_block, redact_reason = should_redact(resolved_message)
                 if should_block:
                     logger.warning("Memory storage blocked by auto-redaction: %s", redact_reason)
-                    return (resolved_message, False, redact_reason, coreference_resolved)
+                    return (resolved_message, False, redact_reason, coreference_resolved)  # type: ignore[return-value]
             except (ImportError, ValueError, TypeError, RuntimeError) as e:
                 logger.warning("Auto-redaction check failed, allowing storage as precaution: %s", e)
 
@@ -136,7 +148,9 @@ class ClassificationMixin:
         Returns:
             entries list (may be empty for noise) or ClassificationResult dict.
         """
-        classify_result = self.classify_message(resolved_message, context=context, language=language)
+        classify_result = self.classify_message(  # type: ignore[attr-defined]
+            resolved_message, context=context, language=language
+        )
 
         if not classify_result["should_remember"] and not force_type:
             return []  # Signal: noise
@@ -153,7 +167,7 @@ class ClassificationMixin:
                     }
                 ]
 
-        return classify_result
+        return classify_result  # type: ignore[no-any-return]
 
     def _store_entries(
         self,
@@ -178,8 +192,8 @@ class ClassificationMixin:
                 entry.raw_text = message
             if session_id and isinstance(entry.metadata, dict):
                 entry.metadata["session_id"] = session_id
-            elif session_id and not entry.metadata:
-                entry.metadata = {"session_id": session_id}
+            elif session_id and not entry.metadata:  # type: ignore[unreachable]
+                entry.metadata = {"session_id": session_id}  # type: ignore[unreachable]
             if entry.suggested_action == "store":
                 try:
                     if entry.type == "correction":
@@ -187,7 +201,7 @@ class ClassificationMixin:
                         if updated:
                             updated_memories.append(updated)
 
-                    stored = self._adapter.remember(entry)
+                    stored = self._adapter.remember(entry)  # type: ignore[union-attr]
                     stored_memories.append(stored.to_dict())
                     storage_keys.append(stored.storage_key)
                 except (ValueError, KeyError, TypeError) as e:
@@ -200,18 +214,18 @@ class ClassificationMixin:
         except (ImportError, KeyError, ValueError, TypeError, RuntimeError) as e:
             logger.debug("Auto rule suggestion skipped: %s", e)
 
-        self._auto_backup()
+        self._auto_backup()  # type: ignore[attr-defined]
 
         return {
             "should_remember": True,
             "type": stored_memories[0].get("type", "unknown") if stored_memories else "unknown",
             "content": stored_memories[0].get("content", message) if stored_memories else message,
-            "entries": stored_memories,
+            "entries": stored_memories,  # type: ignore[typeddict-item]
             "stored": len(stored_memories) > 0,
             "storage_keys": storage_keys,
             "rule_suggestions": auto_rules,
             "auto_rules": auto_rules,
-            "updated_memories": updated_memories,
+            "updated_memories": updated_memories,  # type: ignore[typeddict-item]
             "summary": classify_result["summary"],
         }
 
@@ -227,7 +241,7 @@ class ClassificationMixin:
 
         try:
             keywords = content.lower().split()
-            related = self.recall_memories(limit=CORRECTION_RECALL_LIMIT)
+            related = self.recall_memories(limit=CORRECTION_RECALL_LIMIT)  # type: ignore[attr-defined]
             for mem in related:
                 mem_content = mem.get("content", "").lower()
                 mem_type = mem.get("type", "")
@@ -252,7 +266,7 @@ class ClassificationMixin:
             logger.warning("Correction handling failed: %s", e)
 
         try:
-            engine = self.rule_engine
+            engine = self.rule_engine  # type: ignore[attr-defined]
             rules = engine.list_rules(status="active", limit=ACTIVE_RULES_LIST_LIMIT)
             for rule in rules:
                 rule_content = (rule.trigger + " " + rule.action).lower()
@@ -274,7 +288,7 @@ class ClassificationMixin:
         except (ImportError, ValueError, KeyError, TypeError, RuntimeError) as e:
             logger.warning("Rule correction handling failed: %s", e)
 
-        return updated_info
+        return updated_info  # type: ignore[return-value]
 
     def _count_by_type(self, entries: List[MemoryEntry]) -> Dict[str, int]:
         counts: Dict[str, int] = {}

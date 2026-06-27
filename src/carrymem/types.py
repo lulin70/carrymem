@@ -160,7 +160,7 @@ class RecallAggregatedResult(TypedDict):
     """Result from recall_aggregated()."""
 
     # Keys are memory types, values are lists of memory dicts
-    __extra__: Dict[str, List[StoredMemoryDict]]  # type: ignore[misc]
+    __extra__: Dict[str, List[StoredMemoryDict]]
 
 
 # ---------------------------------------------------------------------------
@@ -297,7 +297,7 @@ class ValidateResolveTuple:
 
     __slots__ = ()
 
-    def __new__(cls) -> None:
+    def __new__(cls) -> "ValidateResolveTuple":
         raise TypeError("ValidateResolveTuple cannot be instantiated")
 
 
@@ -454,7 +454,7 @@ class ComponentStatusDict(TypedDict):
     """Result from get_component_status()."""
 
     # Keys are component names, values are status strings
-    __extra__: Dict[str, str]  # type: ignore[misc]
+    __extra__: Dict[str, str]
 
 
 # ---------------------------------------------------------------------------

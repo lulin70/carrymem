@@ -1,6 +1,7 @@
 """Auto-supersede and contradiction detection for SQLiteAdapter."""
 
 import re
+import sqlite3
 from datetime import datetime, timezone
 
 from ...utils.logger import logger
@@ -52,6 +53,7 @@ class SupersedeManager:
         self._adapter = adapter
 
     def auto_supersede(self, conn, new_storage_key: str, entry: MemoryEntry, namespace: str):
+        """Mark older conflicting memories as superseded by the new entry."""
         if entry.type not in self._SUPERSEDE_TYPES:
             return
         if entry.type == "correction":
@@ -175,6 +177,7 @@ class SupersedeManager:
 
     @staticmethod
     def is_contradictory(new_content: str, old_content: str) -> bool:
+        """Detect contradiction between two memory contents via paired keywords."""
         new_lower = new_content.lower()
         old_lower = old_content.lower()
         for pos_word, neg_word in SupersedeManager._CONTRADICTION_PAIRS:

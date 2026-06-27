@@ -26,7 +26,7 @@ Usage:
 import logging
 import sqlite3
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 _logger = logging.getLogger(__name__)
 
@@ -243,7 +243,7 @@ class RuleEngine:
             **kwargs,
         )
         if conflict_warnings:
-            created._conflict_warnings = conflict_warnings
+            created._conflict_warnings = conflict_warnings  # type: ignore[attr-defined]
 
         return created
 
@@ -412,8 +412,8 @@ class RuleEngine:
         override_rules = [r for r in active if r.override]
         soft_rules = [r for r in active if not r.override]
 
-        type_counts = {}
-        type_trigger_counts = {}
+        type_counts: Dict[str, int] = {}
+        type_trigger_counts: Dict[str, int] = {}
         for r in active:
             rt = r.rule_type
             type_counts[rt] = type_counts.get(rt, 0) + 1
@@ -434,13 +434,13 @@ class RuleEngine:
             for r in never_triggered[:20]
         ]
 
-        derivation_counts = {}
+        derivation_counts: Dict[str, int] = {}
         for r in all_rules:
             d = r.derived_from
             derivation_counts[d] = derivation_counts.get(d, 0) + 1
 
-        scope_counts = {}
-        scope_trigger_counts = {}
+        scope_counts: Dict[str, int] = {}
+        scope_trigger_counts: Dict[str, int] = {}
         for r in active:
             s = r.scope
             scope_counts[s] = scope_counts.get(s, 0) + 1
@@ -821,7 +821,7 @@ class RuleEngine:
                 f"maximum allowed is 500 per import. "
                 f"Please split into smaller files."
             )
-        stats = {"imported": 0, "skipped": 0, "overwritten": 0, "errors": []}
+        stats: Dict[str, Any] = {"imported": 0, "skipped": 0, "overwritten": 0, "errors": []}
 
         existing_rules = self.storage.list_all(limit=10000)
         existing_keys = {(r.trigger, r.action, r.rule_type, r.scope): r for r in existing_rules}

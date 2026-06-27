@@ -327,6 +327,7 @@ class AuditLogger:
         params.append(filter_.limit)
 
         with self._db_lock:
+            assert self._db_conn is not None
             cursor = self._db_conn.execute(query, params)
             rows = cursor.fetchall()
 
@@ -387,6 +388,7 @@ class AuditLogger:
     def _export_db(self) -> List[Dict[str, Any]]:
         """Export all events from the SQLite database as dicts."""
         with self._db_lock:
+            assert self._db_conn is not None
             cursor = self._db_conn.execute(
                 "SELECT id, timestamp, action, resource, user_id, result, details, ip_address "
                 "FROM audit_log ORDER BY timestamp ASC"
@@ -475,6 +477,7 @@ class AuditLogger:
     def _stats_db(self) -> Dict[str, Any]:
         """Aggregate statistics from the SQLite database."""
         with self._db_lock:
+            assert self._db_conn is not None
             total_row = self._db_conn.execute("SELECT COUNT(*) FROM audit_log").fetchone()
             total = total_row[0]
 

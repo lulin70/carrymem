@@ -2,6 +2,8 @@ from typing import List, TypedDict
 
 
 class RuleDict(TypedDict, total=False):
+    """Dictionary shape representing a stored rule."""
+
     id: str
     trigger: str
     action: str
@@ -16,12 +18,16 @@ class RuleDict(TypedDict, total=False):
 
 
 class MatchResultDict(TypedDict, total=False):
+    """Dictionary shape for a single rule match result."""
+
     rule: RuleDict
     score: float
     match_type: str
 
 
 class EffectivenessReportDict(TypedDict, total=False):
+    """Dictionary shape for a rule effectiveness report."""
+
     total_rules: int
     active: int
     paused: int
@@ -40,6 +46,8 @@ class EffectivenessReportDict(TypedDict, total=False):
 
 
 class SourceMemoryValidationDict(TypedDict, total=False):
+    """Dictionary shape for source-memory validation of a rule."""
+
     rule_id: str
     source_memories: List[dict]
     total: int
@@ -50,6 +58,8 @@ class SourceMemoryValidationDict(TypedDict, total=False):
 
 
 class KnowledgeNoteDict(TypedDict, total=False):
+    """Dictionary shape for a knowledge base note."""
+
     id: str
     type: str
     title: str
@@ -64,6 +74,8 @@ class KnowledgeNoteDict(TypedDict, total=False):
 
 
 class RecallAllResultDict(TypedDict, total=False):
+    """Dictionary shape for the combined recall-all result."""
+
     rules: List[dict]
     memories: List[dict]
     knowledge: List[dict]
@@ -76,6 +88,8 @@ class RecallAllResultDict(TypedDict, total=False):
 
 
 class BuildContextResultDict(TypedDict, total=False):
+    """Dictionary shape for the build-context result."""
+
     system_prompt: str
     rules: str
     memories: List[dict]

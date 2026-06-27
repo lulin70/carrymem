@@ -13,10 +13,11 @@ _BUILTIN_ADAPTERS = {
 
 
 def load_adapter(name: str) -> Optional[Type[StorageAdapter]]:
+    """Load a storage adapter class by name from built-ins or installed plugins."""
     if name in _BUILTIN_ADAPTERS:
         module_path, _, class_name = _BUILTIN_ADAPTERS[name].rpartition(".")
         module = importlib.import_module(module_path)
-        return getattr(module, class_name)
+        return getattr(module, class_name)  # type: ignore[no-any-return]
 
     try:
         from importlib.metadata import entry_points
@@ -25,11 +26,11 @@ def load_adapter(name: str) -> Optional[Type[StorageAdapter]]:
         if hasattr(eps, "select"):
             adapter_eps = eps.select(group="carrymem.adapters", name=name)
         else:
-            adapter_eps = eps.get("carrymem.adapters", [])
-            adapter_eps = [ep for ep in adapter_eps if ep.name == name]
+            adapter_eps = eps.get("carrymem.adapters", [])  # type: ignore[arg-type]
+            adapter_eps = [ep for ep in adapter_eps if ep.name == name]  # type: ignore[assignment]
 
         for ep in adapter_eps:
-            return ep.load()
+            return ep.load()  # type: ignore[no-any-return]
     except (ImportError, AttributeError, OSError):
         pass
 
@@ -37,7 +38,7 @@ def load_adapter(name: str) -> Optional[Type[StorageAdapter]]:
         try:
             module_path, _, class_name = name.rpartition(".")
             module = importlib.import_module(module_path)
-            return getattr(module, class_name)
+            return getattr(module, class_name)  # type: ignore[no-any-return]
         except (ImportError, AttributeError):
             pass
 
@@ -45,6 +46,7 @@ def load_adapter(name: str) -> Optional[Type[StorageAdapter]]:
 
 
 def list_available_adapters() -> dict:
+    """Return mapping of available adapter names to their import paths."""
     result = dict(_BUILTIN_ADAPTERS)
 
     try:
@@ -54,7 +56,7 @@ def list_available_adapters() -> dict:
         if hasattr(eps, "select"):
             adapter_eps = eps.select(group="carrymem.adapters")
         else:
-            adapter_eps = eps.get("carrymem.adapters", [])
+            adapter_eps = eps.get("carrymem.adapters", [])  # type: ignore[arg-type]
         for ep in adapter_eps:
             result[ep.name] = f"{ep.value} (plugin)"
     except (ImportError, AttributeError):

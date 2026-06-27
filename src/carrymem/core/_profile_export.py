@@ -1,11 +1,13 @@
 """Profile, stats, export, import operations."""
 
+from __future__ import annotations
+
 import json
 import logging
 import warnings
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from carrymem.__version__ import __version__ as _version
 from carrymem.adapters.base import MemoryEntry
@@ -31,6 +33,9 @@ from carrymem.types import (
     WhoamiResult,
 )
 
+if TYPE_CHECKING:
+    from carrymem.adapters.base import StorageAdapter
+
 logger = logging.getLogger(__name__)
 
 _import_validator = InputValidator(strict_mode=True)
@@ -39,25 +44,32 @@ _import_validator = InputValidator(strict_mode=True)
 class ProfileExportMixin:
     """User profile, statistics, export, and import of memories."""
 
+    # Shared instance state provided by LifecycleMixin.__init__.
+    _adapter: Optional[StorageAdapter]
+    _namespace: str
+
     def get_stats(self) -> MemoryStats:
+        """Return aggregate statistics for the active storage adapter."""
         if not self._adapter:
             return {"adapter": None, "total_count": 0}
 
-        return self._adapter.get_stats()
+        return self._adapter.get_stats()  # type: ignore[return-value]
 
     def get_memory_profile(self) -> MemoryProfile:
+        """Return the structured memory profile for the active namespace."""
         if not self._adapter:
             return {
                 "summary": "No storage configured",
                 "total_memories": 0,
                 "highlights": {},
-                "stats": {},
+                "stats": {},  # type: ignore[typeddict-item]
             }
 
         profile = self._adapter.get_profile()
-        return profile
+        return profile  # type: ignore[return-value]
 
     def whoami(self) -> WhoamiResult:
+        """Build a human-readable identity summary from stored memories."""
         if not self._adapter:
             return {"identity": "unknown", "summary": "No storage configured"}
 
@@ -75,15 +87,21 @@ class ProfileExportMixin:
         by_type = stats.get("by_type", {}) if isinstance(stats, dict) else {}
         profile_stats = profile.get("stats", {}) if isinstance(profile, dict) else {}
 
-        preferences = self.recall_memories(query="", filters={"type": "user_preference"}, limit=WHOAMI_PREFERENCE_COUNT)
-        decisions = self.recall_memories(query="", filters={"type": "decision"}, limit=WHOAMI_DECISION_COUNT)
-        corrections = self.recall_memories(query="", filters={"type": "correction"}, limit=WHOAMI_CORRECTION_COUNT)
+        preferences = self.recall_memories(  # type: ignore[attr-defined]
+            query="", filters={"type": "user_preference"}, limit=WHOAMI_PREFERENCE_COUNT
+        )
+        decisions = self.recall_memories(  # type: ignore[attr-defined]
+            query="", filters={"type": "decision"}, limit=WHOAMI_DECISION_COUNT
+        )
+        corrections = self.recall_memories(  # type: ignore[attr-defined]
+            query="", filters={"type": "correction"}, limit=WHOAMI_CORRECTION_COUNT
+        )
 
         pref_list = [m.get("content", "") for m in preferences[:5]]
         decision_list = [m.get("content", "") for m in decisions[:3]]
         correction_list = [m.get("content", "") for m in corrections[:3]]
 
-        top_type = max(by_type, key=by_type.get) if by_type else "unknown"
+        top_type = max(by_type, key=lambda k: by_type.get(k, 0)) if by_type else "unknown"
         conf_avg = profile_stats.get("confidence_avg", 0)
 
         identity_parts = []
@@ -109,10 +127,11 @@ class ProfileExportMixin:
             "decisions": decision_list,
             "corrections": correction_list,
             "by_type": by_type,
-            "domains": [get_domain_description(d) for d in domains],
+            "domains": [get_domain_description(d) for d in domains],  # type: ignore[misc]
         }
 
     def export_profile(self, output_path: Optional[str] = None) -> ExportProfileResult:
+        """Export the user identity profile to a file (or return as dict)."""
         whoami = self.whoami()
         profile = self.get_memory_profile()
 
@@ -141,7 +160,7 @@ class ProfileExportMixin:
             with open(p, "w", encoding="utf-8") as f:
                 json.dump(export, f, ensure_ascii=False, indent=2)
 
-        return export
+        return export  # type: ignore[return-value]
 
     def export_memories(
         self,
@@ -306,7 +325,7 @@ class ProfileExportMixin:
                 logger.warning("Failed to import memory entry: %s", e)
                 errors += 1
 
-        self._auto_backup()
+        self._auto_backup()  # type: ignore[attr-defined]
 
         return {
             "imported": imported,

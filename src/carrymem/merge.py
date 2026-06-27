@@ -27,6 +27,7 @@ def detect_conflicts(
     memories: List[Dict[str, Any]],
     similarity_threshold: float = 0.8,
 ) -> List[List[Dict[str, Any]]]:
+    """Detect hash and semantic conflicts among memories, returning conflict groups."""
     if not memories:
         return []
 
@@ -74,6 +75,7 @@ def merge_memories(
     strategy: str = "latest_wins",
     conflict_callback: Optional[Callable[[List[Dict[str, Any]]], None]] = None,
 ) -> List[Dict[str, Any]]:
+    """Merge memories resolving conflicts via the chosen strategy."""
     if not memories:
         return []
 

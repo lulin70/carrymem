@@ -39,6 +39,7 @@ class Permission:
 
     @classmethod
     def is_valid(cls, value: str) -> bool:
+        """Return True if ``value`` is a recognized permission."""
         return value in cls._ALL
 
 
@@ -75,7 +76,7 @@ class AccessPolicy:
         Returns:
             ``True`` if the user has the requested permission.
         """
-        if not Permission.is_valid(permission):
+        if not Permission.is_valid(permission):  # type: ignore[arg-type]
             raise SecurityError(
                 code="CM-403",
                 message=f"Invalid permission: {permission!r}",
@@ -107,7 +108,7 @@ class AccessPolicy:
                 log_denied(
                     resource=resource,
                     user_id=user_id,
-                    action=permission.upper(),
+                    action=permission.upper(),  # type: ignore[attr-defined]
                     details={"required_permission": permission, "owner_id": self.owner_id},
                 )
             except Exception:

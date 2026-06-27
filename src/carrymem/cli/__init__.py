@@ -10,6 +10,7 @@ from carrymem.errors import CarryMemError
 
 
 def show_help():
+    """Print the CLI help text listing all available commands."""
     print(f"""
   {_bold(f'CarryMem v{__version__}')} - Your Portable AI Memory Layer
 
@@ -111,6 +112,7 @@ def show_help():
 
 
 def main():
+    """Dispatch a CLI command from sys.argv."""
     if len(sys.argv) < 2:
         show_help()
         sys.exit(0)

@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
 try:
-    import yaml
+    import yaml  # type: ignore[import-untyped]
 
     YAML_AVAILABLE = True
 except ImportError:
@@ -25,7 +25,7 @@ try:
 except ImportError:
     import logging
 
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger(__name__)  # type: ignore[assignment]
 
 
 class SemanticExpander:

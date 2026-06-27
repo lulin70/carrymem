@@ -28,13 +28,15 @@ class MemoryClassificationEngine:
     are handled by CarryMem's adapter system, not here.
     """
 
-    def __init__(self, config_path: str = None, noise_filter_mode: str = "strict"):
+    def __init__(self, config_path: Optional[str] = None, noise_filter_mode: str = "strict"):
         self.config = ConfigManager(config_path)
-        self.classification_pipeline = ClassificationPipeline(self.config, noise_filter_mode=noise_filter_mode)
+        self.classification_pipeline = ClassificationPipeline(
+            self.config, noise_filter_mode=noise_filter_mode  # type: ignore[arg-type]
+        )
         self.max_work_memory_size = self.config.get("storage.max_work_memory_size", 100)
-        self.working_memory = deque(maxlen=self.max_work_memory_size)
+        self.working_memory = deque(maxlen=self.max_work_memory_size)  # type: ignore[call-overload]
         self.max_message_history_size = self.config.get("storage.max_message_history_size", 1000)
-        self.message_history = deque(maxlen=self.max_message_history_size)
+        self.message_history = deque(maxlen=self.max_message_history_size)  # type: ignore[call-overload]
 
     def process_message(
         self,
@@ -131,9 +133,10 @@ class MemoryClassificationEngine:
         )
 
     def clear_working_memory(self):
+        """Reset the in-process working memory buffer."""
         self.working_memory.clear()
 
-    def to_memory_entry(self, message: str, context: str = None) -> Dict[str, Any]:
+    def to_memory_entry(self, message: str, context: Optional[str] = None) -> Dict[str, Any]:
         """Convert process_message result to MemoryEntry Schema v1.0.
 
         This is the core method for Pure Upstream mode.
@@ -144,7 +147,7 @@ class MemoryClassificationEngine:
         from datetime import timezone
         from uuid import uuid4
 
-        result = self.process_message(message, context)
+        result = self.process_message(message, context)  # type: ignore[arg-type]
         matches = result.get("matches", [])
 
         entries = []

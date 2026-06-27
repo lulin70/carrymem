@@ -39,6 +39,7 @@ class RuleCandidateGenerator:
     # ------------------------------------------------------------------
 
     def auto_suggest_rules(self, stored_memories: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Generate up to three rule candidates from stored memories."""
         if not stored_memories:
             return []
 
@@ -135,6 +136,7 @@ class RuleCandidateGenerator:
     # ------------------------------------------------------------------
 
     def detect_implicit_preferences(self) -> List[Dict[str, Any]]:
+        """Detect implicit tech preferences from recalled memories."""
         try:
             memories = self._recall_memories(limit=50)
         except (KeyError, ValueError, RuntimeError):
@@ -149,7 +151,7 @@ class RuleCandidateGenerator:
             re.IGNORECASE,
         )
 
-        tech_counts = {}
+        tech_counts: Dict[str, int] = {}
         for mem in memories:
             content = mem.get("content", "").lower()
             for match in tech_pattern.finditer(content):
@@ -217,6 +219,7 @@ class RuleCandidateGenerator:
 
     @staticmethod
     def sanitize_rule_content(text: str) -> str:
+        """Return text unchanged, or a placeholder if it contains unsafe patterns."""
         danger_pattern = re.compile(
             r"(?:ignore\s+(?:previous|above|all)\s+(?:instructions?|rules?)|"
             r"system\s*[:：]\s*|"
@@ -234,6 +237,7 @@ class RuleCandidateGenerator:
 
     @staticmethod
     def extract_trigger(content: str, mem_type: str) -> str:
+        """Infer a rule trigger phrase from memory content and type."""
         content_lower = content.lower()
 
         trigger_map = [
@@ -305,6 +309,7 @@ class RuleCandidateGenerator:
 
     @staticmethod
     def extract_condition(content: str) -> str:
+        """Extract a conditional clause from memory content, if present."""
         condition_patterns = [
             (r"如果.{0,5}?([^.，！？\n]+?)(?:的话|就|则|时|的时候)", 1),
             (r"当.{0,5}?([^.，！？\n]+?)(?:的时候|时|则)", 1),
@@ -325,6 +330,7 @@ class RuleCandidateGenerator:
 
     @staticmethod
     def extract_action(content: str, mem_type: str) -> str:
+        """Infer a rule action phrase from memory content and type."""
         content_lower = content.lower()
 
         prefer_match = re.search(
@@ -400,6 +406,7 @@ class RuleCandidateGenerator:
 
     @staticmethod
     def infer_rule_type(mem_type: str, content: str = "") -> str:
+        """Infer the rule type (prefer/avoid/always) from memory type and content."""
         if mem_type == "user_preference" and content:
             negation_patterns = [
                 r"别用",

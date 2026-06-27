@@ -91,8 +91,9 @@ def mcp_tool_handler(func):
 
     @wraps(func)
     def wrapper(target, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Invoke the wrapped handler, converting exceptions into an error dict."""
         try:
-            return func(target, arguments)
+            return func(target, arguments)  # type: ignore[no-any-return]
         except Exception as e:
             return {"success": False, "error": _safe_error(e)}
 
@@ -145,6 +146,7 @@ def _build_summary(entries: List[Dict[str, Any]], llm_calls: int = 0) -> Dict[st
 
 
 def handle_classify_message(engine, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Classify a single message into memory types without storing it."""
     message = arguments.get("message", "")
     context = arguments.get("context")
 
@@ -193,6 +195,7 @@ def handle_classify_message(engine, arguments: Dict[str, Any]) -> Dict[str, Any]
 
 
 def handle_get_classification_schema(engine, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Return the MCE classification schema as JSON or markdown."""
     fmt = arguments.get("format", "json")
 
     if fmt == "markdown":
@@ -206,8 +209,7 @@ def handle_get_classification_schema(engine, arguments: Dict[str, Any]) -> Dict[
             "",
         ]
         for mt in CLASSIFICATION_SCHEMA["memory_types"]:
-            # type: ignore[index]
-            lines.append(f"### {mt['id']} ({mt['label_en']} / {mt['label_zh']})")
+            lines.append(f"### {mt['id']} ({mt['label_en']} / {mt['label_zh']})")  # type: ignore[index]
             lines.append(f"- **Description**: {mt['description']}")  # type: ignore[index]
             lines.append(f"- **Examples**: {', '.join(mt['examples'])}")  # type: ignore[index]
             lines.append(f"- **Default Tier**: T{mt['default_tier']}")  # type: ignore[index]
@@ -221,6 +223,7 @@ def handle_get_classification_schema(engine, arguments: Dict[str, Any]) -> Dict[
 
 
 def handle_batch_classify(engine, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Classify multiple messages in a single batch and return per-message results."""
     messages_data = arguments.get("messages", [])
 
     if not messages_data:
@@ -251,6 +254,7 @@ def handle_batch_classify(engine, arguments: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def handle_mce_status(engine, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Return the MCE engine status (mode, version, capabilities, uptime)."""
     status = {
         "status": "active",
         "mode": "3+3_optional",
@@ -270,6 +274,7 @@ def handle_mce_status(engine, arguments: Dict[str, Any]) -> Dict[str, Any]:
 
 @mcp_tool_handler
 def handle_classify_and_remember(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Classify a message and persist the resulting memory entries."""
     message = arguments.get("message", "")
     context = arguments.get("context")
 
@@ -284,11 +289,12 @@ def handle_classify_and_remember(carrymem, arguments: Dict[str, Any]) -> Dict[st
         ctx = {"ai_reply": context}
 
     result = carrymem.classify_and_remember(message, context=ctx)
-    return result
+    return result  # type: ignore[no-any-return]
 
 
 @mcp_tool_handler
 def handle_recall_memories(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Recall memories matching a query with optional filters and limit."""
     query = arguments.get("query")
     filters = arguments.get("filters")
     limit = _clamp(int(arguments.get("limit", 20)), 1, _MAX_LIMIT)
@@ -301,6 +307,7 @@ def handle_recall_memories(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any
 
 @mcp_tool_handler
 def handle_forget_memory(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Delete a memory entry by its memory_id."""
     memory_id = arguments.get("memory_id", "")
 
     if not memory_id:
@@ -313,12 +320,14 @@ def handle_forget_memory(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
 
 @mcp_tool_handler
 def handle_index_knowledge(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Build the knowledge index and return indexing stats."""
     result = carrymem.index_knowledge()
     return {"indexed": True, "stats": result}
 
 
 @mcp_tool_handler
 def handle_recall_from_knowledge(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Recall knowledge notes matching a query."""
     query = arguments.get("query", "")
     filters = arguments.get("filters")
     limit = _clamp(int(arguments.get("limit", 20)), 1, _MAX_LIMIT)
@@ -333,6 +342,7 @@ def handle_recall_from_knowledge(carrymem, arguments: Dict[str, Any]) -> Dict[st
 
 @mcp_tool_handler
 def handle_recall_all(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Recall both memories and knowledge matching a query."""
     query = arguments.get("query", "")
     filters = arguments.get("filters")
     limit = _clamp(int(arguments.get("limit", 20)), 1, _MAX_LIMIT)
@@ -342,11 +352,12 @@ def handle_recall_all(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
 
     query = _validate_query_input(query)
     result = carrymem.recall_all(query=query, filters=filters, limit=limit)
-    return result
+    return result  # type: ignore[no-any-return]
 
 
 @mcp_tool_handler
 def handle_declare_preference(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Explicitly declare a preference/fact/decision from a message."""
     message = arguments.get("message", "")
 
     if not message.strip():
@@ -354,17 +365,19 @@ def handle_declare_preference(carrymem, arguments: Dict[str, Any]) -> Dict[str, 
 
     message = _validate_input(message, "message")
     result = carrymem.declare(message)
-    return result
+    return result  # type: ignore[no-any-return]
 
 
 @mcp_tool_handler
 def handle_get_memory_profile(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Return the user's consolidated memory profile."""
     profile = carrymem.get_memory_profile()
-    return profile
+    return profile  # type: ignore[no-any-return]
 
 
 @mcp_tool_handler
 def handle_get_system_prompt(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Build a ready-to-use system prompt from memories and knowledge."""
     context = arguments.get("context")
     max_memories = _clamp(int(arguments.get("max_memories", 10)), 1, _MAX_MEMORIES)
     max_knowledge = _clamp(int(arguments.get("max_knowledge", 5)), 1, _MAX_KNOWLEDGE)
@@ -383,6 +396,7 @@ def handle_get_system_prompt(carrymem, arguments: Dict[str, Any]) -> Dict[str, A
 
 @mcp_tool_handler
 def handle_summarize_and_store(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Summarize a session's memories and store the summary."""
     session_id = arguments.get("session_id", "")
     max_tokens = _clamp(int(arguments.get("max_tokens", 2000)), 100, 8000)
     namespace = arguments.get("namespace", "default")
@@ -431,30 +445,34 @@ def handle_summarize_and_store(carrymem, arguments: Dict[str, Any]) -> Dict[str,
 
 @mcp_tool_handler
 def handle_consolidate_memories(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Run memory consolidation (phases P1/P2), optionally as a dry run."""
     dry_run = arguments.get("dry_run", True)
     run_p1 = arguments.get("run_p1", True)
     run_p2 = arguments.get("run_p2", True)
     result = carrymem.consolidate(dry_run=dry_run, run_p1=run_p1, run_p2=run_p2)
-    return result
+    return result  # type: ignore[no-any-return]
 
 
 @mcp_tool_handler
 def handle_schedule_consolidation(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Schedule recurring memory consolidation at a given interval."""
     interval = arguments.get("interval_hours", 1.0)
     dry_run = arguments.get("dry_run", False)
     run_p1 = arguments.get("run_p1", True)
     run_p2 = arguments.get("run_p2", False)
     result = carrymem.schedule_consolidation(interval_hours=interval, dry_run=dry_run, run_p1=run_p1, run_p2=run_p2)
-    return result
+    return result  # type: ignore[no-any-return]
 
 
 @mcp_tool_handler
 def handle_stop_consolidation(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Stop any scheduled memory consolidation."""
     result = carrymem.stop_consolidation()
-    return result
+    return result  # type: ignore[no-any-return]
 
 
 def handle_add_rule(engine, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Add a new rule to the rules engine."""
     try:
         trigger = _validate_input(args.get("trigger", ""), "trigger")
         action = _validate_input(args.get("action", ""), "action")
@@ -486,6 +504,7 @@ def handle_add_rule(engine, args: Dict[str, Any]) -> Dict[str, Any]:
 
 @mcp_tool_handler
 def handle_list_rules(engine, args: Dict[str, Any]) -> Dict[str, Any]:
+    """List rules filtered by scope, status, and limit."""
     scope = args.get("scope")
     status = args.get("status", "active")
     limit = min(args.get("limit", 50), 500)
@@ -511,6 +530,7 @@ def handle_list_rules(engine, args: Dict[str, Any]) -> Dict[str, Any]:
 
 @mcp_tool_handler
 def handle_match_rules(engine, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Match rules against a scene and return matching rules with scores."""
     scene = _validate_input(args.get("scene", ""), "scene")
     scopes = args.get("scopes")
 
@@ -535,6 +555,7 @@ def handle_match_rules(engine, args: Dict[str, Any]) -> Dict[str, Any]:
 
 @mcp_tool_handler
 def handle_inject_rules(engine, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Inject matching rules into a context string in the chosen format."""
     context = _validate_input(args.get("context", ""), "context")
     fmt = args.get("format", "structured")
     max_rules = min(args.get("max_rules", 10), 50)
@@ -550,6 +571,7 @@ def handle_inject_rules(engine, args: Dict[str, Any]) -> Dict[str, Any]:
 
 @mcp_tool_handler
 def handle_my_rules(engine, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a compact, human-readable summary of the user's rules."""
     scope = args.get("scope")
     status = args.get("status", "active")
     rules = engine.list_rules(scope=scope, status=status, limit=200)
@@ -580,6 +602,7 @@ def handle_my_rules(engine, args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def handle_delete_rule(engine, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Delete a rule by ID, requiring confirmation for shared scopes."""
     try:
         rule_id = args.get("rule_id", "")
         confirm = args.get("confirm", False)
@@ -621,6 +644,7 @@ def handle_delete_rule(engine, args: Dict[str, Any]) -> Dict[str, Any]:
 
 @mcp_tool_handler
 def handle_suggest_rules(engine, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Suggest rule candidates by analyzing stored memories."""
     memory_type = args.get("memory_type")
     max_candidates = min(args.get("max_candidates", 5), 10)
 
@@ -649,6 +673,7 @@ def handle_suggest_rules(engine, args: Dict[str, Any]) -> Dict[str, Any]:
 
 @mcp_tool_handler
 def handle_promote_rules(engine, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Promote recurring memory patterns into rule candidates."""
     memory_type = args.get("memory_type")
     auto_accept = args.get("auto_accept", False)
 
@@ -668,6 +693,7 @@ def handle_promote_rules(engine, args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def handle_update_rule(engine, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Update fields of an existing rule by ID."""
     try:
         rule_id = args.get("rule_id", "")
         if not rule_id:
@@ -722,6 +748,7 @@ def handle_update_rule(engine, args: Dict[str, Any]) -> Dict[str, Any]:
 
 @mcp_tool_handler
 def handle_my_profile(carrymem, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Return the user's profile including memories and rules."""
     include_memories = args.get("include_memories", True)
     include_rules = args.get("include_rules", True)
 
@@ -781,6 +808,7 @@ def handle_my_profile(carrymem, args: Dict[str, Any]) -> Dict[str, Any]:
 
 @mcp_tool_handler
 def handle_onboard(carrymem, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Return an onboarding welcome message and prompt for initial preferences."""
     language = args.get("language", "en")
 
     welcome_messages = {
@@ -943,6 +971,7 @@ class Handlers:
         self._rule_engine = RuleEngine(db_path=rule_db_path)
 
     async def handle_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
+        """Dispatch an MCP tool call to its handler, running it in an executor."""
         entry = handler_map.get(tool_name)
         if not entry:
             return {

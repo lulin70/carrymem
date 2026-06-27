@@ -11,7 +11,7 @@ Enforces usage limits to prevent:
 """
 
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 
 class RuleLimiter:
@@ -200,7 +200,7 @@ class RuleLimiter:
         if new_rule.trigger == "*":
             cls.check_global_limit(active_rules)
 
-        rules_by_type = {}
+        rules_by_type: Dict[str, int] = {}
         for r in active_rules:
             rules_by_type[r.rule_type] = rules_by_type.get(r.rule_type, 0) + 1
 
@@ -228,12 +228,12 @@ class RuleLimiter:
         global_rules = [r for r in active_rules if r.trigger == "*"]
 
         # Count by type
-        type_counts = {}
+        type_counts: Dict[str, int] = {}
         for r in active_rules:
             type_counts[r.rule_type] = type_counts.get(r.rule_type, 0) + 1
 
         # Count by status
-        status_counts = {}
+        status_counts: Dict[str, int] = {}
         for r in all_rules:
             status_counts[r.status] = status_counts.get(r.status, 0) + 1
 

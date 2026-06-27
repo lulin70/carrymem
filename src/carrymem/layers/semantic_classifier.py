@@ -4,6 +4,8 @@ from carrymem.utils.logger import logger
 
 
 class SemanticClassifier:
+    """LLM-backed classifier that assigns a memory type to messages."""
+
     def __init__(self, config):
         self.config = config
         self.llm_enabled = self.config.get("llm.enabled", False)
@@ -53,7 +55,7 @@ class SemanticClassifier:
         # Attempt to initialize LLM client from available providers
         # Supports ZhipuAI (GLM) as primary LLM backend
         try:
-            from zhipuai import ZhipuAI
+            from zhipuai import ZhipuAI  # type: ignore[import-not-found]
 
             if self.llm_api_key:
                 return ZhipuAI(api_key=self.llm_api_key)

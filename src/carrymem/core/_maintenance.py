@@ -1,9 +1,12 @@
 """Maintenance: conflict detection, quality scoring, expiry, consolidation, scheduling."""
 
+from __future__ import annotations
+
 import logging
 import sqlite3
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from threading import Timer
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.constants import (
@@ -18,13 +21,24 @@ from carrymem.constants import (
 )
 from carrymem.core._lifecycle import StorageNotConfiguredError
 
+if TYPE_CHECKING:
+    from carrymem.adapters.base import StorageAdapter
+    from carrymem.rules import RuleEngine
+
 logger = logging.getLogger(__name__)
 
 
 class MaintenanceMixin:
     """Quality checks, conflict detection, consolidation, and scheduled maintenance."""
 
+    # Shared instance state provided by LifecycleMixin.__init__.
+    _adapter: Optional[StorageAdapter]
+    _namespace: str
+    _rule_engine: Optional[RuleEngine]
+    _consolidation_timer: Optional[Timer]
+
     def check_conflicts(self) -> List[Dict[str, Any]]:
+        """Detect conflicts among stored memories and rule engine rules."""
         from carrymem.conflict_detector import ConflictDetector
 
         if not self._adapter:
@@ -58,6 +72,7 @@ class MaintenanceMixin:
         return all_conflicts
 
     def check_quality(self, min_score: float = MIN_QUALITY_THRESHOLD) -> List[Dict[str, Any]]:
+        """Return memories whose quality score falls below ``min_score``."""
         from carrymem.quality_scorer import QualityAnalyzer
 
         if not self._adapter:
@@ -83,6 +98,7 @@ class MaintenanceMixin:
         return result
 
     def list_expired(self) -> List[Dict[str, Any]]:
+        """Return memories whose expiry timestamp has passed."""
         if not self._adapter:
             raise StorageNotConfiguredError()
 
@@ -100,7 +116,7 @@ class MaintenanceMixin:
         result = []
         for row in rows:
             content = row["content"]
-            if self._adapter._security and self._adapter._security.is_active:
+            if self._adapter._security and self._adapter._security.is_active:  # type: ignore[attr-defined]
                 content = self._adapter.decrypt_field(content)  # Use public API for decryption
             result.append(
                 {

@@ -53,6 +53,7 @@ class BackupManager:
             os.makedirs(path, mode=0o700, exist_ok=True)
 
     def create_backup(self) -> str:
+        """Create a timestamped backup of the database and return its path."""
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
         backup_filename = f"memories_backup_{timestamp}.db"
         backup_path = os.path.join(self._backup_dir, backup_filename)
@@ -85,6 +86,7 @@ class BackupManager:
         return os.path.realpath(backup_path)
 
     def restore_backup(self, backup_path: str) -> None:
+        """Restore the database from a backup file within the backup directory."""
         resolved = os.path.realpath(backup_path)
         backup_dir = os.path.realpath(self._backup_dir)
         if not resolved.startswith(backup_dir + os.sep) and resolved != backup_dir:
@@ -121,6 +123,7 @@ class BackupManager:
                     pass
 
     def list_backups(self) -> List[Dict[str, Any]]:
+        """List available backups sorted by creation time (newest first)."""
         if not os.path.exists(self._backup_dir):
             return []
 
@@ -159,6 +162,7 @@ class BackupManager:
         return backups
 
     def cleanup_old_backups(self) -> int:
+        """Remove oldest backups exceeding the retention limit and return count removed."""
         backups = self.list_backups()
         if len(backups) <= self._max_backups:
             return 0

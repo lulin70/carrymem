@@ -6,13 +6,13 @@ Design: Morandi color palette for a calm, professional aesthetic.
 """
 
 try:
-    from textual.app import App, ComposeResult
-    from textual.binding import Binding
-    from textual.containers import Container, Horizontal, Vertical
-    from textual.reactive import reactive
-    from textual.screen import ModalScreen
-    from textual.widget import Widget
-    from textual.widgets import DataTable, Footer, Header, Input, Label, Static
+    from textual.app import App, ComposeResult  # type: ignore[import-not-found]
+    from textual.binding import Binding  # type: ignore[import-not-found]
+    from textual.containers import Container, Horizontal, Vertical  # type: ignore[import-not-found]
+    from textual.reactive import reactive  # type: ignore[import-not-found]
+    from textual.screen import ModalScreen  # type: ignore[import-not-found]
+    from textual.widget import Widget  # type: ignore[import-not-found]
+    from textual.widgets import DataTable, Footer, Header, Input, Label, Static  # type: ignore[import-not-found]
 
     HAS_TEXTUAL = True
 except ImportError:
@@ -22,6 +22,7 @@ except ImportError:
 if not HAS_TEXTUAL:
 
     def run_tui():
+        """Print an install hint when Textual is unavailable."""
         print("  Textual is not installed.")
         print("  Install with: pip install textual")
         print("  Then run: carrymem tui")
@@ -106,6 +107,7 @@ else:
             self.memory = memory
 
         def compose(self) -> ComposeResult:
+            """Render the memory detail overlay widgets."""
             m = self.memory
             mtype = m.get("type", "unknown")
             icon = _TYPE_ICONS.get(mtype, "\u2753")
@@ -200,6 +202,7 @@ else:
             self.memory = memory
 
         def compose(self) -> ComposeResult:
+            """Render the delete confirmation dialog widgets."""
             mtype = self.memory.get("type", "unknown")
             icon = _TYPE_ICONS.get(mtype, "❓")
             content = self.memory.get("content", "")
@@ -220,9 +223,11 @@ else:
             )
 
         def action_confirm_delete(self) -> None:
+            """Dismiss the dialog confirming deletion."""
             self.dismiss(True)
 
         def action_cancel_delete(self) -> None:
+            """Dismiss the dialog cancelling deletion."""
             self.dismiss(False)
 
         CSS = f"""
@@ -282,6 +287,7 @@ else:
             self.memory = memory
 
         def compose(self) -> ComposeResult:
+            """Render the edit memory dialog widgets."""
             mtype = self.memory.get("type", "unknown")
             icon = _TYPE_ICONS.get(mtype, "❓")
             content = self.memory.get("content", "")
@@ -297,6 +303,7 @@ else:
             )
 
         def on_mount(self) -> None:
+            """Focus the edit input when the screen mounts."""
             try:
                 edit_input = self.query_one("#edit-input", Input)
                 edit_input.focus()
@@ -304,6 +311,7 @@ else:
                 pass
 
         def on_input_submitted(self, event: Input.Submitted) -> None:
+            """Save the edited content when Enter is pressed."""
             if event.input.id == "edit-input":
                 new_content = event.value.strip()
                 if new_content:
@@ -312,6 +320,7 @@ else:
                     self.dismiss(None)
 
         def action_cancel_edit(self) -> None:
+            """Dismiss the edit dialog without saving."""
             self.dismiss(None)
 
         CSS = f"""
@@ -366,6 +375,7 @@ else:
         ]
 
         def compose(self) -> ComposeResult:
+            """Render the keyboard shortcuts help screen."""
             lines = [
                 ("  \u2699  CarryMem TUI \u2014 Keyboard Shortcuts", "title"),
                 ("", ""),
@@ -443,6 +453,7 @@ else:
         """Real-time statistics display in the sidebar."""
 
         def update_stats(self, stats: Dict[str, Any], shown: int, filt: str) -> None:
+            """Refresh the sidebar statistics display."""
             total = stats.get("total_count", 0)
             by_type = stats.get("by_type", {})
             lines = [
@@ -456,7 +467,7 @@ else:
             type_counts = sorted(by_type.items(), key=lambda x: -x[1]) if isinstance(by_type, dict) else []
             for t, c in type_counts[:5]:
                 icon = _TYPE_ICONS.get(t, "\u2753")
-                label = _TYPE_LABELS.get(t, t)[:10]
+                label = _TYPE_LABELS.get(t, t)[:10]  # type: ignore[index]
                 lines.append(f"\u2502  {icon} {label}: {c}")
             self.update("\n".join(lines))
 
@@ -466,6 +477,7 @@ else:
         """Red error prompt box with code, message, and hint."""
 
         def show_error(self, exc: Exception) -> None:
+            """Display an exception as a friendly error box."""
             if isinstance(exc, CarryMemError):
                 code = exc.code
                 message = exc.message
@@ -484,6 +496,7 @@ else:
             self.remove_class("error-hidden")
 
         def clear_error(self) -> None:
+            """Hide the error box and clear its content."""
             self.update("")
             self.remove_class("error-visible")
             self.add_class("error-hidden")
@@ -509,6 +522,8 @@ else:
     # ── Main TUI Application ───────────────────────────────────────
 
     class CarryMemTUI(App):
+        """Main Textual TUI application for browsing and managing memories."""
+
         CSS = f"""
         /* ══════════════════════════════════════════════════════════
            CarryMorandi TUI — Morandi Color Scheme
@@ -730,6 +745,7 @@ else:
         selected_index: reactive[int] = reactive(-1)
 
         def __init__(self, db_path: Optional[str] = None, namespace: str = "default"):
+            """Initialize the TUI with a database path and namespace."""
             super().__init__()
             self.db_path = db_path or str(_DEFAULT_DB)
             self.namespace = namespace
@@ -738,6 +754,7 @@ else:
             self._add_mode = False
 
         def compose(self) -> ComposeResult:
+            """Compose the main application layout."""
             yield Header(show_clock=True)
             with Horizontal(id="search-bar"):
                 yield Input(placeholder="\U0001f50d  Search memories... (/ to focus)", id="search-input")
@@ -766,11 +783,13 @@ else:
             yield Footer()
 
         def on_mount(self) -> None:
+            """Load memories when the app mounts."""
             self._load_memories()
 
         # ── Search & Input ──────────────────────────────────────────
 
         def on_input_submitted(self, event: Input.Submitted) -> None:
+            """Handle Enter on the search bar to search or add a memory."""
             if event.input.id == "search-input":
                 value = event.value.strip()
                 if self._add_mode:
@@ -912,6 +931,7 @@ else:
         # ── Actions / Bindings ──────────────────────────────────────
 
         def action_focus_search(self) -> None:
+            """Move keyboard focus to the search input."""
             try:
                 search_input = self.query_one("#search-input", Input)
                 search_input.focus()
@@ -919,9 +939,11 @@ else:
                 pass
 
         def action_add_memory(self) -> None:
+            """Enter add-memory mode via the search bar."""
             self._prompt_add()
 
         def action_show_help(self) -> None:
+            """Push the keyboard shortcuts help screen."""
             self.push_screen(HelpScreen())
 
         def action_delete_memory(self) -> None:
@@ -974,6 +996,7 @@ else:
             self.push_screen(EditMemoryScreen(memory), _on_edit_result)
 
         def action_cancel_action(self) -> None:
+            """Cancel the current add-memory mode, restoring the search bar."""
             if self._add_mode:
                 self._add_mode = False
                 try:
@@ -995,38 +1018,46 @@ else:
                 pass
 
         def action_refresh(self) -> None:
+            """Reload the memory list and clear stale state."""
             self._load_memories()
             self._set_status("Refreshed \u2713")
 
         def action_view_all(self) -> None:
+            """Clear the type filter and show all memories."""
             self.current_filter = ""
             self._load_memories()
 
         def action_view_preferences(self) -> None:
+            """Filter the list to show only preferences."""
             self.current_filter = "user_preference"
             self._load_memories()
 
         def action_view_facts(self) -> None:
+            """Filter the list to show only facts."""
             self.current_filter = "fact_declaration"
             self._load_memories()
 
         def action_view_corrections(self) -> None:
+            """Filter the list to show only corrections."""
             self.current_filter = "correction"
             self._load_memories()
 
         def action_view_decisions(self) -> None:
+            """Filter the list to show only decisions."""
             self.current_filter = "decision"
             self._load_memories()
 
         # ── Memory Detail View ──────────────────────────────────────
 
         def action_view_detail(self) -> None:
+            """Open the detail overlay for the selected memory."""
             if 0 <= self.selected_index < len(self.memories):
                 self.push_screen(MemoryDetailScreen(self.memories[self.selected_index]))
 
         # ── Keyboard Navigation ─────────────────────────────────────
 
         def on_key(self, event) -> None:
+            """Handle j/k/arrows/Enter/Esc navigation over the memory list."""
             if event.key in ("j", "down"):
                 if self.selected_index < len(self.memories) - 1:
                     self.selected_index += 1
@@ -1044,10 +1075,11 @@ else:
         # ── Lifecycle ───────────────────────────────────────────────
 
         def on_unmount(self) -> None:
+            """Close the CarryMem instance when the app exits."""
             if self.cm:
                 self.cm.close()
 
-    def run_tui(db_path: Optional[str] = None, namespace: str = "default") -> None:
+    def run_tui(db_path: Optional[str] = None, namespace: str = "default") -> None:  # type: ignore[misc]
         """Launch the CarryMem TUI application."""
         if not HAS_TEXTUAL:
             print("  Textual is not installed.")

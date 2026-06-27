@@ -327,6 +327,7 @@ def _replace_pronoun(text: str, pronoun: str, replacement: str) -> str:
         pattern = r"\b" + re.escape(pronoun) + r"\b"
 
         def replacer(m):
+            """Replace possessive pronoun match with the user-possessive form."""
             result = replacement + "'s"
             if m.group(0)[0].isupper():
                 result = result[0].upper() + result[1:]
@@ -337,7 +338,8 @@ def _replace_pronoun(text: str, pronoun: str, replacement: str) -> str:
     # Subject/object pronouns
     pattern = r"\b" + re.escape(pronoun) + r"\b"
 
-    def replacer(m):
+    def replacer(m):  # type: ignore[no-redef]
+        """Replace subject/object pronoun match with the configured replacement."""
         result = replacement
         if m.group(0)[0].isupper():
             result = result[0].upper() + result[1:]

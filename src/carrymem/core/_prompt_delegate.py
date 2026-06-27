@@ -15,6 +15,8 @@ from carrymem.constants import (
 from carrymem.core._lifecycle import StorageNotConfiguredError
 
 if TYPE_CHECKING:
+    from carrymem.adapters.base import StorageAdapter
+    from carrymem.prompt_builder import PromptBuilder
     from carrymem.scoring import RecallBudget
 
 logger = logging.getLogger(__name__)
@@ -22,6 +24,10 @@ logger = logging.getLogger(__name__)
 
 class PromptDelegateMixin:
     """Prompt building delegation and LLM-powered session summarization / aggregation."""
+
+    # Shared instance state provided by LifecycleMixin.__init__.
+    _adapter: Optional[StorageAdapter]
+    _config: Optional[Dict[str, Any]]
 
     def build_context(
         self,
@@ -32,7 +38,8 @@ class PromptDelegateMixin:
         max_tokens: int = CONTEXT_BUILD_DEFAULTS["max_tokens_context"],
         language: str = "en",
     ) -> Dict[str, Any]:
-        return self.prompt_builder.build_context(
+        """Build a context payload of memories, knowledge, and rules."""
+        return self.prompt_builder.build_context(  # type: ignore[attr-defined,no-any-return]
             context=context,
             max_memories=max_memories,
             max_knowledge=max_knowledge,
@@ -50,7 +57,8 @@ class PromptDelegateMixin:
         max_tokens: int = CONTEXT_BUILD_DEFAULTS["max_tokens_system_prompt"],
         language: str = "en",
     ) -> str:
-        return self.prompt_builder.build_system_prompt(
+        """Build a system prompt incorporating recalled context."""
+        return self.prompt_builder.build_system_prompt(  # type: ignore[attr-defined,no-any-return]
             context=context,
             max_memories=max_memories,
             max_knowledge=max_knowledge,
@@ -69,7 +77,8 @@ class PromptDelegateMixin:
         budget: Optional[RecallBudget] = None,
         include_question: bool = True,
     ) -> str:
-        return self.prompt_builder.build_qa_prompt(
+        """Build a QA prompt enriched with relevant memories for a question."""
+        return self.prompt_builder.build_qa_prompt(  # type: ignore[attr-defined,no-any-return]
             question=question,
             max_memories=max_memories,
             max_knowledge=max_knowledge,
@@ -85,6 +94,7 @@ class PromptDelegateMixin:
         language: str = "en",
         store: bool = True,
     ) -> Optional[Dict[str, Any]]:
+        """Summarize a session's memories using the LLM client (experimental)."""
         warnings.warn(
             "summarize_session() is experimental and requires LLM client. "
             "It will be integrated into CLI/MCP in a future version.",
@@ -102,7 +112,7 @@ class PromptDelegateMixin:
             self._llm_client = LLMClient(config=self._config or {})
         summarizer = SessionSummarizer(llm_client=self._llm_client)
 
-        session_memories = self.recall_memories(
+        session_memories = self.recall_memories(  # type: ignore[attr-defined]
             query="",
             limit=SESSION_SUMMARIZER_LIMIT,
             filters={"session_id": session_id, "include_superseded": True},
@@ -131,6 +141,7 @@ class PromptDelegateMixin:
         language: str = "en",
         store: bool = True,
     ) -> List[Dict[str, Any]]:
+        """Aggregate memories of a type into summarized entries (experimental)."""
         warnings.warn(
             "aggregate_memories() is experimental and requires LLM client. "
             "It will be integrated into CLI/MCP in a future version.",
@@ -159,7 +170,9 @@ class PromptDelegateMixin:
         filters: Dict[str, Any] = {"include_superseded": False}
         if memory_type:
             filters["type"] = memory_type
-        memories = self.recall_memories(query="", limit=AGGREGATE_MEMORIES_LIMIT, filters=filters)
+        memories = self.recall_memories(  # type: ignore[attr-defined]
+            query="", limit=AGGREGATE_MEMORIES_LIMIT, filters=filters
+        )
 
         if not memories:
             return []

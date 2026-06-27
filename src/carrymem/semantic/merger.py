@@ -97,6 +97,7 @@ class ResultMerger:
 
         # Phase 3: Sort by relevance score (descending), then by confidence
         def get_sort_key(item):
+            """Return sort tuple (relevance desc, confidence desc) for an item."""
             if isinstance(item, dict):
                 return (-item.get("_relevance_score", 0), -item.get("confidence", 0))
             else:
@@ -132,9 +133,9 @@ class ResultMerger:
 
         # Handle StoredMemory objects or any object with storage_key/id attributes
         if hasattr(result, "storage_key"):
-            return result.storage_key
+            return result.storage_key  # type: ignore[no-any-return]
         if hasattr(result, "id"):
-            return result.id
+            return result.id  # type: ignore[no-any-return]
 
         return None
 

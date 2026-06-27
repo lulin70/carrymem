@@ -13,12 +13,14 @@ Users should be informed of potential conflicts but retain full control.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from .models import Rule
 
 
 class ConflictSeverity(Enum):
+    """Severity levels for rule conflicts."""
+
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
@@ -26,6 +28,8 @@ class ConflictSeverity(Enum):
 
 
 class ConflictType(Enum):
+    """Categories of conflicts detected between rules."""
+
     CONTRADICTION = "contradiction"
     OVERLAP = "overlap"
     REDUNDANCY = "redundancy"
@@ -56,6 +60,7 @@ class RuleConflict:
         return f"RuleConflict({self.conflict_type.value}, " f"{self.severity.value}, rules=[{rule_ids}])"
 
     def summary(self) -> str:
+        """Return a human-readable multi-line summary of this conflict."""
         rule_summaries = " | ".join(r.summary() for r in self.rules)
         return (
             f"[{self.severity.value.upper()}] {self.conflict_type.value}: "
@@ -288,7 +293,7 @@ class RuleConflictDetector:
 
         unused_rules = [r for r in all_rules if r.trigger_count == 0]
 
-        conflict_by_severity = {}
+        conflict_by_severity: Dict[str, int] = {}
         for c in conflicts:
             key = c.severity.value
             conflict_by_severity[key] = conflict_by_severity.get(key, 0) + 1

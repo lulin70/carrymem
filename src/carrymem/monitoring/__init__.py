@@ -19,6 +19,8 @@ from typing import Any, Callable, Dict, List, Optional
 
 
 class AlertSeverity(str, Enum):
+    """Severity level for monitoring alerts."""
+
     INFO = "info"
     WARNING = "warning"
     CRITICAL = "critical"

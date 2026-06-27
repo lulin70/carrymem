@@ -159,6 +159,7 @@ class NoisePattern(Pattern):
         self.category = category
 
     def get_description(self) -> str:
+        """Return a human-readable description of this noise pattern."""
         return f"Noise/{self.category.value} [{self.language}]"
 
 
@@ -178,6 +179,7 @@ class PreferencePattern(Pattern):
         self.strength = strength
 
     def get_description(self) -> str:
+        """Return a human-readable description of this preference pattern."""
         return f"Preference/{self.strength} [{self.language}]"
 
 
@@ -197,6 +199,7 @@ class CorrectionPattern(Pattern):
         self.tier = tier
 
     def get_description(self) -> str:
+        """Return a human-readable description of this correction pattern."""
         return f"Correction/T{self.tier} [{self.language}]"
 
 
@@ -216,6 +219,7 @@ class FactPattern(Pattern):
         self.sub_type = sub_type
 
     def get_description(self) -> str:
+        """Return a human-readable description of this fact pattern."""
         return f"Fact/{self.sub_type} [{self.language}]"
 
 
@@ -236,6 +240,7 @@ class TaskPattern(Pattern):
         self.sub_type = sub_type
 
     def get_description(self) -> str:
+        """Return a human-readable description of this task pattern."""
         return f"Task/{self.sub_type} [{self.language}]"
 
 
@@ -255,6 +260,7 @@ class DecisionPattern(Pattern):
         self.strength = strength
 
     def get_description(self) -> str:
+        """Return a human-readable description of this decision pattern."""
         return f"Decision/{self.strength} [{self.language}]"
 
 
@@ -274,6 +280,7 @@ class RelationshipPattern(Pattern):
         self.sub_type = sub_type
 
     def get_description(self) -> str:
+        """Return a human-readable description of this relationship pattern."""
         return f"Relationship/{self.sub_type} [{self.language}]"
 
 
@@ -293,6 +300,7 @@ class SentimentPattern(Pattern):
         self.sub_type = sub_type
 
     def get_description(self) -> str:
+        """Return a human-readable description of this sentiment pattern."""
         return f"Sentiment/{self.sub_type} [{self.language}]"
 
 
@@ -311,4 +319,5 @@ class LocationPattern(Pattern):
         self.sub_type = "location"
 
     def get_description(self) -> str:
+        """Return a human-readable description of this location pattern."""
         return f"Location [{self.language}]"

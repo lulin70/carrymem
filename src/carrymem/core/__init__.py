@@ -84,6 +84,7 @@ class CarryMem(
 
     @access_policy.setter
     def access_policy(self, policy: Optional[AccessPolicy]) -> None:
+        """Set the active access policy (use ``None`` to clear)."""
         self._access_policy = policy
 
     # ------------------------------------------------------------------ #
@@ -158,7 +159,7 @@ class CarryMem(
             issues.append(f"Rule engine error: {exc}")
 
         overall = "degraded" if issues else "ok"
-        return {"status": overall, "components": components, "issues": issues}
+        return {"status": overall, "components": components, "issues": issues}  # type: ignore[typeddict-item]
 
     def get_component_status(self) -> ComponentStatusDict:
         """Return the initialisation status of every component.
@@ -187,7 +188,7 @@ class CarryMem(
             # Don't trigger lazy init here; report as not configured
             result["rule_engine"] = "not_configured"
 
-        return result
+        return result  # type: ignore[return-value]
 
     def validate_ready(
         self,
@@ -249,14 +250,14 @@ class CarryMem(
 # satisfies every Protocol so ``def f(cm: CarryMemOps)`` accepts CarryMem.
 # ---------------------------------------------------------------------------
 _: LifecycleOps = CarryMem  # type: ignore[assignment]
-_: BackupOps = CarryMem  # type: ignore[assignment]
-_: RecallOps = CarryMem  # type: ignore[assignment]
-_: ClassificationOps = CarryMem  # type: ignore[assignment]
-_: MemoryCRUDOps = CarryMem  # type: ignore[assignment]
-_: ProfileExportOps = CarryMem  # type: ignore[assignment]
-_: MaintenanceOps = CarryMem  # type: ignore[assignment]
-_: PromptDelegateOps = CarryMem  # type: ignore[assignment]
-_: CarryMemOps = CarryMem  # type: ignore[assignment]
+_: BackupOps = CarryMem  # type: ignore[no-redef]
+_: RecallOps = CarryMem  # type: ignore[no-redef]
+_: ClassificationOps = CarryMem  # type: ignore[no-redef]
+_: MemoryCRUDOps = CarryMem  # type: ignore[no-redef]
+_: ProfileExportOps = CarryMem  # type: ignore[no-redef]
+_: MaintenanceOps = CarryMem  # type: ignore[no-redef]
+_: PromptDelegateOps = CarryMem  # type: ignore[no-redef]
+_: CarryMemOps = CarryMem  # type: ignore[no-redef]
 
 
 __all__ = [

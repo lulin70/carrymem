@@ -4,9 +4,9 @@ import sqlite3
 from datetime import datetime, timezone
 
 try:
-    import pysqlite3.dbapi2 as _pysqlite3
+    import pysqlite3.dbapi2 as _pysqlite3  # type: ignore[import-untyped]
 
-    _OpError = (sqlite3.OperationalError, _pysqlite3.OperationalError)
+    _OpError: tuple = (sqlite3.OperationalError, _pysqlite3.OperationalError)
 except ImportError:
     _OpError = (sqlite3.OperationalError,)
 
@@ -181,6 +181,7 @@ class SchemaManager:
         self._conn_mgr = conn_manager
 
     def init_schema(self):
+        """Create the core tables and version schema."""
         conn = self._conn_mgr.get_connection()
         try:
             conn.executescript(_SCHEMA_SQL)
@@ -202,6 +203,7 @@ class SchemaManager:
         self.migrate_v090()
 
     def migrate_namespace(self):
+        """Add the namespace column to the memories table if missing."""
         conn = self._conn_mgr.get_connection()
         try:
             conn.execute("SELECT namespace FROM memories LIMIT 1")
@@ -224,6 +226,7 @@ class SchemaManager:
             logger.debug("FTS5 tokenizer migration skipped: %s", e)
 
     def migrate_v050(self):
+        """Add v0.5.0 importance columns and rebuild indexes."""
         conn = self._conn_mgr.get_connection()
         needs_recalculate = False
         try:
@@ -251,6 +254,7 @@ class SchemaManager:
             self.recalculate_all_importance()
 
     def recalculate_all_importance(self):
+        """Recompute importance_score for every stored memory."""
         conn = self._conn_mgr.get_connection()
         try:
             rows = conn.execute(
@@ -283,6 +287,7 @@ class SchemaManager:
         return len(updates)
 
     def migrate_v060(self):
+        """Add the raw_text column and rebuild FTS5 if needed."""
         conn = self._conn_mgr.get_connection()
         needs_fts_rebuild = False
         try:
@@ -318,6 +323,7 @@ class SchemaManager:
                 logger.warning("Failed to rebuild FTS5: %s", e)
 
     def init_vec_schema(self, embedding_dim: int = 384):
+        """Create the vector search virtual table."""
         conn = self._conn_mgr.get_connection()
         try:
             conn.execute(f"""
@@ -331,6 +337,7 @@ class SchemaManager:
             logger.warning("Failed to create memory_vectors table: %s", e)
 
     def migrate_v070(self):
+        """Ensure the vector table exists for v0.7.0."""
         conn = self._conn_mgr.get_connection()
         try:
             conn.execute("SELECT memory_id FROM memory_vectors LIMIT 1")
@@ -338,6 +345,7 @@ class SchemaManager:
             self.init_vec_schema()
 
     def migrate_v080(self):
+        """Add the superseded_at column for v0.8.0."""
         conn = self._conn_mgr.get_connection()
         try:
             conn.execute("SELECT superseded_at FROM memories LIMIT 1")

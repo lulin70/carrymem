@@ -6,6 +6,7 @@ from carrymem.cli._base import *
 
 
 def cmd_add(args):
+    """Add a memory by classifying or force-declaring a message."""
     parser = _make_parser("add")
     parser.add_argument("message", help=_t("cli.arg.message"))
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace_default"))
@@ -51,7 +52,7 @@ def cmd_add(args):
             cm.close()
             return 1
     else:
-        result = cm.classify_and_remember(parsed.message, context=context)
+        result = cm.classify_and_remember(parsed.message, context=context)  # type: ignore[assignment]
 
         if not result.get("should_remember"):
             print(f"  {_yellow(_t('cli.status.not_classified'))}")
@@ -83,6 +84,7 @@ def cmd_add(args):
 
 
 def cmd_list(args):
+    """List stored memories, optionally filtered by type."""
     parser = _make_parser("list")
     parser.add_argument("--limit", "-l", type=int, default=20, help=_t("cli.arg.limit_memories"))
     parser.add_argument("--type", "-t", help=_t("cli.arg.type_filter"))
@@ -128,6 +130,7 @@ def cmd_list(args):
 
 
 def cmd_search(args):
+    """Search memories matching a query string."""
     parser = _make_parser("search")
     parser.add_argument("query", help=_t("cli.arg.query"))
     parser.add_argument("--limit", "-l", type=int, default=10, help=_t("cli.arg.limit_results"))
@@ -181,6 +184,7 @@ def cmd_search(args):
 
 
 def cmd_show(args):
+    """Show full details of a single memory by key."""
     parser = _make_parser("show")
     parser.add_argument("key", help=_t("cli.arg.key"))
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace_default"))
@@ -238,6 +242,7 @@ def cmd_show(args):
 
 
 def cmd_edit(args):
+    """Edit a memory's content by key, prompting for confirmation."""
     parser = _make_parser("edit")
     parser.add_argument("key", help=_t("cli.arg.key_edit"))
     parser.add_argument("content", help=_t("cli.arg.content"))
@@ -292,6 +297,7 @@ def cmd_edit(args):
 
 
 def cmd_forget(args):
+    """Delete a memory by key, prompting for confirmation."""
     parser = _make_parser("forget")
     parser.add_argument("key", help=_t("cli.arg.key_forget"))
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace_default"))
@@ -344,6 +350,7 @@ def cmd_forget(args):
 
 
 def cmd_clean(args):
+    """Remove expired or low-quality memories, optionally as a dry run."""
     parser = _make_parser("clean")
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace_default"))
     parser.add_argument("--db", help=_t("cli.arg.db"))

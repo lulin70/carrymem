@@ -202,7 +202,7 @@ class TestConnectionCleanup(unittest.TestCase):
     def test_close_all_connections_clears_tracked(self):
         """close_all_connections should clear all tracked connections."""
         conn = self.mgr.get_connection()
-        self.assertTrue(len(self.mgr._all_connections) > 0, "Should have tracked connections")
+        self.assertGreater(len(self.mgr._all_connections), 0, "Should have tracked connections")
 
         self.mgr.close_all_connections()
         self.assertEqual(

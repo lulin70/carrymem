@@ -12,6 +12,7 @@ Audit trail: every promotion action is logged to promotion_audit table.
 """
 
 import json
+import sqlite3
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -43,6 +44,8 @@ DEFAULT_MAX_CANDIDATES = 10
 
 @dataclass
 class PromotionAuditEntry:
+    """Audit record for a rule candidate produced by the promotion pipeline."""
+
     id: str
     candidate_trigger: str
     candidate_action: str
@@ -57,6 +60,7 @@ class PromotionAuditEntry:
     resulting_rule_id: Optional[str] = None
 
     def to_dict(self) -> dict:
+        """Serialize this audit entry to a plain dict."""
         return {
             "id": self.id,
             "candidate_trigger": self.candidate_trigger,
@@ -241,7 +245,7 @@ class PromotionPipeline:
                 "SELECT COUNT(*) FROM promotion_audit WHERE status = ?",
                 (PROMOTION_STATUS_PENDING,),
             )
-            return cursor.fetchone()[0]
+            return cursor.fetchone()[0]  # type: ignore[no-any-return]
         finally:
             pass
 

@@ -511,7 +511,7 @@ class TestJANoiseRejection(unittest.TestCase):
     def test_question(self):
         engine = MemoryClassificationEngine()
         result = engine.process_message("開発環境の構築方法は？")
-        self.assertTrue(len(result["matches"]) <= 1)
+        self.assertLessEqual(len(result["matches"]), 1)
 
 
 # ============================================================
@@ -578,7 +578,7 @@ class TestCarryMemCore(unittest.TestCase):
     def test_recall_memories(self):
         self.cm.classify_and_remember("I prefer dark mode")
         results = self.cm.recall_memories(query="dark mode")
-        self.assertTrue(len(results) > 0)
+        self.assertGreater(len(results), 0)
 
     def test_forget_memory(self):
         result = self.cm.classify_and_remember("I prefer dark mode")
@@ -709,7 +709,7 @@ class TestSQLiteAdapter(unittest.TestCase):
         stored = self.adapter.remember(entry)
         self.assertIsNotNone(stored.storage_key)
         results = self.adapter.recall("dark mode")
-        self.assertTrue(len(results) > 0)
+        self.assertGreater(len(results), 0)
 
     def test_forget(self):
         entry = MemoryEntry(
@@ -828,7 +828,7 @@ class TestExportImport(unittest.TestCase):
             self.assertEqual(import_result["errors"], 0)
 
             memories = cm2.recall_memories(query="", limit=10)
-            self.assertTrue(len(memories) > 0)
+            self.assertGreater(len(memories), 0)
         finally:
             if os.path.exists(db2):
                 os.unlink(db2)
@@ -911,46 +911,46 @@ class TestCJKRecall(unittest.TestCase):
     def test_chinese_recall_2char(self):
         self.cm.classify_and_remember("我偏好使用PostgreSQL")
         results = self.cm.recall_memories(query="偏好")
-        self.assertTrue(len(results) > 0)
+        self.assertGreater(len(results), 0)
 
     def test_chinese_recall_3char(self):
         self.cm.classify_and_remember("我偏好使用PostgreSQL")
         results = self.cm.recall_memories(query="我偏好")
-        self.assertTrue(len(results) > 0)
+        self.assertGreater(len(results), 0)
 
     def test_chinese_recall_english_mixed(self):
         self.cm.classify_and_remember("我偏好使用PostgreSQL")
         results = self.cm.recall_memories(query="PostgreSQL")
-        self.assertTrue(len(results) > 0)
+        self.assertGreater(len(results), 0)
 
     def test_chinese_recall_single_char(self):
         self.cm.classify_and_remember("我偏好使用PostgreSQL")
         results = self.cm.recall_memories(query="使")
-        self.assertTrue(len(results) > 0)
+        self.assertGreater(len(results), 0)
 
     def test_japanese_recall_2char(self):
         self.cm.classify_and_remember("ダークモードが好きです")
         results = self.cm.recall_memories(query="好き")
-        self.assertTrue(len(results) > 0)
+        self.assertGreater(len(results), 0)
 
     def test_japanese_recall_3char(self):
         self.cm.classify_and_remember("ダークモードが好きです")
         results = self.cm.recall_memories(query="ダーク")
-        self.assertTrue(len(results) > 0)
+        self.assertGreater(len(results), 0)
 
     def test_chinese_recall_after_multiple_stores(self):
         self.cm.classify_and_remember("我喜欢深色主题")
         self.cm.classify_and_remember("我偏好使用PostgreSQL")
         self.cm.classify_and_remember("团队决定用微服务架构")
         results = self.cm.recall_memories(query="偏好")
-        self.assertTrue(len(results) > 0)
+        self.assertGreater(len(results), 0)
         contents = [r["content"] for r in results]
         self.assertTrue(any("PostgreSQL" in c for c in contents))
 
     def test_chinese_recall_original_message(self):
         self.cm.classify_and_remember("我偏好使用PostgreSQL")
         results = self.cm.recall_memories(query="偏好")
-        self.assertTrue(len(results) > 0)
+        self.assertGreater(len(results), 0)
 
 
 # ============================================================
@@ -1153,17 +1153,17 @@ class TestSpellCorrection(unittest.TestCase):
     def test_pyton_to_python(self):
         expansions = self.expander.expand("pyton")
         corrected = [e for e in expansions if e.lower() == "python"]
-        self.assertTrue(len(corrected) > 0, f"Expected 'python' in {expansions}")
+        self.assertGreater(len(corrected), 0, f"Expected 'python' in {expansions}")
 
     def test_jvascript_to_javascript(self):
         expansions = self.expander.expand("jvascript")
         corrected = [e for e in expansions if "javascript" in e.lower()]
-        self.assertTrue(len(corrected) > 0, f"Expected 'javascript' in {expansions}")
+        self.assertGreater(len(corrected), 0, f"Expected 'javascript' in {expansions}")
 
     def test_docker_to_dockr(self):
         expansions = self.expander.expand("dockr")
         corrected = [e for e in expansions if "docker" in e.lower()]
-        self.assertTrue(len(corrected) > 0, f"Expected 'docker' in {expansions}")
+        self.assertGreater(len(corrected), 0, f"Expected 'docker' in {expansions}")
 
     def test_correct_word_unchanged(self):
         expansions = self.expander.expand("PostgreSQL")
@@ -1253,7 +1253,7 @@ class TestCrossLanguageMapping(unittest.TestCase):
 
         # All three should share at least one common term (e.g., PostgreSQL)
         common_terms = set(cn_exp) & set(en_exp) & set(jp_exp)
-        self.assertTrue(len(common_terms) > 0, f"No common terms between CN/EN/JP expansions")
+        self.assertGreater(len(common_terms), 0, f"No common terms between CN/EN/JP expansions")
 
     def test_cross_language_preserves_original(self):
         expansions = self.expander.expand("深色模式")
@@ -1292,7 +1292,7 @@ class TestEndToEndSemanticRecall(unittest.TestCase):
         """Critical: 存储 PostgreSQL → 搜 数据库 → 命中"""
         self.cm.classify_and_remember("我偏好使用PostgreSQL")
         results = self.cm.recall_memories(query="数据库")
-        self.assertTrue(len(results) > 0, f"Expected results for '数据库', got {len(results)}")
+        self.assertGreater(len(results), 0, f"Expected results for '数据库', got {len(results)}")
         contents = [r["content"] for r in results]
         self.assertTrue(any("PostgreSQL" in c for c in contents), f"PostgreSQL not found in {contents}")
 
@@ -1308,13 +1308,13 @@ class TestEndToEndSemanticRecall(unittest.TestCase):
         """Japanese query finds English stored preference."""
         self.cm.classify_and_remember("I prefer dark mode in all my apps")
         results = self.cm.recall_memories(query="ダークモード")
-        self.assertTrue(len(results) > 0, f"Expected results for 'ダークモード', got {len(results)}")
+        self.assertGreater(len(results), 0, f"Expected results for 'ダークモード', got {len(results)}")
 
     def test_spell_error_postgres_finds_postgresql(self):
         """Spelling error 'Postgres' should find 'PostgreSQL'."""
         self.cm.classify_and_remember("I prefer PostgreSQL over MySQL")
         results = self.cm.recall_memories(query="Postgres")
-        self.assertTrue(len(results) > 0, f"Expected results for 'Postgres', got {len(results)}")
+        self.assertGreater(len(results), 0, f"Expected results for 'Postgres', got {len(results)}")
         contents = [r["content"] for r in results]
         self.assertTrue(any("PostgreSQL" in c for c in contents))
 
@@ -1322,37 +1322,37 @@ class TestEndToEndSemanticRecall(unittest.TestCase):
         """'DB' should find memories about SQLite."""
         self.cm.classify_and_remember("I use SQLite for local development")
         results = self.cm.recall_memories(query="DB")
-        self.assertTrue(len(results) > 0, f"Expected results for 'DB', got {len(results)}")
+        self.assertGreater(len(results), 0, f"Expected results for 'DB', got {len(results)}")
 
     def test_framework_finds_django(self):
         """'framework' should find Django-specific memories."""
         self.cm.classify_and_remember("Our backend is built with Django")
         results = self.cm.recall_memories(query="framework")
-        self.assertTrue(len(results) > 0, f"Expected results for 'framework', got {len(results)}")
+        self.assertGreater(len(results), 0, f"Expected results for 'framework', got {len(results)}")
 
     def test_editor_finds_vscode(self):
         """'editor' should find VS Code preferences."""
         self.cm.classify_and_remember("My favorite editor is VS Code with Vim keybindings")
         results = self.cm.recall_memories(query="editor")
-        self.assertTrue(len(results) > 0, f"Expected results for 'editor', got {len(results)}")
+        self.assertGreater(len(results), 0, f"Expected results for 'editor', got {len(results)}")
 
     def test_git_finds_github(self):
         """'git' should find GitHub-related memories."""
         self.cm.classify_and_remember("We host our code on GitHub")
         results = self.cm.recall_memories(query="git")
-        self.assertTrue(len(results) > 0, f"Expected results for 'git', got {len(results)}")
+        self.assertGreater(len(results), 0, f"Expected results for 'git', got {len(results)}")
 
     def test_cloud_finds_aws(self):
         """'cloud' should find AWS-related memories."""
         self.cm.classify_and_remember("Our infrastructure runs on AWS")
         results = self.cm.recall_memories(query="cloud")
-        self.assertTrue(len(results) > 0, f"Expected results for 'cloud', got {len(results)}")
+        self.assertGreater(len(results), 0, f"Expected results for 'cloud', got {len(results)}")
 
     def test_testing_finds_pytest(self):
         """'testing' should find pytest-related memories."""
         self.cm.classify_and_remember("We use pytest for unit testing")
         results = self.cm.recall_memories(query="testing")
-        self.assertTrue(len(results) > 0, f"Expected results for 'testing', got {len(results)}")
+        self.assertGreater(len(results), 0, f"Expected results for 'testing', got {len(results)}")
 
     def test_multiple_semantic_matches(self):
         """Should find multiple related memories via semantic expansion."""
@@ -1563,7 +1563,7 @@ class TestPerformanceBenchmark(unittest.TestCase):
         elapsed_ms = (time.time() - start) * 1000
 
         self.assertLess(elapsed_ms, 200, f"Recall took {elapsed_ms:.1f}ms > 200ms limit")
-        self.assertTrue(len(results) > 0, "Should find results via semantic expansion")
+        self.assertGreater(len(results), 0, "Should find results via semantic expansion")
 
     def test_expand_performance(self):
         """SemanticExpander.expand() should be fast."""

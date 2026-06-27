@@ -51,7 +51,8 @@ class AsyncCarryMem:
         context: Optional[Dict] = None,
         language: Optional[str] = None,
     ) -> Dict[str, Any]:
-        return await self._run(self._sync.classify_message, message, context, language)
+        """Classify a message into memory type (noise/preference/fact/etc.)."""
+        return await self._run(self._sync.classify_message, message, context, language)  # type: ignore[no-any-return]
 
     async def classify_and_remember(
         self,
@@ -59,7 +60,10 @@ class AsyncCarryMem:
         context: Optional[Dict] = None,
         language: Optional[str] = None,
     ) -> Dict[str, Any]:
-        return await self._run(self._sync.classify_and_remember, message, context, language)
+        """Classify a message and persist the result as a memory."""
+        return await self._run(  # type: ignore[no-any-return]
+            self._sync.classify_and_remember, message, context, language
+        )
 
     async def recall_memories(
         self,
@@ -67,23 +71,28 @@ class AsyncCarryMem:
         filters: Optional[Dict] = None,
         limit: int = 20,
     ) -> List[Dict[str, Any]]:
-        return await self._run(self._sync.recall_memories, query, filters, limit)
+        """Retrieve memories matching the query and optional filters."""
+        return await self._run(self._sync.recall_memories, query, filters, limit)  # type: ignore[no-any-return]
 
     async def forget_memory(self, memory_id: str) -> bool:
-        return await self._run(self._sync.forget_memory, memory_id)
+        """Delete a memory entry by its ID."""
+        return await self._run(self._sync.forget_memory, memory_id)  # type: ignore[no-any-return]
 
     async def get_stats(self) -> Dict[str, Any]:
-        return await self._run(self._sync.get_stats)
+        """Return aggregate statistics for stored memories."""
+        return await self._run(self._sync.get_stats)  # type: ignore[no-any-return]
 
     async def declare(
         self,
         message: str,
         context: Optional[Dict] = None,
     ) -> Dict[str, Any]:
-        return await self._run(self._sync.declare, message, context)
+        """Explicitly declare a preference/fact/decision from the message."""
+        return await self._run(self._sync.declare, message, context)  # type: ignore[no-any-return]
 
     async def get_memory_profile(self) -> Dict[str, Any]:
-        return await self._run(self._sync.get_memory_profile)
+        """Return the user's consolidated memory profile."""
+        return await self._run(self._sync.get_memory_profile)  # type: ignore[no-any-return]
 
     async def build_context(
         self,
@@ -94,7 +103,8 @@ class AsyncCarryMem:
         max_tokens: int = 2000,
         language: str = "en",
     ) -> Dict[str, Any]:
-        return await self._run(
+        """Build a structured context payload from memories, knowledge, and rules."""
+        return await self._run(  # type: ignore[no-any-return]
             self._sync.build_context,
             context,
             max_memories,
@@ -113,7 +123,8 @@ class AsyncCarryMem:
         max_tokens: int = 2000,
         language: str = "en",
     ) -> str:
-        return await self._run(
+        """Build a ready-to-use system prompt string from memories and knowledge."""
+        return await self._run(  # type: ignore[no-any-return]
             self._sync.build_system_prompt,
             context,
             max_memories,
@@ -128,7 +139,10 @@ class AsyncCarryMem:
         format: str = "json",
         namespace: Optional[str] = None,
     ) -> Dict[str, Any]:
-        return await self._run(self._sync.export_memories, output_path, format, namespace)
+        """Export memories to a file or return them as a dict."""
+        return await self._run(  # type: ignore[no-any-return]
+            self._sync.export_memories, output_path, format, namespace
+        )
 
     async def import_memories(
         self,
@@ -137,7 +151,10 @@ class AsyncCarryMem:
         namespace: Optional[str] = None,
         merge_strategy: str = "skip_existing",
     ) -> Dict[str, Any]:
-        return await self._run(self._sync.import_memories, input_path, data, namespace, merge_strategy)
+        """Import memories from a file or dict using a merge strategy."""
+        return await self._run(  # type: ignore[no-any-return]
+            self._sync.import_memories, input_path, data, namespace, merge_strategy
+        )
 
     async def update_memory(
         self,
@@ -145,16 +162,22 @@ class AsyncCarryMem:
         new_content: str,
         reason: Optional[str] = None,
     ) -> Dict[str, Any]:
-        return await self._run(self._sync.update_memory, storage_key, new_content, reason)
+        """Update an existing memory entry, recording the reason."""
+        return await self._run(  # type: ignore[no-any-return]
+            self._sync.update_memory, storage_key, new_content, reason
+        )
 
     async def get_memory_history(self, storage_key: str) -> List[Dict[str, Any]]:
-        return await self._run(self._sync.get_memory_history, storage_key)
+        """Return the version history of a memory entry."""
+        return await self._run(self._sync.get_memory_history, storage_key)  # type: ignore[no-any-return]
 
     async def rollback_memory(self, storage_key: str, version: int) -> Dict[str, Any]:
-        return await self._run(self._sync.rollback_memory, storage_key, version)
+        """Roll back a memory entry to a specific version."""
+        return await self._run(self._sync.rollback_memory, storage_key, version)  # type: ignore[no-any-return]
 
     async def backup(self, backup_dir: Optional[str] = None) -> Dict[str, Any]:
-        return await self._run(self._sync.backup, backup_dir)
+        """Create a backup of the memory store to a directory."""
+        return await self._run(self._sync.backup, backup_dir)  # type: ignore[no-any-return]
 
     async def get_audit_log(
         self,
@@ -164,9 +187,13 @@ class AsyncCarryMem:
         source: Optional[str] = None,
         limit: int = 100,
     ) -> List[Dict[str, Any]]:
-        return await self._run(self._sync.get_audit_log, operation, since, until, source, limit)
+        """Retrieve filtered audit log entries."""
+        return await self._run(  # type: ignore[no-any-return]
+            self._sync.get_audit_log, operation, since, until, source, limit
+        )
 
     async def close(self):
+        """Close the underlying synchronous CarryMem instance."""
         await self._run(self._sync.close)
 
     async def __aenter__(self):

@@ -148,6 +148,7 @@ def _merge_claude_global_config(new_data: dict, force: bool = False):
 
 
 def cmd_setup_mcp(args):
+    """Configure MCP integration for a target tool (project or global)."""
     parser = _make_parser("setup-mcp")
     parser.add_argument(
         "--tool",
@@ -533,6 +534,7 @@ def cmd_mcp(args):
 
 
 def cmd_serve(args):
+    """Start the MCP HTTP/SSE server for remote tool access."""
     parser = _make_parser("serve")
     parser.add_argument("--host", default="127.0.0.1", help=_t("cli.arg.host"))
     parser.add_argument("--port", "-p", type=int, default=8765, help=_t("cli.arg.port"))
@@ -554,6 +556,7 @@ def cmd_serve(args):
 
 
 def cmd_tui(args):
+    """Launch the interactive Textual TUI for browsing memories."""
     from carrymem.tui import HAS_TEXTUAL, run_tui
 
     if not HAS_TEXTUAL:
@@ -572,6 +575,7 @@ def cmd_tui(args):
 
 
 def cmd_tutorial(args):
+    """Print a 5-minute quick-start guide for CarryMem."""
     if args and args[0] in ("--help", "-h"):
         print("  Usage: carrymem tutorial")
         print("  Show a 5-minute quick-start guide for CarryMem.")

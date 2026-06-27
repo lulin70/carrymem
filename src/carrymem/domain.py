@@ -5,7 +5,7 @@ memories, enabling domain-aware preference injection and scope matching.
 """
 
 import re
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 DOMAIN_VOCABULARY = {
     "coding": {
@@ -230,7 +230,7 @@ def infer_domain(text: str) -> Optional[str]:
         return None
 
     # Return domain with highest score
-    return max(scores, key=scores.get)
+    return max(scores, key=scores.get)  # type: ignore[arg-type]
 
 
 def infer_domains_from_memories(memories: list) -> List[str]:
@@ -239,7 +239,7 @@ def infer_domains_from_memories(memories: list) -> List[str]:
     Aggregates domain signals across all memories and returns
     domains sorted by total score (descending).
     """
-    domain_scores = {}
+    domain_scores: Dict[str, int] = {}
 
     for m in memories:
         content = (m.get("raw_text", "") or "") + " " + (m.get("content", "") or "")

@@ -20,14 +20,14 @@ _db_write_locks_guard = threading.Lock()
 _SLOW_QUERY_THRESHOLD_MS = int(os.environ.get("CARRYMEM_SLOW_QUERY_MS", "100"))
 
 try:
-    import pysqlite3 as _pysqlite3
+    import pysqlite3 as _pysqlite3  # type: ignore[import-untyped]
 
     PYSQLITE3_AVAILABLE = True
 except ImportError:
     PYSQLITE3_AVAILABLE = False
 
 try:
-    import sqlite_vec
+    import sqlite_vec  # type: ignore[import-untyped]
 
     SQLITE_VEC_AVAILABLE = True
 except ImportError:
@@ -60,24 +60,30 @@ class ConnectionManager:
         self._all_connections: Dict[int, sqlite3.Connection] = {}
         self._conn_lock = threading.Lock()
         self._enable_vector = enable_vector
+        self._memory_conn: Optional[sqlite3.Connection] = None
 
     @property
     def db_path(self) -> str:
+        """Path to the SQLite database file."""
         return self._db_path
 
     @property
     def namespace(self) -> str:
+        """Active namespace for this connection manager."""
         return self._namespace
 
     @property
     def lock(self):
+        """In-memory threading lock guarding connection state."""
         return self._lock
 
     @property
     def file_lock(self):
+        """Cross-process file lock guarding the database file."""
         return self._file_lock
 
     def set_enable_vector(self, enable: bool):
+        """Enable or disable vector storage."""
         self._enable_vector = enable
 
     def get_connection(self) -> sqlite3.Connection:
@@ -140,7 +146,7 @@ class ConnectionManager:
                 except sqlite3.Error as e:
                     raise DBConnectionError(f"Failed to connect to database: {e}") from e
 
-        return self._local.conn
+        return self._local.conn  # type: ignore[no-any-return]
 
     def _apply_pragmas(self, conn: sqlite3.Connection) -> None:
         """Apply performance and safety PRAGMAs to a new connection.

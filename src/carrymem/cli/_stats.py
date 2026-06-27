@@ -83,7 +83,8 @@ def _show_value_report(cm, parsed) -> int:
     mid = f"  {'\u251c'}{'\u2500' * w}{'\u2524'}"
     bot = f"  {'\u2514'}{'\u2500' * w}{'\u2518'}"
 
-    def row(label, value):
+    def row(label, value):  # type: ignore[no-redef]
+        """Format a labeled value row for the value report box."""
         return f"  \u2502 {label.ljust(32)}{_bold(str(value)).rjust(6)} \u2502"
 
     print(top)
@@ -102,6 +103,7 @@ def _show_value_report(cm, parsed) -> int:
 
 
 def cmd_stats(args):
+    """Print memory statistics and optional value report."""
     parser = _make_parser("stats")
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
     parser.add_argument("--db", help=_t("cli.arg.db"))
@@ -147,7 +149,7 @@ def cmd_stats(args):
         print("\n  By Tier:")
         for tier_num in sorted(by_tier.keys()):
             count = by_tier[tier_num]
-            label = _TIER_LABELS.get(tier_num, f"T{tier_num}")
+            label = _TIER_LABELS.get(tier_num, f"T{tier_num}")  # type: ignore[call-overload]
             print(f"    Tier {tier_num} ({label}): {count}")
 
     conf_avg = profile_stats.get("confidence_avg", 0)
@@ -156,7 +158,7 @@ def cmd_stats(args):
 
     db_path = stats.get("db_path", "")
     if db_path and db_path != ":memory:":
-        p = Path(db_path)
+        p = Path(db_path)  # type: ignore[arg-type]
         if p.exists():
             size_mb = p.stat().st_size / (1024 * 1024)
             print(f"  Database Size: {size_mb:.2f} MB")
@@ -168,6 +170,7 @@ def cmd_stats(args):
 
 
 def cmd_whoami(args):
+    """Print the user identity summary derived from stored memories."""
     parser = _make_parser("whoami")
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
     parser.add_argument("--db", help=_t("cli.arg.db"))
@@ -236,6 +239,7 @@ def cmd_whoami(args):
 
 
 def cmd_profile(args):
+    """Show or export the user memory profile."""
     parser = _make_parser("profile")
     parser.add_argument(
         "action", choices=["export", "show"], default="show", nargs="?", help=_t("cli.arg.profile_action")
@@ -263,6 +267,7 @@ def cmd_profile(args):
 
 
 def cmd_check(args):
+    """Run quality checks for conflicts, low-quality, and expired memories."""
     parser = _make_parser("check")
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
     parser.add_argument("--db", help=_t("cli.arg.db"))
@@ -340,6 +345,7 @@ def cmd_check(args):
 
 
 def cmd_doctor(args):
+    """Run diagnostics on the CarryMem installation and database."""
     parser = _make_parser("doctor")
     parser.add_argument("--db", help=_t("cli.arg.db"))
     parser.add_argument("--fix", action="store_true", help=_t("cli.arg.fix"))
@@ -467,7 +473,7 @@ def cmd_doctor(args):
 
     optional_deps = []
     try:
-        import pycld2  # noqa: F401
+        import pycld2  # type: ignore[import-not-found]  # noqa: F401
 
         optional_deps.append("pycld2")
     except ImportError:
@@ -479,13 +485,13 @@ def cmd_doctor(args):
     except ImportError:
         pass
     try:
-        import langdetect  # noqa: F401
+        import langdetect  # type: ignore[import-not-found]  # noqa: F401
 
         optional_deps.append("langdetect")
     except ImportError:
         pass
     try:
-        import textual  # noqa: F401
+        import textual  # type: ignore[import-not-found]  # noqa: F401
 
         optional_deps.append("textual")
     except ImportError:

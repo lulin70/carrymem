@@ -4,7 +4,7 @@ from carrymem.adapters.sqlite import SQLiteAdapter
 
 # Re-export module-level constants for backward compatibility
 try:
-    from carrymem.adapters.sqlite import (  # type: ignore
+    from carrymem.adapters.sqlite import (
         PYSQLITE3_AVAILABLE,
         SENTENCE_TRANSFORMERS_AVAILABLE,
         SQLITE_VEC_AVAILABLE,

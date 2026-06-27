@@ -36,7 +36,7 @@ class RuleMatcher:
 
         # Handle None message
         if message is None:
-            return matches
+            return matches  # type: ignore[unreachable]
 
         language, _ = language_manager.detect_language(message)
 
@@ -52,12 +52,12 @@ class RuleMatcher:
             if rule_language and rule_language != "all" and rule_language != language:
                 continue
 
-            if re.search(pattern, message):
+            if re.search(pattern, message):  # type: ignore[arg-type]
                 if action == "extract":
                     # For extract action, use the entire message as content
                     content = message
                 else:
-                    content = extract_content(message, pattern, action)
+                    content = extract_content(message, pattern, action)  # type: ignore[assignment, arg-type]
 
                 if content:
                     # Build source field, ensure preference rules include 'preference' in source

@@ -41,16 +41,20 @@ _MAX_SSE_CLIENTS = 100
 
 
 class SSEClient:
+    """A single SSE client backed by an asyncio queue."""
+
     def __init__(self, client_id: str):
         self.client_id = client_id
         self.queue: asyncio.Queue = asyncio.Queue()
         self.closed = False
 
     async def send(self, data: str):
+        """Enqueue data for the client unless it has been closed."""
         if not self.closed:
             await self.queue.put(data)
 
     def close(self):
+        """Mark the client as closed so sends become no-ops."""
         self.closed = True
 
 
@@ -65,14 +69,15 @@ class MCPHTTPServer:
         carrymem_config: Optional[Dict[str, Any]] = None,
         allowed_origins: Optional[list] = None,
     ):
+        """Initialize the HTTP server, auth, CORS, and monitoring components."""
         self._host = host
         self._port = port
         self._api_key = api_key or os.environ.get("CARRYMEM_API_KEY")
         self._carrymem_config = carrymem_config
         self._allowed_origins = allowed_origins or ["http://localhost:*", "http://127.0.0.1:*"]
         self._clients: Dict[str, SSEClient] = {}
-        self._server = None
-        self._mcq_server = None
+        self._server: Optional[asyncio.AbstractServer] = None
+        self._mcq_server: Optional[MCPServer] = None
         # Monitoring components
         self._metrics = MetricsCollector()
         self._health_checker = HealthChecker(metrics_collector=self._metrics)
@@ -261,11 +266,11 @@ class MCPHTTPServer:
             return
 
         if not self._mcq_server:
-            self._mcq_server = MCPServer(self._carrymem_config)
+            self._mcq_server = MCPServer(self._carrymem_config)  # type: ignore[arg-type]
 
         response = await self._mcq_server.handle_request(request)
 
-        await self._send_response(writer, 200, response, request_origin)
+        await self._send_response(writer, 200, response, request_origin)  # type: ignore[arg-type]
 
         if "method" in request and request.get("method") != "initialize":
             for client in self._clients.values():
@@ -321,6 +326,7 @@ class MCPHTTPServer:
         await writer.drain()
 
     async def start(self):
+        """Start serving HTTP+SSE and block until the server stops."""
         self._server = await asyncio.start_server(self._handle_request, self._host, self._port)
         addrs = ", ".join(str(s.getsockname()) for s in self._server.sockets)
         logger.info("CarryMem MCP HTTP Server running on %s", addrs)
@@ -338,6 +344,7 @@ class MCPHTTPServer:
             await self._server.serve_forever()
 
     async def stop(self):
+        """Close the server and disconnect all SSE clients."""
         if self._server:
             self._server.close()
             await self._server.wait_closed()
@@ -348,6 +355,7 @@ class MCPHTTPServer:
 
 
 def run_http_server(host: str = "127.0.0.1", port: int = 8765, api_key: Optional[str] = None):
+    """Create and run an MCP HTTP server until interrupted."""
     server = MCPHTTPServer(host=host, port=port, api_key=api_key)
     try:
         asyncio.run(server.start())

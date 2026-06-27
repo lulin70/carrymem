@@ -1,6 +1,7 @@
 """Query building utilities for SQLiteAdapter."""
 
 import re
+import sqlite3
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
@@ -96,10 +97,11 @@ class QueryBuilder:
 
     @staticmethod
     def parse_time_expressions(query: str) -> Dict[str, Any]:
+        """Extract time-based filters (e.g. 'last week', '3 days ago') from a query."""
         if not query:
             return {}
 
-        result = {}
+        result: Dict[str, Any] = {}
         query_lower = query.lower()
 
         for pattern, days, is_oldest in _TIME_EXPRESSIONS:
@@ -157,6 +159,7 @@ class QueryBuilderWithContext(QueryBuilder):
         self._adapter = adapter
 
     def rebuild_context(self, original_query: str, keywords: str) -> str:
+        """Augment the original query with profile keywords when available."""
         if not keywords:
             return original_query
 

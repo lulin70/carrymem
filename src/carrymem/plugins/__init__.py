@@ -185,7 +185,7 @@ class PluginManager:
 
             # Call on_load
             try:
-                plugin_instance.on_load(self._carrymem_ref)
+                plugin_instance.on_load(self._carrymem_ref)  # type: ignore[arg-type]
             except Exception as e:
                 self._statuses[name] = PluginStatus(
                     name=name,

@@ -4,6 +4,8 @@ from carrymem.utils.helpers import generate_memory_id
 
 
 class SemanticAggregator:
+    """Aggregate semantically similar memories into concise merged statements."""
+
     _SIMILARITY_THRESHOLD = 0.55
     _MIN_CLUSTER_SIZE = 2
     _MAX_CLUSTERS = 10
@@ -35,6 +37,7 @@ class SemanticAggregator:
         memories: List[Dict[str, Any]],
         language: str = "en",
     ) -> List[Dict[str, Any]]:
+        """Cluster and merge similar memories, returning aggregated entries."""
         if not memories:
             return []
 
@@ -72,7 +75,7 @@ class SemanticAggregator:
             return []
 
         n = len(embeddings)
-        adj = [[] for _ in range(n)]
+        adj: List[List[int]] = [[] for _ in range(n)]
         for i in range(n):
             for j in range(i + 1, n):
                 sim = self._cosine_similarity(embeddings[i], embeddings[j])
@@ -150,7 +153,7 @@ class SemanticAggregator:
         prompt = prompt_template.format(memories=memory_text)
         result = self._llm.chat(prompt)
         if result and len(result.strip()) > 10:
-            return result.strip()
+            return result.strip()  # type: ignore[no-any-return]
         return self._rule_aggregate(cluster, language)
 
     def _rule_aggregate(self, cluster: List[Dict[str, Any]], language: str) -> str:
@@ -161,7 +164,7 @@ class SemanticAggregator:
             if language == "zh":
                 return f"{content}（综合{len(sorted_cluster)}条相关记忆）"
             return f"{content} (aggregated from {len(sorted_cluster)} related memories)"
-        return content
+        return content  # type: ignore[no-any-return]
 
     @staticmethod
     def _cosine_similarity(a: List[float], b: List[float]) -> float:
@@ -172,4 +175,4 @@ class SemanticAggregator:
         norm_b = sum(x * x for x in b) ** 0.5
         if norm_a == 0 or norm_b == 0:
             return 0.0
-        return dot / (norm_a * norm_b)
+        return dot / (norm_a * norm_b)  # type: ignore[no-any-return]

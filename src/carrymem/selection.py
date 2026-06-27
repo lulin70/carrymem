@@ -25,6 +25,7 @@ def _tokenize_text(text: str) -> set:
 
 
 def context_relevance(memory_content: str, context: str) -> float:
+    """Return Jaccard relevance score between memory content and context."""
     if not context or not context.strip():
         return 0.0
     if not memory_content or not isinstance(memory_content, str):
@@ -130,7 +131,7 @@ def _mmr_select(
         candidate_tokens.append(_tokenize_text(text))
 
     selected_indices = []
-    selected_tokens_list = []
+    selected_tokens_list: List[set] = []
     remaining = list(range(len(scored)))
 
     max_score = max(s for s, _ in scored) if scored else 1.0
@@ -181,6 +182,7 @@ def select_memories(
     mmr_lambda: float = 0.7,
     min_confidence: float = 0.0,
 ) -> List[Dict[str, Any]]:
+    """Select the most relevant memories for a context within token limits."""
     if not memories:
         return []
 
@@ -288,7 +290,7 @@ def select_memories(
     ]
     scored = mandatory_scored + pref_scored + other_scored
 
-    selected = []
+    selected: List[Dict[str, Any]] = []
     total_tokens = 0
     for score, m in scored:
         if len(selected) >= max_count:
@@ -311,6 +313,7 @@ def select_knowledge(
     max_count: int = 5,
     max_tokens: int = 1000,
 ) -> List[Dict[str, Any]]:
+    """Select the most relevant knowledge entries for a context."""
     if not knowledge:
         return []
 
@@ -324,7 +327,7 @@ def select_knowledge(
 
     scored.sort(key=lambda x: x[0], reverse=True)
 
-    selected = []
+    selected: List[Dict[str, Any]] = []
     total_tokens = 0
     for score, k in scored:
         if len(selected) >= max_count:

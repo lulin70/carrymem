@@ -13,7 +13,7 @@ Additions:
 
 import re
 from datetime import datetime, timezone
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from .matcher import MatchResult
 from .models import Rule
@@ -41,6 +41,7 @@ class ContextBudget:
         self.budget_tokens = budget_tokens
 
     def estimate_tokens(self, text: str) -> int:
+        """Estimate the token count for a text string."""
         if not text:
             return 0
         cjk_count = len(self.CJK_PATTERN.findall(text))
@@ -49,10 +50,12 @@ class ContextBudget:
         return max(1, int(cjk_count / 2 + non_cjk_chars / 4))
 
     def should_compress(self, text: str) -> bool:
+        """Return True if the text exceeds the compression threshold."""
         used = self.estimate_tokens(text)
         return used > self.budget_tokens * self.COMPRESSION_THRESHOLD
 
-    def compress_rules(self, matches: List, budget_tokens: int = None) -> List:
+    def compress_rules(self, matches: List, budget_tokens: Optional[int] = None) -> List:
+        """Compress rule matches to fit within a token budget."""
         if budget_tokens is None:
             budget_tokens = self.budget_tokens
 
@@ -481,7 +484,7 @@ class RuleInjector:
         hard_rules = sum(1 for m in matches if m.rule.override)
         soft_rules = len(matches) - hard_rules
 
-        type_counts = {}
+        type_counts: Dict[str, int] = {}
         for m in matches:
             t = m.rule.rule_type
             type_counts[t] = type_counts.get(t, 0) + 1

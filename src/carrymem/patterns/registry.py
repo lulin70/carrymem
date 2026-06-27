@@ -29,6 +29,7 @@ class PatternRegistry:
 
     @property
     def group_names(self) -> List[str]:
+        """Names of all registered pattern groups."""
         return list(self._groups.keys())
 
     def match_by_group(

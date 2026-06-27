@@ -214,13 +214,13 @@ class TestRuleMatcher(unittest.TestCase):
     def test_match_basic_preference(self):
         matcher = RuleMatcher(self.basic_rules)
         results = matcher.match("I prefer dark mode")
-        self.assertTrue(len(results) >= 1)
+        self.assertGreaterEqual(len(results), 1)
         self.assertEqual(results[0]["memory_type"], "user_preference")
 
     def test_match_correction(self):
         matcher = RuleMatcher(self.basic_rules)
         results = matcher.match("correction: use PostgreSQL instead")
-        self.assertTrue(len(results) >= 1)
+        self.assertGreaterEqual(len(results), 1)
         self.assertEqual(results[0]["memory_type"], "correction")
 
     def test_match_none_message_returns_empty(self):
@@ -260,7 +260,7 @@ class TestRuleMatcher(unittest.TestCase):
         ]
         matcher = RuleMatcher(rules)
         results = matcher.match("test")
-        self.assertTrue(len(results) >= 2)
+        self.assertGreaterEqual(len(results), 2)
         self.assertEqual(results[0]["priority"], 10)
         self.assertEqual(results[-1]["priority"], 3)
 
@@ -301,7 +301,7 @@ class TestRuleMatcher(unittest.TestCase):
         ]
         matcher = RuleMatcher(rules)
         results = matcher.match("test")
-        self.assertTrue(len(results) >= 1)
+        self.assertGreaterEqual(len(results), 1)
 
     def test_match_extract_action(self):
         rules = [
@@ -315,7 +315,7 @@ class TestRuleMatcher(unittest.TestCase):
         ]
         matcher = RuleMatcher(rules)
         results = matcher.match("I prefer dark mode")
-        self.assertTrue(len(results) >= 1)
+        self.assertGreaterEqual(len(results), 1)
         self.assertEqual(results[0]["content"], "I prefer dark mode")
 
     def test_match_preference_source_field(self):
@@ -330,7 +330,7 @@ class TestRuleMatcher(unittest.TestCase):
         ]
         matcher = RuleMatcher(rules)
         results = matcher.match("I prefer dark mode")
-        self.assertTrue(len(results) >= 1)
+        self.assertGreaterEqual(len(results), 1)
         self.assertIn("preference", results[0]["source"])
 
     def test_match_non_preference_source(self):
@@ -345,7 +345,7 @@ class TestRuleMatcher(unittest.TestCase):
         ]
         matcher = RuleMatcher(rules)
         results = matcher.match("correction: use PostgreSQL")
-        self.assertTrue(len(results) >= 1)
+        self.assertGreaterEqual(len(results), 1)
         self.assertNotIn("preference", results[0]["source"])
 
     def test_add_rule(self):
@@ -360,7 +360,7 @@ class TestRuleMatcher(unittest.TestCase):
         matcher.add_rule(new_rule)
         self.assertEqual(len(matcher.get_rules()), 1)
         results = matcher.match("I love Python")
-        self.assertTrue(len(results) >= 1)
+        self.assertGreaterEqual(len(results), 1)
 
     def test_remove_rule(self):
         matcher = RuleMatcher(self.basic_rules)
@@ -391,18 +391,18 @@ class TestRuleMatcher(unittest.TestCase):
         ]
         matcher = RuleMatcher(rules)
         results = matcher.match("test")
-        self.assertTrue(len(results) >= 1)
+        self.assertGreaterEqual(len(results), 1)
         self.assertEqual(results[0]["priority"], 5)
 
     def test_match_with_context_param(self):
         matcher = RuleMatcher(self.basic_rules)
         results = matcher.match("I prefer dark mode", context={"session_id": "test"})
-        self.assertTrue(len(results) >= 1)
+        self.assertGreaterEqual(len(results), 1)
 
     def test_match_with_execution_context_param(self):
         matcher = RuleMatcher(self.basic_rules)
         results = matcher.match("I prefer dark mode", execution_context={"tool_error": False})
-        self.assertTrue(len(results) >= 1)
+        self.assertGreaterEqual(len(results), 1)
 
     def test_match_empty_rules(self):
         matcher = RuleMatcher([])
@@ -583,7 +583,7 @@ class TestSessionSummarizer(unittest.TestCase):
         ]
         result = summarizer.summarize_session(memories, session_id="sess-1")
         self.assertIsNotNone(result)
-        self.assertTrue(len(result["metadata"]["source_memory_ids"]) >= 1)
+        self.assertGreaterEqual(len(result["metadata"]["source_memory_ids"]), 1)
 
 
 class TestSemanticAggregator(unittest.TestCase):
@@ -616,7 +616,7 @@ class TestSemanticAggregator(unittest.TestCase):
             _make_memory(content="I like dark mode when coding", raw_text="I like dark mode when coding"),
         ]
         results = agg.aggregate(memories)
-        self.assertTrue(len(results) >= 1)
+        self.assertGreaterEqual(len(results), 1)
         self.assertEqual(results[0]["source_layer"], "semantic_aggregator")
         self.assertIn("aggregated_from", results[0]["metadata"])
 
@@ -660,7 +660,7 @@ class TestSemanticAggregator(unittest.TestCase):
             _make_memory(content="I like dark mode", raw_text="I like dark mode"),
         ]
         results = agg.aggregate(memories)
-        self.assertTrue(len(results) >= 1)
+        self.assertGreaterEqual(len(results), 1)
         self.assertIn("aggregated from", results[0]["content"])
 
     def test_aggregate_with_mocked_llm(self):
@@ -679,7 +679,7 @@ class TestSemanticAggregator(unittest.TestCase):
             _make_memory(content="I like dark mode", raw_text="I like dark mode"),
         ]
         results = agg.aggregate(memories)
-        self.assertTrue(len(results) >= 1)
+        self.assertGreaterEqual(len(results), 1)
         self.assertEqual(results[0]["metadata"]["aggregation_method"], "llm")
 
     def test_aggregate_llm_fallback_to_rule(self):
@@ -698,7 +698,7 @@ class TestSemanticAggregator(unittest.TestCase):
             _make_memory(content="I like dark mode", raw_text="I like dark mode"),
         ]
         results = agg.aggregate(memories)
-        self.assertTrue(len(results) >= 1)
+        self.assertGreaterEqual(len(results), 1)
         self.assertIn("aggregated from", results[0]["content"])
 
     def test_cosine_similarity_identical(self):
@@ -1099,7 +1099,7 @@ class TestPatternAnalyzer(unittest.TestCase):
         analyzer = PatternAnalyzer(noise_filter_mode="strict")
         analyzer.analyze("I prefer dark mode")
         analyzer.analyze("We use PostgreSQL")
-        self.assertTrue(len(analyzer.message_history) > 0)
+        self.assertGreater(len(analyzer.message_history), 0)
         analyzer.clear_history()
         self.assertEqual(len(analyzer.message_history), 0)
         self.assertEqual(len(analyzer.task_patterns), 0)
@@ -1162,7 +1162,7 @@ class TestPatternAnalyzer(unittest.TestCase):
 
     def test_analyze_multiple_patterns(self):
         result = self.analyzer.analyze("I prefer dark mode and we decided to use PostgreSQL")
-        self.assertTrue(len(result) >= 1)
+        self.assertGreaterEqual(len(result), 1)
 
     def test_analyze_no_execution_context_no_feedback(self):
         result = self.analyzer.analyze("I prefer dark mode")

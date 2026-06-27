@@ -1,18 +1,31 @@
 """Backup & audit operations."""
 
+from __future__ import annotations
+
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.constants import AUDIT_LOG_DEFAULT_LIMIT
 from carrymem.core._lifecycle import StorageNotConfiguredError
+
+if TYPE_CHECKING:
+    from carrymem.adapters.base import StorageAdapter
 
 logger = logging.getLogger(__name__)
 
 
 class BackupMixin:
     """Backup creation, listing, restoration, cache clearing, and audit log."""
+
+    # Shared instance state provided by LifecycleMixin.__init__ (no default
+    # assignment — values are set at runtime by the composite CarryMem class).
+    _adapter: Optional[StorageAdapter]
+    _backup_dir: Optional[str]
+    _auto_backup_interval: int
+    _write_count: int
+    _initial_backup_done: bool
 
     def _do_initial_backup(self) -> None:
         """Create initial backup when CarryMem first opens an existing database."""
@@ -58,10 +71,12 @@ class BackupMixin:
                 logger.debug("Auto-backup failed: %s", e)
 
     def clear_cache(self) -> None:
+        """Invalidate the adapter's in-memory cache."""
         if self._adapter and hasattr(self._adapter, "_cache") and self._adapter._cache:
             self._adapter._cache.clear()
 
     def backup(self, backup_dir: Optional[str] = None) -> Dict[str, Any]:
+        """Create a database backup and return the result dict."""
         if not self._adapter or not isinstance(self._adapter, SQLiteAdapter):
             return {"error": "Backup only supported with SQLiteAdapter"}
 
@@ -79,6 +94,7 @@ class BackupMixin:
             return {"backed_up": False, "error": str(e)}
 
     def list_backups(self, backup_dir: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List available backups for the adapter's database."""
         if not self._adapter or not isinstance(self._adapter, SQLiteAdapter):
             return []
 
@@ -89,6 +105,7 @@ class BackupMixin:
         return manager.list_backups()
 
     def restore_backup(self, backup_path: str, backup_dir: Optional[str] = None) -> Dict[str, Any]:
+        """Restore the database from a backup file and return the result dict."""
         if not self._adapter or not isinstance(self._adapter, SQLiteAdapter):
             return {"error": "Restore only supported with SQLiteAdapter"}
 
@@ -115,6 +132,7 @@ class BackupMixin:
         source: Optional[str] = None,
         limit: int = AUDIT_LOG_DEFAULT_LIMIT,
     ) -> List[Dict[str, Any]]:
+        """Return audit log entries matching the filter criteria."""
         if not self._adapter or not isinstance(self._adapter, SQLiteAdapter):
             return []
 

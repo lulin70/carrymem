@@ -33,14 +33,14 @@ from .versioning import VersionManager
 
 # Module-level capability flags (re-exported for backward compatibility)
 try:
-    import sqlite_vec
+    import sqlite_vec  # type: ignore[import-untyped]
 
     SQLITE_VEC_AVAILABLE = True
 except ImportError:
     SQLITE_VEC_AVAILABLE = False
 
 try:
-    import pysqlite3
+    import pysqlite3  # type: ignore[import-untyped]
 
     PYSQLITE3_AVAILABLE = True
 except ImportError:
@@ -182,7 +182,7 @@ class SQLiteAdapter(StorageAdapter):
                 else:
                     os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
                     self._embedding_model = SentenceTransformer(embedding_model)
-                self._embedding_dim = self._embedding_model.get_embedding_dimension()
+                self._embedding_dim = self._embedding_model.get_embedding_dimension()  # type: ignore[attr-defined]
                 # Close existing connection and switch to pysqlite3 with vec0
                 self._conn_mgr.close_memory_conn_for_vector_switch()
                 self._conn_mgr.set_enable_vector(True)
@@ -255,18 +255,22 @@ class SQLiteAdapter(StorageAdapter):
 
     @property
     def db_path(self) -> str:
+        """Return the filesystem path to the SQLite database file."""
         return self._conn_mgr.db_path
 
     @property
     def namespace(self) -> str:
+        """Return the namespace this adapter is scoped to."""
         return self._conn_mgr.namespace
 
     @property
     def name(self) -> str:
+        """Return the adapter name ("sqlite")."""
         return "sqlite"
 
     @property
     def capabilities(self) -> Dict[str, bool]:
+        """Return a dict of supported backend capabilities."""
         return {
             "vector_search": self._enable_vector,
             "fts": True,
@@ -278,15 +282,18 @@ class SQLiteAdapter(StorageAdapter):
 
     @property
     def semantic_enabled(self) -> bool:
+        """Return whether semantic recall is enabled."""
         return self._enable_semantic
 
     @property
     def expander(self):
+        """Return the configured semantic expander (or None)."""
         return self._expander
 
     # ── Public API: delegated to components ─────────────────────
 
     def enable_semantic_recall(self, enabled: bool = True):
+        """Enable or disable semantic recall, gated on availability of the expander."""
         try:
             from ...semantic.expander import SemanticExpander
             from ...semantic.merger import ResultMerger
@@ -297,6 +304,7 @@ class SQLiteAdapter(StorageAdapter):
         self._enable_semantic = enabled and SEMANTIC_AVAIL and (self._expander is not None)
 
     def enable_vector_search(self, enabled: bool = True):
+        """Enable or disable vector search, gated on dependencies and model."""
         try:
             import pysqlite3
             import sqlite_vec
@@ -363,8 +371,8 @@ class SQLiteAdapter(StorageAdapter):
         stats = self.get_stats()
         if filter_ and "type" in filter_:
             by_type = stats.get("by_type", {})
-            return by_type.get(filter_["type"], 0)
-        return stats.get("total_count", 0)
+            return by_type.get(filter_["type"], 0)  # type: ignore[no-any-return]
+        return stats.get("total_count", 0)  # type: ignore[no-any-return]
 
     def health_check(self) -> dict:
         """Run a health check on the SQLite backend.
@@ -448,6 +456,7 @@ class SQLiteAdapter(StorageAdapter):
         return [r.to_dict() for r in results]
 
     def close(self):
+        """Close the underlying connection manager and release resources."""
         self._conn_mgr.close()
 
     def __enter__(self):
@@ -470,6 +479,7 @@ class SQLiteAdapter(StorageAdapter):
     # ── CRUD operations ─────────────────────────────────────────
 
     def remember(self, entry: MemoryEntry, _skip_commit: bool = False) -> StoredMemory:
+        """Store a memory entry (deprecated, use store() instead)."""
         warnings.warn(
             "remember() is deprecated, use store() instead. " "Will be removed in v0.5.0.",
             DeprecationWarning,
@@ -478,9 +488,11 @@ class SQLiteAdapter(StorageAdapter):
         return self._crud.remember(entry, _skip_commit)
 
     def remember_batch(self, entries: list) -> list:
+        """Store multiple memory entries in a single batch."""
         return self._crud.remember_batch(entries)
 
     def forget(self, storage_key: str) -> bool:
+        """Delete a memory by storage_key (deprecated, use delete() instead)."""
         warnings.warn(
             "forget() is deprecated, use delete() instead. " "Will be removed in v0.5.0.",
             DeprecationWarning,
@@ -489,6 +501,7 @@ class SQLiteAdapter(StorageAdapter):
         return self._crud.forget(storage_key)
 
     def forget_expired(self) -> int:
+        """Delete all expired memories and return the count removed."""
         return self._crud.forget_expired()
 
     def update_memory(
@@ -497,14 +510,16 @@ class SQLiteAdapter(StorageAdapter):
         new_content: str,
         reason: Optional[str] = None,
     ) -> Optional[StoredMemory]:
+        """Update an existing memory's content, recording the change reason."""
         return self._crud.update_memory(storage_key, new_content, reason)
 
     def get_by_key(self, storage_key: str):
+        """Retrieve a stored memory by its storage_key (or None if missing)."""
         return self._crud.get_by_key(storage_key)
 
     # ── Recall operations ───────────────────────────────────────
 
-    def recall(
+    def recall(  # type: ignore[override]
         self,
         query: str,
         filters: Optional[Dict[str, Any]] = None,
@@ -512,40 +527,50 @@ class SQLiteAdapter(StorageAdapter):
         namespaces: Optional[list] = None,
         update_access: bool = True,
     ) -> list:
+        """Retrieve memories matching a query with optional filters."""
         return self._recall_engine.recall(query, filters, limit, namespaces, update_access)
 
     def recall_aggregated(
         self, memory_type: Optional[str] = None, namespaces: Optional[list] = None, limit_per_type: int = 50
     ) -> Dict[str, list]:
+        """Return memories grouped by type, aggregated across namespaces."""
         return self._stats.recall_aggregated(memory_type, namespaces, limit_per_type)
 
     def recall_timeline(self, topic: str, namespaces: Optional[list] = None, limit: int = 20) -> list:
+        """Return a chronological timeline of memories for a topic."""
         return self._stats.recall_timeline(topic, namespaces, limit)
 
     # ── Version management ──────────────────────────────────────
 
     def get_memory_history(self, storage_key: str) -> list:
+        """Return the version history of a memory entry."""
         return self._version.get_memory_history(storage_key)
 
     def rollback_memory(self, storage_key: str, version: int) -> Optional[StoredMemory]:
+        """Roll back a memory entry to a specific version."""
         return self._version.rollback_memory(storage_key, version)
 
     # ── Statistics ───────────────────────────────────────────────
 
     def get_stats(self) -> Dict[str, Any]:
+        """Return aggregate statistics for stored memories."""
         return self._stats.get_stats()
 
     def get_profile(self) -> Dict[str, Any]:
+        """Return the consolidated memory profile."""
         return self._stats.get_profile()
 
     def recalculate_importance(self) -> int:
+        """Recalculate importance scores for all memories; return count updated."""
         with self._conn_mgr.file_lock:
-            return self._schema.recalculate_all_importance()
+            return self._schema.recalculate_all_importance()  # type: ignore[no-any-return]
 
     # ── Internal helpers exposed for sub-component access ───────
 
     def encrypt_field(self, plaintext: str) -> str:
+        """Encrypt a plaintext field value for storage."""
         return self._security.encrypt_field(plaintext)
 
     def decrypt_field(self, ciphertext: str) -> str:
+        """Decrypt a stored ciphertext field value."""
         return self._security.decrypt_field(ciphertext)

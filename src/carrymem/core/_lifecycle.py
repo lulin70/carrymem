@@ -48,6 +48,8 @@ def _validate_file_path(path: str, allowed_base: Optional[str] = None) -> str:
 
 
 class StorageNotConfiguredError(_StorageNotConfiguredError):
+    """Raised when no storage adapter is configured, with a setup hint."""
+
     def __init__(self):
         super().__init__(
             "Storage adapter not configured. "
@@ -57,6 +59,8 @@ class StorageNotConfiguredError(_StorageNotConfiguredError):
 
 
 class KnowledgeNotConfiguredError(_KnowledgeNotConfiguredError):
+    """Raised when no knowledge adapter is configured, with a setup hint."""
+
     def __init__(self):
         super().__init__(
             "Knowledge adapter not configured. "
@@ -81,6 +85,7 @@ class LifecycleMixin:
         encryption_key: Optional[str] = None,
         auto_backup_interval: int = 20,
     ) -> None:
+        """Initialize storage adapter, engine, and shared lifecycle state."""
         self._engine = MemoryClassificationEngine()
         self._namespace = namespace
 
@@ -147,7 +152,7 @@ class LifecycleMixin:
         self._prompt_builder: Optional[PromptBuilder] = None
         self._candidate_generator = RuleCandidateGenerator(
             rule_engine_getter=lambda: self.rule_engine,
-            recall_memories=self.recall_memories,
+            recall_memories=self.recall_memories,  # type: ignore[attr-defined]
         )
 
         # Auto-backup state
@@ -164,12 +169,13 @@ class LifecycleMixin:
             db_file = self._adapter.db_path
             if db_file and db_file != ":memory:" and os.path.exists(db_file):
                 try:
-                    self._do_initial_backup()
+                    self._do_initial_backup()  # type: ignore[attr-defined]
                 except (OSError, ValueError, RuntimeError) as e:
                     logger.debug("Initial backup skipped: %s", e)
 
     @property
     def rule_engine(self) -> RuleEngine:  # lazy init; uses TYPE_CHECKING import
+        """Lazily-initialized rule engine bound to the storage backend."""
         if self._rule_engine is None:
             from carrymem.rules import RuleEngine
 
@@ -179,6 +185,7 @@ class LifecycleMixin:
 
     @property
     def prompt_builder(self) -> PromptBuilder:  # lazy init; uses TYPE_CHECKING import
+        """Lazily-initialized prompt builder bound to this instance."""
         if self._prompt_builder is None:
             from carrymem.prompt_builder import PromptBuilder
 
@@ -186,14 +193,15 @@ class LifecycleMixin:
         return self._prompt_builder
 
     def close(self) -> None:
+        """Release the engine, rule engine, adapters, and cached helpers."""
         if self._rule_engine:
             self._rule_engine = None
         if self._engine:
-            self._engine = None
+            self._engine = None  # type: ignore[assignment]
         if self._prompt_builder:
             self._prompt_builder = None
         if self._candidate_generator:
-            self._candidate_generator = None
+            self._candidate_generator = None  # type: ignore[assignment]
         if self._adapter and hasattr(self._adapter, "close"):
             self._adapter.close()
         if self._knowledge_adapter and hasattr(self._knowledge_adapter, "close"):
@@ -202,7 +210,7 @@ class LifecycleMixin:
     def __enter__(self) -> "LifecycleMixin":
         return self
 
-    def __exit__(
+    def __exit__(  # type: ignore[exit-return]
         self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
     ) -> bool:
         self.close()
@@ -210,20 +218,25 @@ class LifecycleMixin:
 
     @property
     def namespace(self) -> str:
+        """Active namespace for this instance."""
         return self._namespace
 
     @property
     def engine(self) -> MemoryClassificationEngine:
+        """Underlying memory classification engine."""
         return self._engine
 
     @property
     def adapter(self) -> Optional[StorageAdapter]:
+        """Configured storage adapter, if any."""
         return self._adapter
 
     @property
     def storage(self) -> Optional[StorageAdapter]:
+        """Configured storage adapter, if any."""
         return self._adapter
 
     @property
     def knowledge_adapter(self) -> Optional[StorageAdapter]:
+        """Configured knowledge adapter, if any."""
         return self._knowledge_adapter

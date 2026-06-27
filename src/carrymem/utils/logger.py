@@ -5,7 +5,10 @@ from datetime import datetime
 
 
 class Logger:
+    """Wrapper around :mod:`logging` with file and console handlers."""
+
     def __init__(self, name: str = "carrymem"):
+        """Configure a named logger with file (INFO) and console (WARNING) handlers."""
         self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.DEBUG)
 
@@ -29,18 +32,23 @@ class Logger:
             self.logger.propagate = False
 
     def debug(self, message: str, *args, **kwargs):
+        """Log a DEBUG-level message."""
         self.logger.debug(message, *args, **kwargs)
 
     def info(self, message: str, *args, **kwargs):
+        """Log an INFO-level message."""
         self.logger.info(message, *args, **kwargs)
 
     def warning(self, message: str, *args, **kwargs):
+        """Log a WARNING-level message."""
         self.logger.warning(message, *args, **kwargs)
 
     def error(self, message: str, *args, exc_info: bool = False, **kwargs):
+        """Log an ERROR-level message, optionally with exception info."""
         self.logger.error(message, *args, exc_info=exc_info, **kwargs)
 
     def critical(self, message: str, *args, exc_info: bool = False, **kwargs):
+        """Log a CRITICAL-level message, optionally with exception info."""
         self.logger.critical(message, *args, exc_info=exc_info, **kwargs)
 
 

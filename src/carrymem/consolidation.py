@@ -61,12 +61,13 @@ def _similarity(a: str, b: str) -> float:
 
 
 def compute_decay_factor(
-    created_at: Union[str, datetime, float],
+    created_at: Optional[Union[str, datetime, float]],
     memory_type: str,
     confidence: float,
     access_count: int = 0,
     now: Optional[datetime] = None,
 ) -> float:
+    """Compute a decay factor (0-1) for a memory based on age, type, and access."""
     if now is None:
         now = datetime.now(timezone.utc)
 
@@ -104,6 +105,7 @@ def find_duplicates(
     memories: List[Dict[str, Any]],
     similarity_threshold: float = 0.85,
 ) -> List[Tuple[Dict[str, Any], Dict[str, Any], float]]:
+    """Find duplicate memory pairs above the similarity threshold."""
     if len(memories) < 2:
         return []
 
@@ -141,6 +143,7 @@ def find_duplicates(
 def find_superseded_pairs(
     memories: List[Dict[str, Any]],
 ) -> List[Tuple[Dict[str, Any], Dict[str, Any]]]:
+    """Find (older, newer) memory pairs where newer supersedes older."""
     by_key_prefix: Dict[str, List[Dict[str, Any]]] = {}
     for m in memories:
         if m.get("superseded_at"):
@@ -174,10 +177,11 @@ def consolidate(
     now: Optional[datetime] = None,
     similarity_threshold: float = 0.85,
 ) -> Dict[str, Any]:
+    """Consolidate memories by deduplicating and superseding stale entries."""
     if now is None:
         now = datetime.now(timezone.utc)
 
-    result = {
+    result: Dict[str, Any] = {
         "timestamp": now.isoformat(),
         "input_count": len(memories),
         "to_supersede": [],

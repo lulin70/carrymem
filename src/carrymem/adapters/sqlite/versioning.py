@@ -12,6 +12,7 @@ class VersionManager:
         self._adapter = adapter
 
     def get_memory_history(self, storage_key: str) -> List[Dict[str, Any]]:
+        """Return version history for a memory, current version first."""
         conn = self._adapter._conn_mgr.get_connection()
         row = conn.execute(
             "SELECT id FROM memories WHERE storage_key = ? AND namespace = ?",
@@ -60,6 +61,7 @@ class VersionManager:
         return history
 
     def rollback_memory(self, storage_key: str, version: int) -> Optional[StoredMemory]:
+        """Restore a memory to a previous version, returning the stored result."""
         with self._adapter._conn_mgr.lock:
             conn = self._adapter._conn_mgr.get_connection()
             row = conn.execute(
@@ -80,7 +82,7 @@ class VersionManager:
             old_content = version_row["content"]
             if self._adapter._security.encryption and self._adapter._security.encryption.is_active:
                 old_content = self._adapter.decrypt_field(old_content)
-            return self._adapter.update_memory(
+            return self._adapter.update_memory(  # type: ignore[no-any-return]
                 storage_key=storage_key,
                 new_content=old_content,
                 reason=f"Rollback to version {version}",

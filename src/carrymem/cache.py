@@ -56,6 +56,7 @@ class RecallCache:
         filters: Optional[Dict[str, Any]],
         limit: int,
     ) -> Optional[List[Dict[str, Any]]]:
+        """Return cached results for the query, or None if missing/expired."""
         key = self._make_key(namespace, query, filters, limit)
         with self._lock:
             entry = self._cache.get(key)
@@ -78,6 +79,7 @@ class RecallCache:
         limit: int,
         value: List[Dict[str, Any]],
     ) -> None:
+        """Store query results in the cache with TTL eviction."""
         key = self._make_key(namespace, query, filters, limit)
         expires_at = time.monotonic() + self._ttl
         with self._lock:
@@ -86,7 +88,8 @@ class RecallCache:
             while len(self._cache) > self._max_size:
                 self._cache.popitem(last=False)
 
-    def invalidate(self, namespace: str = None) -> None:
+    def invalidate(self, namespace: Optional[str] = None) -> None:
+        """Drop cached entries, optionally scoped to a namespace."""
         with self._lock:
             if namespace is None:
                 self._cache.clear()
@@ -96,6 +99,7 @@ class RecallCache:
                 del self._cache[k]
 
     def clear(self) -> None:
+        """Remove all entries and reset hit/miss counters."""
         with self._lock:
             self._cache.clear()
             self._hits = 0
@@ -103,6 +107,7 @@ class RecallCache:
 
     @property
     def stats(self) -> Dict[str, Any]:
+        """Return cache size and hit/miss statistics."""
         with self._lock:
             total = self._hits + self._misses
             hit_rate = self._hits / total if total > 0 else 0.0

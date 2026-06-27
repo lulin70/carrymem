@@ -130,7 +130,7 @@ class TestClassifyWithDefaults(unittest.TestCase):
         ctx = {"ai_reply": "Should I use PostgreSQL?"}
         result = self.pipeline.classify_with_defaults("ok", "en", context=ctx)
         # Should not be empty — the confirmation-with-context path was taken
-        self.assertTrue(len(result) > 0)
+        self.assertGreater(len(result), 0)
 
     def test_noise_filter_count_increments(self):
         """Noise filter count should increment when messages are filtered."""
@@ -259,7 +259,7 @@ class TestClassifyWithDefaults(unittest.TestCase):
             },
         ):
             result = soft_pipeline.classify_with_defaults("some content here", "en")
-        self.assertTrue(len(result) > 0)
+        self.assertGreater(len(result), 0)
         self.assertEqual(result[0]["source"], "default:soft_fallback")
         self.assertGreaterEqual(result[0]["confidence"], soft_pipeline.MIN_DEFAULT_CONFIDENCE)
 
@@ -280,7 +280,7 @@ class TestClassifyWithDefaults(unittest.TestCase):
             },
         ):
             result = soft_pipeline.classify_with_defaults("I feel okay about this project", "en")
-        self.assertTrue(len(result) > 0)
+        self.assertGreater(len(result), 0)
         self.assertEqual(result[0]["source"], "default:soft_fallback")
         self.assertGreaterEqual(result[0]["confidence"], soft_pipeline.MIN_SENTIMENT_DEFAULT_CONFIDENCE)
 
@@ -292,7 +292,7 @@ class TestClassifyWithDefaults(unittest.TestCase):
         soft_pipeline.pattern_analyzer.noise_filter_mode = "soft"
         with patch.object(soft_pipeline, "_get_default_classification", return_value=None):
             result = soft_pipeline.classify_with_defaults("some message", "en")
-        self.assertTrue(len(result) > 0)
+        self.assertGreater(len(result), 0)
         self.assertEqual(result[0]["source"], "default:soft_catchall")
         self.assertEqual(result[0]["memory_type"], "fact_declaration")
 
@@ -307,7 +307,7 @@ class TestClassifyWithDefaults(unittest.TestCase):
 
         ctx = {"ai_reply": "Should I use PostgreSQL for the database?"}
         result = self.pipeline.classify_with_defaults("ok", "en", context=ctx)
-        self.assertTrue(len(result) > 0)
+        self.assertGreater(len(result), 0)
         match = result[0]
         self.assertEqual(match["context_source"], "ai_reply")
         self.assertIn("Confirmed:", match["content"])
@@ -322,7 +322,7 @@ class TestClassifyWithDefaults(unittest.TestCase):
 
         ctx = {"ai_reply": "Did you mean MySQL?"}
         result = self.pipeline.classify_with_defaults("ok", "en", context=ctx)
-        self.assertTrue(len(result) > 0)
+        self.assertGreater(len(result), 0)
         match = result[0]
         self.assertEqual(match["context_source"], "ai_reply")
 
@@ -342,7 +342,7 @@ class TestClassifyWithDefaults(unittest.TestCase):
 
         ctx = {"ai_reply": "Should I use PostgreSQL for the database?"}
         result = self.pipeline.classify_with_defaults("yes", "en", context=ctx)
-        self.assertTrue(len(result) > 0)
+        self.assertGreater(len(result), 0)
         self.assertIn("Use PostgreSQL:", result[0]["content"])
 
     def test_confirmation_does_not_enrich_non_decision_correction(self):
@@ -361,7 +361,7 @@ class TestClassifyWithDefaults(unittest.TestCase):
 
         ctx = {"ai_reply": "Do you like dark mode?"}
         result = self.pipeline.classify_with_defaults("yes", "en", context=ctx)
-        self.assertTrue(len(result) > 0)
+        self.assertGreater(len(result), 0)
         self.assertNotIn("context_source", result[0])
 
     def test_confirmation_no_ai_reply_no_enrichment(self):
@@ -379,7 +379,7 @@ class TestClassifyWithDefaults(unittest.TestCase):
         )
 
         result = self.pipeline.classify_with_defaults("confirmed decision", "en", context={})
-        self.assertTrue(len(result) > 0)
+        self.assertGreater(len(result), 0)
         self.assertNotIn("context_source", result[0])
 
     def test_confirmation_already_has_context_source(self):
@@ -848,7 +848,7 @@ class TestEdgeCases(unittest.TestCase):
 
         ctx = {"ai_reply": "Should I use PostgreSQL for the database?"}
         result = self.pipeline.classify_with_defaults("ok", "en", context=ctx)
-        self.assertTrue(len(result) > 0)
+        self.assertGreater(len(result), 0)
         self.assertIn("Confirmed:", result[0]["content"])
         self.assertEqual(result[0].get("original_user_message"), "ok")
 
@@ -865,7 +865,7 @@ class TestEdgeCases(unittest.TestCase):
         )
         exec_ctx = {"tool_error": True}
         result = self.pipeline.classify_with_defaults("test message", "en", execution_context=exec_ctx)
-        self.assertTrue(len(result) > 0)
+        self.assertGreater(len(result), 0)
         self.pipeline.rule_matcher.match.assert_called()
 
 

@@ -232,7 +232,7 @@ class MCPServer:
 
         try:
             result = await asyncio.wait_for(
-                self.handlers.handle_tool(tool_name, arguments),
+                self.handlers.handle_tool(tool_name, arguments),  # type: ignore[arg-type]
                 timeout=self.request_timeout,
             )
 
@@ -298,7 +298,7 @@ class MCPServer:
         }
 
         if data:
-            error_response["error"]["data"] = data
+            error_response["error"]["data"] = data  # type: ignore[index]
 
         await self.send_response(error_response)
         return error_response

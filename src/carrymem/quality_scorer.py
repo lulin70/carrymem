@@ -90,7 +90,7 @@ class MemoryQualityScorer:
 
         return round(total_score, 3)
 
-    def score_with_breakdown(self, memory: StoredMemory) -> Dict[str, float]:
+    def score_with_breakdown(self, memory: StoredMemory) -> Dict[str, Any]:
         """Calculate quality score with detailed breakdown.
 
         Args:
@@ -134,7 +134,7 @@ class MemoryQualityScorer:
         Returns:
             List of dicts with memory and score, sorted by score descending
         """
-        scored = []
+        scored: List[Dict[str, Any]] = []
         for memory in memories:
             score = self.score(memory)
             scored.append(
@@ -371,7 +371,7 @@ class QualityAnalyzer:
         Returns:
             List of dicts with memory info and reasons for low quality
         """
-        low_quality = []
+        low_quality: List[Dict[str, Any]] = []
 
         for memory in memories:
             breakdown = self.scorer.score_with_breakdown(memory)

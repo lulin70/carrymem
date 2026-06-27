@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from ..utils.language import has_cjk
 
@@ -94,8 +94,8 @@ class RuleMatcher:
         self,
         scene_description: str,
         limit: int = 10,
-        scopes: List[str] = None,
-        context_conditions: List[str] = None,
+        scopes: Optional[List[str]] = None,
+        context_conditions: Optional[List[str]] = None,
     ) -> List[MatchResult]:
         """
         Find all rules that match a given scene.
@@ -164,7 +164,7 @@ class RuleMatcher:
 
         return results[:limit]
 
-    def _match_global_rules(self, all_active: list = None) -> List[MatchResult]:
+    def _match_global_rules(self, all_active: Optional[list] = None) -> List[MatchResult]:
         """Find all active global rules"""
         if all_active is None:
             all_active = self.storage.list_all(status="active", limit=1000)
@@ -186,7 +186,7 @@ class RuleMatcher:
 
         return results
 
-    def _match_exact(self, scene: str, all_active: list = None) -> List[MatchResult]:
+    def _match_exact(self, scene: str, all_active: Optional[list] = None) -> List[MatchResult]:
         """Find rules with exact trigger match"""
         if all_active is None:
             all_active = self.storage.list_all(status="active", limit=1000)
@@ -247,7 +247,7 @@ class RuleMatcher:
 
         return results
 
-    def _match_partial(self, scene: str, limit: int, all_active: list = None) -> List[MatchResult]:
+    def _match_partial(self, scene: str, limit: int, all_active: Optional[list] = None) -> List[MatchResult]:
         """Fallback partial string matching"""
         if all_active is None:
             all_active = self.storage.list_all(status="active", limit=1000)
@@ -330,7 +330,7 @@ class RuleMatcher:
         if has_cjk(text):
             if cls._jieba_available is None:
                 try:
-                    import jieba
+                    import jieba  # type: ignore[import-not-found]
 
                     cls._jieba_available = True
                 except ImportError:
@@ -376,7 +376,7 @@ class RuleMatcher:
         """
         Remove duplicate rules, keeping the one with highest score.
         """
-        seen = {}
+        seen: Dict[str, MatchResult] = {}
         for result in results:
             if result.rule.id not in seen or result.score > seen[result.rule.id].score:
                 seen[result.rule.id] = result

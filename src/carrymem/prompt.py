@@ -7,7 +7,7 @@ from typing import Any, Dict, List
 
 from carrymem.format import _build_superseded_notes, format_knowledge_entry, format_memory_entry
 
-PROMPT_TEMPLATES = {
+PROMPT_TEMPLATES: Dict[str, Dict[str, Any]] = {
     "en": {
         "header": "You are an AI assistant with access to the user's memory and knowledge base.",
         "priority": [
@@ -155,6 +155,7 @@ def build_prompt(
     knowledge: List[Dict[str, Any]],
     language: str = "en",
 ) -> str:
+    """Build a system prompt from memories and knowledge entries."""
     t = PROMPT_TEMPLATES.get(language, PROMPT_TEMPLATES["en"])
     parts = [t["header"], "Follow these retrieval priorities when responding:"]
     parts.extend(t["priority"])
@@ -218,6 +219,7 @@ def build_qa_prompt(
     include_question: bool = True,
     rules: str = "",
 ) -> str:
+    """Build a QA prompt with relevant memories for answering a question."""
     t = PROMPT_TEMPLATES.get(language, PROMPT_TEMPLATES["en"])
 
     active = [m for m in memories if not m.get("superseded_at")]

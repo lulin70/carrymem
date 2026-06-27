@@ -19,6 +19,7 @@ class CRUDOperations:
         self._adapter = adapter
 
     def remember(self, entry: MemoryEntry, _skip_commit: bool = False) -> StoredMemory:
+        """Insert (or dedupe) a memory entry and invalidate the cache."""
         with self._adapter._conn_mgr.file_lock:
             result = self._remember_impl(entry, _skip_commit)
         if self._adapter._enable_cache and self._adapter._cache:
@@ -49,7 +50,7 @@ class CRUDOperations:
                     (c_hash, self._adapter.namespace),
                 ).fetchone()
             )
-            return stored
+            return stored  # type: ignore[no-any-return]
 
         storage_key = f"cm_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}_{c_hash[:8]}"
         now = datetime.now(timezone.utc)
@@ -158,6 +159,7 @@ class CRUDOperations:
         return stored
 
     def remember_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:
+        """Insert multiple entries in a single transaction."""
         with self._adapter._conn_mgr.file_lock:
             conn = self._adapter._conn_mgr.get_connection()
             results = []
@@ -176,6 +178,7 @@ class CRUDOperations:
         return results
 
     def forget(self, storage_key: str) -> bool:
+        """Delete a memory and its vector by storage key."""
         with self._adapter._conn_mgr.file_lock:
             conn = self._adapter._conn_mgr.get_connection()
             memory_id = None
@@ -207,9 +210,10 @@ class CRUDOperations:
                 storage_key=storage_key,
                 success=result,
             )
-        return result
+        return result  # type: ignore[no-any-return]
 
     def forget_expired(self) -> int:
+        """Delete expired memories and return the count removed."""
         with self._adapter._conn_mgr.file_lock:
             conn = self._adapter._conn_mgr.get_connection()
             now = datetime.now(timezone.utc).isoformat()
@@ -221,9 +225,10 @@ class CRUDOperations:
             count = cursor.rowcount
         if self._adapter._enable_cache and self._adapter._cache and count > 0:
             self._adapter._cache.invalidate(self._adapter.namespace)
-        return count
+        return count  # type: ignore[no-any-return]
 
     def get_by_key(self, storage_key: str):
+        """Return a stored memory by key, or None if not found."""
         conn = self._adapter._conn_mgr.get_connection()
         try:
             row = conn.execute(
@@ -243,6 +248,7 @@ class CRUDOperations:
         new_content: str,
         reason: Optional[str] = None,
     ) -> Optional[StoredMemory]:
+        """Update memory content under the file lock, returning the new version."""
         with self._adapter._conn_mgr.file_lock:
             return self._update_memory_impl(storage_key, new_content, reason)
 
@@ -315,4 +321,4 @@ class CRUDOperations:
             "SELECT * FROM memories WHERE storage_key = ? AND namespace = ?",
             (storage_key, self._adapter.namespace),
         ).fetchone()
-        return self._adapter._serializer.row_to_stored(updated_row)
+        return self._adapter._serializer.row_to_stored(updated_row)  # type: ignore[no-any-return]

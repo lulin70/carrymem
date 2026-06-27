@@ -2,6 +2,7 @@
 
 import json
 import os
+import sqlite3
 import sys
 
 from carrymem.cli._base import *
@@ -99,6 +100,7 @@ def cmd_backup(args):
 
 
 def cmd_init(args):
+    """Initialize CarryMem config directory and database."""
     parser = _make_parser("init")
     parser.add_argument("--db", help=_t("cli.arg.db"))
 
@@ -147,6 +149,7 @@ def cmd_init(args):
 
 
 def cmd_version(args):
+    """Print CarryMem version and runtime environment info."""
     print(f"\n  {_bold(f'CarryMem v{__version__}')}")
     print(f"  Python: {sys.version.split()[0]}")
     print(f"  Config: {_DEFAULT_CONFIG_DIR}")

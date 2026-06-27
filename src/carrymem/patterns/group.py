@@ -82,10 +82,12 @@ class PatternGroup:
 
     @property
     def pattern_count(self) -> int:
+        """Number of patterns in this group."""
         return len(self._patterns)
 
     @property
     def languages(self) -> List[str]:
+        """Languages covered by this group's patterns."""
         return list(self._lang_index.keys())
 
     def __repr__(self) -> str:

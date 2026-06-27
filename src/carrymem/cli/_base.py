@@ -181,7 +181,7 @@ def _find_memory(cm: CarryMem, key: str) -> Optional[Dict[str, Any]]:
     if cm._adapter and hasattr(cm._adapter, "_get_by_key"):
         stored = cm._adapter._get_by_key(key)
         if stored:
-            return stored.to_dict()
+            return stored.to_dict()  # type: ignore[no-any-return]
     memories = cm.recall_memories(query="", limit=200)
     for m in memories:
         if m.get("storage_key") == key:

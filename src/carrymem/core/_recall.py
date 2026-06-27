@@ -1,7 +1,9 @@
 """Recall operations: memories, aggregated, timeline, knowledge, all."""
 
+from __future__ import annotations
+
 import logging
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from carrymem.adapters.obsidian_adapter import ObsidianAdapter
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
@@ -10,13 +12,22 @@ from carrymem.core._lifecycle import KnowledgeNotConfiguredError, StorageNotConf
 from carrymem.types import RecallAllResult, StoredMemoryDict
 from carrymem.utils.validators import validate_limit, validate_query
 
+if TYPE_CHECKING:
+    from carrymem.adapters.base import StorageAdapter
+
 logger = logging.getLogger(__name__)
 
 
 class RecallMixin:
     """Recall / search operations across memories, knowledge base, and rules."""
 
+    # Shared instance state provided by LifecycleMixin.__init__.
+    _adapter: Optional[StorageAdapter]
+    _knowledge_adapter: Optional[StorageAdapter]
+    _namespace: str
+
     def index_knowledge(self) -> Dict[str, Any]:
+        """Index the configured knowledge base and return summary stats."""
         if not self._knowledge_adapter:
             raise KnowledgeNotConfiguredError()
 
@@ -31,6 +42,7 @@ class RecallMixin:
         filters: Optional[Dict[str, Any]] = None,
         limit: int = DEFAULT_RECALL_LIMIT,
     ) -> List[Dict[str, Any]]:
+        """Recall notes from the knowledge base matching the query."""
         if not self._knowledge_adapter:
             raise KnowledgeNotConfiguredError()
 
@@ -47,13 +59,14 @@ class RecallMixin:
         namespaces: Optional[List[str]] = None,
         include_rules: bool = True,
     ) -> Dict[str, Any]:
+        """Recall rules, memories, and knowledge matching a query."""
         memory_results = []
         knowledge_results = []
         rule_results = []
 
         if include_rules:
             try:
-                rule_engine = self.rule_engine
+                rule_engine = self.rule_engine  # type: ignore[attr-defined]
                 matches = rule_engine.match(query, limit=min(limit, RULE_MATCH_LIMIT_CAP), increment_count=False)
                 rule_results = [
                     {
@@ -105,6 +118,7 @@ class RecallMixin:
         namespaces: Optional[List[str]] = None,
         update_access: bool = True,
     ) -> List[Dict[str, Any]]:
+        """Recall stored memories matching the query."""
         if not self._adapter:
             raise StorageNotConfiguredError()
 
@@ -127,6 +141,7 @@ class RecallMixin:
         memory_type: Optional[str] = None,
         limit_per_type: int = 50,
     ) -> Dict[str, List[StoredMemoryDict]]:
+        """Recall memories grouped by type."""
         if not self._adapter:
             raise StorageNotConfiguredError()
 
@@ -141,6 +156,7 @@ class RecallMixin:
         topic: str,
         limit: int = DEFAULT_RECALL_LIMIT,
     ) -> List[Dict[str, Any]]:
+        """Recall memories for a topic ordered as a timeline."""
         if not self._adapter:
             raise StorageNotConfiguredError()
 

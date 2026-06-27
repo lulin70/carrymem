@@ -171,7 +171,7 @@ jobs:
         run: isort --check-only --diff src/ tests/
 
       - name: mypy
-        run: mypy src/ --config-file mypy.ini || true
+        run: mypy src/ --config-file mypy.ini
 
   # ═══════════════════════════════════════
   # ADVISORY: i18n Compliance (non-blocking)

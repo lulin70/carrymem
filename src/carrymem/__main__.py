@@ -3,6 +3,7 @@ import sys
 
 
 def main():
+    """Entry point for ``python -m carrymem`` that dispatches subcommands."""
     parser = argparse.ArgumentParser(description="CarryMem — Your portable AI memory layer", prog="python -m carrymem")
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -62,7 +63,7 @@ def main():
     elif args.command == "cli":
         from carrymem.cli import main as cli_main
 
-        cli_main(args.cli_args)
+        cli_main(args.cli_args)  # type: ignore[call-arg]
 
     else:
         parser.print_help()

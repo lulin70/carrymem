@@ -23,7 +23,7 @@ class DevSquadAdapter:
             prompt = adapter.format_rules_as_prompt(rules)
     """
 
-    def __init__(self, db_path: str = None, namespace: str = "default"):
+    def __init__(self, db_path: Optional[str] = None, namespace: str = "default"):
         self._db_path = db_path or ":memory:"
         self._namespace = namespace
         self._rule_engine: Optional[RuleEngine] = None
@@ -43,6 +43,7 @@ class DevSquadAdapter:
             self._audit = None
 
     def is_available(self) -> bool:
+        """Return whether the rule engine is initialized and responsive."""
         if self._rule_engine is None:
             return False
         try:
@@ -53,8 +54,10 @@ class DevSquadAdapter:
             return False
 
     def get_rules(self, user_id: str, context: Optional[Dict[str, Any]] = None) -> List[str]:
+        """Return formatted rule strings matching the user and context."""
         if not self.is_available():
             return []
+        assert self._rule_engine is not None
         try:
             scene = ""
             if context:
@@ -76,8 +79,10 @@ class DevSquadAdapter:
             return []
 
     def add_rule(self, user_id: str, rule: str, metadata: Optional[Dict[str, Any]] = None) -> None:
+        """Add a rule derived from the DevSquad rule string and metadata."""
         if not self.is_available():
             return
+        assert self._rule_engine is not None
         try:
             params = devsquad_rule_to_carrymem_params(rule, metadata)
             if not params["trigger"]:
@@ -88,8 +93,10 @@ class DevSquadAdapter:
             self._log("add_rule", user_id, success=False, details={"error": str(e)})
 
     def update_rule(self, user_id: str, rule_id: str, rule: str) -> None:
+        """Update the action text of an existing rule."""
         if not self.is_available():
             return
+        assert self._rule_engine is not None
         try:
             self._rule_engine.update_rule(rule_id, action=rule)
             self._log(
@@ -109,8 +116,10 @@ class DevSquadAdapter:
             )
 
     def delete_rule(self, user_id: str, rule_id: str) -> None:
+        """Delete the rule identified by ``rule_id``."""
         if not self.is_available():
             return
+        assert self._rule_engine is not None
         try:
             self._rule_engine.delete_rule(rule_id)
             self._log("delete_rule", user_id, storage_key=rule_id, success=True)
@@ -124,6 +133,7 @@ class DevSquadAdapter:
             )
 
     def get_stats(self) -> Dict[str, Any]:
+        """Return rule engine statistics with availability and namespace."""
         if not self.is_available():
             return {
                 "total_rules": 0,
@@ -131,6 +141,7 @@ class DevSquadAdapter:
                 "available": False,
                 "namespace": self._namespace,
             }
+        assert self._rule_engine is not None
         try:
             stats = self._rule_engine.get_stats()
             stats["available"] = True
@@ -151,8 +162,10 @@ class DevSquadAdapter:
         role: Optional[str] = None,
         max_rules: int = 5,
     ) -> List[Dict[str, Any]]:
+        """Return DevSquad-formatted rules matching the task and user."""
         if not self.is_available():
             return []
+        assert self._rule_engine is not None
         try:
             scene = task_description or ""
             if role:
@@ -182,6 +195,7 @@ class DevSquadAdapter:
             return []
 
     def format_rules_as_prompt(self, rules: List[Dict[str, Any]]) -> str:
+        """Format matched rules into a prompt-ready Markdown string."""
         if not rules:
             return ""
         try:
@@ -211,6 +225,7 @@ class DevSquadAdapter:
         outcome: str,
         user_feedback: Optional[str] = None,
     ) -> str:
+        """Log an experience entry recording rules applied and the outcome."""
         if not self.is_available():
             return ""
         try:

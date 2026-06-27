@@ -16,6 +16,7 @@ Workflow:
 Audit trail: every experience→rule action is logged.
 """
 
+import sqlite3
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -55,6 +56,8 @@ _CONFIDENCE_SCORE_MAP = {
 
 @dataclass
 class ExperienceAuditEntry:
+    """Audit record for a failure lesson extracted from memories."""
+
     id: str
     source_memory_id: str
     source_content: str
@@ -71,6 +74,7 @@ class ExperienceAuditEntry:
     resulting_rule_id: Optional[str] = None
 
     def to_dict(self) -> dict:
+        """Serialize this audit entry to a plain dict."""
         return {
             "id": self.id,
             "source_memory_id": self.source_memory_id,
@@ -381,7 +385,7 @@ class ExperienceRuleBridge:
                 "SELECT COUNT(*) FROM experience_audit WHERE status = ?",
                 (EXPERIENCE_STATUS_PENDING,),
             )
-            return cursor.fetchone()[0]
+            return cursor.fetchone()[0]  # type: ignore[no-any-return]
         finally:
             pass
 

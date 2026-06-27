@@ -47,11 +47,11 @@ _INTEGRITY_HMAC_KEY = b"carrymem-key-integrity-v1"
 
 
 class EncryptionError(Exception):
-    pass
+    """Raised when an encryption or decryption operation fails."""
 
 
 class SecurityWarning(UserWarning):
-    pass
+    """Warns about insecure encryption configuration or fallback usage."""
 
 
 class NoEncryption:
@@ -67,21 +67,26 @@ class NoEncryption:
     _security_level = "none"
 
     def encrypt(self, plaintext: str) -> str:
+        """Return plaintext unchanged (no-op encryption)."""
         return plaintext
 
     def decrypt(self, ciphertext: str) -> str:
+        """Return ciphertext unchanged (no-op decryption)."""
         return ciphertext
 
     @property
     def is_active(self) -> bool:
+        """Return False since encryption is disabled."""
         return False
 
     @property
     def backend(self) -> str:
+        """Return the backend name ("none")."""
         return "none"
 
     @property
     def security_level(self) -> str:
+        """Return the security level string ("none")."""
         return self._security_level
 
 
@@ -264,6 +269,7 @@ class MemoryEncryption:
             os.makedirs(path, mode=0o700, exist_ok=True)
 
     def encrypt(self, plaintext: str) -> str:
+        """Encrypt plaintext using the configured backend (Fernet or HMAC-CTR)."""
         if not plaintext:
             return ""
 
@@ -274,6 +280,7 @@ class MemoryEncryption:
         return self._encrypt_stream(plaintext)
 
     def decrypt(self, ciphertext: str) -> str:
+        """Decrypt ciphertext using the configured backend (Fernet or HMAC-CTR)."""
         if not ciphertext:
             return ""
 
@@ -296,8 +303,9 @@ class MemoryEncryption:
 
     def _encrypt_fernet(self, plaintext: str) -> str:
         try:
+            assert self._fernet is not None
             encrypted = self._fernet.encrypt(plaintext.encode("utf-8"))
-            return encrypted.decode("ascii")
+            return encrypted.decode("ascii")  # type: ignore[no-any-return]
         except (TypeError, ValueError, AttributeError, binascii.Error) as e:
             raise EncryptionError(f"Fernet encryption failed: {e}") from e
 
@@ -305,8 +313,9 @@ class MemoryEncryption:
         from cryptography.fernet import InvalidToken
 
         try:
+            assert self._fernet is not None
             decrypted = self._fernet.decrypt(ciphertext.encode("ascii"))
-            return decrypted.decode("utf-8")
+            return decrypted.decode("utf-8")  # type: ignore[no-any-return]
         except (TypeError, ValueError, binascii.Error, InvalidToken) as e:
             raise EncryptionError(f"Fernet decryption failed: {e}") from e
 
@@ -439,13 +448,13 @@ class MemoryEncryption:
                 try:
                     from cryptography.fernet import Fernet
 
-                    old_f = self._make_fernet(old_key)  # type: ignore[arg-type]
+                    old_f = self._make_fernet(old_key)
                     plaintext = old_f.decrypt(old_ciphertext.encode("ascii")).decode("utf-8")
                 except (TypeError, ValueError, binascii.Error) as e:
                     raise EncryptionError(f"Key rotation decryption failed: {e}") from e
             else:
                 # Stream cipher fallback - use old_key directly
-                plaintext = self._decrypt_with_key(old_key, old_ciphertext)  # type: ignore[arg-type]
+                plaintext = self._decrypt_with_key(old_key, old_ciphertext)
 
             # Encrypt with new key
             return self.encrypt(plaintext)
@@ -522,10 +531,12 @@ class MemoryEncryption:
 
     @property
     def is_active(self) -> bool:
+        """Return True since encryption is active."""
         return True
 
     @property
     def backend(self) -> str:
+        """Return the active backend name ("fernet" or "hmac-ctr")."""
         if self._fernet_available and self._fernet:
             return "fernet"
         return "hmac-ctr"

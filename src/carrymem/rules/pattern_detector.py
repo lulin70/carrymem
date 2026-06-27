@@ -18,6 +18,8 @@ from typing import Dict, List, Optional
 
 
 class PatternType(str, Enum):
+    """Type of behavioral pattern detected from memories."""
+
     AVOIDANCE = "avoidance"
     PREFERENCE = "preference"
     CONSISTENCY = "consistency"
@@ -25,6 +27,8 @@ class PatternType(str, Enum):
 
 
 class PatternConfidence(str, Enum):
+    """Confidence level assigned to a detected pattern."""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -32,6 +36,8 @@ class PatternConfidence(str, Enum):
 
 @dataclass
 class MemoryPattern:
+    """A behavioral pattern detected across multiple memories."""
+
     pattern_type: PatternType
     keywords: List[str]
     source_memory_ids: List[str]
@@ -42,6 +48,7 @@ class MemoryPattern:
     domain: str = ""
 
     def to_dict(self) -> dict:
+        """Serialize the memory pattern to a dictionary."""
         return {
             "pattern_type": self.pattern_type.value,
             "keywords": self.keywords,
@@ -784,7 +791,7 @@ class PatternDetector:
         if len(patterns) <= 1:
             return patterns
 
-        unique = []
+        unique: List[MemoryPattern] = []
         for p in patterns:
             is_dup = False
             for existing in unique:

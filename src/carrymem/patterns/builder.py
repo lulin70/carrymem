@@ -71,6 +71,7 @@ class PatternBuilder:
         flags: int = 0,
         match_method: str = "match",
     ) -> "PatternBuilder":
+        """Add a noise pattern to the current group."""
         group = self._require_group()
         group.add_pattern(
             NoisePattern(
@@ -108,6 +109,7 @@ class PatternBuilder:
         confidence: float = 0.75,
         flags: int = 0,
     ) -> "PatternBuilder":
+        """Add a preference pattern to the current group."""
         group = self._require_group()
         group.add_pattern(
             PreferencePattern(
@@ -142,6 +144,7 @@ class PatternBuilder:
         confidence: float = 0.85,
         flags: int = 0,
     ) -> "PatternBuilder":
+        """Add a correction pattern to the current group."""
         group = self._require_group()
         group.add_pattern(
             CorrectionPattern(
@@ -176,6 +179,7 @@ class PatternBuilder:
         confidence: float = 0.7,
         flags: int = 0,
     ) -> "PatternBuilder":
+        """Add a fact pattern to the current group."""
         group = self._require_group()
         group.add_pattern(
             FactPattern(
@@ -211,6 +215,7 @@ class PatternBuilder:
         flags: int = 0,
         match_method: str = "search",
     ) -> "PatternBuilder":
+        """Add a task pattern to the current group."""
         group = self._require_group()
         group.add_pattern(
             TaskPattern(
@@ -247,6 +252,7 @@ class PatternBuilder:
         confidence: float = 0.75,
         flags: int = 0,
     ) -> "PatternBuilder":
+        """Add a decision pattern to the current group."""
         group = self._require_group()
         group.add_pattern(
             DecisionPattern(
@@ -281,6 +287,7 @@ class PatternBuilder:
         confidence: float = 0.75,
         flags: int = 0,
     ) -> "PatternBuilder":
+        """Add a relationship pattern to the current group."""
         group = self._require_group()
         group.add_pattern(
             RelationshipPattern(
@@ -315,6 +322,7 @@ class PatternBuilder:
         confidence: float = 0.8,
         flags: int = 0,
     ) -> "PatternBuilder":
+        """Add a sentiment pattern to the current group."""
         group = self._require_group()
         group.add_pattern(
             SentimentPattern(
@@ -348,6 +356,7 @@ class PatternBuilder:
         confidence: float = 0.7,
         flags: int = 0,
     ) -> "PatternBuilder":
+        """Add a location pattern to the current group."""
         group = self._require_group()
         group.add_pattern(
             LocationPattern(

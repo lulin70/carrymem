@@ -35,7 +35,7 @@ class TestDeclare(unittest.TestCase):
         result = self.cm.declare_preference("I like Python")
         self.assertTrue(result["declared"])
         self.assertIn("storage_keys", result)
-        self.assertTrue(len(result["storage_keys"]) > 0)
+        self.assertGreater(len(result["storage_keys"]), 0)
 
     def test_declare_validates_empty_content(self):
         """declare() raises on empty message."""
@@ -68,7 +68,7 @@ class TestDeclare(unittest.TestCase):
         """declare() returns non-empty storage_keys."""
         result = self.cm.declare("Test memory")
         self.assertIsInstance(result["storage_keys"], list)
-        self.assertTrue(len(result["storage_keys"]) > 0)
+        self.assertGreater(len(result["storage_keys"]), 0)
 
     def test_declare_returns_summary(self):
         """declare() returns a summary with total_entries."""

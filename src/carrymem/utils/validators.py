@@ -181,7 +181,8 @@ def validate_limit(limit: int, max_limit: int = 100000) -> None:
 _DEFAULT_ALLOWED_FILTER_KEYS = {"type", "tier", "confidence_min", "created_after", "namespace"}
 
 
-def validate_filters(filters: Optional[Dict[str, Any]], allowed_keys: set = None) -> None:
+def validate_filters(filters: Optional[Dict[str, Any]], allowed_keys: Optional[set] = None) -> None:
+    """Validate that a filters dict only contains allowed keys."""
     if filters is None:
         return
 
@@ -274,7 +275,7 @@ def validate_query(query: str, max_length: int = 10000) -> None:
         ValidationError: If validation fails
     """
     if query is None:
-        return  # Empty query is allowed for some operations
+        return  # type: ignore[unreachable]  # Empty query is allowed for some operations
 
     if not isinstance(query, str):
         raise ValidationError(f"Query must be a string, got {type(query).__name__}")

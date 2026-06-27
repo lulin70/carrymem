@@ -13,7 +13,7 @@ Security-focused input validation for rules to prevent:
 
 import re
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Dict, Optional
 
 
 class RuleSanitizer:
@@ -201,7 +201,7 @@ class RuleSanitizer:
         if not isinstance(metadata, dict):
             raise ValueError("Metadata must be a dictionary")
 
-        cleaned = {}
+        cleaned: Dict[str, Any] = {}
         for key, value in metadata.items():
             # Key must be string
             if not isinstance(key, str):

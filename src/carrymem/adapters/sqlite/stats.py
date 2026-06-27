@@ -12,6 +12,7 @@ class StatsManager:
         self._adapter = adapter
 
     def get_stats(self) -> Dict[str, Any]:
+        """Return summary statistics for stored memories."""
         conn = self._adapter._conn_mgr.get_connection()
         total = conn.execute(
             "SELECT COUNT(*) FROM memories WHERE namespace = ?",
@@ -33,6 +34,7 @@ class StatsManager:
         }
 
     def get_profile(self) -> Dict[str, Any]:
+        """Return a detailed memory profile for the active namespace."""
         conn = self._adapter._conn_mgr.get_connection()
         total = conn.execute(
             "SELECT COUNT(*) FROM memories WHERE namespace = ?",
@@ -126,6 +128,7 @@ class StatsManager:
         namespaces: Optional[List[str]] = None,
         limit_per_type: int = 50,
     ) -> Dict[str, List[StoredMemory]]:
+        """Recall memories grouped by type."""
         with self._adapter._conn_mgr.lock:
             return self._recall_aggregated_impl(memory_type, namespaces, limit_per_type)
 
@@ -137,7 +140,7 @@ class StatsManager:
     ) -> Dict[str, List[StoredMemory]]:
         ns = namespaces or [self._adapter.namespace]
         placeholders = ",".join(["?"] * len(ns))
-        params = list(ns)
+        params: List[Any] = list(ns)
 
         conditions = [f"namespace IN ({placeholders})"]
         conditions.append("(superseded_at IS NULL OR superseded_at = '')")
@@ -183,6 +186,7 @@ class StatsManager:
         namespaces: Optional[List[str]] = None,
         limit: int = 20,
     ) -> List[StoredMemory]:
+        """Recall memories for a topic ordered as a timeline."""
         with self._adapter._conn_mgr.lock:
             return self._recall_timeline_impl(topic, namespaces, limit)
 
@@ -194,7 +198,7 @@ class StatsManager:
     ) -> List[StoredMemory]:
         ns = namespaces or [self._adapter.namespace]
         placeholders = ",".join(["?"] * len(ns))
-        params = list(ns)
+        params: List[Any] = list(ns)
 
         conditions = [f"namespace IN ({placeholders})"]
 

@@ -13,6 +13,7 @@ All sessions are persisted to the refinement_sessions table for audit.
 """
 
 import json
+import sqlite3
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -47,6 +48,8 @@ MAX_ROUNDS = 5
 
 @dataclass
 class SessionEntry:
+    """A single rule refinement session record."""
+
     id: str
     source_rule_id: Optional[str]
     source_memory_id: Optional[str]
@@ -66,6 +69,7 @@ class SessionEntry:
     resulting_rule_id: Optional[str] = None
 
     def to_dict(self) -> dict:
+        """Serialize this session entry to a plain dict."""
         return {
             "id": self.id,
             "source_rule_id": self.source_rule_id,
@@ -414,6 +418,7 @@ class RefinementSessionManager:
         }
 
     def get_stats(self) -> Dict:
+        """Return counts of refinement sessions grouped by status."""
         conn = self.storage._get_connection()
         try:
             cursor = conn.execute("SELECT status, COUNT(*) as count FROM refinement_sessions GROUP BY status")

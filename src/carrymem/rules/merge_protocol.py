@@ -26,12 +26,16 @@ from .models import SCOPE_PRIORITY, VALID_RULE_SCOPES, Rule
 
 
 class MergeStrategy(str, Enum):
+    """Strategy for merging incoming rules with existing rules."""
+
     COMPANY_OVERRIDES = "company_overrides"
     NEGOTIATE = "negotiate"
     KEEP_BOTH = "keep_both"
 
 
 class MergeDecision(str, Enum):
+    """Decision applied when resolving a merge conflict."""
+
     KEEP_INCOMING = "keep_incoming"
     KEEP_EXISTING = "keep_existing"
     MODIFY_INCOMING = "modify_incoming"
@@ -41,6 +45,8 @@ class MergeDecision(str, Enum):
 
 @dataclass
 class MergeConflict:
+    """Conflict between an incoming rule and an existing rule."""
+
     incoming_rule: Rule
     existing_rule: Rule
     conflict_type: str
@@ -50,6 +56,7 @@ class MergeConflict:
     decision: Optional[MergeDecision] = None
 
     def to_dict(self) -> dict:
+        """Serialize this conflict to a plain dict."""
         return {
             "incoming_rule_id": self.incoming_rule.id,
             "incoming_trigger": self.incoming_rule.trigger,
@@ -67,6 +74,8 @@ class MergeConflict:
 
 @dataclass
 class MergeResult:
+    """Outcome of merging a set of incoming rules against existing rules."""
+
     strategy: MergeStrategy
     conflicts: List[MergeConflict]
     accepted: List[Rule]
@@ -77,6 +86,7 @@ class MergeResult:
     audit_entries: List[dict] = field(default_factory=list)
 
     def to_dict(self) -> dict:
+        """Serialize the merge result to a dictionary."""
         return {
             "strategy": self.strategy.value,
             "conflict_count": len(self.conflicts),
@@ -244,7 +254,7 @@ def resolve_conflict(
     elif strategy == MergeStrategy.KEEP_BOTH:
         return MergeDecision.KEEP_BOTH
 
-    return MergeDecision.SKIP
+    return MergeDecision.SKIP  # type: ignore[unreachable]
 
 
 def merge_rules(

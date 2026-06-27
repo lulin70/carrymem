@@ -54,22 +54,22 @@ def _make_lazy_import(module_path, class_name):
 try:
     from carrymem.semantic.expander import SemanticExpander
 except ImportError:
-    SemanticExpander = _make_lazy_import("carrymem.semantic.expander", "SemanticExpander")
+    SemanticExpander = _make_lazy_import("carrymem.semantic.expander", "SemanticExpander")  # type: ignore[misc]
 
 try:
     from carrymem.semantic.merger import ResultMerger
 except ImportError:
-    ResultMerger = _make_lazy_import("carrymem.semantic.merger", "ResultMerger")
+    ResultMerger = _make_lazy_import("carrymem.semantic.merger", "ResultMerger")  # type: ignore[misc]
 
 try:
     from carrymem.security import InputValidator
 except ImportError:
-    InputValidator = _make_lazy_import("carrymem.security", "InputValidator")
+    InputValidator = _make_lazy_import("carrymem.security", "InputValidator")  # type: ignore[misc]
 
 try:
     from carrymem.security import ValidationError
 except ImportError:
-    ValidationError = _make_lazy_import("carrymem.security", "ValidationError")
+    ValidationError = _make_lazy_import("carrymem.security", "ValidationError")  # type: ignore[misc]
 
 try:
     from carrymem.security import validate_content
@@ -89,7 +89,7 @@ except ImportError:
 try:
     from carrymem.async_carrymem import AsyncCarryMem
 except ImportError:
-    AsyncCarryMem = _make_lazy_import("carrymem.async_carrymem", "AsyncCarryMem")
+    AsyncCarryMem = _make_lazy_import("carrymem.async_carrymem", "AsyncCarryMem")  # type: ignore[misc]
 
 from carrymem.__version__ import __version__  # noqa: F401
 from carrymem.api_types import (

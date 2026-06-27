@@ -217,6 +217,7 @@ class StoredMemory(MemoryEntry):
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "StoredMemory":
+        """Reconstruct a StoredMemory from a serialized dictionary."""
         created_at = None
         if data.get("created_at"):
             if isinstance(data["created_at"], str):
@@ -632,28 +633,36 @@ class AsyncStorageAdapter(Protocol):
     Same interface as StorageAdapter, but all methods are async.
     """
 
-    async def remember(self, entry: MemoryEntry) -> StoredMemory: ...
+    async def remember(self, entry: MemoryEntry) -> StoredMemory:
+        """Store a memory entry asynchronously."""
 
-    async def remember_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]: ...
+    async def remember_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:
+        """Store multiple memory entries asynchronously."""
 
     async def recall(
         self,
         query: str,
         filters: Optional[Dict[str, Any]] = None,
         limit: int = 20,
-    ) -> List[StoredMemory]: ...
+    ) -> List[StoredMemory]:
+        """Retrieve memories matching the query asynchronously."""
 
-    async def forget(self, storage_key: str) -> bool: ...
+    async def forget(self, storage_key: str) -> bool:
+        """Delete a memory by key asynchronously."""
 
-    async def forget_expired(self) -> int: ...
+    async def forget_expired(self) -> int:
+        """Delete expired memories asynchronously."""
 
-    async def get_stats(self) -> Dict[str, Any]: ...
+    async def get_stats(self) -> Dict[str, Any]:
+        """Return adapter statistics asynchronously."""
 
     @property
-    def name(self) -> str: ...
+    def name(self) -> str:
+        """Human-readable adapter name."""
 
     @property
-    def capabilities(self) -> Dict[str, bool]: ...
+    def capabilities(self) -> Dict[str, bool]:
+        """Mapping of capability name to whether it is supported."""
 
 
 class TestStorageAdapterContract:

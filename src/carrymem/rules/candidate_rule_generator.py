@@ -26,6 +26,8 @@ from .sanitizer import RuleSanitizer
 
 @dataclass
 class RuleCandidate:
+    """Candidate rule generated from detected memory patterns."""
+
     trigger: str
     action: str
     rule_type: str
@@ -38,6 +40,7 @@ class RuleCandidate:
     explanation: str
 
     def to_dict(self) -> dict:
+        """Serialize this candidate to a plain dict."""
         return {
             "trigger": self.trigger,
             "action": self.action,

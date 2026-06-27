@@ -194,7 +194,7 @@ else:
 
         def test_labels_are_human_readable(self):
             for t, label in _TYPE_LABELS.items():
-                self.assertTrue(len(label) > 0, f"Empty label for {t}")
+                self.assertGreater(len(label), 0, f"Empty label for {t}")
 
     # ══════════════════════════════════════════════════════════════════
     # Test Group 2: App Lifecycle
@@ -312,7 +312,7 @@ else:
                 from textual.widgets import Footer
 
                 footer = app.query(Footer)
-                self.assertTrue(len(footer) > 0)
+                self.assertGreater(len(footer), 0)
 
         @patch("carrymem.tui.CarryMem")
         async def test_header_present(self, MockCM):
@@ -324,7 +324,7 @@ else:
                 from textual.widgets import Header
 
                 header = app.query(Header)
-                self.assertTrue(len(header) > 0)
+                self.assertGreater(len(header), 0)
 
     # ══════════════════════════════════════════════════════════════════
     # Test Group 4: Data Binding & Memory Rendering
@@ -744,7 +744,7 @@ else:
         def test_detail_screen_compose_yields_widgets(self):
             screen = MemoryDetailScreen(SAMPLE_MEMORIES[0])
             widgets = list(screen.compose())
-            self.assertTrue(len(widgets) > 0)
+            self.assertGreater(len(widgets), 0)
 
         def test_detail_screen_shows_content(self):
             screen = MemoryDetailScreen(SAMPLE_MEMORIES[0])

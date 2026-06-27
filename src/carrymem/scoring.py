@@ -15,7 +15,7 @@ Formula:
 import math
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 TYPE_WEIGHTS: Dict[str, float] = {
     "correction": 1.3,
@@ -38,6 +38,8 @@ ACCESS_SCALE = 0.1
 
 @dataclass
 class RecallBudget:
+    """Constraints (count, confidence, importance, tokens, per-type quotas) for recall."""
+
     max_results: int = 20
     min_confidence: float = 0.0
     min_importance: float = 0.0
@@ -56,6 +58,7 @@ class RecallBudget:
     )
 
     def allows(self, memory_type: str, confidence: float, importance: float) -> bool:
+        """Return whether a memory meets the minimum confidence and importance."""
         if confidence < self.min_confidence:
             return False
         if importance < self.min_importance:
@@ -63,14 +66,17 @@ class RecallBudget:
         return True
 
     def quota_for(self, memory_type: str) -> int:
+        """Return the per-type result quota, falling back to ``max_results``."""
         return self.type_quotas.get(memory_type, self.max_results)
 
 
 def type_weight(memory_type: str) -> float:
+    """Return the type-based weight multiplier for a memory type."""
     return TYPE_WEIGHTS.get(memory_type, DEFAULT_TYPE_WEIGHT)
 
 
-def recency_factor(created_at, now: datetime = None) -> float:
+def recency_factor(created_at: Union[str, datetime], now: Optional[datetime] = None) -> float:
+    """Return a 0.3–1.0 recency multiplier based on age since ``created_at``."""
     if now is None:
         now = datetime.now(timezone.utc)
 
@@ -83,16 +89,17 @@ def recency_factor(created_at, now: datetime = None) -> float:
             return 1.0
 
     if not isinstance(created_at, datetime):
-        return 1.0
+        return 1.0  # type: ignore[unreachable]
 
     if created_at.tzinfo is None:
         created_at = created_at.replace(tzinfo=timezone.utc)
 
     age_days = max(0, (now - created_at).total_seconds() / 86400)
-    return RECENCY_FLOOR + (1.0 - RECENCY_FLOOR) * (0.5 ** (age_days / HALF_LIFE_DAYS))
+    return RECENCY_FLOOR + (1.0 - RECENCY_FLOOR) * (0.5 ** (age_days / HALF_LIFE_DAYS))  # type: ignore[no-any-return]
 
 
 def access_factor(access_count: int) -> float:
+    """Return a logarithmic access-reinforcement multiplier for the access count."""
     return 1.0 + math.log(1 + max(0, access_count)) * ACCESS_SCALE
 
 
@@ -101,8 +108,9 @@ def calculate_importance(
     memory_type: str,
     created_at: datetime,
     access_count: int = 0,
-    now: datetime = None,
+    now: Optional[datetime] = None,
 ) -> float:
+    """Compute an importance score from confidence, type, recency, and access."""
     tw = type_weight(memory_type)
     rf = recency_factor(created_at, now)
     af = access_factor(access_count)
@@ -114,9 +122,10 @@ def recalculate_confidence(
     base_confidence: float,
     fts_rank: float = 0.0,
     access_count: int = 0,
-    created_at: Optional[datetime] = None,
+    created_at: Optional[Union[str, datetime]] = None,
     now: Optional[datetime] = None,
 ) -> float:
+    """Blend base confidence with FTS rank, access, and recency signals."""
     if now is None:
         now = datetime.now(timezone.utc)
 
@@ -148,8 +157,9 @@ def recalculate_importance(
     memory_type: str,
     created_at: datetime,
     access_count: int,
-    now: datetime = None,
+    now: Optional[datetime] = None,
 ) -> float:
+    """Recompute importance after confidence/access updates."""
     return calculate_importance(
         confidence=confidence,
         memory_type=memory_type,

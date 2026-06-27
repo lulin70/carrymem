@@ -34,6 +34,7 @@ class RecallEngine:
         namespaces: Optional[List[str]] = None,
         update_access: bool = True,
     ) -> List[StoredMemory]:
+        """Run multi-phase recall with caching, returning matching stored memories."""
         if self._adapter._enable_cache and self._adapter._cache:
             cached = self._adapter._cache.get(self._adapter.namespace, query, filters, limit)
             if cached is not None:
@@ -51,7 +52,7 @@ class RecallEngine:
                 [r.to_dict() for r in results],
             )
 
-        return results
+        return results  # type: ignore[no-any-return]
 
     def _recall_impl(
         self,
@@ -92,7 +93,7 @@ class RecallEngine:
             if time_constraints.get("order_oldest"):
                 filters["_order_oldest"] = True
 
-        ns = namespaces or [self._adapter.namespace]
+        ns = namespaces or [self._adapter.namespace]  # type: ignore[assignment]
         placeholders = ",".join(["?"] * len(ns))
         conditions = [f"namespace IN ({placeholders})"]
         params = list(ns)
@@ -153,7 +154,7 @@ class RecallEngine:
                 ORDER BY importance_score DESC, confidence DESC
                 LIMIT ?
             """
-            params.append(limit)
+            params.append(limit)  # type: ignore[arg-type]
             rows = conn.execute(sql, params).fetchall()
 
         # Phase 4: Batch access count update (normal path)
@@ -285,7 +286,7 @@ class RecallEngine:
         now_iso = datetime.now(timezone.utc).isoformat()
         results = []
         seen_keys = set()
-        batch_updates = []
+        batch_updates: List[tuple] = []
 
         if is_stored:
             for stored in rows:
@@ -303,7 +304,7 @@ class RecallEngine:
                 )
         else:
             # P1-2: Diversity filtering - limit same-type dominance
-            type_counts = {}
+            type_counts: Dict[str, int] = {}
             max_per_type = max(3, limit // 3)
 
             for row in rows:
@@ -418,8 +419,8 @@ class RecallEngine:
         RRF formula: score(d) = w_fts * 1/(k + rank_fts) + w_vec * 1/(k + rank_vec)
         Where k, weights, and type boosts are configurable via rrf_config or env vars.
         """
-        rrf_scores = {}
-        row_data = {}
+        rrf_scores: Dict[str, float] = {}
+        row_data: Dict[str, Any] = {}
 
         for rank, row in enumerate(fts_rows, start=1):
             rid = row["id"] if row and "id" in row.keys() else None
@@ -450,7 +451,7 @@ class RecallEngine:
         Default: fact/decision +20%, sentiment -50%.
         """
         mtype = row["type"] if row and "type" in row.keys() else ""
-        return self._adapter._rrf_type_boosts.get(mtype, 1.0)
+        return self._adapter._rrf_type_boosts.get(mtype, 1.0)  # type: ignore[no-any-return]
 
     def _fts_search(self, query, where_clause, params, limit):
         from .query_builder import QueryBuilder

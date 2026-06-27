@@ -21,6 +21,7 @@ _CONFIRMATION_PATTERNS = {
 
 
 def is_confirmation(message: str) -> bool:
+    """Return True if the message matches a confirmation phrase in any language."""
     msg_lower = message.strip().lower().rstrip("!.。！")
     for lang_patterns in _CONFIRMATION_PATTERNS.values():
         for pattern in lang_patterns:
@@ -30,12 +31,14 @@ def is_confirmation(message: str) -> bool:
 
 
 def summarize_context(context_text: str, max_length: int = 100) -> str:
+    """Truncate context text to ``max_length`` characters with an ellipsis."""
     if len(context_text) <= max_length:
         return context_text
     return context_text[: max_length - 3] + "..."
 
 
 def has_confirmation_context(context: Optional[Dict]) -> bool:
+    """Return True if the context dict contains an AI reply awaiting confirmation."""
     if not context or not isinstance(context, dict):
         return False
     return bool(context.get("ai_reply", ""))

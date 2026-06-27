@@ -18,7 +18,7 @@ versions as additional LLM capabilities are integrated.
 
 import os
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from carrymem.utils.logger import logger
 
@@ -36,7 +36,7 @@ except ImportError:
 
 if _BACKEND is None:
     try:
-        from zhipuai import ZhipuAI as _ZhipuAI
+        from zhipuai import ZhipuAI as _ZhipuAI  # type: ignore[import-not-found]
 
         _ZHIPUAI_CLIENT = _ZhipuAI
         _BACKEND = "zhipuai"
@@ -48,18 +48,20 @@ _CJK_RANGES = re.compile(
 )
 
 
-def _env_or(key: str, default: str = None) -> Optional[str]:
+def _env_or(key: str, default: Optional[str] = None) -> Optional[str]:
     return os.environ.get(key, default)
 
 
-def _str_to_bool(val: str) -> bool:
+def _str_to_bool(val: Union[str, bool]) -> bool:
     if isinstance(val, bool):
         return val
     return str(val).lower() in ("true", "1", "yes", "on")
 
 
 class LLMClient:
-    def __init__(self, config: Dict[str, Any] = None):
+    """LLM client wrapper supporting OpenAI and ZhipuAI backends."""
+
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
         self._enabled = self._resolve_enabled(config)
         self._api_key = self._resolve("llm.api_key", "CARRYMEM_LLM_API_KEY", config)
         self._base_url = self._resolve(
@@ -68,35 +70,43 @@ class LLMClient:
         self._model = self._resolve("llm.model", "CARRYMEM_LLM_MODEL", config, default="gpt-4o-mini")
         try:
             self._temperature = float(
-                self._resolve("llm.temperature", "CARRYMEM_LLM_TEMPERATURE", config, default="0.3")
+                self._resolve(  # type: ignore[arg-type]
+                    "llm.temperature", "CARRYMEM_LLM_TEMPERATURE", config, default="0.3"
+                )
             )
         except (ValueError, TypeError):
             self._temperature = 0.3
         try:
-            self._max_tokens = int(self._resolve("llm.max_tokens", "CARRYMEM_LLM_MAX_TOKENS", config, default="500"))
+            self._max_tokens = int(
+                self._resolve(  # type: ignore[arg-type]
+                    "llm.max_tokens", "CARRYMEM_LLM_MAX_TOKENS", config, default="500"
+                )
+            )
         except (ValueError, TypeError):
             self._max_tokens = 500
         try:
-            self._timeout = int(self._resolve("llm.timeout", "CARRYMEM_LLM_TIMEOUT", config, default="30"))
+            self._timeout = int(
+                self._resolve("llm.timeout", "CARRYMEM_LLM_TIMEOUT", config, default="30")  # type: ignore[arg-type]
+            )
         except (ValueError, TypeError):
             self._timeout = 30
         self._client = self._init_client()
 
-    def _resolve_enabled(self, config: Dict[str, Any] = None) -> bool:
+    def _resolve_enabled(self, config: Optional[Dict[str, Any]] = None) -> bool:
         if config and "llm.enabled" in config:
             return _str_to_bool(config["llm.enabled"])
         val = _env_or("CARRYMEM_LLM_ENABLED", "false")
-        return _str_to_bool(val)
+        return _str_to_bool(val)  # type: ignore[arg-type]
 
     def _resolve(
         self,
         config_key: str,
         env_key: str,
-        config: Dict[str, Any] = None,
-        default: str = None,
+        config: Optional[Dict[str, Any]] = None,
+        default: Optional[str] = None,
     ) -> Optional[str]:
         if config and config_key in config:
-            return config[config_key]
+            return config[config_key]  # type: ignore[no-any-return]
         return _env_or(env_key, default)
 
     def _init_client(self):
@@ -125,6 +135,7 @@ class LLMClient:
         return None
 
     def is_available(self) -> bool:
+        """Return True if the LLM backend client was initialized."""
         return self._client is not None
 
     def __repr__(self):
@@ -132,7 +143,8 @@ class LLMClient:
         masked = key[:4] + "..." + key[-4:] if key and len(key) > 8 else "***"
         return f"LLMClient(backend={_BACKEND}, model={self._model}, api_key={masked}, available={self.is_available()})"
 
-    def chat(self, prompt: str, system: str = None) -> Optional[str]:
+    def chat(self, prompt: str, system: Optional[str] = None) -> Optional[str]:
+        """Send a chat completion request and return the response text, or None on failure."""
         if not self.is_available():
             return None
         try:
@@ -151,7 +163,7 @@ class LLMClient:
                 if not response.choices:
                     logger.warning("LLM returned empty choices")
                     return None
-                return response.choices[0].message.content
+                return response.choices[0].message.content  # type: ignore[no-any-return]
             if _BACKEND == "zhipuai":
                 response = self._client.chat.completions.create(
                     model=self._model,
@@ -162,12 +174,13 @@ class LLMClient:
                 if not response.choices:
                     logger.warning("LLM returned empty choices")
                     return None
-                return response.choices[0].message.content
+                return response.choices[0].message.content  # type: ignore[no-any-return]
         except (RuntimeError, ValueError, TypeError, OSError) as e:
             logger.error("LLM chat failed: %s", e)
         return None
 
     def count_tokens(self, text: str) -> int:
+        """Estimate token count for a text string (heuristic, not exact)."""
         if not text:
             return 0
         cjk_count = len(_CJK_RANGES.findall(text))

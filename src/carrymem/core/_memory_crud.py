@@ -1,7 +1,9 @@
 """Memory CRUD: classify_and_remember, declare, forget, update, merge, etc."""
 
+from __future__ import annotations
+
 import logging
-from typing import Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 from carrymem.adapters.base import MemoryEntry
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
@@ -22,11 +24,20 @@ from carrymem.utils.validators import (
     validate_storage_key,
 )
 
+if TYPE_CHECKING:
+    from carrymem.adapters.base import StorageAdapter
+    from carrymem.engine import MemoryClassificationEngine
+
 logger = logging.getLogger(__name__)
 
 
 class MemoryCRUDMixin:
     """Core CRUD operations for memories: remember, declare, forget, update, history, merge."""
+
+    # Shared instance state provided by LifecycleMixin.__init__.
+    _adapter: Optional[StorageAdapter]
+    _engine: MemoryClassificationEngine
+    _namespace: str
 
     # ── Permission helpers (P1-8 MVP) ──────────────────────────────
 
@@ -55,6 +66,7 @@ class MemoryCRUDMixin:
         force_type: Optional[str] = None,
         user_id: Optional[str] = None,
     ) -> ClassificationResult:
+        """Classify a message and persist the resulting memory entries."""
         self._check_write_permission(user_id)
 
         # Validate input BEFORE checking storage adapter so that invalid
@@ -66,8 +78,10 @@ class MemoryCRUDMixin:
             raise StorageNotConfiguredError()
 
         # 1. Validate & resolve (coreference + redaction check)
-        resolved_message, should_continue, redact_result, coreference_resolved = self._validate_and_resolve(
-            message, context, force_type, session_id
+        resolved_message, should_continue, redact_result, coreference_resolved = (
+            self._validate_and_resolve(  # type: ignore[attr-defined]
+                message, context, force_type, session_id
+            )
         )
         if not should_continue:
             return {
@@ -77,8 +91,8 @@ class MemoryCRUDMixin:
                 "storage_keys": [],
                 "type": "auto_redacted",
                 "content": str(message)[:100] if message else "",
-                "error": redact_result or "Blocked by redaction",
-                "summary": {
+                "error": redact_result or "Blocked by redaction",  # type: ignore[typeddict-unknown-key]
+                "summary": {  # type: ignore[typeddict-item]
                     "redacted": True,
                     "redact_reason": redact_result or "Sensitive content detected",
                 },
@@ -86,7 +100,9 @@ class MemoryCRUDMixin:
 
         # 2. Classify
         try:
-            classify_result = self._classify_message(resolved_message, context, language, force_type, message)
+            classify_result = self._classify_message(  # type: ignore[attr-defined]
+                resolved_message, context, language, force_type, message
+            )
         except ClassificationError as e:
             logger.warning("Classification failed: %s", e)
             return {
@@ -96,7 +112,7 @@ class MemoryCRUDMixin:
                 "storage_keys": [],
                 "type": "unknown",
                 "content": message,
-                "error": str(e),
+                "error": str(e),  # type: ignore[typeddict-unknown-key]
             }
         if isinstance(classify_result, list) and len(classify_result) == 0:
             base_result = self.classify_message(resolved_message, context=context, language=language)
@@ -108,8 +124,8 @@ class MemoryCRUDMixin:
 
         # 3. Store & post-process (with audit logging)
         try:
-            result = self._store_entries(
-                classify_result,  # type: ignore[arg-type]
+            result = self._store_entries(  # type: ignore[attr-defined]
+                classify_result,
                 resolved_message,
                 message,
                 context,
@@ -125,7 +141,7 @@ class MemoryCRUDMixin:
                     success=True,
                     details={"message_preview": message[:100]},
                 )
-            return result
+            return result  # type: ignore[no-any-return]
         except Exception as exc:
             if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:
                 self._adapter._audit.log_operation(
@@ -141,6 +157,7 @@ class MemoryCRUDMixin:
         context: Optional[Dict[str, Any]] = None,
         language: Optional[str] = None,
     ) -> ClassificationResult:
+        """Classify a message into memory entries without persisting."""
         validate_message(message, max_length=MAX_MESSAGE_LENGTH)
         validate_context(context)
         validate_language(language)
@@ -167,10 +184,10 @@ class MemoryCRUDMixin:
 
         return {
             "should_remember": len(entries) > 0,
-            "entries": [e.to_dict() for e in entries],
+            "entries": [e.to_dict() for e in entries],  # type: ignore[misc]
             "summary": {
                 "total_entries": len(entries),
-                "by_type": self._count_by_type(entries),
+                "by_type": self._count_by_type(entries),  # type: ignore[attr-defined]
             },
         }
 
@@ -180,6 +197,7 @@ class MemoryCRUDMixin:
         context: Optional[Dict[str, Any]] = None,
         user_id: Optional[str] = None,
     ) -> DeclareResult:
+        """Explicitly declare and store a message as a memory."""
         self._check_write_permission(user_id)
 
         validate_message(message)
@@ -228,7 +246,7 @@ class MemoryCRUDMixin:
             stored_memories.append(stored.to_dict())
             storage_keys.append(stored.storage_key)
 
-        self._auto_backup()
+        self._auto_backup()  # type: ignore[attr-defined]
 
         if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:
             self._adapter._audit.log_operation(
@@ -240,12 +258,12 @@ class MemoryCRUDMixin:
 
         return {
             "declared": True,
-            "entries": stored_memories,
+            "entries": stored_memories,  # type: ignore[typeddict-item]
             "storage_keys": storage_keys,
             "source": "declaration",
             "summary": {
                 "total_entries": len(stored_memories),
-                "by_type": self._count_by_type(matches),
+                "by_type": self._count_by_type(matches),  # type: ignore[attr-defined]
             },
         }
 
@@ -255,9 +273,11 @@ class MemoryCRUDMixin:
         context: Optional[Dict[str, Any]] = None,
         user_id: Optional[str] = None,
     ) -> DeclareResult:
+        """Alias for :meth:`declare` storing a user preference."""
         return self.declare(message, context, user_id=user_id)
 
     def forget_memory(self, memory_id: str, user_id: Optional[str] = None) -> bool:
+        """Delete a memory by its storage key."""
         self._check_delete_permission(user_id)
 
         if not self._adapter:
@@ -265,7 +285,7 @@ class MemoryCRUDMixin:
 
         validate_storage_key(memory_id)
         result = self._adapter.forget(memory_id)
-        self._auto_backup()
+        self._auto_backup()  # type: ignore[attr-defined]
 
         if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:
             self._adapter._audit.log_operation(
@@ -282,6 +302,7 @@ class MemoryCRUDMixin:
         reason: Optional[str] = None,
         user_id: Optional[str] = None,
     ) -> UpdateMemoryResult:
+        """Update a memory's content, creating a new version."""
         self._check_write_permission(user_id)
 
         if not self._adapter:
@@ -304,7 +325,7 @@ class MemoryCRUDMixin:
         if self._adapter._cache:
             self._adapter._cache.invalidate()
 
-        self._auto_backup()
+        self._auto_backup()  # type: ignore[attr-defined]
 
         if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:
             self._adapter._audit.log_operation(
@@ -325,6 +346,7 @@ class MemoryCRUDMixin:
         self,
         storage_key: str,
     ) -> List[Dict[str, Any]]:
+        """Return the version history for a memory."""
         if not self._adapter:
             raise StorageNotConfiguredError()
 
@@ -338,6 +360,7 @@ class MemoryCRUDMixin:
         storage_key: str,
         version: int,
     ) -> RollbackMemoryResult:
+        """Roll a memory back to a previous version."""
         if not self._adapter:
             raise StorageNotConfiguredError()
 
@@ -351,7 +374,7 @@ class MemoryCRUDMixin:
         if self._adapter._cache:
             self._adapter._cache.invalidate()
 
-        self._auto_backup()
+        self._auto_backup()  # type: ignore[attr-defined]
 
         return {
             "rolled_back": True,
@@ -364,8 +387,9 @@ class MemoryCRUDMixin:
         self,
         namespaces: Optional[List[str]] = None,
         strategy: str = "latest_wins",
-        conflict_callback: Optional[Callable[[Dict[str, Any], Dict[str, Any]], Dict[str, Any]]] = None,
+        conflict_callback: Optional[Callable[[List[Dict[str, Any]]], None]] = None,
     ) -> MergeMemoriesResult:
+        """Merge memories across namespaces, removing duplicates."""
         from carrymem.merge import merge_memories as _merge
 
         if not self._adapter:

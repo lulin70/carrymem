@@ -14,7 +14,7 @@ import re
 import sqlite3
 import threading
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from carrymem.utils.language import has_cjk
 
@@ -73,9 +73,10 @@ class RuleStorage:
                 conn.execute("PRAGMA journal_mode=WAL")
                 conn.execute("PRAGMA foreign_keys=ON")
                 self._local.conn = conn
-        return self._local.conn
+        return self._local.conn  # type: ignore[no-any-return]
 
     def close(self):
+        """Close the thread-local SQLite connection if open."""
         if hasattr(self._local, "conn") and self._local.conn is not None:
             try:
                 self._local.conn.close()
@@ -355,6 +356,7 @@ class RuleStorage:
             return self._row_to_rule(row)
         except sqlite3.Error as e:
             _logger.debug("[RuleStorage] get failed: %s", e)
+        return None
 
     def list_all(
         self,
@@ -378,7 +380,7 @@ class RuleStorage:
             List of Rule objects
         """
         query = "SELECT * FROM rules WHERE 1=1"
-        params = []
+        params: List[Any] = []
 
         if status:
             query += " AND status = ?"
@@ -402,6 +404,7 @@ class RuleStorage:
             return [self._row_to_rule(row) for row in rows]
         except sqlite3.Error as e:
             _logger.debug("[RuleStorage] list_all failed: %s", e)
+        return []
 
     @staticmethod
     def _estimate_rank(rule: Rule, query_text: str) -> float:
@@ -448,6 +451,7 @@ class RuleStorage:
         return " ".join(f'"{t}"' for t in terms)
 
     def search(self, query_text: str, limit: int = 20) -> List[Rule]:
+        """Full-text search rules by query, falling back to LIKE on failure."""
         safe_query = self._sanitize_fts_query(query_text)
         if not safe_query.strip():
             return []
@@ -482,6 +486,7 @@ class RuleStorage:
         return self._fallback_search(query_text, limit)
 
     def search_with_rank(self, query_text: str, limit: int = 20) -> List[tuple]:
+        """Search rules returning (rule, bm25_rank_score) tuples."""
         safe_query = self._sanitize_fts_query(query_text)
         if not safe_query.strip():
             return []
@@ -542,8 +547,10 @@ class RuleStorage:
             return [self._row_to_rule(row) for row in rows]
         except sqlite3.Error as e:
             _logger.debug("[RuleStorage] _fallback_search failed: %s", e)
+        return []
 
     def update(self, rule_id: str, **updates) -> Optional[Rule]:
+        """Update fields of a rule by id, returning the updated rule."""
         existing = self.get(rule_id)
         if existing is None:
             return None
@@ -633,7 +640,7 @@ class RuleStorage:
                 cursor = conn.execute("SELECT COUNT(*) FROM rules WHERE status = ?", (status,))
             else:
                 cursor = conn.execute("SELECT COUNT(*) FROM rules")
-            return cursor.fetchone()[0]
+            return cursor.fetchone()[0]  # type: ignore[no-any-return]
         except sqlite3.Error as e:
             _logger.debug("[RuleStorage] count failed: %s", e)
             return 0

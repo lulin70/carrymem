@@ -213,6 +213,7 @@ def skill_install(
     scope_override: Optional[str] = None,
     mode: str = "skip",
 ) -> dict:
+    """Install a verified skill bundle into storage, returning the result."""
     verification = skill_verify(data)
     if not verification["valid"]:
         return {"installed": 0, "errors": [verification["reason"]]}
