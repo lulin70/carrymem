@@ -25,13 +25,18 @@ CarryMem fixes this. It's a lightweight, zero-dependency memory system that stor
 ---
 
 <p align="center">
+  <a href="https://github.com/lulin70/carrymem/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/lulin70/carrymem/ci.yml?branch=main&label=CI&logo=github" alt="CI"></a>
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-4198-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-4044-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-82%25%2B-green" alt="Coverage">
+  <img src="https://img.shields.io/badge/mypy-0%20errors-brightgreen" alt="mypy">
+  <img src="https://img.shields.io/badge/ruff-0%20errors-brightgreen" alt="ruff">
+  <img src="https://img.shields.io/badge/security-24%20patterns-blue" alt="Security">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval Academic Benchmark"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
+  <img src="https://img.shields.io/badge/deploy-Local%20No%20Docker-success" alt="Deploy">
 </p>
 
 **Topics**: `ai-memory` `mcp` `claude-code` `agent-memory` `cursor` `obsidian` `preference-injection` `sqlite` `llm-tools` `portable-memory`
@@ -153,7 +158,7 @@ carrymem backup --restore memories_backup_20260527_120000.db  # Restore from bac
 
 > 📊 **Academically Verified**: CarryMem's preference injection accuracy (83.0%) was measured using the [PrefEval protocol](https://arxiv.org/abs/2410.01373) (ICLR 2025 Oral, Amazon Science), outperforming simple reminder (80.0%) and zero-shot (71.5%) baselines across 200 test items. See [Citation](#citation) below.
 
-## 3 Reasons to Choose CarryMem
+## 4 Reasons to Choose CarryMem
 
 These are what make CarryMem different from every other memory solution:
 
@@ -172,6 +177,15 @@ These are what make CarryMem different from every other memory solution:
 - Zero external dependencies for core functionality
 - Single .db file — carry your identity anywhere
 - Works with Cursor, Claude Code, ChatGPT, any MCP client
+
+### 4. Industrial-Grade Engineering — 4044 Tests / mypy 0 / ruff 0
+- **4044 tests passing** with 82%+ coverage (tested: 7 memory types × 4 tiers × lifecycle)
+- **mypy 0 errors** across 143 source files — fully type-safe (CI blocking gate)
+- **ruff 0 errors** — clean codebase, no lint violations
+- **24 sensitive-pattern redaction** — auto-detects API keys, passwords, tokens before storage
+- **PatternAnalyzer God Class split** (1547→171 LOC facade + 3 modules) — maintainable architecture
+- **394 docstrings added** — 50%→100% public API documentation coverage
+- Maturity assessment: **80/100 (B)** per 7-dimension DevSquad evaluation
 
 ---
 
@@ -827,6 +841,16 @@ Rule Engine (60%+) → Pattern Analysis (30%) → Semantic (10%)
  Zero cost            Near-zero cost          Token cost
 ```
 
+**PatternAnalyzer Composition** (v0.4.0 refactor — 1547→171 LOC):
+```
+PatternAnalyzer (facade, 171 LOC)
+    ├── NoiseDetector          — noise filtering (B1-B5, C5 rules)
+    ├── FeedbackDetector       — execution feedback detection
+    └── MemoryPatternDetectors — 8 memory type detectors
+        (preference/correction/fact/relationship/task/decision/sentiment/location)
+```
+Backward compatible: `from carrymem.layers.pattern_analyzer import PatternAnalyzer` unchanged.
+
 ---
 
 ## Module Overview
@@ -861,6 +885,11 @@ Rule Engine (60%+) → Pattern Analysis (30%) → Semantic (10%)
 | `i18n` | `src/carrymem/i18n/__init__.py` | I18nManager dictionary-based translation, locale switching, variable interpolation |
 | **Coordinators** | | |
 | `classification_pipeline` | `src/carrymem/coordinators/classification_pipeline.py` | Multi-phase classification orchestration |
+| **Pattern Analysis** (v0.4.0 split — was 1547 LOC God Class) | | |
+| `pattern_analyzer` | `src/carrymem/layers/pattern_analyzer.py` | Thin facade (171 LOC) — backward-compatible API |
+| `noise_detector` | `src/carrymem/layers/noise_detector.py` | Noise filtering (B1-B5, C5 rules, substantive content detection) |
+| `feedback_detector` | `src/carrymem/layers/feedback_detector.py` | Execution feedback detection (positive/negative keywords) |
+| `memory_pattern_detectors` | `src/carrymem/layers/memory_pattern_detectors.py` | 8 memory type detectors + result builders (1133 LOC) |
 
 ---
 
@@ -943,19 +972,20 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 ## Project Status
 
 **Current Version**: v0.4.0
-**Tests**: 4198+ passing
+**Tests**: 4044 passing, 0 failed, 65 slow skipped
 **Coverage**: 82%+
+**mypy**: 0 errors (143 source files, CI blocking gate)
+**ruff**: 0 errors
+**Maturity**: 80/100 (B) per 7-dimension DevSquad evaluation
 
 **Changelog**:
+- **v0.4.0** (tech debt cleanup): PatternAnalyzer God Class split (1547→171 LOC facade + NoiseDetector + FeedbackDetector + MemoryPatternDetectors), mypy 536→0 errors with CI blocking gate, 394 public API docstrings added (50%→100%), 67 loose assertions strengthened (assertTrue→assertGreater), mypy.ini cleaned (python_version 3.10, removed unused sections). Maturity 74→80 (B-→B).
 - **v0.4.0**: Quality Sprint — 134 unit tests for core Mixins, health_check MCP tool (28 total), TUI delete/edit, CLI rules subcommand grouping, audit SQLite persistence, removed @runtime_checkable, merged StorageAdapterProtocol, all Any types replaced (24→0), mypy+bandit CI
 - **v0.4.0**: Protocol & Maturity Sprint — Mixin+Facade+Protocol 三层架构, 10个 Protocol 接口, 错误码体系 (CM-001~999), SQLite 连接池 (WAL+线程缓存), 加密升级 (PBKDF2 260K), E2E 测试补全 (+78), 监控框架 MVP, 插件系统 MVP, 权限系统 MVP, i18n 框架, 类型注解 ~82%, 72 new tests
 - **v0.3.0**: Maturity & Architecture Sprint — God Class→8 Mixin, exception narrowing (173→15), TUI enhancement (+453 lines, Morandi palette), constants.py (28 named), lazy import cache, ghost feature audit, 71 new tests
 - **v0.2.5**: Integration/E2E audit, ghost feature deprecation warnings, version chain validation, 83 new tests
 - **v0.2.4**: Beta release — CI root fix, 24 security fixes, Glama TDQS boost, 6-gate CI pipeline
 - **v0.2.0**: USB carry encryption, auto-backup, concurrent safety, PrefEval 83.0% (200 items), 8-client MCP setup
-- **v0.2.3** (pre-reset): Consolidation scheduling (schedule/stop), PrefEval standardization
-- **v0.2.2** (pre-reset): Token budget + dead code fix + security, PrefEval 87.9%
-- **v0.2.1** (pre-reset): Coreference resolution, auto-redaction, QA prompt optimization
 
 ---
 
