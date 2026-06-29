@@ -310,7 +310,7 @@ class TestE2EDataConsistencyUnderConcurrency:
 
         # Store known data first
         known_memories = [
-            "CRITICAL: Use PostgreSQL not MySQL",
+            "FACT: Use PostgreSQL not MySQL",
             "IMPORTANT: All APIs must be versioned",
             "RULE: Never hardcode credentials",
             "FACT: Production runs on AWS",

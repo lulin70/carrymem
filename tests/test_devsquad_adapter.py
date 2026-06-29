@@ -75,7 +75,7 @@ class TestTypeMapping:
         assert carrymem_to_devsquad_type("format") == "avoid"
 
     def test_carrymem_to_devsquad_prefer(self):
-        assert carrymem_to_devsquad_type("prefer") == "avoid"
+        assert carrymem_to_devsquad_type("prefer") == "always"
 
     def test_carrymem_to_devsquad_unknown(self):
         assert carrymem_to_devsquad_type("unknown") == "avoid"

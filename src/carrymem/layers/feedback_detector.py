@@ -46,9 +46,7 @@ class FeedbackDetector:
             "again",
         }
 
-    def detect(
-        self, message: str, execution_context: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+    def detect(self, message: str, execution_context: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Detect execution feedback patterns."""
         user_feedback = execution_context.get("user_feedback", "").lower()
 

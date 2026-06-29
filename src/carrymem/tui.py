@@ -6,13 +6,13 @@ Design: Morandi color palette for a calm, professional aesthetic.
 """
 
 try:
-    from textual.app import App, ComposeResult  # type: ignore[import-not-found]
-    from textual.binding import Binding  # type: ignore[import-not-found]
-    from textual.containers import Container, Horizontal, Vertical  # type: ignore[import-not-found]
-    from textual.reactive import reactive  # type: ignore[import-not-found]
-    from textual.screen import ModalScreen  # type: ignore[import-not-found]
-    from textual.widget import Widget  # type: ignore[import-not-found]
-    from textual.widgets import DataTable, Footer, Header, Input, Label, Static  # type: ignore[import-not-found]
+    from textual.app import App, ComposeResult
+    from textual.binding import Binding
+    from textual.containers import Container, Horizontal, Vertical
+    from textual.reactive import reactive
+    from textual.screen import ModalScreen
+    from textual.widget import Widget
+    from textual.widgets import DataTable, Footer, Header, Input, Label, Static
 
     HAS_TEXTUAL = True
 except ImportError:
@@ -29,7 +29,7 @@ if not HAS_TEXTUAL:
 
 else:
     import sqlite3
-    from typing import Any, Dict, List, Optional
+    from typing import Any, Dict, List, Mapping, Optional
 
     from carrymem import CarryMem
     from carrymem.constants import DB_PATH
@@ -452,7 +452,7 @@ else:
     class StatsPanel(Static):
         """Real-time statistics display in the sidebar."""
 
-        def update_stats(self, stats: Dict[str, Any], shown: int, filt: str) -> None:
+        def update_stats(self, stats: Mapping[str, Any], shown: int, filt: str) -> None:
             """Refresh the sidebar statistics display."""
             total = stats.get("total_count", 0)
             by_type = stats.get("by_type", {})
@@ -954,7 +954,7 @@ else:
             memory = self.memories[self.selected_index]
             key = memory.get("storage_key", "")
 
-            def _on_delete_result(confirmed: bool) -> None:
+            def _on_delete_result(confirmed: "bool | None") -> None:
                 if confirmed:
                     try:
                         result = self.cm.forget_memory(key)

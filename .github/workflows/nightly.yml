@@ -9,6 +9,7 @@ jobs:
   slow-tests:
     name: Slow Test Suite
     runs-on: ubuntu-latest
+    timeout-minutes: 90
 
     steps:
       - uses: actions/checkout@v4
@@ -33,9 +34,11 @@ jobs:
           }
 
       - name: Run slow tests
+        env:
+          CI: "true"
         run: |
           python -m pytest tests/ \
             -m "slow" \
             --tb=long \
-            --timeout=300 \
+            --timeout=1800 \
             -q

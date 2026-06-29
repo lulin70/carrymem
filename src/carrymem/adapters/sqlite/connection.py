@@ -20,14 +20,14 @@ _db_write_locks_guard = threading.Lock()
 _SLOW_QUERY_THRESHOLD_MS = int(os.environ.get("CARRYMEM_SLOW_QUERY_MS", "100"))
 
 try:
-    import pysqlite3 as _pysqlite3  # type: ignore[import-untyped]
+    import pysqlite3 as _pysqlite3  # type: ignore[import-not-found]
 
     PYSQLITE3_AVAILABLE = True
 except ImportError:
     PYSQLITE3_AVAILABLE = False
 
 try:
-    import sqlite_vec  # type: ignore[import-untyped]
+    import sqlite_vec  # type: ignore[import-not-found]
 
     SQLITE_VEC_AVAILABLE = True
 except ImportError:
@@ -59,6 +59,7 @@ class ConnectionManager:
         self._closed = False
         self._all_connections: Dict[int, sqlite3.Connection] = {}
         self._conn_lock = threading.Lock()
+        self._init_lock = threading.Lock()
         self._enable_vector = enable_vector
         self._memory_conn: Optional[sqlite3.Connection] = None
 
@@ -115,38 +116,81 @@ class ConnectionManager:
             return self._memory_conn
 
         if not hasattr(self._local, "conn") or self._local.conn is None:
-            max_retries = 5
-            for attempt in range(max_retries):
-                try:
-                    use_pysqlite3 = self._enable_vector and PYSQLITE3_AVAILABLE
-                    if use_pysqlite3:
-                        conn = _pysqlite3.connect(self._db_path, timeout=30.0)
-                        conn.row_factory = _pysqlite3.Row
-                    else:
-                        conn = sqlite3.connect(self._db_path, timeout=30.0)
-                        conn.row_factory = sqlite3.Row
-                    self._apply_pragmas(conn)
-                    if use_pysqlite3 and SQLITE_VEC_AVAILABLE:
-                        try:
-                            conn.enable_load_extension(True)
-                            sqlite_vec.load(conn)
-                        except (OSError, AttributeError, ImportError, RuntimeError) as e:
-                            logger.debug("sqlite_vec extension loading failed: %s", e)
-                    self._local.conn = conn
-                    with self._conn_lock:
-                        self._all_connections[id(conn)] = conn
-                    break
-                except sqlite3.OperationalError as e:
-                    if "database is locked" in str(e).lower() and attempt < max_retries - 1:
-                        import time as _time
+            with self._init_lock:
+                if hasattr(self._local, "conn") and self._local.conn is not None:
+                    return self._local.conn  # type: ignore[no-any-return]
+                max_retries = 5
+                for attempt in range(max_retries):
+                    try:
+                        use_pysqlite3 = self._enable_vector and PYSQLITE3_AVAILABLE
+                        if use_pysqlite3:
+                            conn = _pysqlite3.connect(self._db_path, timeout=30.0)
+                            conn.row_factory = _pysqlite3.Row
+                        else:
+                            conn = sqlite3.connect(self._db_path, timeout=30.0)
+                            conn.row_factory = sqlite3.Row
+                        self._apply_pragmas(conn)
+                        if use_pysqlite3 and SQLITE_VEC_AVAILABLE:
+                            try:
+                                conn.enable_load_extension(True)
+                                sqlite_vec.load(conn)
+                            except (OSError, AttributeError, ImportError, RuntimeError) as e:
+                                logger.debug("sqlite_vec extension loading failed: %s", e)
+                        self._prime_fts5_vtable(conn)
+                        self._local.conn = conn
+                        with self._conn_lock:
+                            self._all_connections[id(conn)] = conn
+                        break
+                    except sqlite3.OperationalError as e:
+                        if "database is locked" in str(e).lower() and attempt < max_retries - 1:
+                            import time as _time
 
-                        _time.sleep(0.5 * (attempt + 1))
-                        continue
-                    raise DBConnectionError(f"Failed to connect to database: {e}") from e
-                except sqlite3.Error as e:
-                    raise DBConnectionError(f"Failed to connect to database: {e}") from e
+                            _time.sleep(0.5 * (attempt + 1))
+                            continue
+                        raise DBConnectionError(f"Failed to connect to database: {e}") from e
+                    except sqlite3.Error as e:
+                        raise DBConnectionError(f"Failed to connect to database: {e}") from e
 
         return self._local.conn  # type: ignore[no-any-return]
+
+    def _prime_fts5_vtable(self, conn: sqlite3.Connection) -> None:
+        """Trigger FTS5 vtable xConnect on a new connection.
+
+        When multiple threads create new SQLite connections concurrently,
+        the FTS5 vtable constructor can race, producing intermittent
+        "vtable constructor failed: memories_fts" errors when an INSERT
+        trigger first touches the vtable. Running a trivial SELECT against
+        memories_fts forces xConnect to complete on this connection before
+        any trigger fires. Held under _init_lock so only one thread
+        constructs the vtable at a time.
+
+        Safe to call before init_schema() runs (returns silently when the
+        vtable does not yet exist).
+        """
+        last_err: Optional[sqlite3.OperationalError] = None
+        for attempt in range(5):
+            try:
+                conn.execute("SELECT 1 FROM memories_fts LIMIT 1").fetchone()
+                return
+            except sqlite3.OperationalError as e:
+                last_err = e
+                msg_lower = str(e).lower()
+                err_code = getattr(e, "sqlite_errorcode", None)
+                err_name = getattr(e, "sqlite_errorname", None)
+                logger.warning(
+                    "FTS5 prime attempt %d failed: %s (code=%s, name=%s)",
+                    attempt + 1,
+                    e,
+                    err_code,
+                    err_name,
+                )
+                if "no such table" in msg_lower:
+                    return
+                import time as _time
+
+                _time.sleep(0.05 * (attempt + 1))
+        if last_err is not None:
+            logger.warning("FTS5 vtable priming failed after retries: %s", last_err)
 
     def _apply_pragmas(self, conn: sqlite3.Connection) -> None:
         """Apply performance and safety PRAGMAs to a new connection.

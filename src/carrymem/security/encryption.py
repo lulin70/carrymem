@@ -115,7 +115,7 @@ class MemoryEncryption:
         self._current_iterations = PBKDF2_ITERATIONS
 
         try:
-            from cryptography.fernet import Fernet  # noqa: F401
+            from cryptography.fernet import Fernet  # type: ignore[import-not-found]  # noqa: F401
 
             self._fernet_available = True
         except ImportError:

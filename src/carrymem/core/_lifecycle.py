@@ -155,6 +155,21 @@ class LifecycleMixin:
             recall_memories=self.recall_memories,  # type: ignore[attr-defined]
         )
 
+        # Eagerly initialize the rule engine schema before any concurrent
+        # access. RuleStorage._ensure_schema() creates the rules_fts vtable
+        # and triggers, which increments the SQLite schema cookie. If this
+        # runs lazily during a concurrent INSERT (via classify_and_remember
+        # → rule_engine access), the memories_fts vtable on other
+        # connections becomes invalid, producing intermittent
+        # "vtable constructor failed: memories_fts" (SQLITE_SCHEMA) errors.
+        # Eager init ensures all schema changes complete before worker
+        # threads can access the database.
+        if self._adapter is not None and hasattr(self._adapter, "db_path"):
+            try:
+                _ = self.rule_engine
+            except Exception:
+                pass
+
         # Auto-backup state
         self._write_count = 0
         self._auto_backup_interval = auto_backup_interval

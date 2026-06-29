@@ -33,21 +33,21 @@ from .versioning import VersionManager
 
 # Module-level capability flags (re-exported for backward compatibility)
 try:
-    import sqlite_vec  # type: ignore[import-untyped]
+    import sqlite_vec  # type: ignore[import-not-found]
 
     SQLITE_VEC_AVAILABLE = True
 except ImportError:
     SQLITE_VEC_AVAILABLE = False
 
 try:
-    import pysqlite3  # type: ignore[import-untyped]
+    import pysqlite3  # type: ignore[import-not-found]
 
     PYSQLITE3_AVAILABLE = True
 except ImportError:
     PYSQLITE3_AVAILABLE = False
 
 try:
-    from sentence_transformers import SentenceTransformer
+    from sentence_transformers import SentenceTransformer  # type: ignore[import-not-found]
 
     SENTENCE_TRANSFORMERS_AVAILABLE = True
 except ImportError:

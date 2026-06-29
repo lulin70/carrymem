@@ -11,7 +11,7 @@ CARRYMEM_TO_DEVOPSQUAD_RULE_TYPE = {
     "avoid": "avoid",
     "always": "always",
     "format": "avoid",
-    "prefer": "avoid",
+    "prefer": "always",
 }
 
 

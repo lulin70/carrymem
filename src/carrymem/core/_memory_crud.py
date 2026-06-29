@@ -78,10 +78,10 @@ class MemoryCRUDMixin:
             raise StorageNotConfiguredError()
 
         # 1. Validate & resolve (coreference + redaction check)
-        resolved_message, should_continue, redact_result, coreference_resolved = (
-            self._validate_and_resolve(  # type: ignore[attr-defined]
-                message, context, force_type, session_id
-            )
+        # _validate_and_resolve is provided by ClassificationMixin at runtime
+        validator = self._validate_and_resolve  # type: ignore[attr-defined]
+        resolved_message, should_continue, redact_result, coreference_resolved = validator(
+            message, context, force_type, session_id
         )
         if not should_continue:
             return {

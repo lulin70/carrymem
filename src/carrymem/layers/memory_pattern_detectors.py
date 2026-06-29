@@ -27,9 +27,7 @@ class MemoryPatternDetectors:
     # Preference detection (uses registry)
     # ------------------------------------------------------------------
 
-    def detect_preference(
-        self, message: str, language: str, analyzer
-    ) -> Optional[Dict[str, Any]]:
+    def detect_preference(self, message: str, language: str, analyzer) -> Optional[Dict[str, Any]]:
         """Detect preference patterns.
 
         Phase B-3 Fix: Enhanced preference detection.
@@ -214,9 +212,7 @@ class MemoryPatternDetectors:
     # Correction detection (uses registry)
     # ------------------------------------------------------------------
 
-    def detect_correction(
-        self, message: str, language: str, analyzer
-    ) -> Optional[Dict[str, Any]]:
+    def detect_correction(self, message: str, language: str, analyzer) -> Optional[Dict[str, Any]]:
         """Detect correction patterns.
 
         V4-02 Enhanced: Comprehensive correction detection with 3-tier strategy.
@@ -292,9 +288,7 @@ class MemoryPatternDetectors:
     # Fact detection (uses registry)
     # ------------------------------------------------------------------
 
-    def detect_fact(
-        self, message: str, language: str, analyzer
-    ) -> Optional[Dict[str, Any]]:
+    def detect_fact(self, message: str, language: str, analyzer) -> Optional[Dict[str, Any]]:
         """Detect fact declaration patterns.
 
         V4-04 Enhanced: Balanced 3-tier fact detection.
@@ -396,9 +390,7 @@ class MemoryPatternDetectors:
     # Relationship detection (uses registry)
     # ------------------------------------------------------------------
 
-    def detect_relationship(
-        self, message: str, language: str, analyzer
-    ) -> Optional[Dict[str, Any]]:
+    def detect_relationship(self, message: str, language: str, analyzer) -> Optional[Dict[str, Any]]:
         """Detect relationship patterns.
 
         V4-05 Enhanced: 3-tier relationship detection.
@@ -463,9 +455,7 @@ class MemoryPatternDetectors:
     # Task detection (uses registry)
     # ------------------------------------------------------------------
 
-    def detect_task(
-        self, message: str, language: str, analyzer
-    ) -> Optional[Dict[str, Any]]:
+    def detect_task(self, message: str, language: str, analyzer) -> Optional[Dict[str, Any]]:
         """Detect task patterns.
 
         Phase A Fix #3: Enhanced with technical action verbs and structured patterns.
@@ -694,9 +684,7 @@ class MemoryPatternDetectors:
     # Decision detection (uses registry)
     # ------------------------------------------------------------------
 
-    def detect_decision(
-        self, message: str, language: str, analyzer
-    ) -> Optional[Dict[str, Any]]:
+    def detect_decision(self, message: str, language: str, analyzer) -> Optional[Dict[str, Any]]:
         """Detect decision patterns.
 
         Phase B-2 Fix: Complete rewrite of decision detection.
@@ -848,9 +836,7 @@ class MemoryPatternDetectors:
     # Sentiment detection (uses registry)
     # ------------------------------------------------------------------
 
-    def detect_sentiment(
-        self, message: str, language: str, analyzer
-    ) -> Optional[Dict[str, Any]]:
+    def detect_sentiment(self, message: str, language: str, analyzer) -> Optional[Dict[str, Any]]:
         """Detect sentiment patterns.
 
         V4-05 Enhanced: Structural + keyword hybrid detection.
@@ -1060,9 +1046,7 @@ class MemoryPatternDetectors:
     # Location detection (uses registry)
     # ------------------------------------------------------------------
 
-    def detect_location(
-        self, message: str, language: str, analyzer
-    ) -> Optional[Dict[str, Any]]:
+    def detect_location(self, message: str, language: str, analyzer) -> Optional[Dict[str, Any]]:
         """Detect location patterns.
 
         V4-08: Restricted to pure location info, not facts containing locations.
