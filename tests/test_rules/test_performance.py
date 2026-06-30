@@ -19,7 +19,12 @@ from carrymem.rules.injector import RuleInjector
 from carrymem.rules.matcher import RuleMatcher
 from carrymem.rules.storage import RuleStorage
 
-# Mark all tests in this file as slow (skipped in CI, run locally/nightly)
+# CI VMs are 20-50x slower than dev machines; apply CI_FACTOR to time-based
+# thresholds so perf tests are not flaky in CI environments.
+_CI_ENV = bool(os.environ.get("CARRYMEM_CI") or os.environ.get("CI"))
+CI_FACTOR = 50 if _CI_ENV else 1
+
+# Mark all tests in this file as slow (run in nightly, not in default CI gate)
 pytestmark = [pytest.mark.slow]
 
 
@@ -87,9 +92,8 @@ class TestMatchLatency:
         assert p99 < 50, f"P99 match latency {p99:.1f}ms exceeds 50ms for 100 rules"
         assert avg < 20, f"Average match latency {avg:.1f}ms exceeds 20ms"
 
-    @pytest.mark.skip(reason="Performance test flaky on CI - needs dedicated benchmark environment")
     def test_match_latency_large_dataset(self, large_storage):
-        """Match with 1000 rules should be < 100ms P99"""
+        """Match with 1000 rules should be < P99 threshold (CI-scaled)."""
         matcher = RuleMatcher(large_storage)
         latencies = []
 
@@ -101,12 +105,13 @@ class TestMatchLatency:
         p99 = sorted(latencies)[int(len(latencies) * 0.99)]
         avg = statistics.mean(latencies)
 
-        assert p99 < 100, f"P99 match latency {p99:.1f}ms exceeds 100ms for 1000 rules"
-        assert avg < 50, f"Average match latency {avg:.1f}ms exceeds 50ms"
+        p99_threshold = 100 * CI_FACTOR
+        avg_threshold = 50 * CI_FACTOR
+        assert p99 < p99_threshold, f"P99 match latency {p99:.1f}ms exceeds {p99_threshold}ms for 1000 rules"
+        assert avg < avg_threshold, f"Average match latency {avg:.1f}ms exceeds {avg_threshold}ms"
 
-    @pytest.mark.skip(reason="Performance test flaky on CI - needs dedicated benchmark environment")
     def test_match_latency_no_results(self, large_storage):
-        """Match with no results should still be fast (fallback path)"""
+        """Match with no results should still be fast (fallback path)."""
         matcher = RuleMatcher(large_storage)
         latencies = []
 
@@ -116,8 +121,9 @@ class TestMatchLatency:
             latencies.append((time.perf_counter() - start) * 1000)
 
         p99 = sorted(latencies)[int(len(latencies) * 0.99)]
-        # Relaxed threshold: fallback path (LIKE search) on 1000 rules without FTS hit
-        assert p99 < 1500, f"P99 no-result latency {p99:.1f}ms exceeds 1500ms"
+        # Fallback path (LIKE search) on 1000 rules without FTS hit; scaled for CI VMs.
+        p99_threshold = 1500 * CI_FACTOR
+        assert p99 < p99_threshold, f"P99 no-result latency {p99:.1f}ms exceeds {p99_threshold}ms"
 
 
 class TestInjectionLatency:

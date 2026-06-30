@@ -202,8 +202,8 @@ class CRUDOperations:
                     logger.warning("Failed to delete vector for memory %s: %s", memory_id, e)
             conn.commit()
             result = cursor.rowcount > 0
-        if self._adapter._enable_cache and self._adapter._cache:
-            self._adapter._cache.invalidate(self._adapter.namespace)
+        if self._adapter._enable_cache and self._adapter._cache and result:
+            self._adapter._cache.invalidate_keys(self._adapter.namespace, {storage_key})
         if self._adapter._audit:
             self._adapter._audit.log_operation(
                 operation="forget",
@@ -340,6 +340,9 @@ class CRUDOperations:
                     "reason": reason,
                 },
             )
+
+        if self._adapter._enable_cache and self._adapter._cache:
+            self._adapter._cache.invalidate_keys(self._adapter.namespace, {storage_key})
 
         updated_row = conn.execute(
             "SELECT * FROM memories WHERE storage_key = ? AND namespace = ?",

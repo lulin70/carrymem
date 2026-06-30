@@ -98,6 +98,25 @@ class RecallCache:
             for k in keys_to_remove:
                 del self._cache[k]
 
+    def invalidate_keys(self, namespace: str, storage_keys: set[str]) -> None:
+        """Drop cached entries whose results contain any of the given storage_keys.
+
+        Finer-grained than invalidate(namespace): only queries whose cached
+        result set references a modified/deleted memory are dropped, preserving
+        hit rate for unrelated queries in the same namespace.
+        """
+        if not storage_keys:
+            return
+        with self._lock:
+            keys_to_remove: list[str] = []
+            for cache_key, entry in self._cache.items():
+                if entry.namespace != namespace:
+                    continue
+                if any(item.get("storage_key") in storage_keys for item in entry.value):
+                    keys_to_remove.append(cache_key)
+            for k in keys_to_remove:
+                del self._cache[k]
+
     def clear(self) -> None:
         """Remove all entries and reset hit/miss counters."""
         with self._lock:

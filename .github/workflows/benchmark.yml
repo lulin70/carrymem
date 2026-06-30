@@ -1,6 +1,6 @@
 # Performance Regression Benchmark CI
 #
-# Runs performance benchmarks as an optional, non-blocking job.
+# Runs performance benchmarks as a BLOCKING hard gate.
 # Triggers on:
 #   - Push to new-main (always runs)
 #   - Pull request to new-main (always runs)
@@ -8,7 +8,8 @@
 #   - Schedule: weekly on Monday 00:00 UTC (baseline tracking)
 #
 # Failure behavior:
-#   - Benchmark failures do NOT block merges (continue-on-error)
+#   - Benchmark failures BLOCK merges (hard gate)
+#   - CARRYMEM_CI=true activates CI_FACTOR=50 scaling for CI VMs
 #   - Failed benchmarks generate GitHub Issue annotations
 #   - Results uploaded as artifacts for trend analysis
 
@@ -29,15 +30,15 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  CARRYMEM_CI: 'true'  # Activate CI_FACTOR=50 scaling for perf thresholds
 
 jobs:
   # ═══════════════════════════════════════
-  # Performance Benchmark Suite (P1-5)
+  # Performance Benchmark Suite (P1-5) - Hard Gate
   # ═══════════════════════════════════════
   benchmark:
     name: Performance Benchmarks (py${{ matrix.python-version }})
     runs-on: ubuntu-latest
-    continue-on-error: true  # Non-blocking: don't fail the pipeline
     timeout-minutes: 30
 
     strategy:
@@ -132,12 +133,11 @@ jobs:
           if-no-files-found: ignore
 
   # ═══════════════════════════════════════
-  # Memory Optimization Tests (P1-6)
+  # Memory Optimization Tests (P1-6) - Hard Gate
   # ═══════════════════════════════════════
   memory-optimization:
     name: Memory Optimization Tests (py${{ matrix.python-version }})
     runs-on: ubuntu-latest
-    continue-on-error: true  # Non-blocking
     needs: []  # Independent of benchmark job
     timeout-minutes: 20
 

@@ -126,6 +126,59 @@ class TestRecallCache:
         assert cache.get("ns1", "q1", None, 10) is None
         assert cache.get("ns2", "q2", None, 10) is not None
 
+    def test_invalidate_keys_empty_set_noop(self):
+        """invalidate_keys with empty set does nothing."""
+        cache = RecallCache()
+        cache.put("ns1", "q1", None, 10, [{"storage_key": "k1"}])
+        cache.invalidate_keys("ns1", set())
+        assert len(cache._cache) == 1
+        assert cache.get("ns1", "q1", None, 10) is not None
+
+    def test_invalidate_keys_drops_only_matching_entries(self):
+        """invalidate_keys drops only entries referencing the given storage_key."""
+        cache = RecallCache()
+        # query1 returns items with storage_key=k1
+        cache.put("ns1", "q1", None, 10, [{"storage_key": "k1"}, {"storage_key": "k2"}])
+        # query2 returns items with storage_key=k3 (unrelated)
+        cache.put("ns1", "q2", None, 10, [{"storage_key": "k3"}])
+        # query3 in different namespace (must be preserved)
+        cache.put("ns2", "q1", None, 10, [{"storage_key": "k1"}])
+
+        cache.invalidate_keys("ns1", {"k1"})
+
+        # q1 dropped (contains k1), q2 preserved (only k3), ns2 preserved (different ns)
+        assert cache.get("ns1", "q1", None, 10) is None
+        assert cache.get("ns1", "q2", None, 10) is not None
+        assert cache.get("ns2", "q1", None, 10) is not None
+
+    def test_invalidate_keys_multiple_keys(self):
+        """invalidate_keys handles multiple storage_keys in one call."""
+        cache = RecallCache()
+        cache.put("ns1", "q1", None, 10, [{"storage_key": "k1"}])
+        cache.put("ns1", "q2", None, 10, [{"storage_key": "k2"}])
+        cache.put("ns1", "q3", None, 10, [{"storage_key": "k3"}])
+
+        cache.invalidate_keys("ns1", {"k1", "k2"})
+
+        assert cache.get("ns1", "q1", None, 10) is None
+        assert cache.get("ns1", "q2", None, 10) is None
+        assert cache.get("ns1", "q3", None, 10) is not None
+
+    def test_invalidate_keys_preserves_unrelated_queries(self):
+        """invalidate_keys preserves hit rate for unrelated queries."""
+        cache = RecallCache()
+        # Simulate a write-heavy scenario: 10 queries, only 1 references the modified key
+        for i in range(10):
+            cache.put("ns1", f"q{i}", None, 10, [{"storage_key": f"k{i}"}])
+        cache.put("ns1", "q_target", None, 10, [{"storage_key": "k_modified"}])
+
+        cache.invalidate_keys("ns1", {"k_modified"})
+
+        # Only q_target dropped, other 10 queries preserved
+        for i in range(10):
+            assert cache.get("ns1", f"q{i}", None, 10) is not None
+        assert cache.get("ns1", "q_target", None, 10) is None
+
     def test_clear(self):
         """Test clear method resets stats"""
         cache = RecallCache()
