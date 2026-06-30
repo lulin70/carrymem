@@ -410,4 +410,3 @@ class JSONAdapter(StorageAdapter):
 
     def close(self):
         """Release resources held by the adapter (no-op for JSON)."""
-        pass

@@ -12,8 +12,7 @@ from ...utils.logger import logger
 from ..base import StoredMemory
 
 try:
-    from ...semantic.expander import SemanticExpander
-    from ...semantic.merger import ResultMerger
+    pass
 
     SEMANTIC_AVAILABLE = True
 except ImportError:

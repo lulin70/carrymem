@@ -16,25 +16,16 @@ import os
 import time
 from datetime import datetime, timezone
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from carrymem.__version__ import __version__ as _version
 
 from .tools import (
     CLASSIFICATION_SCHEMA,
-    CONSOLIDATION_TOOL_NAMES,
     CORE_TOOL_NAMES,
-    HEALTH_CHECK_TOOL_NAMES,
-    KNOWLEDGE_TOOL_NAMES,
     OPTIONAL_TOOL_NAMES,
-    PROFILE_TOOL_NAMES,
-    PROMPT_TOOL_NAMES,
-    RULE_TOOL_NAMES,
     TOOL_NAMES,
 )
-
-if TYPE_CHECKING:
-    from carrymem.security.input_validator import InputValidator
 
 _validator: Optional[InputValidator] = None
 try:
@@ -879,7 +870,6 @@ def handle_health_check(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
 
     # Memory count
     try:
-        memories = carrymem.recall_memories(limit=1)
         result["memory_count"] = len(carrymem.recall_memories(limit=1000))
     except Exception:
         result["memory_count"] = "unavailable"

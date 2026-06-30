@@ -31,7 +31,7 @@ import shutil
 import struct
 import warnings
 from datetime import datetime, timezone
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Optional
 
 from carrymem.constants import PBKDF2_ITERATIONS, PBKDF2_ITERATIONS_LEGACY
 
@@ -446,7 +446,7 @@ class MemoryEncryption:
             # Decrypt with old key/backend
             if old_backend == "fernet":
                 try:
-                    from cryptography.fernet import Fernet
+                    pass
 
                     old_f = self._make_fernet(old_key)
                     plaintext = old_f.decrypt(old_ciphertext.encode("ascii")).decode("utf-8")

@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import json
 import logging
-import warnings
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from carrymem.__version__ import __version__ as _version
 from carrymem.adapters.base import MemoryEntry

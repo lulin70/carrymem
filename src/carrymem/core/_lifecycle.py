@@ -9,7 +9,7 @@ from threading import Timer
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Dict, Optional, Type, Union
 
-from carrymem.adapters.base import MemoryEntry, StorageAdapter
+from carrymem.adapters.base import StorageAdapter
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.engine import MemoryClassificationEngine
 from carrymem.error_messages import get_hint, get_message

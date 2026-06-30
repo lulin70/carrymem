@@ -14,9 +14,8 @@ Integration points:
 
 from __future__ import annotations
 
-from typing import Optional
 
-from carrymem.errors import CarryMemError, SecurityError
+from carrymem.errors import SecurityError
 
 
 class Permission:

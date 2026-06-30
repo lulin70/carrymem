@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.constants import AUDIT_LOG_DEFAULT_LIMIT
-from carrymem.core._lifecycle import StorageNotConfiguredError
 
 if TYPE_CHECKING:
     from carrymem.adapters.base import StorageAdapter

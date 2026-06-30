@@ -2,7 +2,7 @@
 
 import json
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 from ...utils.logger import logger
 from ..base import StoredMemory
@@ -44,7 +44,6 @@ class RowSerializer:
 
     def row_to_stored(self, row) -> Optional[StoredMemory]:
         """Convert a sqlite3.Row to StoredMemory."""
-        import sqlite3
 
         if not row:
             return None

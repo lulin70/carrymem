@@ -17,7 +17,7 @@ import json
 import logging
 import sqlite3
 import threading
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from io import StringIO
 from pathlib import Path

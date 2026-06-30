@@ -9,7 +9,7 @@ from carrymem.adapters.obsidian_adapter import ObsidianAdapter
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.constants import DEFAULT_RECALL_LIMIT, RULE_MATCH_LIMIT_CAP
 from carrymem.core._lifecycle import KnowledgeNotConfiguredError, StorageNotConfiguredError
-from carrymem.types import RecallAllResult, StoredMemoryDict
+from carrymem.types import StoredMemoryDict
 from carrymem.utils.validators import validate_limit, validate_query
 
 if TYPE_CHECKING:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from carrymem.adapters.base import MemoryEntry
 from carrymem.constants import (
@@ -13,22 +13,14 @@ from carrymem.constants import (
     CORRECTION_KEYWORD_OVERLAP,
     CORRECTION_RECALL_LIMIT,
     DEFAULT_FORCE_TYPE_CONFIDENCE,
-    IMPORT_CONTENT_SEARCH_LENGTH,
     MAX_MESSAGE_LENGTH,
     MIN_CORRECTION_CONTENT_LENGTH,
     RULE_CONTENT_MAX_LENGTH,
 )
-from carrymem.security.input_validator import InputValidator
 from carrymem.types import (
     ClassificationResult,
     CorrectionUpdateInfo,
     ValidateAndResolveResult,
-    ValidationResult,
-)
-from carrymem.utils.validators import (
-    validate_context,
-    validate_language,
-    validate_message,
 )
 
 if TYPE_CHECKING:

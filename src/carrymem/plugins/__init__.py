@@ -13,12 +13,11 @@ Provides:
 
 import importlib
 import importlib.util
-import os
 import sys
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Protocol, Type, runtime_checkable
+from typing import TYPE_CHECKING, Dict, List, Optional, Protocol, runtime_checkable
 
 from carrymem.utils.logger import logger
 

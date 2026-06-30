@@ -126,12 +126,12 @@ class MetricsCollector:
         for op, stats in snapshot["latency"].items():
             if stats.get("count", 0) > 0:
                 safe_op = op.replace("-", "_").replace(".", "_")
-                lines.append(f'carrymem_latency_ms{{operation="{op}",quantile="0.99"}} {stats.get("p99", 0)}')
-                lines.append(f'carrymem_latency_ms{{operation="{op}",quantile="0.95"}} {stats.get("p95", 0)}')
-                lines.append(f'carrymem_latency_ms{{operation="{op}",quantile="0.5"}} {stats.get("avg", 0)}')
+                lines.append(f'carrymem_latency_ms{{operation="{safe_op}",quantile="0.99"}} {stats.get("p99", 0)}')
+                lines.append(f'carrymem_latency_ms{{operation="{safe_op}",quantile="0.95"}} {stats.get("p95", 0)}')
+                lines.append(f'carrymem_latency_ms{{operation="{safe_op}",quantile="0.5"}} {stats.get("avg", 0)}')
                 latency_sum = round(stats.get("avg", 0) * stats["count"], 2)
-                lines.append(f'carrymem_latency_ms_sum{{operation="{op}"}} {latency_sum}')
-                lines.append(f'carrymem_latency_ms_count{{operation="{op}"}} {stats["count"]}')
+                lines.append(f'carrymem_latency_ms_sum{{operation="{safe_op}"}} {latency_sum}')
+                lines.append(f'carrymem_latency_ms_count{{operation="{safe_op}"}} {stats["count"]}')
 
         # Gauges
         if snapshot["gauges"]:

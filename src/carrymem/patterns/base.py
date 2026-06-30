@@ -136,7 +136,6 @@ class Pattern(ABC):
     @abstractmethod
     def get_description(self) -> str:
         """Return a human-readable description of this pattern."""
-        pass
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(name={self.full_name!r}, type={self.pattern_type.value})"

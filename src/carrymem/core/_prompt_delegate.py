@@ -16,7 +16,6 @@ from carrymem.core._lifecycle import StorageNotConfiguredError
 
 if TYPE_CHECKING:
     from carrymem.adapters.base import StorageAdapter
-    from carrymem.prompt_builder import PromptBuilder
     from carrymem.scoring import RecallBudget
 
 logger = logging.getLogger(__name__)

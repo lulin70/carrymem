@@ -9,7 +9,7 @@ from carrymem.adapters.base import MemoryEntry
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.constants import BATCH_RECALL_LIMIT, MAX_MESSAGE_LENGTH
 from carrymem.core._lifecycle import StorageNotConfiguredError
-from carrymem.exceptions import ClassificationError, ValidationError
+from carrymem.exceptions import ClassificationError
 from carrymem.types import (
     ClassificationResult,
     DeclareResult,

@@ -6,12 +6,10 @@ import getpass
 import gzip
 import hashlib
 import json
-import os
 import socket
 import sqlite3
 from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Dict
 
 from carrymem.cli._base import *
 
@@ -360,7 +358,6 @@ def cmd_pack(args):
 
 def cmd_unpack(args):
     """Unpack a .carry file to restore CarryMem identity."""
-    import os
 
     parser = _make_parser("unpack")
     parser.add_argument("file", help=_t("cli.arg.carry_file"))

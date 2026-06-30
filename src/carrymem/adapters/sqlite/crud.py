@@ -225,6 +225,15 @@ class CRUDOperations:
             count = cursor.rowcount
         if self._adapter._enable_cache and self._adapter._cache and count > 0:
             self._adapter._cache.invalidate(self._adapter.namespace)
+        if self._adapter._audit:
+            self._adapter._audit.log_operation(
+                operation="forget_expired",
+                success=count > 0,
+                details={
+                    "namespace": self._adapter.namespace,
+                    "deleted_count": count,
+                },
+            )
         return count  # type: ignore[no-any-return]
 
     def get_by_key(self, storage_key: str):
@@ -316,6 +325,21 @@ class CRUDOperations:
             ),
         )
         conn.commit()
+
+        if self._adapter._audit:
+            self._adapter._audit.log_operation(
+                operation="update",
+                storage_key=storage_key,
+                memory_type=stored.type,
+                success=True,
+                details={
+                    "namespace": self._adapter.namespace,
+                    "memory_key": storage_key,
+                    "old_version": old_version,
+                    "new_version": new_version,
+                    "reason": reason,
+                },
+            )
 
         updated_row = conn.execute(
             "SELECT * FROM memories WHERE storage_key = ? AND namespace = ?",

@@ -1,7 +1,5 @@
 """CarryMem CLI - Rules engine commands (~26 functions)."""
 
-import json
-
 from carrymem.cli._base import *
 
 

@@ -1,6 +1,6 @@
 name: carrymem
 description: "Your portable AI memory layer. Classify, store, and recall what matters across models, tools, and devices."
-version: 0.2.0
+version: 0.4.0
 author: lulin70
 license: MIT
 repository: https://github.com/lulin70/carrymem

@@ -33,14 +33,14 @@ from .versioning import VersionManager
 
 # Module-level capability flags (re-exported for backward compatibility)
 try:
-    import sqlite_vec  # type: ignore[import-not-found]
+    import sqlite_vec  # type: ignore[import-not-found]  # noqa: F401
 
     SQLITE_VEC_AVAILABLE = True
 except ImportError:
     SQLITE_VEC_AVAILABLE = False
 
 try:
-    import pysqlite3  # type: ignore[import-not-found]
+    import pysqlite3  # type: ignore[import-not-found]  # noqa: F401
 
     PYSQLITE3_AVAILABLE = True
 except ImportError:
@@ -295,8 +295,8 @@ class SQLiteAdapter(StorageAdapter):
     def enable_semantic_recall(self, enabled: bool = True):
         """Enable or disable semantic recall, gated on availability of the expander."""
         try:
-            from ...semantic.expander import SemanticExpander
-            from ...semantic.merger import ResultMerger
+            from ...semantic.expander import SemanticExpander  # noqa: F401
+            from ...semantic.merger import ResultMerger  # noqa: F401
 
             SEMANTIC_AVAIL = True
         except ImportError:
@@ -306,9 +306,9 @@ class SQLiteAdapter(StorageAdapter):
     def enable_vector_search(self, enabled: bool = True):
         """Enable or disable vector search, gated on dependencies and model."""
         try:
-            import pysqlite3
-            import sqlite_vec
-            from sentence_transformers import SentenceTransformer
+            import pysqlite3  # noqa: F401, F811
+            import sqlite_vec  # noqa: F401, F811
+            from sentence_transformers import SentenceTransformer  # noqa: F401, F811
 
             deps_ok = True
         except ImportError:

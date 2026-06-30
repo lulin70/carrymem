@@ -12,7 +12,7 @@ Error code ranges:
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Type
+from typing import Dict, Optional, Type
 
 from carrymem.error_messages import ERROR_MESSAGES, ErrorTemplate
 

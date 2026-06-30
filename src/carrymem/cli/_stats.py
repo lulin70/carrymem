@@ -6,7 +6,6 @@ import shutil
 import sqlite3
 import sys
 from pathlib import Path
-from typing import Optional
 
 from carrymem.cli._base import *
 
@@ -19,7 +18,6 @@ def _show_value_report(cm, parsed) -> int:
     profile = cm.get_memory_profile()
     total_memories = stats.get("total_count", 0)
     by_type = stats.get("by_type", {})
-    profile_stats = profile.get("stats", {})
     highlights = profile.get("highlights", {})
 
     # Rules active

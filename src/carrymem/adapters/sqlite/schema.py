@@ -4,7 +4,7 @@ import sqlite3
 from datetime import datetime, timezone
 
 try:
-    import pysqlite3.dbapi2 as _pysqlite3  # type: ignore[import-untyped]
+    import pysqlite3.dbapi2 as _pysqlite3  # type: ignore[import-not-found]
 
     _OpError: tuple = (sqlite3.OperationalError, _pysqlite3.OperationalError)
 except ImportError:

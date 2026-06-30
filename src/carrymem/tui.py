@@ -11,8 +11,7 @@ try:
     from textual.containers import Container, Horizontal, Vertical
     from textual.reactive import reactive
     from textual.screen import ModalScreen
-    from textual.widget import Widget
-    from textual.widgets import DataTable, Footer, Header, Input, Label, Static
+    from textual.widgets import Footer, Header, Input, Static
 
     HAS_TEXTUAL = True
 except ImportError:

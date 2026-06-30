@@ -11,7 +11,7 @@ Usage:
 
 from typing import TYPE_CHECKING
 
-from carrymem.plugins import HookPoint, PluginManager, PluginProtocol
+from carrymem.plugins import PluginProtocol
 
 if TYPE_CHECKING:
     from carrymem import CarryMem
