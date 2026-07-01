@@ -317,6 +317,4 @@ class TestMCPServer:
 
 class TestRunHTTPServer:
     def test_import(self):
-        from carrymem.integration.layer2_mcp.http_server import run_http_server
-
         assert callable(run_http_server)

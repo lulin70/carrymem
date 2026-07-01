@@ -539,8 +539,6 @@ class TestCmdSetupMcp:
 
 class TestCmdServe:
     def test_serve_import(self):
-        from carrymem.cli import cmd_serve
-
         assert callable(cmd_serve)
 
 
