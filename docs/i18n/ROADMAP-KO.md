@@ -30,7 +30,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 - 두 번째 자리: GA 마일스톤 (API 안정성 보장)
 - "v1.0.0 점프" 없음 — 실제 프로덕션 사용으로 획득
 
-> **참고**: 위에 나열된 v0.3.0–v0.4.1 버전은 프로젝트의 개발 이력을 나타냅니다. 현재 버전은 v0.5.0이며, 자동 백업, 암호화 .carry 파일, 동시성 안전, E2E 테스트, **PrefEval 83.0%** (200샘플, 3조건 정식), 상태/이벤트 버전 체인, 보안 강화, 선호 주입 최적화, context.py 모듈화, 통합 스케줄링 등을 포함하며, P0/P1/P2 성숙도 수정(RecallCache 세분화 무효화, PBKDF2 600k, 다단계 Dockerfile, release.yml 버전 일관성 게이트)도 포함합니다.
+> **참고**: 위에 나열된 v0.3.0–v0.4.1 버전은 프로젝트의 개발 이력을 나타냅니다. 현재 버전은 v0.5.1이며, 자동 백업, 암호화 .carry 파일, 동시성 안전, E2E 테스트, **PrefEval 83.0%** (200샘플, 3조건 정식), 상태/이벤트 버전 체인, 보안 강화, 선호 주입 최적화, context.py 모듈화, 통합 스케줄링 등을 포함하며, P0/P1/P2 성숙도 수정(RecallCache 세분화 무효화, PBKDF2 600k, 다단계 Dockerfile, release.yml 버전 일관성 게이트)도 포함합니다.
 
 ---
 

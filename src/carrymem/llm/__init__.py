@@ -3,7 +3,7 @@
 This module provides LLM client abstraction for CarryMem's AI-powered features
 (session summarization, semantic aggregation, etc.).
 
-Currently supports OpenAI and ZhipuAI backends. Future enhancements (v0.5.0+)
+Currently supports OpenAI and ZhipuAI backends. Future enhancements (v0.5.1+)
 may include:
 - Additional LLM provider support (Anthropic, Google, etc.)
 - Streaming response support

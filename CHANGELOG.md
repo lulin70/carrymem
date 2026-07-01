@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI rules subcommand grouping (carrymem rules add/list/match...)
 - Audit logger defaults to SQLite persistence (~/.carrymem/audit.db)
 - mypy type check and bandit security scan in CI
+- **Security upgrade test suite**: 29 tests in `test_security_crypto_upgrade.py`
+  covering PBKDF2 iterations, key rotation round-trip, digest tampering detection,
+  security level attributes, fallback warnings, and full backward compatibility.
+- **Security constants**: `PBKDF2_ITERATIONS = 260000` and
+  `PBKDF2_ITERATIONS_LEGACY = 100000` in `constants.py`.
 
 ### Changed
 - StorageAdapterProtocol merged into StorageAdapter (interface simplified)
@@ -73,12 +78,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `.key`. Automatic verification on load; tampered keys rejected with `EncryptionError`.
   Missing digest files auto-created on first load (migration path from pre-check versions).
 
+## [0.5.1] - 2026-07-01 (Entity Normalization — Ontology-lite)
+
 ### Added
-- **Security upgrade test suite**: 29 tests in `test_security_crypto_upgrade.py`
-  covering PBKDF2 iterations, key rotation round-trip, digest tampering detection,
-  security level attributes, fallback warnings, and full backward compatibility.
-- **Security constants**: `PBKDF2_ITERATIONS = 260000` and
-  `PBKDF2_ITERATIONS_LEGACY = 100000` in `constants.py`.
+- **EntityNormalizer module** (`src/carrymem/layers/entity_normalizer.py`): Rule-based
+  entity extraction + `difflib.SequenceMatcher` fuzzy matching (ratio ≥ 0.8) to map
+  surface forms to canonical forms. Zero LLM dependency. Borrows cognee's 80% cutoff.
+  - 4 regex extraction patterns: acronyms (ALL_CAPS 2-6 chars), CamelCase terms,
+    hyphenated/underscored tool names, capitalized phrases
+  - Stopword filtering (80+ English stopwords) to avoid false positives
+  - `_MAX_ENTITIES_PER_TEXT=50` performance guard
+- **entity_aliases table** (schema migration `_V051`): `canonical_form`, `alias_form`,
+  `entity_type`, `namespace`, `similarity_score`, `created_at` with UNIQUE constraint
+  and namespace/canonical indexes. Idempotent migration via `migrate_v051()`.
+- **memories table columns**: `entity_normalized` (JSON) and `entity_id` (TEXT) added
+  via ALTER TABLE migration (NULL-able, backward compatible)
+- **classify pipeline integration**: `_store_entries()` in `_classification.py` now
+  runs EntityNormalizer as post-classification enrichment. Entity metadata merged
+  into `entry.metadata["entities"]` before persistence. Graceful degradation on any
+  error (non-SQLite adapters, missing InputValidator, DB failures).
+- **InputValidator.sanitize_content()** public API: C16 security correction —
+  alias_form/canonical_form sanitized via this method before persistence.
+- **EntityNormalizer.list_entities() / merge_entities()**: CLI/MCP support methods.
+  `merge_entities()` emits `ENTITY_MERGE` audit log per C19.
+- **42-test suite** (`tests/test_entity_normalizer.py`): Happy Path (6), Boundary (9),
+  Error (4), Performance (2), Namespace Isolation (2), Classify Integration (2),
+  Security C15/C16/C18 (5), Config Switch (3), List/Merge (4), JSON builder (3),
+  NormalizeResult (2). Uses real SQLite in-memory DB (no Mock).
+- **`CARRYMEM_ENTITY_NORMALIZATION` env var** (default `1`): Set to `0` to disable.
+
+### Security
+- **C15**: Fuzzy match constrained to same `entity_type` + length diff ≤ 3 + first 2
+  chars match. Prevents false merges like "Java" (language) ↔ "JavaScript".
+- **C16**: `alias_form`/`canonical_form` sanitized via `InputValidator.sanitize_content()`
+  (null-byte removal + whitespace strip) before DB persistence.
+- **C18**: Namespace sourced from adapter (`self._namespace` from LifecycleMixin, set
+  by SQLiteAdapter) — not from user-controllable `memory.metadata`. Format validated
+  defensively (`^[a-zA-Z0-9_-]+$`).
+- **C19**: `merge_entities()` emits `ENTITY_MERGE` audit log with source/target/namespace.
+- **Namespace isolation** (spec §8.1): No cross-namespace entity normalization. Each
+  namespace's `entity_aliases` are isolated (privacy boundary).
+
+### Changed
+- `SchemaManager.migrate_all()` now calls `migrate_v051()` after `migrate_v090()`.
+- `ClassificationMixin` declares `_entity_normalizer`/`_input_validator` lazy-init
+  attributes; `LifecycleMixin.__init__` initializes them to `None`.
+- `_store_entries()` adds entity metadata enrichment step before storage loop.
 
 ## [0.5.0] - 2026-07-01 (Access Frequency Weighting Enhancement)
 
