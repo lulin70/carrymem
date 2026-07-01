@@ -179,6 +179,33 @@ class TestRecallCache:
             assert cache.get("ns1", f"q{i}", None, 10) is not None
         assert cache.get("ns1", "q_target", None, 10) is None
 
+    def test_hit_rate_comparison_invalidate_keys_vs_namespace(self):
+        """Quantify hit-rate improvement: fine-grained vs namespace-level invalidation.
+
+        Simulates a write-heavy workload: 20 cached queries, 1 forget operation.
+        - invalidate_keys: 19/20 cache entries preserved (95% survival)
+        - invalidate (namespace): 0/20 cache entries preserved (0% survival)
+        """
+        # --- Scenario A: fine-grained invalidation (invalidate_keys) ---
+        cache_fine = RecallCache(max_size=256, ttl_seconds=300)
+        for i in range(20):
+            cache_fine.put("ns1", f"q{i}", None, 10, [{"storage_key": f"k{i}"}])
+
+        cache_fine.invalidate_keys("ns1", {"k5"})  # forget k5
+
+        hits_fine = sum(1 for i in range(20) if cache_fine.get("ns1", f"q{i}", None, 10) is not None)
+        assert hits_fine == 19, f"Fine-grained: expected 19 hits, got {hits_fine}"
+
+        # --- Scenario B: namespace-level invalidation (invalidate) ---
+        cache_coarse = RecallCache(max_size=256, ttl_seconds=300)
+        for i in range(20):
+            cache_coarse.put("ns1", f"q{i}", None, 10, [{"storage_key": f"k{i}"}])
+
+        cache_coarse.invalidate("ns1")  # forget any key → wipe entire namespace
+
+        hits_coarse = sum(1 for i in range(20) if cache_coarse.get("ns1", f"q{i}", None, 10) is not None)
+        assert hits_coarse == 0, f"Namespace-level: expected 0 hits, got {hits_coarse}"
+
     def test_clear(self):
         """Test clear method resets stats"""
         cache = RecallCache()

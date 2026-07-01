@@ -185,5 +185,98 @@ class TestCacheInvalidationUpdate(unittest.TestCase):
         self.assertIsNone(cached_b, "update(key_b) must evict cache entries containing key_b")
 
 
+class TestCacheConsistencyUserJourney(unittest.TestCase):
+    """E2E: simulate a real user journey to verify cache consistency.
+
+    Journey: remember → recall (cache) → update → recall (new content)
+    → forget → recall (empty). Each step must reflect the latest state,
+    not stale cache.
+    """
+
+    def setUp(self):
+        self.db = tempfile.mktemp(suffix=".db")
+        self.adapter = _make_adapter(self.db)
+
+    def tearDown(self):
+        self.adapter.close()
+        if os.path.exists(self.db):
+            os.unlink(self.db)
+
+    def test_remember_recall_update_recall_forget_recall(self):
+        """Full user journey: cache must never serve stale data after writes."""
+        # Step 1: remember
+        entry = MemoryEntry(
+            id="journey_mem",
+            type=TYPE_A,
+            content="original content for journey",
+            confidence=0.9,
+            tier=2,
+        )
+        stored = self.adapter.remember(entry)
+        key = stored.storage_key
+        filters = {"type": TYPE_A}
+
+        # Step 2: recall (populates cache)
+        results = self.adapter.recall("", filters=filters, limit=10)
+        self.assertEqual(len(results), 1)
+        self.assertIn("original", results[0].content)
+        self.assertEqual(self.adapter._cache.stats["size"], 1)
+
+        # Step 3: update content
+        self.adapter.update_memory(key, "UPDATED content for journey", reason="user edit")
+
+        # Step 4: recall again — must return UPDATED content (not stale cache)
+        results_after_update = self.adapter.recall("", filters=filters, limit=10)
+        self.assertEqual(len(results_after_update), 1)
+        self.assertIn(
+            "UPDATED",
+            results_after_update[0].content,
+            "recall after update must return new content, not stale cache",
+        )
+
+        # Step 5: forget
+        self.adapter.forget(key)
+
+        # Step 6: recall again — must return empty (memory deleted)
+        results_after_forget = self.adapter.recall("", filters=filters, limit=10)
+        self.assertEqual(len(results_after_forget), 0, "recall after forget must return empty")
+
+    def test_concurrent_writes_preserve_cache_consistency(self):
+        """Multiple writes in sequence must not leave stale cache entries."""
+        # Seed 3 memories of different types
+        entries = [
+            MemoryEntry(
+                id=f"mem_{t}",
+                type=t,
+                content=f"content for {t}",
+                confidence=0.9,
+                tier=2,
+            )
+            for t in [TYPE_A, TYPE_B, "decision"]
+        ]
+        stored_list = [self.adapter.remember(e) for e in entries]
+        keys = [s.storage_key for s in stored_list]
+
+        # Prime cache with 3 type-filtered queries
+        for i, t in enumerate([TYPE_A, TYPE_B, "decision"]):
+            results = self.adapter.recall("", filters={"type": t}, limit=10)
+            self.assertEqual(len(results), 1)
+        self.assertEqual(self.adapter._cache.stats["size"], 3)
+
+        # Update key[0] — only query for TYPE_A should be invalidated
+        self.adapter.update_memory(keys[0], "updated content for type_a", reason="test")
+
+        # TYPE_A query: evicted (must re-query)
+        results_a = self.adapter.recall("", filters={"type": TYPE_A}, limit=10)
+        self.assertIn("updated", results_a[0].content)
+
+        # TYPE_B and decision queries: should still be cached (hits)
+        cached_b = self.adapter._cache.get(NS, "", {"type": TYPE_B}, 10)
+        self.assertIsNotNone(cached_b, "TYPE_B cache must survive update to TYPE_A key")
+
+        cached_d = self.adapter._cache.get(NS, "", {"type": "decision"}, 10)
+        self.assertIsNotNone(cached_d, "decision cache must survive update to TYPE_A key")
+
+
 if __name__ == "__main__":
     unittest.main()
