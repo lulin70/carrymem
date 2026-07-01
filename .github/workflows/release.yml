@@ -9,6 +9,7 @@ jobs:
   release:
     name: Build & Publish
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
       id-token: write
@@ -31,6 +32,21 @@ jobs:
 
       - name: Check package
         run: twine check dist/*
+
+      - name: Verify version consistency (tag == built wheel)
+        run: |
+          # Extract tag version (strip leading 'v')
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          # Extract built wheel version
+          WHEEL=$(ls dist/carrymem-*.whl | head -1)
+          WHEEL_VERSION=$(echo "$WHEEL" | sed -n 's/.*carrymem-\([^-]*\)-.*/\1/p')
+          echo "Tag version:    $TAG_VERSION"
+          echo "Wheel version:  $WHEEL_VERSION"
+          if [ "$TAG_VERSION" != "$WHEEL_VERSION" ]; then
+            echo "ERROR: Tag version ($TAG_VERSION) does not match built wheel version ($WHEEL_VERSION)"
+            exit 1
+          fi
+          echo "Version consistency verified: $TAG_VERSION"
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
