@@ -80,6 +80,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Security constants**: `PBKDF2_ITERATIONS = 260000` and
   `PBKDF2_ITERATIONS_LEGACY = 100000` in `constants.py`.
 
+## [0.4.1] - 2026-07-01 (Maturity Fixes Release)
+
+### Fixed
+- **P0-1**: Black 16 files formatting regression — `black src/ tests/` reformatted 274 files
+- **P0-2**: mypy 21 errors (unused-ignore × 15, arg-type × 2, import-not-found × 4) — cleaned up stale `# type: ignore` comments and updated error codes for mypy ≥ 1.0
+- **P0-3**: nightly.yml missing `timeout-minutes` + unrealistic performance baselines — added `timeout-minutes: 90` and CI_FACTOR pattern (50x threshold relaxation in CI via `CARRYMEM_CI` env var)
+- **P0-4**: DevSquad `type_mapping["prefer"]: "avoid"` semantic inversion — corrected to `"always"`
+- **P0-5**: FTS5 concurrent vtable `SQLITE_SCHEMA (code=17)` — root cause: lazy `@property` `rule_engine` triggering DDL on first access → schema cookie increment → concurrent FTS5 vtable xConnect failure. Fix: eager init `rule_engine` in `CarryMem.__init__()`
+- **P1-4**: `.flake8` extend-ignore masking F401/F841/F821/F811 — removed 4 critical error codes from ignore list
+- **P1-5/6**: pre-commit tool versions drift (black 23.12.1/mypy v1.8.0) vs CI (black 26.5.1/mypy 2.1.0) — aligned to CI versions
+- **P1-8**: benchmark.yml `continue-on-error: true` masking performance regression — removed 2 occurrences, added `CARRYMEM_CI` env
+- **P1-9**: CRUD write paths missing audit log — `log_operation` now covers 4/4 write paths (remember/forget/forget_expired/update)
+- **P1-11**: RecallCache write-invalidates-namespace causing hit rate 0.33→0.047 — new `invalidate_keys(namespace, storage_keys)` method for fine-grained invalidation; hit rate restored to 95% (19/20 queries preserved). Also fixed `update_memory` missing cache invalidation (data consistency bug)
+- **P1-13/15/16**: Version numbers stale in SECURITY.md, ROADMAP.md, server.json, smithery.yaml — aligned to v0.4.0
+- **P1-14**: Missing CLAUDE.md AI collaboration guide — created (227 lines)
+- **P1-17**: 2 performance tests `@pytest.mark.skip` as flaky-skip — replaced with CI_FACTOR environment-adaptive threshold (50x CI / 1x dev)
+
+### Changed
+- **P2-7 (Security)**: PBKDF2_ITERATIONS raised from 260000 → 600000 (OWASP 2023 recommendation for PBKDF2-HMAC-SHA256). Existing keys remain verifiable via stored iteration metadata
+- **P2-17 (Build)**: Dockerfile converted to multi-stage build (builder stage builds wheel, runtime stage installs wheel + [full] extras). Added `.dockerignore`
+- **P1-7 (CI/CD)**: release.yml added `timeout-minutes: 30` and version consistency verification step (tag version == built wheel version)
+
+### Added
+- Cache hit-rate comparison test (95% fine-grained vs 0% namespace-level invalidation)
+- User journey E2E test (remember → recall → update → recall → forget → recall — cache must never serve stale data)
+- Concurrent write cache consistency test
+
+### Resolved (Closed without code change)
+- **P1-12**: "WarmupManager" and "3 extra recalls per write" claims from prior assessment confirmed non-existent (LLM hallucination in prior report)
+- **P2-13**: 9 `NotImplementedError` sites evaluated — all unsuitable for ABC `@abstractmethod` conversion (3 optional method defaults / 6 concrete class runtime guards)
+
 ## [0.2.4] - 2026-05-29 (Beta Release)
 
 ### Fixed

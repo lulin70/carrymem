@@ -193,7 +193,9 @@ class TestRecallCache:
 
         cache_fine.invalidate_keys("ns1", {"k5"})  # forget k5
 
-        hits_fine = sum(1 for i in range(20) if cache_fine.get("ns1", f"q{i}", None, 10) is not None)
+        hits_fine = sum(
+            1 for i in range(20) if cache_fine.get("ns1", f"q{i}", None, 10) is not None
+        )
         assert hits_fine == 19, f"Fine-grained: expected 19 hits, got {hits_fine}"
 
         # --- Scenario B: namespace-level invalidation (invalidate) ---
@@ -203,7 +205,9 @@ class TestRecallCache:
 
         cache_coarse.invalidate("ns1")  # forget any key → wipe entire namespace
 
-        hits_coarse = sum(1 for i in range(20) if cache_coarse.get("ns1", f"q{i}", None, 10) is not None)
+        hits_coarse = sum(
+            1 for i in range(20) if cache_coarse.get("ns1", f"q{i}", None, 10) is not None
+        )
         assert hits_coarse == 0, f"Namespace-level: expected 0 hits, got {hits_coarse}"
 
     def test_clear(self):

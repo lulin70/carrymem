@@ -178,11 +178,15 @@ class TestCacheInvalidationUpdate(unittest.TestCase):
 
         # query_a should still be cached (hit)
         cached_a = self.adapter._cache.get(NS, "", filters_a, 10)
-        self.assertIsNotNone(cached_a, "update(key_b) must not evict unrelated query_a")
+        self.assertIsNotNone(
+            cached_a, "update(key_b) must not evict unrelated query_a"
+        )
 
         # query_b should have been evicted (content changed)
         cached_b = self.adapter._cache.get(NS, "", filters_b, 10)
-        self.assertIsNone(cached_b, "update(key_b) must evict cache entries containing key_b")
+        self.assertIsNone(
+            cached_b, "update(key_b) must evict cache entries containing key_b"
+        )
 
 
 class TestCacheConsistencyUserJourney(unittest.TestCase):
@@ -239,7 +243,9 @@ class TestCacheConsistencyUserJourney(unittest.TestCase):
 
         # Step 6: recall again — must return empty (memory deleted)
         results_after_forget = self.adapter.recall("", filters=filters, limit=10)
-        self.assertEqual(len(results_after_forget), 0, "recall after forget must return empty")
+        self.assertEqual(
+            len(results_after_forget), 0, "recall after forget must return empty"
+        )
 
     def test_concurrent_writes_preserve_cache_consistency(self):
         """Multiple writes in sequence must not leave stale cache entries."""

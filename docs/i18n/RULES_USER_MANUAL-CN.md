@@ -1,6 +1,6 @@
 # CarryMem 规则用户手册
 
-**版本**: v0.4.0  
+**版本**: v0.4.1  
 **Date**: 2026-05-03  
 **Audience**: End Users (Developers, Power Users, Teams)  
 **Prerequisites**: Python 3.9+, pip

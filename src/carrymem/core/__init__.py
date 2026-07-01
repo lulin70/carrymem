@@ -98,7 +98,7 @@ class CarryMem(
         Example::
 
             >>> cm.version
-            '0.4.0'
+            '0.4.1'
         """
         from carrymem import __version__
 
