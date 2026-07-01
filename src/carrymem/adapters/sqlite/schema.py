@@ -127,6 +127,29 @@ _V090_INDEX_SQL = [
     "CREATE INDEX IF NOT EXISTS idx_memories_chain_version ON memories(version_chain_id, version_number)",
 ]
 
+_V051_ENTITY_ALIASES_SQL = """
+CREATE TABLE IF NOT EXISTS entity_aliases (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    canonical_form TEXT NOT NULL,
+    alias_form TEXT NOT NULL,
+    entity_type TEXT,
+    namespace TEXT NOT NULL,
+    similarity_score REAL DEFAULT 1.0,
+    created_at TEXT NOT NULL,
+    UNIQUE(canonical_form, alias_form, namespace)
+);
+"""
+
+_V051_INDEX_SQL = [
+    "CREATE INDEX IF NOT EXISTS idx_entity_aliases_namespace ON entity_aliases(namespace)",
+    "CREATE INDEX IF NOT EXISTS idx_entity_aliases_canonical ON entity_aliases(canonical_form)",
+]
+
+_V051_MIGRATION_SQL = [
+    "ALTER TABLE memories ADD COLUMN entity_normalized TEXT",
+    "ALTER TABLE memories ADD COLUMN entity_id TEXT",
+]
+
 _V060_FTS_REBUILD_SQL = [
     "DROP TABLE IF EXISTS memories_fts",
     """CREATE VIRTUAL TABLE memories_fts USING fts5(
@@ -201,6 +224,7 @@ class SchemaManager:
             self.migrate_v070()
         self.migrate_v080()
         self.migrate_v090()
+        self.migrate_v051()
 
     def migrate_namespace(self):
         """Add the namespace column to the memories table if missing."""
@@ -381,4 +405,30 @@ class SchemaManager:
             conn.execute(
                 "UPDATE memories SET memory_nature = 'event' " "WHERE type IN ('session_summary', 'task_pattern')"
             )
+            conn.commit()
+
+    def migrate_v051(self):
+        """Add entity_aliases table and entity_normalized/entity_id columns (v0.5.1)."""
+        conn = self._conn_mgr.get_connection()
+        # entity_aliases table (idempotent — CREATE IF NOT EXISTS)
+        try:
+            conn.executescript(_V051_ENTITY_ALIASES_SQL)
+            for sql in _V051_INDEX_SQL:
+                try:
+                    conn.execute(sql)
+                except _OpError:
+                    pass
+            conn.commit()
+        except sqlite3.Error as e:
+            logger.warning("Failed to create entity_aliases table: %s", e)
+
+        # memories table: entity_normalized + entity_id columns
+        try:
+            conn.execute("SELECT entity_normalized FROM memories LIMIT 1")
+        except _OpError:
+            for sql in _V051_MIGRATION_SQL:
+                try:
+                    conn.execute(sql)
+                except _OpError:
+                    pass
             conn.commit()

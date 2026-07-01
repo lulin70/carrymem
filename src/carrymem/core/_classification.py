@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
 
 from carrymem.adapters.base import MemoryEntry
 from carrymem.constants import (
@@ -17,6 +17,7 @@ from carrymem.constants import (
     MIN_CORRECTION_CONTENT_LENGTH,
     RULE_CONTENT_MAX_LENGTH,
 )
+from carrymem.layers.entity_normalizer import is_entity_normalization_enabled
 from carrymem.types import (
     ClassificationResult,
     CorrectionUpdateInfo,
@@ -36,6 +37,10 @@ class ClassificationMixin:
     # Shared instance state provided by LifecycleMixin.__init__.
     _adapter: Optional[StorageAdapter]
     _candidate_generator: RuleCandidateGenerator
+    # Lazy-init entity normalizer + input validator (v0.5.1)
+    _entity_normalizer: Optional[Any]
+    _input_validator: Optional[Any]
+    _namespace: str  # provided by LifecycleMixin.__init__ (trusted adapter source, C18)
 
     def _validate_and_resolve(
         self,
@@ -175,6 +180,11 @@ class ClassificationMixin:
         stored_memories = []
         storage_keys = []
         updated_memories = []
+
+        # v0.5.1: Entity normalization (Ontology-lite). Runs as post-classification
+        # enrichment. Namespace from self._namespace (adapter-sourced, C18).
+        entity_meta = self._normalize_entities_safe(resolved_message)
+
         for entry_dict in classify_result["entries"]:
             entry = MemoryEntry.from_dict(entry_dict)
             if force_type:
@@ -186,6 +196,11 @@ class ClassificationMixin:
                 entry.metadata["session_id"] = session_id
             elif session_id and not entry.metadata:  # type: ignore[unreachable]
                 entry.metadata = {"session_id": session_id}  # type: ignore[unreachable]
+            if entity_meta:
+                if not entry.metadata:
+                    entry.metadata = {}
+                if isinstance(entry.metadata, dict):
+                    entry.metadata["entities"] = entity_meta
             if entry.suggested_action == "store":
                 try:
                     if entry.type == "correction":
@@ -287,6 +302,59 @@ class ClassificationMixin:
         for e in entries:
             counts[e.type] = counts.get(e.type, 0) + 1
         return counts
+
+    # ── v0.5.1: Entity normalization (Ontology-lite) ──────────────────
+
+    def _get_entity_normalizer(self) -> Optional[Any]:
+        """Lazily initialize EntityNormalizer bound to the storage backend.
+
+        Returns None if entity normalization is disabled, adapter is missing,
+        or adapter lacks ConnectionManager (non-SQLite backends).
+        """
+        if not is_entity_normalization_enabled():
+            return None
+        if self._entity_normalizer is not None:
+            return self._entity_normalizer
+        if self._adapter is None:
+            return None
+        conn_mgr = getattr(self._adapter, "_conn_mgr", None)
+        if conn_mgr is None:
+            return None
+        if self._input_validator is None:
+            try:
+                from carrymem.security.input_validator import InputValidator
+
+                self._input_validator = InputValidator(strict_mode=False)
+            except (ImportError, TypeError) as e:
+                logger.debug("InputValidator init failed: %s", e)
+                self._input_validator = None
+        try:
+            from carrymem.layers.entity_normalizer import EntityNormalizer
+
+            self._entity_normalizer = EntityNormalizer(
+                conn_mgr=conn_mgr,
+                input_validator=self._input_validator,
+            )
+        except (ImportError, TypeError) as e:
+            logger.debug("EntityNormalizer init failed: %s", e)
+            self._entity_normalizer = None
+        return self._entity_normalizer
+
+    def _normalize_entities_safe(self, resolved_message: str) -> List[Dict[str, Any]]:
+        """Run entity normalization with graceful degradation.
+
+        Returns a list of entity metadata dicts (empty on any failure).
+        Namespace comes from self._namespace (adapter-sourced, C18).
+        """
+        normalizer = self._get_entity_normalizer()
+        if normalizer is None:
+            return []
+        try:
+            result = normalizer.normalize(resolved_message, self._namespace)
+            return cast(List[Dict[str, Any]], result.to_metadata()["entities"])
+        except (ValueError, RuntimeError, AttributeError) as e:
+            logger.debug("Entity normalization skipped: %s", e)
+            return []
 
     # --- Rule delegate methods (thin wrappers around RuleCandidateGenerator) ---
 

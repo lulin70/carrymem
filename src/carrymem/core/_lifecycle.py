@@ -179,6 +179,10 @@ class LifecycleMixin:
         # Access control (P1-8 MVP) — set via CarryMem.access_policy property
         self._access_policy: Optional[AccessPolicy] = None
 
+        # v0.5.1: Entity normalization lazy-init state (ClassificationMixin owns the property)
+        self._entity_normalizer: Optional[Any] = None
+        self._input_validator: Optional[Any] = None
+
         # Perform initial backup on first creation with SQLite
         if self._adapter and isinstance(self._adapter, SQLiteAdapter):
             db_file = self._adapter.db_path

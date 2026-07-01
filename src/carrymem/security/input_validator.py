@@ -400,6 +400,14 @@ class InputValidator:
         content = content.strip()
         return content
 
+    def sanitize_content(self, content: str) -> str:
+        """Sanitize content for safe storage (public API for entity_normalizer).
+
+        Removes null bytes and strips whitespace. Used by EntityNormalizer
+        for alias_form/canonical_form sanitization (C16).
+        """
+        return self._sanitize_content(content)
+
     def _validate_path_location(self, path: Path):
         """
         Validate that path is within allowed directories
