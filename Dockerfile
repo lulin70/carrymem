@@ -1,3 +1,18 @@
+# ── Builder stage: build wheel from local source ────────────────────────────
+FROM python:3.12-slim AS builder
+
+WORKDIR /build
+
+RUN pip install --no-cache-dir --upgrade pip build
+
+# Copy only files needed for building the wheel
+COPY setup.py pyproject.toml MANIFEST.in ./
+COPY src/ ./src/
+COPY README.md ./
+
+RUN python -m build --wheel --no-isolation
+
+# ── Runtime stage: minimal image with only runtime dependencies ─────────────
 FROM python:3.12-slim
 
 ARG VERSION=0.4.0
@@ -13,10 +28,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# Install the wheel built in the builder stage (includes [full] extras)
+COPY --from=builder /build/dist/*.whl /tmp/
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir carrymem[full]
-
-COPY . .
+    whl=$(ls /tmp/carrymem-*.whl | head -1) && \
+    pip install --no-cache-dir "${whl}[full]" && \
+    rm -f /tmp/*.whl
 
 RUN mkdir -p /data
 
