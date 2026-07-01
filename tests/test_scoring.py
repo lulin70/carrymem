@@ -7,12 +7,16 @@ import pytest
 
 from carrymem.scoring import (
     ACCESS_SCALE,
+    ACCESS_SIGNAL_SCALE,
+    ACCESS_SIGNAL_WEIGHT,
     DEFAULT_TYPE_WEIGHT,
     HALF_LIFE_DAYS,
     RECENCY_FLOOR,
     TYPE_WEIGHTS,
+    _env_float,
     access_factor,
     calculate_importance,
+    recalculate_confidence,
     recalculate_importance,
     recency_factor,
     type_weight,
@@ -151,7 +155,68 @@ class TestConstants:
         assert RECENCY_FLOOR == 0.3
         assert ACCESS_SCALE == 0.1
 
+    def test_access_weighting_constants(self):
+        assert ACCESS_SIGNAL_SCALE == 0.2
+        assert ACCESS_SIGNAL_WEIGHT == 0.1
+
     def test_type_weights_ordering(self):
         assert TYPE_WEIGHTS["correction"] > TYPE_WEIGHTS["decision"]
         assert TYPE_WEIGHTS["decision"] > TYPE_WEIGHTS["user_preference"]
         assert TYPE_WEIGHTS["task_pattern"] > TYPE_WEIGHTS["sentiment_marker"]
+
+
+class TestEnvFloat:
+    """Test _env_float helper for configurable weighting (v0.5.0)."""
+
+    def test_default_when_unset(self):
+        assert _env_float("CARRYMEM_NONEXISTENT_VAR_XYZ", 0.5) == 0.5
+
+    def test_valid_float(self, monkeypatch):
+        monkeypatch.setenv("TEST_ENV_FLOAT_VAR", "0.3")
+        assert _env_float("TEST_ENV_FLOAT_VAR", 0.5) == 0.3
+
+    def test_invalid_string_falls_back(self, monkeypatch):
+        monkeypatch.setenv("TEST_ENV_FLOAT_VAR", "abc")
+        assert _env_float("TEST_ENV_FLOAT_VAR", 0.5) == 0.5
+
+    def test_empty_string_falls_back(self, monkeypatch):
+        monkeypatch.setenv("TEST_ENV_FLOAT_VAR", "")
+        assert _env_float("TEST_ENV_FLOAT_VAR", 0.5) == 0.5
+
+    def test_negative_value(self, monkeypatch):
+        monkeypatch.setenv("TEST_ENV_FLOAT_VAR", "-0.2")
+        assert _env_float("TEST_ENV_FLOAT_VAR", 0.5) == -0.2
+
+
+class TestRecalculateConfidenceWeights:
+    """Test configurable access weighting in recalculate_confidence (v0.5.0)."""
+
+    def test_access_signal_scale_effect(self, monkeypatch):
+        """Higher ACCESS_SIGNAL_SCALE should increase confidence for accessed memories."""
+        from carrymem import scoring
+
+        monkeypatch.setattr(scoring, "ACCESS_SIGNAL_SCALE", 0.5)
+        c_high_scale = scoring.recalculate_confidence(0.5, access_count=10)
+        monkeypatch.setattr(scoring, "ACCESS_SIGNAL_SCALE", 0.01)
+        c_low_scale = scoring.recalculate_confidence(0.5, access_count=10)
+        assert c_high_scale > c_low_scale
+
+    def test_access_signal_weight_effect(self, monkeypatch):
+        """Higher ACCESS_SIGNAL_WEIGHT should increase access contribution to confidence."""
+        from carrymem import scoring
+
+        monkeypatch.setattr(scoring, "ACCESS_SIGNAL_WEIGHT", 0.3)
+        c_high_weight = scoring.recalculate_confidence(0.5, access_count=10)
+        monkeypatch.setattr(scoring, "ACCESS_SIGNAL_WEIGHT", 0.01)
+        c_low_weight = scoring.recalculate_confidence(0.5, access_count=10)
+        assert c_high_weight > c_low_weight
+
+    def test_zero_access_no_signal(self):
+        """access_count=0 should produce zero access_signal regardless of scale."""
+        c = recalculate_confidence(0.5, access_count=0)
+        assert c == 0.25
+
+    def test_huge_access_count_capped(self):
+        """Very large access_count should not overflow — access_signal capped at 1.0."""
+        c = recalculate_confidence(0.5, access_count=10**6)
+        assert 0.0 <= c <= 1.0

@@ -13,6 +13,7 @@ Formula:
 """
 
 import math
+import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Dict, Optional, Union
@@ -33,7 +34,23 @@ HALF_LIFE_DAYS = 30
 
 RECENCY_FLOOR = 0.3
 
-ACCESS_SCALE = 0.1
+
+def _env_float(name: str, default: float) -> float:
+    """Read a float from an env var, falling back to default on parse error."""
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        return float(raw)
+    except (ValueError, TypeError):
+        return default
+
+
+ACCESS_SCALE = _env_float("CARRYMEM_ACCESS_SCALE", 0.1)
+
+ACCESS_SIGNAL_SCALE = _env_float("CARRYMEM_ACCESS_SIGNAL_SCALE", 0.2)
+
+ACCESS_SIGNAL_WEIGHT = _env_float("CARRYMEM_ACCESS_SIGNAL_WEIGHT", 0.1)
 
 
 @dataclass
@@ -131,7 +148,7 @@ def recalculate_confidence(
 
     rank_signal = min(1.0, fts_rank / 10.0) if fts_rank > 0 else 0.0
 
-    access_signal = min(1.0, math.log(1 + access_count) * 0.2) if access_count > 0 else 0.0
+    access_signal = min(1.0, math.log(1 + access_count) * ACCESS_SIGNAL_SCALE) if access_count > 0 else 0.0
 
     recency_signal = 0.0
     if created_at:
@@ -148,7 +165,7 @@ def recalculate_confidence(
             age_days = max(0, (now - created_at).total_seconds() / 86400)
             recency_signal = max(0.0, 1.0 - age_days / 365.0)
 
-    confidence = base_confidence * 0.5 + rank_signal * 0.3 + access_signal * 0.1 + recency_signal * 0.1
+    confidence = base_confidence * 0.5 + rank_signal * 0.3 + access_signal * ACCESS_SIGNAL_WEIGHT + recency_signal * 0.1
     return round(max(0.0, min(1.0, confidence)), 6)
 
 

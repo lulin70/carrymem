@@ -8,6 +8,9 @@ from typing import Any, Dict, List, Optional
 
 from .utils.language import has_cjk
 
+ACCESS_BOOST_PER_ACCESS = 0.01
+ACCESS_BOOST_CAP = 0.1
+
 
 def _estimate_tokens(text: str) -> int:
     cjk_count = sum(1 for c in text if has_cjk(c))
@@ -217,6 +220,9 @@ def select_memories(
 
         type_boost = TYPE_SELECTION_BOOST.get(mtype, 0.0)
         final += type_boost
+
+        access_count = max(0, m.get("access_count", 0) or 0)
+        final += min(access_count * ACCESS_BOOST_PER_ACCESS, ACCESS_BOOST_CAP)
 
         if is_temporal:
             content_lower = (m.get("content", "") or "").lower()

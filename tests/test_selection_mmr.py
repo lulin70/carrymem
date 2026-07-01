@@ -95,3 +95,102 @@ class TestSelectMemories:
         result = select_memories(memories, context="when did I start my job?")
         # The dated memory should rank higher with temporal boost
         assert len(result) >= 1
+
+
+class TestAccessBoost:
+    """Test access_count boost in select_memories (v0.5.0)."""
+
+    def test_frequently_accessed_ranks_higher(self):
+        """Memory with higher access_count should rank higher (all else equal)."""
+        memories = [
+            {
+                "content": "rare",
+                "type": "fact_declaration",
+                "confidence": 0.8,
+                "importance_score": 0.5,
+                "access_count": 0,
+            },
+            {
+                "content": "rare",
+                "type": "fact_declaration",
+                "confidence": 0.8,
+                "importance_score": 0.5,
+                "access_count": 50,
+            },
+        ]
+        result = select_memories(memories)
+        assert result[0]["access_count"] == 50
+
+    def test_access_boost_capped(self):
+        """access_boost should be capped at ACCESS_BOOST_CAP (0.1)."""
+        from carrymem.selection import ACCESS_BOOST_CAP
+
+        memories = [
+            {
+                "content": "x",
+                "type": "fact_declaration",
+                "confidence": 0.8,
+                "importance_score": 0.5,
+                "access_count": 10**6,
+            },
+        ]
+        result = select_memories(memories)
+        boost = result[0]["_selection_score"] - 0.5 * 0.7
+        assert boost <= ACCESS_BOOST_CAP + 0.001
+
+    def test_zero_access_no_boost(self):
+        """access_count=0 should add zero boost."""
+        memories = [
+            {
+                "content": "x",
+                "type": "fact_declaration",
+                "confidence": 0.8,
+                "importance_score": 0.5,
+                "access_count": 0,
+            },
+        ]
+        result = select_memories(memories)
+        assert len(result) == 1
+        assert result[0]["_selection_score"] >= 0.35
+
+    def test_negative_access_treated_as_zero(self):
+        """Negative access_count should be treated as 0 (no penalty)."""
+        memories = [
+            {
+                "content": "x",
+                "type": "fact_declaration",
+                "confidence": 0.8,
+                "importance_score": 0.5,
+                "access_count": -10,
+            },
+        ]
+        result = select_memories(memories)
+        assert len(result) == 1
+        assert result[0]["_selection_score"] >= 0.35
+
+    def test_missing_access_count_field(self):
+        """Missing access_count field should default to 0 (no boost, no crash)."""
+        memories = [
+            {
+                "content": "x",
+                "type": "fact_declaration",
+                "confidence": 0.8,
+                "importance_score": 0.5,
+            },
+        ]
+        result = select_memories(memories)
+        assert len(result) == 1
+
+    def test_none_access_count_treated_as_zero(self):
+        """None access_count should be treated as 0."""
+        memories = [
+            {
+                "content": "x",
+                "type": "fact_declaration",
+                "confidence": 0.8,
+                "importance_score": 0.5,
+                "access_count": None,
+            },
+        ]
+        result = select_memories(memories)
+        assert len(result) == 1
