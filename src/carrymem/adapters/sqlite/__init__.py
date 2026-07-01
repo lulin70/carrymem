@@ -481,7 +481,7 @@ class SQLiteAdapter(StorageAdapter):
     def remember(self, entry: MemoryEntry, _skip_commit: bool = False) -> StoredMemory:
         """Store a memory entry (deprecated, use store() instead)."""
         warnings.warn(
-            "remember() is deprecated, use store() instead. " "Will be removed in v0.5.0.",
+            "remember() is deprecated, use store() instead. " "Will be removed in v0.6.0.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -494,7 +494,7 @@ class SQLiteAdapter(StorageAdapter):
     def forget(self, storage_key: str) -> bool:
         """Delete a memory by storage_key (deprecated, use delete() instead)."""
         warnings.warn(
-            "forget() is deprecated, use delete() instead. " "Will be removed in v0.5.0.",
+            "forget() is deprecated, use delete() instead. " "Will be removed in v0.6.0.",
             DeprecationWarning,
             stacklevel=2,
         )

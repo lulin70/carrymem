@@ -139,10 +139,10 @@ class JSONAdapter(StorageAdapter):
         """Store a memory entry.
 
         .. deprecated:: 0.4.0
-            Use ``store()`` instead. Will be removed in v0.5.0.
+            Use ``store()`` instead. Will be removed in v0.6.0.
         """
         warnings.warn(
-            "remember() is deprecated, use store() instead. " "Will be removed in v0.5.0.",
+            "remember() is deprecated, use store() instead. " "Will be removed in v0.6.0.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -245,10 +245,10 @@ class JSONAdapter(StorageAdapter):
         """Delete a memory by its storage key.
 
         .. deprecated:: 0.4.0
-            Use ``delete()`` instead. Will be removed in v0.5.0.
+            Use ``delete()`` instead. Will be removed in v0.6.0.
         """
         warnings.warn(
-            "forget() is deprecated, use delete() instead. " "Will be removed in v0.5.0.",
+            "forget() is deprecated, use delete() instead. " "Will be removed in v0.6.0.",
             DeprecationWarning,
             stacklevel=2,
         )

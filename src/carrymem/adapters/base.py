@@ -313,8 +313,8 @@ class StorageAdapter(ABC):
     - close(): Release all resources
 
     Legacy Interface (deprecated):
-    - remember(): Use ``store()`` instead. Will be removed in v0.5.0.
-    - forget(): Use ``delete()`` instead. Will be removed in v0.5.0.
+    - remember(): Use ``store()`` instead. Will be removed in v0.6.0.
+    - forget(): Use ``delete()`` instead. Will be removed in v0.6.0.
 
     Implementation guide:
     1. Subclass StorageAdapter
@@ -451,7 +451,7 @@ class StorageAdapter(ABC):
         """Store a memory entry.
 
         .. deprecated:: 0.4.0
-            Use ``store()`` instead. Will be removed in v0.5.0.
+            Use ``store()`` instead. Will be removed in v0.6.0.
 
         Args:
             entry: The MemoryEntry to persist
@@ -460,7 +460,7 @@ class StorageAdapter(ABC):
             StoredMemory with storage metadata attached
         """
         warnings.warn(
-            "remember() is deprecated, use store() instead. " "Will be removed in v0.5.0.",
+            "remember() is deprecated, use store() instead. " "Will be removed in v0.6.0.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -489,7 +489,7 @@ class StorageAdapter(ABC):
         """Delete a memory by its storage key.
 
         .. deprecated:: 0.4.0
-            Use ``delete()`` instead. Will be removed in v0.5.0.
+            Use ``delete()`` instead. Will be removed in v0.6.0.
 
         Args:
             storage_key: The storage_key from StoredMemory
@@ -498,7 +498,7 @@ class StorageAdapter(ABC):
             True if deleted, False if not found
         """
         warnings.warn(
-            "forget() is deprecated, use delete() instead. " "Will be removed in v0.5.0.",
+            "forget() is deprecated, use delete() instead. " "Will be removed in v0.6.0.",
             DeprecationWarning,
             stacklevel=2,
         )

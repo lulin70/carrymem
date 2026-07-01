@@ -80,6 +80,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Security constants**: `PBKDF2_ITERATIONS = 260000` and
   `PBKDF2_ITERATIONS_LEGACY = 100000` in `constants.py`.
 
+## [0.5.0] - 2026-07-01 (Access Frequency Weighting Enhancement)
+
+### Changed
+- **Configurable access weighting**: `ACCESS_SCALE`, `ACCESS_SIGNAL_SCALE`, and
+  `ACCESS_SIGNAL_WEIGHT` in `scoring.py` are now configurable via environment
+  variables (`CARRYMEM_ACCESS_SCALE`, `CARRYMEM_ACCESS_SIGNAL_SCALE`,
+  `CARRYMEM_ACCESS_SIGNAL_WEIGHT`). Invalid values fall back to defaults.
+  Default values unchanged (0.1/0.2/0.1) — fully backward compatible.
+- **Selection access_boost**: `select_memories()` in `selection.py` now adds
+  `access_boost = min(max(0, access_count) * 0.01, 0.1)` to the final ranking
+  score. Frequently accessed memories rank higher; boost capped at 0.1 to
+  prevent hot-memory domination. Negative/None/missing `access_count` treated
+  as 0 (no penalty).
+
+### Added
+- 15 new tests covering env var configuration (valid/invalid/empty/negative),
+  access_signal scale/weight effects, access_boost ranking/cap/boundary cases
+  (zero/negative/None/missing access_count, huge count cap).
+
 ## [0.4.1] - 2026-07-01 (Maturity Fixes Release)
 
 ### Fixed
