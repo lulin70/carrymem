@@ -102,8 +102,8 @@ class MemoryEncryption:
     - Integrity verified via ~/.carrymem/.key.digest (HMAC-SHA256)
     - Key rotation supported via :meth:`rotate_key`
 
-    Password-based key derivation uses PBKDF2-HMAC-SHA256 with 260000 iterations
-    (2026 NIST recommendation). Legacy keys with 100000 iterations are still
+    Password-based key derivation uses PBKDF2-HMAC-SHA256 with 600000 iterations
+    (OWASP 2023 recommendation). Legacy keys with 100000 iterations are still
     supported for decryption.
     """
 

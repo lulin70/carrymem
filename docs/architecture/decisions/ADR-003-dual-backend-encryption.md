@@ -65,7 +65,7 @@ CarryMem 存储用户的个人偏好、决策记录、事实声明等敏感信�
 密钥管理：
 - 密钥文件位置：`~/.carrymem/.key`（权限 600）
 - 完整性校验：`~/.carrymem/.key.digest`（HMAC-SHA256 校验和）
-- 密钥派生：PBKDF2-HMAC-SHA256，迭代次数 260,000（与 `constants.PBKDF2_ITERATIONS` 一致）
+- 密钥派生：PBKDF2-HMAC-SHA256，迭代次数 600,000（与 `constants.PBKDF2_ITERATIONS` 一致，OWASP 2023 推荐）
 - 加密字段：仅加密 `content` 和 `original_message`；元数据（type/tier/confidence）明文存储以支持查询
 
 ## 后果

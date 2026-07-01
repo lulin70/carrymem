@@ -581,7 +581,7 @@ class TestEncryptionParameterTampering:
         """MUTATION #8: 降低 PBKDF2 迭代次数
 
         Original Logic (_derive_key Line 186-192):
-            iterations = PBKDF2_ITERATIONS  # 260000 (2026 NIST recommendation)
+            iterations = PBKDF2_ITERATIONS  # 600000 (OWASP 2023 recommendation)
             return hashlib.pbkdf2_hmac("sha256", password, salt, iterations, dklen=32)
 
         Mutated Logic:

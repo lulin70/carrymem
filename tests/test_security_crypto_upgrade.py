@@ -63,15 +63,15 @@ def password_encryptor(key_file):
 
 
 class TestPBKDF2Iterations:
-    """Verify that new keys use 260000 iterations and legacy is supported."""
+    """Verify that new keys use 600000 iterations and legacy is supported."""
 
     def test_constants_values(self):
-        """PBKDF2_ITERATIONS should be 260000, LEGACY should be 100000."""
-        assert PBKDF2_ITERATIONS == 260_000
+        """PBKDF2_ITERATIONS should be 600000, LEGACY should be 100000."""
+        assert PBKDF2_ITERATIONS == 600_000
         assert PBKDF2_ITERATIONS_LEGACY == 100_000
 
     def test_new_password_key_uses_new_iterations(self, password_encryptor):
-        """A fresh password-derived key must use PBKDF2_ITERATIONS (260000)."""
+        """A fresh password-derived key must use PBKDF2_ITERATIONS (600000)."""
         assert password_encryptor._current_iterations == PBKDF2_ITERATIONS
 
     def test_new_salt_file_contains_iterations(self, key_file):

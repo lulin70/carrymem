@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed 9 @runtime_checkable decorators (zero runtime overhead)
 - All Any types replaced with specific types (24→0)
 - CLI old flat commands (add-rule etc.) deprecated, use rules subcommands
+- **Security**: PBKDF2_ITERATIONS raised from 260000 → 600000 (OWASP 2023 recommendation
+  for PBKDF2-HMAC-SHA256). Existing keys remain verifiable via stored iteration metadata.
 
 ### Fixed
 - handlers.cleanup() async→sync (RuntimeWarning)

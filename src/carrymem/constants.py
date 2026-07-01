@@ -402,8 +402,8 @@ __all__ = [
 
 # --- Security Constants ---
 
-PBKDF2_ITERATIONS = 260000
-"""PBKDF2-HMAC-SHA256 iteration count (2026 NIST recommendation: ≥ 210000)."""
+PBKDF2_ITERATIONS = 600000
+"""PBKDF2-HMAC-SHA256 iteration count (OWASP 2023 recommendation for SHA256)."""
 
 PBKDF2_ITERATIONS_LEGACY = 100000
 """Legacy PBKDF2 iteration count for backward compatibility with pre-2026 keys."""

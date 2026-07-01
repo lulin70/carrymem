@@ -910,7 +910,7 @@ LLM 驱动的语义聚合（实验性功能）。
 
 | 常量名 | 值 | 说明 |
 |--------|-----|------|
-| `PBKDF2_ITERATIONS` | `260000` | PBKDF2-HMAC-SHA256 迭代次数（2026 NIST 推荐 ≥210000） |
+| `PBKDF2_ITERATIONS` | `600000` | PBKDF2-HMAC-SHA256 迭代次数（OWASP 2023 推荐） |
 | `PBKDF2_ITERATIONS_LEGACY` | `100000` | 旧版 PBKDF2 迭代次数（向后兼容） |
 | `DANGEROUS_SYSTEM_DIRS` | `List[Path]` | 危险系统目录列表（不应作为数据路径） |
 
