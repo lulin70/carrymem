@@ -301,7 +301,7 @@
 | P1-1 | memory_pattern_detectors.py 1117 LOC God Class | 评估为低风险拆分 (stateless, 方法独立, 调用方已解耦), 但代码移动量大 (1117 LOC)。根据 Simplicity First 原则, 当前结构工作良好, 不做不必要重构 |
 | P1-2 | rules/__init__.py 1114 LOC God Class | 同 P1-1, RuleEngine 拆分风险较高 |
 | P1-3 | cli/_rules.py 1348 / tui.py 1089 LOC | 同 P1-1, CLI/TUI 拆分风险中等 |
-| P1-7 | release.yml 从未触发 | 需要 git tag v0.4.1 实战验证, 属于发布操作非代码修改 |
+| P1-7 | release.yml 从未触发 | **部分修复** (commit b594146): 添加 `timeout-minutes: 30` 满足硬约束 + 版本一致性验证步骤 (tag 版本 == wheel 版本)。**待完成**: (1) 用户在 GitHub repo settings 配置 `PYPI_API_TOKEN` secret (`gh secret list` 当前为空); (2) 创建并推送 `v0.4.1` tag 触发首次自动发布 |
 | P1-10 | 无 async/aiosqlite | 大型重构, 超出当前范围 |
 | P1-12 | WarmupManager 不存在 | 已确认, 关闭 |
 
