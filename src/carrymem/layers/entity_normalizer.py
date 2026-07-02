@@ -35,16 +35,100 @@ def is_entity_normalization_enabled() -> bool:
 # Stopwords filtered from capitalized-phrase extraction (avoid false positives
 # like "The", "This", "It" being treated as entities).
 _STOPWORDS = {
-    "the", "this", "that", "these", "those", "it", "is", "was", "are", "were",
-    "a", "an", "and", "or", "but", "if", "then", "else", "for", "to", "of",
-    "in", "on", "at", "by", "with", "from", "as", "be", "been", "being",
-    "have", "has", "had", "do", "does", "did", "will", "would", "could",
-    "should", "may", "might", "must", "can", "i", "you", "he", "she", "we",
-    "they", "me", "him", "her", "us", "them", "my", "your", "his", "its",
-    "our", "their", "what", "which", "who", "whom", "where", "when", "why",
-    "how", "all", "each", "every", "both", "few", "more", "most", "other",
-    "some", "such", "no", "nor", "not", "only", "own", "same", "so", "than",
-    "too", "very", "just", "now", "here", "there",
+    "the",
+    "this",
+    "that",
+    "these",
+    "those",
+    "it",
+    "is",
+    "was",
+    "are",
+    "were",
+    "a",
+    "an",
+    "and",
+    "or",
+    "but",
+    "if",
+    "then",
+    "else",
+    "for",
+    "to",
+    "of",
+    "in",
+    "on",
+    "at",
+    "by",
+    "with",
+    "from",
+    "as",
+    "be",
+    "been",
+    "being",
+    "have",
+    "has",
+    "had",
+    "do",
+    "does",
+    "did",
+    "will",
+    "would",
+    "could",
+    "should",
+    "may",
+    "might",
+    "must",
+    "can",
+    "i",
+    "you",
+    "he",
+    "she",
+    "we",
+    "they",
+    "me",
+    "him",
+    "her",
+    "us",
+    "them",
+    "my",
+    "your",
+    "his",
+    "its",
+    "our",
+    "their",
+    "what",
+    "which",
+    "who",
+    "whom",
+    "where",
+    "when",
+    "why",
+    "how",
+    "all",
+    "each",
+    "every",
+    "both",
+    "few",
+    "more",
+    "most",
+    "other",
+    "some",
+    "such",
+    "no",
+    "nor",
+    "not",
+    "only",
+    "own",
+    "same",
+    "so",
+    "than",
+    "too",
+    "very",
+    "just",
+    "now",
+    "here",
+    "there",
 }
 
 # Entity extraction patterns:
@@ -200,9 +284,7 @@ class EntityNormalizer:
             logger.warning("list_entities failed: %s", e)
             return []
 
-    def merge_entities(
-        self, source_canonical: str, target_canonical: str, namespace: str
-    ) -> int:
+    def merge_entities(self, source_canonical: str, target_canonical: str, namespace: str) -> int:
         """Merge source canonical into target canonical (repoint all aliases).
 
         Emits ENTITY_MERGE audit log per C19.
@@ -314,9 +396,7 @@ class EntityNormalizer:
 
     # ── Internal: normalization ───────────────────────────────────────
 
-    def _normalize_entity(
-        self, alias_form: str, entity_type: str, namespace: str
-    ) -> tuple:
+    def _normalize_entity(self, alias_form: str, entity_type: str, namespace: str) -> tuple:
         """Normalize a single alias to its canonical form.
 
         Returns:
@@ -363,9 +443,7 @@ class EntityNormalizer:
             logger.debug("exact lookup failed: %s", e)
         return None
 
-    def _lookup_fuzzy(
-        self, alias_form: str, entity_type: str, namespace: str
-    ) -> Optional[Dict[str, Any]]:
+    def _lookup_fuzzy(self, alias_form: str, entity_type: str, namespace: str) -> Optional[Dict[str, Any]]:
         """Find a fuzzy match (C15 constraints + ratio >= 0.8).
 
         C15: same entity_type + |len(alias) - len(canonical_or_existing_alias)| <= 3
@@ -472,8 +550,5 @@ def build_entity_normalized_json(result: NormalizeResult) -> str:
     """
     if not result.entities:
         return ""
-    payload = [
-        {"canonical": e["canonical"], "type": e["type"]}
-        for e in result.entities
-    ]
+    payload = [{"canonical": e["canonical"], "type": e["type"]} for e in result.entities]
     return json.dumps(payload, ensure_ascii=False)

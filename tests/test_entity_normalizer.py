@@ -32,7 +32,6 @@ from carrymem.layers.entity_normalizer import (
 )
 from carrymem.security.input_validator import InputValidator
 
-
 # ── Fixtures ──────────────────────────────────────────────────────────────
 
 
@@ -59,8 +58,7 @@ class FakeConnMgr:
 
 def _init_entity_schema(conn: sqlite3.Connection) -> None:
     """Create the entity_aliases table (mirrors schema.py _V051_ENTITY_ALIASES_SQL)."""
-    conn.executescript(
-        """
+    conn.executescript("""
         CREATE TABLE IF NOT EXISTS entity_aliases (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             canonical_form TEXT NOT NULL,
@@ -73,8 +71,7 @@ def _init_entity_schema(conn: sqlite3.Connection) -> None:
         );
         CREATE INDEX IF NOT EXISTS idx_entity_aliases_namespace ON entity_aliases(namespace);
         CREATE INDEX IF NOT EXISTS idx_entity_aliases_canonical ON entity_aliases(canonical_form);
-        """
-    )
+        """)
     conn.commit()
 
 
@@ -251,9 +248,7 @@ class TestPerformance:
     def test_1000_entities_under_200ms(self, normalizer: EntityNormalizer):
         """Normalize text with 1000 distinct entities should complete < 200ms."""
         # Generate 1000 unique acronyms (2-letter combos)
-        entities = " ".join(
-            [chr(65 + i // 26) + chr(65 + i % 26) for i in range(1000)]
-        )
+        entities = " ".join([chr(65 + i // 26) + chr(65 + i % 26) for i in range(1000)])
         start = time.perf_counter()
         result = normalizer.normalize(entities, "default")
         elapsed_ms = (time.perf_counter() - start) * 1000
@@ -266,9 +261,7 @@ class TestPerformance:
         """Single fuzzy match lookup with 200 candidates < 50ms."""
         # Seed 200 aliases with same prefix
         for i in range(200):
-            normalizer._persist_alias(
-                f"AB{i:03d}", f"AB{i:03d}", "acronym", "default", 1.0
-            )
+            normalizer._persist_alias(f"AB{i:03d}", f"AB{i:03d}", "acronym", "default", 1.0)
         start = time.perf_counter()
         normalizer._lookup_fuzzy("AB999", "acronym", "default")
         elapsed_ms = (time.perf_counter() - start) * 1000
@@ -411,9 +404,7 @@ class TestSecurity:
         result = normalizer.normalize("REST\x00API", "default")
         # The null byte should be stripped before persistence
         conn = normalizer._conn_mgr.get_connection()
-        rows = conn.execute(
-            "SELECT alias_form FROM entity_aliases WHERE alias_form LIKE '%REST%'"
-        ).fetchall()
+        rows = conn.execute("SELECT alias_form FROM entity_aliases WHERE alias_form LIKE '%REST%'").fetchall()
         for r in rows:
             assert "\x00" not in r["alias_form"]
 
@@ -502,9 +493,7 @@ class TestListAndMerge:
         assert repointed >= 1
         # Verify REST API no longer exists as canonical
         conn = normalizer._conn_mgr.get_connection()
-        rows = conn.execute(
-            "SELECT DISTINCT canonical_form FROM entity_aliases WHERE namespace='default'"
-        ).fetchall()
+        rows = conn.execute("SELECT DISTINCT canonical_form FROM entity_aliases WHERE namespace='default'").fetchall()
         canonicals = {r["canonical_form"] for r in rows}
         assert "REST API" not in canonicals
         assert "GraphQL" in canonicals

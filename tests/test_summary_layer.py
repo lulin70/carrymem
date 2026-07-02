@@ -32,7 +32,6 @@ from carrymem.layers.summary_layer import (
 )
 from carrymem.prompt import build_prompt
 
-
 # ── Fixtures ──────────────────────────────────────────────────────
 
 
@@ -395,26 +394,32 @@ class TestPerformance:
         memories = []
         for i in range(1000):
             if i % 3 == 0:
-                memories.append({
-                    "type": "user_preference",
-                    "raw_text": f"Preference number {i}. This is a test preference.",
-                    "content": f"Preference {i}",
-                    "confidence": 0.9,
-                })
+                memories.append(
+                    {
+                        "type": "user_preference",
+                        "raw_text": f"Preference number {i}. This is a test preference.",
+                        "content": f"Preference {i}",
+                        "confidence": 0.9,
+                    }
+                )
             elif i % 3 == 1:
-                memories.append({
-                    "type": "fact_declaration",
-                    "raw_text": f"Fact number {i}. This is a test fact statement.",
-                    "content": f"Fact {i}",
-                    "confidence": 0.85,
-                })
+                memories.append(
+                    {
+                        "type": "fact_declaration",
+                        "raw_text": f"Fact number {i}. This is a test fact statement.",
+                        "content": f"Fact {i}",
+                        "confidence": 0.85,
+                    }
+                )
             else:
-                memories.append({
-                    "type": "relationship",
-                    "raw_text": f"Relationship number {i}. This is a test relationship note.",
-                    "content": f"Relationship {i}",
-                    "confidence": 0.6,
-                })
+                memories.append(
+                    {
+                        "type": "relationship",
+                        "raw_text": f"Relationship number {i}. This is a test relationship note.",
+                        "content": f"Relationship {i}",
+                        "confidence": 0.6,
+                    }
+                )
 
         start = time.perf_counter()
         build_prompt(memories, [], progressive=True)
