@@ -1,6 +1,6 @@
 # CarryMem — User Installation & Usage Manual
 
-**Version**: v0.5.1  
+**Version**: v0.5.2  
 **Date**: 2026-05-03  
 **Audience**: End Users (Developers, Power Users, Teams)  
 **Prerequisites**: Python 3.9+, pip
@@ -18,7 +18,7 @@ pip install carrymem
 **Verify installation:**
 ```bash
 carrymem version
-# Output: CarryMem v0.5.1
+# Output: CarryMem v0.5.2
 ```
 
 ### Step 2: Initialize
@@ -75,7 +75,7 @@ $ carrymem doctor
   CarryMem Doctor - Diagnostics
   =============================================
   [OK] Python 3.11+ (>= 3.9)
-  [OK] CarryMem v0.5.1
+  [OK] CarryMem v0.5.2
   [OK] Config directory: /Users/you/.carrymem
   [OK] Database: /Users/you/.carrymem/memories.db (0.14 MB)
   
@@ -731,7 +731,7 @@ $ carrymem rules add "normal" --trigger "*" --type prefer
 - **Security Reports**: Please email maintainers (do NOT post publicly)
 
 ### Version History
-- **v0.5.1** (Current): P0/P1/P2 maturity fixes, RecallCache fine-grained invalidation, PBKDF2 600k, multi-stage Dockerfile, release.yml with version consistency gate
+- **v0.5.2** (Current): Summary Layer + Progressive Disclosure (token-efficient prompt injection, rule-based + LLM-optional summarization, schema migration _V052)
 - **v0.3.0**: Memory layer foundation, Rules Engine, PyPI release
 - **Changelog**: See [CHANGELOG.md](../CHANGELOG.md)
 

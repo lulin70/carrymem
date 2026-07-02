@@ -78,6 +78,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `.key`. Automatic verification on load; tampered keys rejected with `EncryptionError`.
   Missing digest files auto-created on first load (migration path from pre-check versions).
 
+## [0.5.2] - 2026-07-02 (Summary Layer + Progressive Disclosure)
+
+### Added
+- **SummaryLayer module** (`src/carrymem/layers/summary_layer.py`): Field-level memory
+  summary caching with progressive disclosure for token-efficient prompt injection.
+  - `RuleBasedSummarizer`: Zero-LLM summarizer with 3 depth levels (1=keywords,
+    2=first sentence, 3=full raw_text). Type-specific extraction (decision →
+    content after "decided:", etc.). 80+ English stopwords for keyword extraction.
+  - `SummaryLayer`: LLM-optional summary layer. Reuses `LLMClient` when enabled;
+    falls back to rule-based on LLM failure. Caches to `memories.summary` field.
+  - `BUCKET_DEPTH` mapping: mandatory=3, important=2, context=2, outdated=1.
+  - `get_depth_for_bucket()`: Helper for prompt rendering depth selection.
+  - LLM switch config: `CARRYMEM_LLM_SUMMARY` env > TRAE env detection > False.
+  - `CARRYMEM_SUMMARY_ENABLED` env (default "1") to disable summary layer entirely.
+- **Schema migration `_V052`**: `summary TEXT` and `summary_level INTEGER` columns
+  added to `memories` table. Idempotent migration via `migrate_v052()`.
+- **StoredMemory extension**: `summary` and `summary_level` fields in dataclass,
+  `to_dict()`/`from_dict()`, and `StoredMemoryDict` TypedDict.
+- **Progressive disclosure API**: `progressive: bool` parameter added to
+  `build_prompt()`, `build_context()`, `build_system_prompt()` (all default `False`
+  for backward compatibility). `depth: int` parameter added to
+  `format_memory_entry()` (default `3` for backward compatibility).
+- **44-test suite** (`tests/test_summary_layer.py`): Covers 11 dimensions —
+  Happy Path, LLM Switch, LLM Fallback, Progressive Disclosure, Cache, Boundary,
+  Integration, Performance (<500ms for 1000 memories), Config, Schema Migration,
+  CRUD Invalidation, Serialization.
+
+### Security
+- **C20**: LLM-generated summaries sanitized via `InputValidator.sanitize_content()`
+  before caching. Fallback: null-byte strip + whitespace strip.
+- **C21**: LLM prompt wraps `raw_text` in `<memory_data>` XML tags to prevent
+  prompt injection (pattern reused from SessionSummarizer).
+- **C22**: Summary field length capped at 500 characters (`_MAX_SUMMARY_LENGTH`)
+  to prevent oversized LLM output from consuming excessive storage.
+
+### Changed
+- **`format_memory_entry()`**: New `depth: int = 3` parameter. When `depth < 3`,
+  renders memory using cached `summary` field or rule-based fallback instead of
+  full `raw_text`. Superseded memories always show NOTE prefix regardless of depth.
+- **`build_prompt()`**: New `progressive: bool = False` parameter. When `True`,
+  renders memory buckets at progressive depths (Mandatory=full, Important=summary,
+  Context=summary, Outdated=keywords). Mandatory always renders at depth=3 to
+  preserve key directives.
+- **`build_context()` / `build_system_prompt()`**: New `progressive` parameter
+  transparently passed to `build_prompt()` via `PromptBuilder` and `PromptDelegateMixin`.
+- **Summary cache invalidation**: `crud.py` update path now sets
+  `summary = NULL, summary_level = NULL` when `raw_text` or `content` is updated,
+  ensuring stale summaries are never served.
+- **Serializer**: `row_to_stored()` and `dict_to_stored()` now read/write
+  `summary` and `summary_level` fields with backward-compatible `if "col" in row.keys()`
+  guards.
+
 ## [0.5.1] - 2026-07-01 (Entity Normalization — Ontology-lite)
 
 ### Added

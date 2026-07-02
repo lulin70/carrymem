@@ -30,7 +30,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 - Second digit changes for GA milestones (API stability guarantee)
 - No "v1.0.0 jump" — earn it through proven production usage
 
-> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. Current version is v0.5.1, including auto-backup, encrypted .carry files, concurrent safety, E2E tests, **PrefEval 83.0%** (200-sample, 3-condition canonical), state/event version chain, security hardening, preference injection optimization, context.py modularization, and consolidation scheduling. Next milestone: v0.5.2 (Summary Layer + Progressive Disclosure).
+> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. Current version is v0.5.2, including auto-backup, encrypted .carry files, concurrent safety, E2E tests, **PrefEval 83.0%** (200-sample, 3-condition canonical), state/event version chain, security hardening, preference injection optimization, context.py modularization, and consolidation scheduling. Next milestone: v0.5.3.
 
 ---
 

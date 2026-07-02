@@ -7,7 +7,7 @@
 ## 项目概述
 
 - **CarryMem** 是一个可移植的 AI 记忆层：让 AI 自动记住用户的偏好、决策与纠正，跨模型 / 工具 / 设备复用，无需每次重复自我介绍。
-- **当前版本**：`0.5.1`（来源：`src/carrymem/__version__.py`）
+- **当前版本**：`0.5.2`（来源：`src/carrymem/__version__.py`）
 - **核心技术栈**：
   - Python 3.12+（`setup.py` 中 `python_requires=">=3.12"`）
   - SQLite + FTS5（默认存储与全文检索）
