@@ -14,7 +14,6 @@ Integration points:
 
 from __future__ import annotations
 
-
 from carrymem.errors import SecurityError
 
 
