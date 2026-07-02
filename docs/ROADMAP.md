@@ -740,5 +740,5 @@ carrymem unpack team-identity.carry
 
 ---
 
-**Next Milestone**: v0.5.0 GA (General Availability)
+**Next Milestone**: v0.5.3 (next patch — planning TBD)
 **Status**: ✅ **v0.4.0 complete (4198 tests, 80%+ coverage, Memory + Rules + Knowledge + Enterprise)**
