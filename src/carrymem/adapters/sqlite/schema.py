@@ -150,6 +150,11 @@ _V051_MIGRATION_SQL = [
     "ALTER TABLE memories ADD COLUMN entity_id TEXT",
 ]
 
+_V052_MIGRATION_SQL = [
+    "ALTER TABLE memories ADD COLUMN summary TEXT",
+    "ALTER TABLE memories ADD COLUMN summary_level INTEGER",
+]
+
 _V060_FTS_REBUILD_SQL = [
     "DROP TABLE IF EXISTS memories_fts",
     """CREATE VIRTUAL TABLE memories_fts USING fts5(
@@ -225,6 +230,7 @@ class SchemaManager:
         self.migrate_v080()
         self.migrate_v090()
         self.migrate_v051()
+        self.migrate_v052()
 
     def migrate_namespace(self):
         """Add the namespace column to the memories table if missing."""
@@ -427,6 +433,19 @@ class SchemaManager:
             conn.execute("SELECT entity_normalized FROM memories LIMIT 1")
         except _OpError:
             for sql in _V051_MIGRATION_SQL:
+                try:
+                    conn.execute(sql)
+                except _OpError:
+                    pass
+            conn.commit()
+
+    def migrate_v052(self):
+        """Add summary and summary_level columns to memories table (v0.5.2)."""
+        conn = self._conn_mgr.get_connection()
+        try:
+            conn.execute("SELECT summary FROM memories LIMIT 1")
+        except _OpError:
+            for sql in _V052_MIGRATION_SQL:
                 try:
                     conn.execute(sql)
                 except _OpError:

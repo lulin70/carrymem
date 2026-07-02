@@ -1,10 +1,18 @@
 """Memory formatting — format memory entries for AI prompt injection.
 
 Extracted from context.py for modularity.
+
+v0.5.2: Added `depth` parameter to format_memory_entry() for progressive
+disclosure. depth=3 (default) preserves v0.5.1 behavior; depth=2/1 use
+cached summary or rule-based fallback for token-efficient rendering.
 """
 
 import re
 from typing import Any, Dict, List
+
+from carrymem.layers.summary_layer import RuleBasedSummarizer
+
+_RULE_SUMMARIZER = RuleBasedSummarizer()
 
 TYPE_LABELS = {
     "en": {
@@ -56,8 +64,17 @@ def _extract_event_dates(text: str) -> str:
     return ", ".join(found) if found else ""
 
 
-def format_memory_entry(m: Dict[str, Any], language: str = "en") -> str:
-    """Render a single memory entry as a human-readable string."""
+def format_memory_entry(m: Dict[str, Any], language: str = "en", depth: int = 3) -> str:
+    """Render a single memory entry as a human-readable string.
+
+    Args:
+        m: Memory dict with raw_text/content, type, and optionally cached summary.
+        language: Language code for type labels ("en"/"zh"/"ja").
+        depth: Rendering depth for progressive disclosure (v0.5.2).
+            3 (default): full content — preserves v0.5.1 behavior.
+            2: short summary — uses cached `summary` if available, else rule-based.
+            1: ultra-short keywords — extracted from cached summary or raw_text.
+    """
     labels = TYPE_LABELS.get(language, TYPE_LABELS["en"])
     label = labels.get(m.get("type", ""), m.get("type", "Info"))
     content = m.get("raw_text", "") or m.get("content", "")
@@ -82,7 +99,12 @@ def format_memory_entry(m: Dict[str, Any], language: str = "en") -> str:
                 pass
 
     if superseded_at:
+        # Outdated memories always show the NOTE prefix regardless of depth
         return f'- NOTE: "{content[:80]}" is outdated{time_tag}'
+
+    # v0.5.2: Progressive disclosure — depth < 3 uses summary-based rendering
+    if depth < 3:
+        return _format_progressive(m, label, depth)
 
     if mtype == "user_preference" and auto_rule == "avoid":
         return f"- [IMPORTANT] The user does NOT want: {content}"
@@ -104,6 +126,31 @@ def format_memory_entry(m: Dict[str, Any], language: str = "en") -> str:
         tag = " [IMPORTANT]"
 
     return f"- [{label}{tag}] {content}{time_tag}"
+
+
+def _format_progressive(m: Dict[str, Any], label: str, depth: int) -> str:
+    """Render a memory entry using progressive disclosure (v0.5.2).
+
+    Uses cached `summary` field if available; otherwise generates a rule-based
+    summary on-the-fly. No LLM calls — LLM summaries are pre-cached by
+    SummaryLayer.summarize() at recall time.
+
+    Args:
+        m: Memory dict.
+        label: Pre-resolved type label for the current language.
+        depth: 1=keywords, 2=short summary.
+    """
+    cached_summary = m.get("summary")
+    if cached_summary and depth >= 2:
+        return f"- [{label}] {cached_summary}"
+    if cached_summary and depth == 1:
+        # Extract keywords from cached summary
+        keywords = _RULE_SUMMARIZER._extract_keywords(cached_summary)
+        if keywords:
+            return f"- [{label}] {' '.join(keywords)}"
+        return f"- [{label}] {cached_summary[:30].strip()}"
+    # No cache — generate rule-based summary on-the-fly
+    return f"- {_RULE_SUMMARIZER.summarize(m, level=depth)}"
 
 
 def _build_superseded_notes(memories: List[Dict[str, Any]], language: str = "en") -> List[str]:

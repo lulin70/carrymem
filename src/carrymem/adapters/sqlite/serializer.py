@@ -88,6 +88,8 @@ class RowSerializer:
             memory_nature=row["memory_nature"] if "memory_nature" in row.keys() else "state",
             version_chain_id=row["version_chain_id"] if "version_chain_id" in row.keys() else None,
             version_number=row["version_number"] if "version_number" in row.keys() else 1,
+            summary=row["summary"] if "summary" in row.keys() else None,
+            summary_level=row["summary_level"] if "summary_level" in row.keys() else None,
         )
 
     def dict_to_stored(self, d: Dict) -> Optional[StoredMemory]:
@@ -144,6 +146,8 @@ class RowSerializer:
                 memory_nature=d.get("memory_nature", "state"),
                 version_chain_id=d.get("version_chain_id"),
                 version_number=d.get("version_number", 1),
+                summary=d.get("summary"),
+                summary_level=d.get("summary_level"),
             )
         except (KeyError, ValueError, TypeError) as e:
             logger.debug("Failed to convert dict to StoredMemory: %s", e)

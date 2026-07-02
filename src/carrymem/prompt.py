@@ -154,8 +154,20 @@ def build_prompt(
     memories: List[Dict[str, Any]],
     knowledge: List[Dict[str, Any]],
     language: str = "en",
+    progressive: bool = False,
 ) -> str:
-    """Build a system prompt from memories and knowledge entries."""
+    """Build a system prompt from memories and knowledge entries.
+
+    Args:
+        memories: List of memory dicts to inject.
+        knowledge: List of knowledge entry dicts.
+        language: Language code ("en"/"zh"/"ja").
+        progressive: v0.5.2 — enable progressive disclosure. When True, memories
+            are rendered at bucket-specific depths: Mandatory=3 (full),
+            Important=2 (short summary), Context=2 (short summary),
+            Outdated=1 (keywords). When False (default), all memories render
+            at depth=3 (v0.5.1 behavior).
+    """
     t = PROMPT_TEMPLATES.get(language, PROMPT_TEMPLATES["en"])
     parts = [t["header"], "Follow these retrieval priorities when responding:"]
     parts.extend(t["priority"])
@@ -172,25 +184,32 @@ def build_prompt(
         ]
         optional = [m for m in active if m not in mandatory and m not in important]
 
+        # v0.5.2: Bucket → depth mapping for progressive disclosure.
+        # Mandatory always renders at full depth (never sacrifice key directives).
+        depth_mandatory = 3
+        depth_important = 2 if progressive else 3
+        depth_context = 2 if progressive else 3
+        depth_outdated = 1 if progressive else 3
+
         if mandatory:
             parts.append("\n### Mandatory (must follow)")
             for m in mandatory:
-                parts.append(format_memory_entry(m, language))
+                parts.append(format_memory_entry(m, language, depth=depth_mandatory))
 
         if important:
             parts.append("\n### Important (high confidence)")
             for m in important:
-                parts.append(format_memory_entry(m, language))
+                parts.append(format_memory_entry(m, language, depth=depth_important))
 
         if optional:
             parts.append("\n### Context (for reference)")
             for m in optional:
-                parts.append(format_memory_entry(m, language))
+                parts.append(format_memory_entry(m, language, depth=depth_context))
 
         if outdated:
             parts.append("\n### Outdated (superseded, do NOT use)")
             for m in outdated[:3]:
-                parts.append(format_memory_entry(m, language))
+                parts.append(format_memory_entry(m, language, depth=depth_outdated))
 
         update_notes = _build_superseded_notes(memories, language)
         if update_notes:

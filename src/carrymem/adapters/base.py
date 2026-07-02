@@ -159,6 +159,8 @@ class StoredMemory(MemoryEntry):
     storage_metadata: Dict[str, Any] = field(default_factory=dict)
     superseded_at: Optional[datetime] = None
     supersedes: Optional[str] = None
+    summary: Optional[str] = None
+    summary_level: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize to plain dict (JSON-safe), including storage fields."""
@@ -182,6 +184,8 @@ class StoredMemory(MemoryEntry):
                 "version_chain_id": self.version_chain_id,
                 "version_number": self.version_number,
                 "domain": self.domain,
+                "summary": self.summary,
+                "summary_level": self.summary_level,
             }
         )
         return base
@@ -294,6 +298,8 @@ class StoredMemory(MemoryEntry):
             version_chain_id=data.get("version_chain_id"),
             version_number=data.get("version_number", 1),
             domain=data.get("domain"),
+            summary=data.get("summary"),
+            summary_level=data.get("summary_level"),
         )
 
 

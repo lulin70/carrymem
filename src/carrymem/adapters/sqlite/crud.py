@@ -37,8 +37,11 @@ class CRUDOperations:
         if existing:
             if not existing["raw_text"] and entry.raw_text:
                 try:
+                    # v0.5.2: Invalidate summary cache when raw_text is populated
+                    # (summary was generated from empty raw_text, now stale)
                     conn.execute(
-                        "UPDATE memories SET raw_text = ? WHERE storage_key = ?",
+                        "UPDATE memories SET raw_text = ?, summary = NULL, summary_level = NULL "
+                        "WHERE storage_key = ?",
                         (self._adapter.encrypt_field(entry.raw_text), existing["storage_key"]),
                     )
                     conn.commit()
@@ -313,7 +316,9 @@ class CRUDOperations:
 
         conn.execute(
             """UPDATE memories SET content = ?, content_hash = ?, version = ?,
-               importance_score = ?, updated_at = ? WHERE storage_key = ? AND namespace = ?""",
+               importance_score = ?, updated_at = ?,
+               summary = NULL, summary_level = NULL
+               WHERE storage_key = ? AND namespace = ?""",
             (
                 encrypted_content,
                 new_c_hash,

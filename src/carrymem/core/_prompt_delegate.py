@@ -36,8 +36,14 @@ class PromptDelegateMixin:
         max_rules: int = CONTEXT_BUILD_DEFAULTS["max_rules"],
         max_tokens: int = CONTEXT_BUILD_DEFAULTS["max_tokens_context"],
         language: str = "en",
+        progressive: bool = False,
     ) -> Dict[str, Any]:
-        """Build a context payload of memories, knowledge, and rules."""
+        """Build a context payload of memories, knowledge, and rules.
+
+        Args:
+            progressive: v0.5.2 — enable progressive disclosure for token-efficient
+                prompt rendering. See PromptBuilder.build_context().
+        """
         return self.prompt_builder.build_context(  # type: ignore[attr-defined,no-any-return]
             context=context,
             max_memories=max_memories,
@@ -45,6 +51,7 @@ class PromptDelegateMixin:
             max_rules=max_rules,
             max_tokens=max_tokens,
             language=language,
+            progressive=progressive,
         )
 
     def build_system_prompt(
@@ -55,8 +62,14 @@ class PromptDelegateMixin:
         max_rules: int = CONTEXT_BUILD_DEFAULTS["max_rules"],
         max_tokens: int = CONTEXT_BUILD_DEFAULTS["max_tokens_system_prompt"],
         language: str = "en",
+        progressive: bool = False,
     ) -> str:
-        """Build a system prompt incorporating recalled context."""
+        """Build a system prompt incorporating recalled context.
+
+        Args:
+            progressive: v0.5.2 — enable progressive disclosure for token-efficient
+                prompt rendering.
+        """
         return self.prompt_builder.build_system_prompt(  # type: ignore[attr-defined,no-any-return]
             context=context,
             max_memories=max_memories,
@@ -64,6 +77,7 @@ class PromptDelegateMixin:
             max_rules=max_rules,
             max_tokens=max_tokens,
             language=language,
+            progressive=progressive,
         )
 
     def build_qa_prompt(

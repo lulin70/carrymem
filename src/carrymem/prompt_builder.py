@@ -303,8 +303,15 @@ class PromptBuilder:
         max_rules: int = 5,
         max_tokens: int = 2000,
         language: str = "en",
+        progressive: bool = False,
     ) -> Dict[str, Any]:
-        """Build a full context dict with system_prompt, memories, knowledge, rules."""
+        """Build a full context dict with system_prompt, memories, knowledge, rules.
+
+        Args:
+            progressive: v0.5.2 — enable progressive disclosure in the generated
+                system_prompt. When True, lower-priority memory buckets render
+                as summaries instead of full raw_text, reducing token consumption.
+        """
         memories_section: List[Dict] = []
         knowledge_section: List[Dict] = []
         rules_budget = int(max_tokens * 0.2)
@@ -370,6 +377,7 @@ class PromptBuilder:
             memories=memories_section,
             knowledge=knowledge_section,
             language=language,
+            progressive=progressive,
         )
         if rules_section:
             system_prompt = rules_section + "\n\n" + system_prompt
@@ -420,8 +428,13 @@ class PromptBuilder:
         max_rules: int = 5,
         max_tokens: int = 4000,
         language: str = "en",
+        progressive: bool = False,
     ) -> str:
-        """Build a system prompt string (convenience wrapper)."""
+        """Build a system prompt string (convenience wrapper).
+
+        Args:
+            progressive: v0.5.2 — enable progressive disclosure. See build_context().
+        """
         result = self.build_context(
             context=context,
             max_memories=max_memories,
@@ -429,6 +442,7 @@ class PromptBuilder:
             max_rules=max_rules,
             max_tokens=max_tokens,
             language=language,
+            progressive=progressive,
         )
         return result["system_prompt"]  # type: ignore[no-any-return]
 
