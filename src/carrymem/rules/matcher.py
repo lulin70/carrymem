@@ -330,7 +330,7 @@ class RuleMatcher:
         if has_cjk(text):
             if cls._jieba_available is None:
                 try:
-                    import jieba  # type: ignore[import-not-found]
+                    import jieba
 
                     cls._jieba_available = True
                 except ImportError:

@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
 try:
-    import yaml  # type: ignore[import-untyped]
+    import yaml
 
     YAML_AVAILABLE = True
 except ImportError:

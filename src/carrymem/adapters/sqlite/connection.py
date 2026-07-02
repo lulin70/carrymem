@@ -20,14 +20,14 @@ _db_write_locks_guard = threading.Lock()
 _SLOW_QUERY_THRESHOLD_MS = int(os.environ.get("CARRYMEM_SLOW_QUERY_MS", "100"))
 
 try:
-    import pysqlite3 as _pysqlite3  # type: ignore[import-not-found]
+    import pysqlite3 as _pysqlite3
 
     PYSQLITE3_AVAILABLE = True
 except ImportError:
     PYSQLITE3_AVAILABLE = False
 
 try:
-    import sqlite_vec  # type: ignore[import-not-found]
+    import sqlite_vec
 
     SQLITE_VEC_AVAILABLE = True
 except ImportError:

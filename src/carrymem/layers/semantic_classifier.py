@@ -55,7 +55,7 @@ class SemanticClassifier:
         # Attempt to initialize LLM client from available providers
         # Supports ZhipuAI (GLM) as primary LLM backend
         try:
-            from zhipuai import ZhipuAI  # type: ignore[import-not-found]
+            from zhipuai import ZhipuAI
 
             if self.llm_api_key:
                 return ZhipuAI(api_key=self.llm_api_key)

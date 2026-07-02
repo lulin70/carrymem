@@ -4,7 +4,7 @@ import os
 from typing import Any, Dict, Optional
 
 try:
-    import yaml  # type: ignore[import-untyped]
+    import yaml
 
     YAML_AVAILABLE = True
 except ImportError:

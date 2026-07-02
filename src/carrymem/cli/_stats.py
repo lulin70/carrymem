@@ -471,19 +471,19 @@ def cmd_doctor(args):
 
     optional_deps = []
     try:
-        import pycld2  # type: ignore[import-untyped]  # noqa: F401
+        import pycld2  # noqa: F401
 
         optional_deps.append("pycld2")
     except ImportError:
         pass
     try:
-        from cryptography.fernet import Fernet  # type: ignore[import-not-found]  # noqa: F401
+        from cryptography.fernet import Fernet  # noqa: F401
 
         optional_deps.append("cryptography")
     except ImportError:
         pass
     try:
-        import langdetect  # type: ignore[import-untyped]  # noqa: F401
+        import langdetect  # noqa: F401
 
         optional_deps.append("langdetect")
     except ImportError:

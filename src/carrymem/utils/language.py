@@ -3,7 +3,7 @@ from typing import List, Tuple
 from carrymem.utils.logger import logger
 
 try:
-    from langdetect import LangDetectException, detect  # type: ignore[import-not-found]
+    from langdetect import LangDetectException, detect
 
     _LANGDETECT_AVAILABLE = True
 except ImportError:
@@ -11,7 +11,7 @@ except ImportError:
     LangDetectException = Exception
 
 try:
-    import pycld2 as cld2  # type: ignore[import-not-found]
+    import pycld2 as cld2
 
     _CLD2_AVAILABLE = True
 except ImportError:

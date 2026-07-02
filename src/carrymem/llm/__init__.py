@@ -36,7 +36,7 @@ except ImportError:
 
 if _BACKEND is None:
     try:
-        from zhipuai import ZhipuAI as _ZhipuAI  # type: ignore[import-not-found]
+        from zhipuai import ZhipuAI as _ZhipuAI
 
         _ZHIPUAI_CLIENT = _ZhipuAI
         _BACKEND = "zhipuai"
