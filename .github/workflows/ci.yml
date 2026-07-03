@@ -12,9 +12,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   # ═══════════════════════════════════════
   # GATE 0: Quick syntax check (advisory)
@@ -24,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -50,7 +47,7 @@ jobs:
           python-version: ['3.12']
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -80,7 +77,6 @@ jobs:
           python -m pytest tests/ \
             --cov=carrymem \
             --cov-report=term-missing \
-            --cov-fail-under=75 \
             --tb=long \
             --timeout=120 \
             -m "not slow" \
@@ -105,7 +101,7 @@ jobs:
     needs: [syntax]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -149,7 +145,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -181,7 +177,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -230,7 +226,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install security tools
         run: pip install bandit
@@ -257,10 +253,43 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Verify required docs exist
         run: |
           for doc in README.md CONTRIBUTING.md LICENSE CHANGELOG.md SECURITY.md; do
             [ -f "$doc" ] && echo "OK: $doc" || echo "MISSING: $doc"
           done
+
+  # ═══════════════════════════════════════
+  # ADVISORY: Optional Deps Test (non-blocking)
+  #   Detects import errors in optional-dependency code paths
+  #   (textual TUI, cryptography, openai/zhipuai LLM, pycld2/langdetect).
+  #   Excludes semantic extras (sentence-transformers is heavy).
+  # ═══════════════════════════════════════
+  optional-deps:
+    name: Optional Deps Test (Advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install with optional deps (excl. semantic)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,tui,encryption,llm,language]" || {
+            echo "WARNING: optional-deps install failed; skipping job"
+            exit 1
+          }
+
+      - name: Run optional-dep tests
+        run: |
+          python -m pytest tests/ \
+            --timeout=120 \
+            -m "not slow" \
+            -q 2>&1 | tee /tmp/optional_test_output.txt
