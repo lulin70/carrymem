@@ -175,6 +175,9 @@ class ConnectionManager:
             except sqlite3.OperationalError as e:
                 last_err = e
                 msg_lower = str(e).lower()
+                if "no such table" in msg_lower:
+                    # Expected before init_schema() runs — not an error
+                    return
                 err_code = getattr(e, "sqlite_errorcode", None)
                 err_name = getattr(e, "sqlite_errorname", None)
                 logger.warning(
@@ -184,8 +187,6 @@ class ConnectionManager:
                     err_code,
                     err_name,
                 )
-                if "no such table" in msg_lower:
-                    return
                 import time as _time
 
                 _time.sleep(0.05 * (attempt + 1))

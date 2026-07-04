@@ -53,6 +53,26 @@ try:
 except ImportError:
     SENTENCE_TRANSFORMERS_AVAILABLE = False
 
+_EMBEDDING_MODEL_CACHE: Dict[str, Any] = {}
+_EMBEDDING_MODEL_LOCK = __import__("threading").Lock()
+
+
+def _get_or_load_embedding_model(model_name: str):
+    """Get cached SentenceTransformer model, loading on first access.
+
+    Avoids repeated model weight loading (103 weights) when multiple
+    SQLiteAdapter instances are created in the same process (e.g. benchmarks).
+    """
+    if model_name in _EMBEDDING_MODEL_CACHE:
+        return _EMBEDDING_MODEL_CACHE[model_name]
+    with _EMBEDDING_MODEL_LOCK:
+        if model_name in _EMBEDDING_MODEL_CACHE:
+            return _EMBEDDING_MODEL_CACHE[model_name]
+        os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+        model = SentenceTransformer(model_name)
+        _EMBEDDING_MODEL_CACHE[model_name] = model
+        return model
+
 
 def _default_db_path() -> str:
     home = os.path.expanduser("~")
@@ -180,8 +200,7 @@ class SQLiteAdapter(StorageAdapter):
                 if _external_embedding_model is not None:
                     self._embedding_model = _external_embedding_model
                 else:
-                    os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
-                    self._embedding_model = SentenceTransformer(embedding_model)
+                    self._embedding_model = _get_or_load_embedding_model(embedding_model)
                 self._embedding_dim = self._embedding_model.get_embedding_dimension()  # type: ignore[attr-defined]
                 # Close existing connection and switch to pysqlite3 with vec0
                 self._conn_mgr.close_memory_conn_for_vector_switch()
