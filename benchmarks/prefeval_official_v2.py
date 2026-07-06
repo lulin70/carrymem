@@ -21,6 +21,7 @@ Usage:
     # All conditions, all topics
     python benchmarks/prefeval_official_v2.py --num-topics 20 --num-turns 10 --conditions zero-shot,reminder,carrymem
 """
+
 from __future__ import annotations
 
 import argparse
@@ -32,11 +33,9 @@ import re
 import sys
 import tempfile
 import time
-import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 
-import numpy as np
 from openai import OpenAI
 
 BENCHMARKS_DIR = Path(__file__).resolve().parent
@@ -52,7 +51,9 @@ if str(SRC_DIR) not in sys.path:
 LLM_BASE_URL = os.environ.get("OPENAI_BASE_URL", "https://api.moka-ai.com/v1")
 LLM_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 LLM_MODEL = os.environ.get("LLM_MODEL", "code/claude-sonnet-4-6")
-JUDGE_BASE_URL = os.environ.get("JUDGE_BASE_URL", os.environ.get("OPENAI_BASE_URL", "https://api.moka-ai.com/v1"))
+JUDGE_BASE_URL = os.environ.get(
+    "JUDGE_BASE_URL", os.environ.get("OPENAI_BASE_URL", "https://api.moka-ai.com/v1")
+)
 JUDGE_API_KEY = os.environ.get("JUDGE_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
 JUDGE_MODEL = os.environ.get("JUDGE_MODEL", "code/claude-sonnet-4-6")
 
@@ -60,7 +61,9 @@ REMINDER_TEXT = "\nIn your response, please ensure that you take into account ou
 
 
 def load_official_data(num_topics: int = 20, limit: int = 0, seed: int = 42):
-    topics = sorted([f.replace('.json', '') for f in os.listdir(DATA_DIR) if f.endswith('.json')])
+    topics = sorted(
+        [f.replace(".json", "") for f in os.listdir(DATA_DIR) if f.endswith(".json")]
+    )
     if num_topics < len(topics):
         rng = random.Random(seed)
         rng.shuffle(topics)
@@ -71,7 +74,7 @@ def load_official_data(num_topics: int = 20, limit: int = 0, seed: int = 42):
         with open(DATA_DIR / f"{topic}.json") as f:
             items = json.load(f)
         for item in items:
-            item['topic'] = topic
+            item["topic"] = topic
         all_items.extend(items)
 
     if limit > 0:
@@ -88,13 +91,21 @@ def load_inter_turns():
         convs = json.load(f)
     all_turns = []
     for conv in convs:
-        all_turns.extend(conv['conversation'])
-    print(f"Loaded {len(all_turns)} inter-turn messages from {len(convs)} conversations")
+        all_turns.extend(conv["conversation"])
+    print(
+        f"Loaded {len(all_turns)} inter-turn messages from {len(convs)} conversations"
+    )
     return all_turns
 
 
-def build_messages(preference: str, question: str, inter_turns: list,
-                   num_turns: int, condition: str, carrymem_prompt: str = None):
+def build_messages(
+    preference: str,
+    question: str,
+    inter_turns: list,
+    num_turns: int,
+    condition: str,
+    carrymem_prompt: str = None,
+):
     """Build OpenAI-format messages following the official PrefEval protocol.
 
     Protocol:
@@ -106,7 +117,12 @@ def build_messages(preference: str, question: str, inter_turns: list,
 
     # Turn 0: User states preference
     messages.append({"role": "user", "content": preference})
-    messages.append({"role": "assistant", "content": f"I understand your preference. You've mentioned that {preference.lower()} I'll keep this in mind."})
+    messages.append(
+        {
+            "role": "assistant",
+            "content": f"I understand your preference. You've mentioned that {preference.lower()} I'll keep this in mind.",
+        }
+    )
 
     # Turn 1~N: Inter-turn noise
     turn_count = 0
@@ -137,7 +153,9 @@ def build_messages(preference: str, question: str, inter_turns: list,
     return messages
 
 
-def generate_response(client: OpenAI, model: str, messages: list, max_retries: int = 3) -> str:
+def generate_response(
+    client: OpenAI, model: str, messages: list, max_retries: int = 3
+) -> str:
     for attempt in range(max_retries):
         try:
             resp = client.chat.completions.create(
@@ -149,7 +167,7 @@ def generate_response(client: OpenAI, model: str, messages: list, max_retries: i
             return resp.choices[0].message.content.strip()
         except Exception as e:
             if attempt < max_retries - 1:
-                time.sleep(2 ** attempt)
+                time.sleep(2**attempt)
             else:
                 return f"Error: {e}"
 
@@ -181,7 +199,9 @@ def _judge_call(judge_client: OpenAI, prompt: str, max_retries: int = 3) -> str:
 def evaluate_acknowledge(judge_client: OpenAI, question: str, response: str) -> dict:
     prompt_path = ERROR_TYPE_DIR / "check_acknowledge.txt"
     prompt_template = prompt_path.read_text()
-    prompt = prompt_template.replace("{question}", question).replace("{end_generation}", response)
+    prompt = prompt_template.replace("{question}", question).replace(
+        "{end_generation}", response
+    )
 
     try:
         text = _judge_call(judge_client, prompt)
@@ -192,10 +212,16 @@ def evaluate_acknowledge(judge_client: OpenAI, question: str, response: str) -> 
         return {"acknowledged": None, "restatement": "", "error": str(e)}
 
 
-def evaluate_violation(judge_client: OpenAI, preference: str, question: str, response: str) -> dict:
+def evaluate_violation(
+    judge_client: OpenAI, preference: str, question: str, response: str
+) -> dict:
     prompt_path = ERROR_TYPE_DIR / "check_violation.txt"
     prompt_template = prompt_path.read_text()
-    prompt = prompt_template.replace("{preference}", preference).replace("{question}", question).replace("{end_generation}", response)
+    prompt = (
+        prompt_template.replace("{preference}", preference)
+        .replace("{question}", question)
+        .replace("{end_generation}", response)
+    )
 
     try:
         text = _judge_call(judge_client, prompt)
@@ -205,13 +231,17 @@ def evaluate_violation(judge_client: OpenAI, preference: str, question: str, res
         return {"violated": None, "error": str(e)}
 
 
-def evaluate_hallucination(judge_client: OpenAI, preference: str, restatement: str) -> dict:
+def evaluate_hallucination(
+    judge_client: OpenAI, preference: str, restatement: str
+) -> dict:
     if not restatement:
         return {"hallucinated": False}
 
     prompt_path = ERROR_TYPE_DIR / "check_hallucination.txt"
     prompt_template = prompt_path.read_text()
-    prompt = prompt_template.replace("{preference}", preference).replace("{assistant_restatement}", restatement)
+    prompt = prompt_template.replace("{preference}", preference).replace(
+        "{assistant_restatement}", restatement
+    )
 
     try:
         text = _judge_call(judge_client, prompt)
@@ -224,7 +254,9 @@ def evaluate_hallucination(judge_client: OpenAI, preference: str, restatement: s
 def evaluate_helpful(judge_client: OpenAI, question: str, response: str) -> dict:
     prompt_path = ERROR_TYPE_DIR / "check_helpful.txt"
     prompt_template = prompt_path.read_text()
-    prompt = prompt_template.replace("{question}", question).replace("{end_generation}", response)
+    prompt = prompt_template.replace("{question}", question).replace(
+        "{end_generation}", response
+    )
 
     try:
         text = _judge_call(judge_client, prompt)
@@ -234,26 +266,96 @@ def evaluate_helpful(judge_client: OpenAI, question: str, response: str) -> dict
         return {"helpful": None, "error": str(e)}
 
 
+def evaluate_judges_parallel(
+    judge_client: OpenAI,
+    preference: str,
+    question: str,
+    response: str,
+) -> dict:
+    """Run 4 judge evaluations with parallel execution where possible.
+
+    Dependency graph:
+      Layer 1: acknowledge (produces restatement needed by hallucination)
+      Layer 2: hallucination + violation + helpful (all independent, run in parallel)
+
+    This reduces per-item judge time from 4 sequential API calls to 2 layers,
+    cutting judge wall-time by ~50%.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    # Layer 1: acknowledge (must run first — hallucination depends on restatement)
+    ack = evaluate_acknowledge(judge_client, question, response)
+    restatement = ack.get("restatement", "")
+
+    # Layer 2: hallucination + violation + helpful in parallel
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        hal_future = pool.submit(
+            evaluate_hallucination, judge_client, preference, restatement
+        )
+        vio_future = pool.submit(
+            evaluate_violation, judge_client, preference, question, response
+        )
+        hlp_future = pool.submit(evaluate_helpful, judge_client, question, response)
+
+        hal = hal_future.result()
+        vio = vio_future.result()
+        hlp = hlp_future.result()
+
+    return {
+        "acknowledged": ack.get("acknowledged"),
+        "restatement": restatement,
+        "hallucinated": hal.get("hallucinated"),
+        "violated": vio.get("violated"),
+        "helpful": hlp.get("helpful"),
+        "ack_error": ack.get("error"),
+    }
+
+
 def compute_accuracy(results: list[dict]) -> dict:
-    valid = [r for r in results if all(
-        r.get(k) is not None for k in ["acknowledged", "violated", "hallucinated", "helpful"]
-    )]
+    valid = [
+        r
+        for r in results
+        if all(
+            r.get(k) is not None
+            for k in ["acknowledged", "violated", "hallucinated", "helpful"]
+        )
+    ]
     errors = [r for r in results if r not in valid]
     total = len(valid)
     if total == 0:
-        return {"accuracy": 0.0, "total": len(results), "valid": 0, "judge_errors": len(errors)}
+        return {
+            "accuracy": 0.0,
+            "total": len(results),
+            "valid": 0,
+            "judge_errors": len(errors),
+        }
 
     n_ack = sum(1 for r in valid if r.get("acknowledged", False))
     n_violate = sum(1 for r in valid if r.get("violated", False))
     n_hallucinate = sum(1 for r in valid if r.get("hallucinated", False))
     n_unhelpful = sum(1 for r in valid if not r.get("helpful", True))
 
-    n_inconsistent = sum(1 for r in valid
-                         if r.get("acknowledged") and not r.get("hallucinated") and r.get("violated") and r.get("helpful"))
-    n_halluc_violate = sum(1 for r in valid
-                           if r.get("acknowledged") and r.get("hallucinated") and r.get("violated") and r.get("helpful"))
-    n_unaware_violate = sum(1 for r in valid
-                            if not r.get("acknowledged") and r.get("violated") and r.get("helpful"))
+    n_inconsistent = sum(
+        1
+        for r in valid
+        if r.get("acknowledged")
+        and not r.get("hallucinated")
+        and r.get("violated")
+        and r.get("helpful")
+    )
+    n_halluc_violate = sum(
+        1
+        for r in valid
+        if r.get("acknowledged")
+        and r.get("hallucinated")
+        and r.get("violated")
+        and r.get("helpful")
+    )
+    n_unaware_violate = sum(
+        1
+        for r in valid
+        if not r.get("acknowledged") and r.get("violated") and r.get("helpful")
+    )
 
     n_errors = n_inconsistent + n_halluc_violate + n_unaware_violate + n_unhelpful
     accuracy = (total - n_errors) / total
@@ -273,8 +375,9 @@ def compute_accuracy(results: list[dict]) -> dict:
     }
 
 
-def run_carrymem_condition(item: dict, inter_turns: list, num_turns: int,
-                           llm_client: OpenAI, llm_model: str) -> tuple[str, str]:
+def run_carrymem_condition(
+    item: dict, inter_turns: list, num_turns: int, llm_client: OpenAI, llm_model: str
+) -> tuple[str, str]:
     """Run CarryMem condition: store preference + inter-turns, then build_qa_prompt."""
     from carrymem import CarryMem
 
@@ -282,7 +385,9 @@ def run_carrymem_condition(item: dict, inter_turns: list, num_turns: int,
     db_path = tmp.name
     tmp.close()
 
-    cm = CarryMem(storage="sqlite", db_path=db_path, namespace=f"prefeval_{item['topic']}")
+    cm = CarryMem(
+        storage="sqlite", db_path=db_path, namespace=f"prefeval_{item['topic']}"
+    )
 
     try:
         # Force store preference as user_preference type to ensure correct
@@ -300,8 +405,12 @@ def run_carrymem_condition(item: dict, inter_turns: list, num_turns: int,
 
         prompt = cm.build_qa_prompt(question=item["question"], include_question=True)
         messages = build_messages(
-            item["preference"], item["question"], inter_turns,
-            num_turns, "carrymem", carrymem_prompt=prompt
+            item["preference"],
+            item["question"],
+            inter_turns,
+            num_turns,
+            "carrymem",
+            carrymem_prompt=prompt,
         )
         response = generate_response(llm_client, llm_model, messages)
         return response, prompt
@@ -317,18 +426,32 @@ def run_carrymem_condition(item: dict, inter_turns: list, num_turns: int,
 
 
 def main():
-    parser = argparse.ArgumentParser(description="PrefEval Official Protocol Evaluation")
+    parser = argparse.ArgumentParser(
+        description="PrefEval Official Protocol Evaluation"
+    )
     parser.add_argument("--num-topics", type=int, default=1)
-    parser.add_argument("--num-turns", type=int, default=10, help="Number of inter-turn conversations (0/2/4/6/8/10)")
+    parser.add_argument(
+        "--num-turns",
+        type=int,
+        default=10,
+        help="Number of inter-turn conversations (0/2/4/6/8/10)",
+    )
     parser.add_argument("--conditions", type=str, default="zero-shot,reminder,carrymem")
-    parser.add_argument("--limit", type=int, default=0, help="Max items to evaluate (0=all)")
+    parser.add_argument(
+        "--limit", type=int, default=0, help="Max items to evaluate (0=all)"
+    )
     parser.add_argument("--llm-model", type=str, default=None)
     parser.add_argument("--skip-judge", action="store_true")
-    parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
-    parser.add_argument("--report", action="store_true", help="Generate Markdown comparison report")
+    parser.add_argument(
+        "--seed", type=int, default=42, help="Random seed for reproducibility"
+    )
+    parser.add_argument(
+        "--report", action="store_true", help="Generate Markdown comparison report"
+    )
     args = parser.parse_args()
 
     from dotenv import load_dotenv
+
     env_paths = [
         BENCHMARKS_DIR / "MemEval" / ".env",
         BENCHMARKS_DIR.parent / ".env",
@@ -368,9 +491,9 @@ def main():
     consecutive_judge_errors = 0
 
     for condition in conditions:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"  CONDITION: {condition}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         results = []
         for i, item in enumerate(items):
@@ -383,7 +506,9 @@ def main():
                     item, inter_turns, args.num_turns, llm_client, llm_model
                 )
             else:
-                messages = build_messages(preference, question, inter_turns, args.num_turns, condition)
+                messages = build_messages(
+                    preference, question, inter_turns, args.num_turns, condition
+                )
                 response = generate_response(llm_client, llm_model, messages)
                 system_prompt = None
 
@@ -401,42 +526,53 @@ def main():
                 result["system_prompt"] = system_prompt[:500]
 
             if not args.skip_judge:
-                ack = evaluate_acknowledge(judge_client, question, response)
-                result["acknowledged"] = ack["acknowledged"]
-                result["restatement"] = ack.get("restatement", "")
+                judge_result = evaluate_judges_parallel(
+                    judge_client, preference, question, response
+                )
+                result["acknowledged"] = judge_result["acknowledged"]
+                result["restatement"] = judge_result["restatement"]
+                result["hallucinated"] = judge_result["hallucinated"]
+                result["violated"] = judge_result["violated"]
+                result["helpful"] = judge_result["helpful"]
 
                 # Check for judge errors and pause if API is unstable
-                if ack.get("error"):
+                if judge_result.get("ack_error"):
                     consecutive_judge_errors += 1
                     if consecutive_judge_errors >= 3:
-                        print(f"  ⚠️  {consecutive_judge_errors} consecutive judge errors — pausing 30s for API recovery...")
+                        print(
+                            f"  ⚠️  {consecutive_judge_errors} consecutive judge errors — pausing 30s for API recovery..."
+                        )
                         import time as _time
+
                         _time.sleep(30)
-                        ack = evaluate_acknowledge(judge_client, question, response)
-                        result["acknowledged"] = ack["acknowledged"]
-                        result["restatement"] = ack.get("restatement", "")
-                        if ack.get("error"):
-                            print(f"  ❌ Judge still failing after pause. Stopping to avoid wasting time.")
-                            print(f"  Completed {i}/{len(items)} items. Run with --skip-judge to continue without judging.")
+                        # Retry full judge evaluation after pause
+                        judge_result = evaluate_judges_parallel(
+                            judge_client, preference, question, response
+                        )
+                        result["acknowledged"] = judge_result["acknowledged"]
+                        result["restatement"] = judge_result["restatement"]
+                        result["hallucinated"] = judge_result["hallucinated"]
+                        result["violated"] = judge_result["violated"]
+                        result["helpful"] = judge_result["helpful"]
+                        if judge_result.get("ack_error"):
+                            print(
+                                "  ❌ Judge still failing after pause. Stopping to avoid wasting time."
+                            )
+                            print(
+                                f"  Completed {i}/{len(items)} items. Run with --skip-judge to continue without judging."
+                            )
                             break
                         consecutive_judge_errors = 0
                 else:
                     consecutive_judge_errors = 0
 
-                hal = evaluate_hallucination(judge_client, preference, result.get("restatement", ""))
-                result["hallucinated"] = hal["hallucinated"]
-
-                vio = evaluate_violation(judge_client, preference, question, response)
-                result["violated"] = vio["violated"]
-
-                hlp = evaluate_helpful(judge_client, question, response)
-                result["helpful"] = hlp["helpful"]
-
             results.append(result)
 
             if (i + 1) % 5 == 0:
                 acc = compute_accuracy(results)
-                print(f"  [{condition}] {i+1}/{len(items)} — Running accuracy: {acc['accuracy']:.3f}")
+                print(
+                    f"  [{condition}] {i + 1}/{len(items)} — Running accuracy: {acc['accuracy']:.3f}"
+                )
 
         acc = compute_accuracy(results)
         print(f"\n  {condition} Results:")
@@ -472,7 +608,9 @@ def main():
         "conditions": conditions,
         "config_hash": config_hash,
         "summary": summary,
-        "results": {cond: data["results"] for cond, data in all_condition_results.items()},
+        "results": {
+            cond: data["results"] for cond, data in all_condition_results.items()
+        },
     }
 
     with open(out_path, "w") as f:
@@ -480,14 +618,18 @@ def main():
     print(f"\n  Saved: {out_path}")
 
     # Print comparison table
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"PREFEVAL RESULTS ({args.num_turns} inter-turns, {len(items)} items)")
-    print(f"{'='*70}")
-    print(f"  {'Condition':15} {'Accuracy':>10} {'Ack':>6} {'Violate':>8} {'Halluc':>8} {'Unhelp':>8}")
-    print(f"  {'-'*15} {'-'*10} {'-'*6} {'-'*8} {'-'*8} {'-'*8}")
+    print(f"{'=' * 70}")
+    print(
+        f"  {'Condition':15} {'Accuracy':>10} {'Ack':>6} {'Violate':>8} {'Halluc':>8} {'Unhelp':>8}"
+    )
+    print(f"  {'-' * 15} {'-' * 10} {'-' * 6} {'-' * 8} {'-' * 8} {'-' * 8}")
     for cond in conditions:
         acc = summary[cond]
-        print(f"  {cond:15} {acc['accuracy']:>10.3f} {acc['acknowledged']:>6} {acc['violated']:>8} {acc['hallucinated']:>8} {acc['unhelpful']:>8}")
+        print(
+            f"  {cond:15} {acc['accuracy']:>10.3f} {acc['acknowledged']:>6} {acc['violated']:>8} {acc['hallucinated']:>8} {acc['unhelpful']:>8}"
+        )
 
     # Generate Markdown report
     if args.report:
@@ -512,8 +654,12 @@ def _generate_markdown_report(payload: dict, report_path: Path, total_items: int
 
     # Summary table
     lines.append("## Results Summary\n")
-    lines.append("| Condition | Accuracy | Acknowledged | Violated | Hallucinated | Unhelpful |")
-    lines.append("|-----------|----------|-------------|----------|-------------|-----------|")
+    lines.append(
+        "| Condition | Accuracy | Acknowledged | Violated | Hallucinated | Unhelpful |"
+    )
+    lines.append(
+        "|-----------|----------|-------------|----------|-------------|-----------|"
+    )
     for cond in payload["conditions"]:
         acc = payload["summary"][cond]
         lines.append(
@@ -533,7 +679,12 @@ def _generate_markdown_report(payload: dict, report_path: Path, total_items: int
                 if topic not in topic_stats:
                     topic_stats[topic] = {}
                 if cond not in topic_stats[topic]:
-                    topic_stats[topic][cond] = {"total": 0, "violated": 0, "hallucinated": 0, "unhelpful": 0}
+                    topic_stats[topic][cond] = {
+                        "total": 0,
+                        "violated": 0,
+                        "hallucinated": 0,
+                        "unhelpful": 0,
+                    }
                 topic_stats[topic][cond]["total"] += 1
                 if item.get("violated"):
                     topic_stats[topic][cond]["violated"] += 1
@@ -564,11 +715,15 @@ def _generate_markdown_report(payload: dict, report_path: Path, total_items: int
         diff = carrymem_acc - reminder_acc
         lines.append(f"- CarryMem: **{carrymem_acc:.3f}**")
         lines.append(f"- Reminder: {reminder_acc:.3f}")
-        lines.append(f"- Delta: **{diff:+.3f}** ({'CarryMem leads' if diff > 0 else 'Reminder leads'})")
+        lines.append(
+            f"- Delta: **{diff:+.3f}** ({'CarryMem leads' if diff > 0 else 'Reminder leads'})"
+        )
         lines.append("")
 
     lines.append("---")
-    lines.append(f"*Generated by PrefEval Official V2 (seed={payload['seed']}, config={payload['config_hash']})*")
+    lines.append(
+        f"*Generated by PrefEval Official V2 (seed={payload['seed']}, config={payload['config_hash']})*"
+    )
 
     with open(report_path, "w") as f:
         f.write("\n".join(lines))
