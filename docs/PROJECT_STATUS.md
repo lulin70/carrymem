@@ -53,6 +53,7 @@ process:
 | `dd430dc` | 2026-07-02 | isort — remove extra blank line in permissions.py | `from __future__ import annotations` followed by extra blank line (pre-existing, masked by Black failure) |
 | `a505ea3` | 2026-07-02 | mypy — add ignore_missing_imports + remove unused type: ignore | mypy.ini lacked `ignore_missing_imports`; 12 `import-not-found` errors for optional deps (openai/textual/pycld2/langdetect) not installed in CI |
 | `dc5f861` | 2026-07-03 | P3 tech debt cleanup — actions/checkout@v5 + optional-deps job + consolidate fail_under | Node.js 20 deprecation warnings (forced EOL 2026-06-02); optional-dep import errors undetected by CI; duplicate coverage fail_under config |
+| `2fad777` | 2026-07-06 | P2-P4 CarryMem system performance optimizations | classify_and_remember P95/P99 dual threshold; added remember_batch() fast path; encryption overhead threshold adjustment |
 
 ### Key Insight: Coverage Gate Was Not the Problem
 
