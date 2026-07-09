@@ -5,6 +5,12 @@
 **参与者**: PM + Architect 共识
 **状态**: Phase 1 已完成 ✅ | Phase 2-3 待实施
 
+> **Phase 1 交付记录**（2026-07-09）：
+> - Commit: `6aaa477` (push 到 origin/new-main)
+> - 文件变更: 44 files, +348/-70
+> - CI 验证: Tests (py3.12) ✅ + 6 job 通过（Syntax/Docs/i18n/Security/Build/Optional Deps）
+> - 已知问题: Lint (Quality Gate) ❌ — 预存 Black 格式问题（`_memory_crud.py` + `test_performance_benchmark.py`），在 4ac2ed3 就存在，非 Phase 1 回归，留待 tech debt cleanup 处理
+
 ## 1. 问题诊断
 
 ### 核心问题：API 双轨制认知负担

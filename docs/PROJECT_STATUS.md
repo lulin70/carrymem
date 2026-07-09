@@ -204,13 +204,18 @@ each py3.11 + py3.12).
 
 ## Next Milestone
 
-**v0.5.3** (next patch — planning TBD)
+**v0.5.4** (next patch — Phase 2: batch API + async migration)
 
-P3 tech debt cleanup is complete (commit `dc5f861`). Potential candidates
-for v0.5.3 (not yet committed):
-- Coverage improvement for optional-dep modules (now testable via
-  the `optional-deps` advisory job added in `dc5f861`)
-- Real LLM performance baselines
-- Codecov token integration
+Phase 1 (store_entry core API) is complete (commit `6aaa477`, 2026-07-09).
+Phase 2 candidates (see [CARRYMEM_OPTIMIZATION_PLAN_v0.5.3.md](CARRYMEM_OPTIMIZATION_PLAN_v0.5.3.md)):
+- `store_batch(List[dict]) -> List[StoredMemory]` + `delete_batch(List[str]) -> Dict[str, bool]`
+- SQLiteAdapter atomic transaction batch implementations
+- AsyncStorageAdapter migration to store/delete/store_batch
+- Core layer `remember_batch()` → `store_batch()` migration
+- MIGRATION.md release guide
+
+Known tech debt to address:
+- Pre-existing Black/isort format issues in `_memory_crud.py` + `test_performance_benchmark.py`
+  (Lint CI job failure, not a Phase 1 regression — present since 4ac2ed3)
 
 See [ROADMAP.md](ROADMAP.md) for long-term planning.
