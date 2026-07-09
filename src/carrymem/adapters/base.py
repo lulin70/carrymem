@@ -468,6 +468,49 @@ class StorageAdapter(ABC):
         """
         ...
 
+    # ── Batch Operations (v0.5.4+) ──────────────────────────────────────
+
+    def store_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:
+        """Store multiple memory entries in a single batch operation.
+
+        Default implementation calls store_entry() for each entry. Override
+        for atomic batch operations (e.g., SQLiteAdapter uses BEGIN/commit/rollback
+        to ensure all-or-nothing semantics).
+
+        Args:
+            entries: List of MemoryEntry objects to persist.
+
+        Returns:
+            List of StoredMemory objects (same order as input) with full
+            storage metadata populated by the adapter.
+        """
+        results = []
+        for entry in entries:
+            results.append(self.store_entry(entry))
+        return results
+
+    def delete_batch(self, storage_keys: List[str]) -> Dict[str, bool]:
+        """Delete multiple memories by their storage keys.
+
+        Default implementation calls delete() for each key. Override for
+        atomic batch operations.
+
+        Args:
+            storage_keys: List of storage_key strings to delete.
+
+        Returns:
+            Dict mapping each storage_key to its deletion result (True if
+            deleted, False if not found). Keys that cause exceptions will
+            have False as their value.
+        """
+        results: Dict[str, bool] = {}
+        for key in storage_keys:
+            try:
+                results[key] = self.delete(key)
+            except Exception:
+                results[key] = False
+        return results
+
     # ── Legacy Interface (deprecated, with default implementations) ─────
 
     def remember(self, entry: MemoryEntry) -> StoredMemory:
@@ -493,9 +536,8 @@ class StorageAdapter(ABC):
     def remember_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:
         """Store multiple memory entries.
 
-        Default implementation calls store_entry() for each entry to preserve
-        full storage metadata (importance_score, version, created_at, etc.).
-        Override for atomic batch operations.
+        .. deprecated:: 0.5.4
+            Use ``store_batch()`` instead. Will be removed in v0.6.0.
 
         Args:
             entries: List of MemoryEntry objects to persist
@@ -503,10 +545,12 @@ class StorageAdapter(ABC):
         Returns:
             List of StoredMemory objects (same order as input)
         """
-        results = []
-        for entry in entries:
-            results.append(self.store_entry(entry))
-        return results
+        warnings.warn(
+            "remember_batch() is deprecated, use store_batch() instead. " "Will be removed in v0.6.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.store_batch(entries)
 
     def forget(self, storage_key: str) -> bool:
         """Delete a memory by its storage key.
@@ -656,11 +700,22 @@ class AsyncStorageAdapter(Protocol):
     Same interface as StorageAdapter, but all methods are async.
     """
 
-    async def remember(self, entry: MemoryEntry) -> StoredMemory:
-        """Store a memory entry asynchronously."""
+    # ── Current API (v0.5.4+) ───────────────────────────────────────────
 
-    async def remember_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:
-        """Store multiple memory entries asynchronously."""
+    async def store_entry(self, entry: MemoryEntry) -> StoredMemory:
+        """Store a MemoryEntry and return StoredMemory with full metadata."""
+
+    async def store(self, entry: dict) -> str:
+        """Store a dict entry and return the storage_key."""
+
+    async def store_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:
+        """Batch store entries, returning full metadata for each."""
+
+    async def delete(self, entry_id: str) -> bool:
+        """Delete a memory by its entry ID."""
+
+    async def delete_batch(self, storage_keys: List[str]) -> Dict[str, bool]:
+        """Batch delete by storage keys, returning per-key result."""
 
     async def recall(
         self,
@@ -669,9 +724,6 @@ class AsyncStorageAdapter(Protocol):
         limit: int = 20,
     ) -> List[StoredMemory]:
         """Retrieve memories matching the query asynchronously."""
-
-    async def forget(self, storage_key: str) -> bool:
-        """Delete a memory by key asynchronously."""
 
     async def forget_expired(self) -> int:
         """Delete expired memories asynchronously."""
@@ -686,6 +738,17 @@ class AsyncStorageAdapter(Protocol):
     @property
     def capabilities(self) -> Dict[str, bool]:
         """Mapping of capability name to whether it is supported."""
+
+    # ── Legacy API (deprecated, will be removed in v0.6.0) ──────────────
+
+    async def remember(self, entry: MemoryEntry) -> StoredMemory:
+        """Store a memory entry asynchronously. (deprecated, use store_entry)"""
+
+    async def remember_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:
+        """Store multiple memory entries asynchronously. (deprecated, use store_batch)"""
+
+    async def forget(self, storage_key: str) -> bool:
+        """Delete a memory by key asynchronously. (deprecated, use delete)"""
 
 
 class TestStorageAdapterContract:
@@ -787,6 +850,56 @@ class TestStorageAdapterContract:
         stored = self.adapter.remember_batch(entries)
         assert len(stored) == 5
         assert all(s.storage_key != "" for s in stored)
+
+    def test_store_batch(self):
+        """store_batch() must store all entries and return StoredMemory list.
+
+        Verifies:
+        - Returns list of StoredMemory with same length as input.
+        - Each StoredMemory has a non-empty storage_key.
+        - Results are in the same order as input entries.
+        - Stored entries are retrievable via recall().
+        """
+        entries = [
+            MemoryEntry(id=f"store-batch-{i}", type="fact_declaration", content=f"batch fact {i}") for i in range(5)
+        ]
+
+        stored = self.adapter.store_batch(entries)
+
+        assert len(stored) == 5
+        assert all(isinstance(s, StoredMemory) for s in stored)
+        assert all(s.storage_key != "" for s in stored)
+        assert all(s.content == f"batch fact {i}" for i, s in enumerate(stored))
+
+        results = self.adapter.recall("batch fact", limit=10)
+        assert len(results) >= 5
+
+    def test_delete_batch(self):
+        """delete_batch() must delete multiple memories and return per-key results.
+
+        Verifies:
+        - Returns dict mapping each storage_key to True/False.
+        - Existing keys are deleted (True).
+        - Non-existent keys return False.
+        - Deleted entries are no longer retrievable.
+        """
+        entries = [
+            MemoryEntry(id=f"del-batch-{i}", type="task_pattern", content=f"delete target {i}") for i in range(3)
+        ]
+        stored = self.adapter.store_batch(entries)
+        keys_to_delete = [s.storage_key for s in stored]
+
+        results = self.adapter.delete_batch(keys_to_delete)
+
+        assert isinstance(results, dict)
+        assert len(results) == 3
+        assert all(v is True for v in results.values())
+
+        mixed_keys = keys_to_delete[:1] + ["nonexistent_key_12345"]
+        mixed_results = self.adapter.delete_batch(mixed_keys)
+
+        assert mixed_results[keys_to_delete[0]] is False  # already deleted
+        assert mixed_results["nonexistent_key_12345"] is False
 
     def test_adapter_name_and_capabilities(self):
         """Adapter must have name and capabilities."""

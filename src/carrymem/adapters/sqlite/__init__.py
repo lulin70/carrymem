@@ -385,9 +385,33 @@ class SQLiteAdapter(StorageAdapter):
         """
         return self._crud.remember(entry)
 
+    def store_batch(self, entries: list) -> list:
+        """Store multiple MemoryEntry objects in a single atomic transaction.
+
+        Args:
+            entries: List of MemoryEntry objects to persist.
+
+        Returns:
+            List of StoredMemory objects (same order as input) with full
+            storage metadata populated by the adapter.
+        """
+        return self._crud.store_batch(entries)
+
     def delete(self, entry_id: str) -> bool:
         """Delete a memory by its storage_key."""
         return self._crud.forget(entry_id)
+
+    def delete_batch(self, storage_keys: list) -> dict:
+        """Delete multiple memories by storage_key in a single atomic transaction.
+
+        Args:
+            storage_keys: List of storage_key strings to delete.
+
+        Returns:
+            Dict mapping each storage_key to its deletion result (True if
+            deleted, False if not found).
+        """
+        return self._crud.delete_batch(storage_keys)
 
     def count(self, filter_: Optional[dict] = None) -> int:
         """Count stored memories with optional filtering.

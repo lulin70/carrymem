@@ -3,8 +3,9 @@
 import json
 import sqlite3
 import struct
+import warnings
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from ...scoring import calculate_importance
 from ...utils.helpers import TIER_TTL, content_hash
@@ -161,8 +162,12 @@ class CRUDOperations:
         stored.version = 1
         return stored
 
-    def remember_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:
-        """Insert multiple entries in a single transaction."""
+    def store_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:
+        """Insert multiple entries in a single atomic transaction.
+
+        Uses BEGIN/commit/rollback to ensure all-or-nothing semantics: if any
+        entry fails, the entire batch is rolled back and the exception re-raised.
+        """
         with self._adapter._conn_mgr.file_lock:
             conn = self._adapter._conn_mgr.get_connection()
             results = []
@@ -174,10 +179,74 @@ class CRUDOperations:
                 conn.commit()
             except (sqlite3.Error, ValueError) as e:
                 conn.rollback()
-                logger.warning("Batch remember failed, rolled back: %s", e)
+                logger.warning("Batch store failed, rolled back: %s", e)
                 raise
         if self._adapter._enable_cache and self._adapter._cache:
             self._adapter._cache.invalidate(self._adapter.namespace)
+        return results
+
+    def remember_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:
+        """Insert multiple entries in a single transaction.
+
+        .. deprecated:: 0.5.4
+            Use :meth:`store_batch` instead. Will be removed in v0.6.0.
+        """
+        warnings.warn(
+            "remember_batch() is deprecated, use store_batch() instead. " "Will be removed in v0.6.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.store_batch(entries)
+
+    def delete_batch(self, storage_keys: List[str]) -> Dict[str, bool]:
+        """Delete multiple memories by storage_key in a single atomic transaction.
+
+        Uses BEGIN/commit/rollback to ensure atomicity on SQL errors. Keys that
+        are not found are recorded as False (not an error). On sqlite3.Error the
+        entire batch is rolled back and the exception re-raised.
+        """
+        results: Dict[str, bool] = {}
+        with self._adapter._conn_mgr.file_lock:
+            conn = self._adapter._conn_mgr.get_connection()
+            try:
+                conn.execute("BEGIN")
+                for key in storage_keys:
+                    memory_id = None
+                    row = conn.execute(
+                        "SELECT id FROM memories WHERE storage_key = ? AND namespace = ?",
+                        (key, self._adapter.namespace),
+                    ).fetchone()
+                    if row:
+                        memory_id = row["id"]
+                    cursor = conn.execute(
+                        "DELETE FROM memories WHERE storage_key = ? AND namespace = ?",
+                        (key, self._adapter.namespace),
+                    )
+                    results[key] = cursor.rowcount > 0
+                    if memory_id and self._adapter._enable_vector:
+                        try:
+                            conn.execute(
+                                "DELETE FROM memory_vectors WHERE memory_id = ?",
+                                (memory_id,),
+                            )
+                        except sqlite3.Error as e:
+                            logger.warning("Failed to delete vector for memory %s: %s", memory_id, e)
+                conn.commit()
+            except sqlite3.Error as e:
+                conn.rollback()
+                logger.warning("Batch delete failed, rolled back: %s", e)
+                raise
+        if self._adapter._enable_cache and self._adapter._cache:
+            deleted_keys = {k for k, v in results.items() if v}
+            if deleted_keys:
+                self._adapter._cache.invalidate_keys(self._adapter.namespace, deleted_keys)
+        if self._adapter._audit:
+            for key, ok in results.items():
+                self._adapter._audit.log_operation(
+                    operation="forget",
+                    storage_key=key,
+                    success=ok,
+                )
         return results
 
     def forget(self, storage_key: str) -> bool:

@@ -229,8 +229,16 @@ class ObsidianAdapter(StorageAdapter):
         """ObsidianAdapter is read-only — storing is not supported."""
         raise NotImplementedError("ObsidianAdapter is read-only")
 
+    def store_batch(self, entries: list) -> list:
+        """ObsidianAdapter is read-only — batch storing is not supported."""
+        raise NotImplementedError("ObsidianAdapter is read-only")
+
     def delete(self, entry_id: str) -> bool:
         """ObsidianAdapter is read-only — deleting is not supported."""
+        raise NotImplementedError("ObsidianAdapter is read-only")
+
+    def delete_batch(self, storage_keys: list) -> dict:
+        """ObsidianAdapter is read-only — batch deleting is not supported."""
         raise NotImplementedError("ObsidianAdapter is read-only")
 
     def count(self, filter_: Optional[dict] = None) -> int:

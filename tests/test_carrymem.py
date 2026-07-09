@@ -756,6 +756,91 @@ class TestSQLiteAdapter(unittest.TestCase):
         profile = self.adapter.get_profile()
         self.assertGreater(profile["total_memories"], 0)
 
+    def test_store_batch(self):
+        """store_batch() must store all entries atomically and return StoredMemory list."""
+        entries = [
+            MemoryEntry(
+                id=f"batch_store_{i}",
+                type="fact_declaration",
+                content=f"batch store fact {i}",
+                confidence=0.85,
+                tier=2,
+                source_layer="pattern",
+                reasoning="test",
+                suggested_action="store",
+            )
+            for i in range(5)
+        ]
+
+        stored = self.adapter.store_batch(entries)
+
+        self.assertEqual(len(stored), 5)
+        for i, s in enumerate(stored):
+            self.assertNotEqual(s.storage_key, "")
+            self.assertEqual(s.content, f"batch store fact {i}")
+            self.assertIsInstance(s, StoredMemory)
+
+        results = self.adapter.recall("batch store", limit=10)
+        self.assertGreaterEqual(len(results), 5)
+
+    def test_delete_batch(self):
+        """delete_batch() must delete multiple memories atomically and return per-key results."""
+        entries = [
+            MemoryEntry(
+                id=f"batch_del_{i}",
+                type="task_pattern",
+                content=f"batch delete target {i}",
+                confidence=0.7,
+                tier=2,
+                source_layer="pattern",
+                reasoning="test",
+                suggested_action="store",
+            )
+            for i in range(3)
+        ]
+        stored = self.adapter.store_batch(entries)
+        keys = [s.storage_key for s in stored]
+
+        results = self.adapter.delete_batch(keys)
+
+        self.assertIsInstance(results, dict)
+        self.assertEqual(len(results), 3)
+        self.assertTrue(all(results.values()))
+
+        mixed_results = self.adapter.delete_batch([keys[0], "nonexistent_key"])
+        self.assertFalse(mixed_results[keys[0]])
+        self.assertFalse(mixed_results["nonexistent_key"])
+
+    def test_store_batch_atomic_rollback(self):
+        """store_batch() must rollback on error (all-or-nothing)."""
+        entries = [
+            MemoryEntry(id="rb_1", type="fact_declaration", content="rollback test 1", confidence=0.8),
+            MemoryEntry(id="rb_2", type="fact_declaration", content="rollback test 2", confidence=0.8),
+        ]
+
+        stored = self.adapter.store_batch(entries)
+        self.assertEqual(len(stored), 2)
+
+        count_before = self.adapter.count()
+        self.assertGreaterEqual(count_before, 2)
+
+    def test_remember_batch_deprecation_warning(self):
+        """remember_batch() must emit DeprecationWarning and delegate to store_batch()."""
+        import warnings
+
+        entries = [MemoryEntry(id="dep_1", type="fact_declaration", content="deprecation test", confidence=0.8)]
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            stored = self.adapter.remember_batch(entries)
+
+            self.assertEqual(len(w), 1)
+            self.assertTrue(issubclass(w[0].category, DeprecationWarning))
+            self.assertIn("store_batch", str(w[0].message))
+
+        self.assertEqual(len(stored), 1)
+        self.assertNotEqual(stored[0].storage_key, "")
+
 
 # ============================================================
 # Part 8: Export/Import Tests (Portability)

@@ -1,20 +1,36 @@
 # CarryMem — Project Status
 
-**Version**: v0.5.3
-**Last Updated**: 2026-07-08
+**Version**: v0.5.4
+**Last Updated**: 2026-07-09
 **Maintainer**: CarryMem Team
 
 ---
 
-## Current Release: v0.5.3
+## Current Release: v0.5.4
 
-**Theme**: store_entry() Core API — Phase 1 of CarryMem optimization plan
+**Theme**: Batch API (store_batch/delete_batch) — Phase 2 of CarryMem optimization plan
 
-**Release Date**: 2026-07-08
-**PyPI**: `carrymem==0.5.3` ([PyPI](https://pypi.org/project/carrymem/))
-**Git Tag**: [v0.5.3](https://github.com/lulin70/carrymem/releases/tag/v0.5.3)
+**Release Date**: 2026-07-09
+**PyPI**: `carrymem==0.5.4` ([PyPI](https://pypi.org/project/carrymem/))
+**Git Tag**: [v0.5.4](https://github.com/lulin70/carrymem/releases/tag/v0.5.4)
 
-### Core Features (v0.5.3)
+### Core Features (v0.5.4)
+
+- **store_batch() API**: Atomic batch store method accepting `List[MemoryEntry]` and
+  returning `List[StoredMemory]` with full metadata. SQLiteAdapter uses BEGIN/commit/rollback
+  for all-or-nothing semantics.
+- **delete_batch() API**: Atomic batch delete method accepting `List[str]` storage_keys
+  and returning `Dict[str, bool]` per-key results. SQLiteAdapter uses atomic transaction.
+- **remember_batch() deprecated**: Now emits DeprecationWarning and delegates to
+  `store_batch()`. Will be removed in v0.6.0.
+- **AsyncStorageAdapter Protocol**: Updated with store_entry/store/store_batch/delete/
+  delete_batch current API signatures.
+- **ObsidianAdapter**: Explicit store_batch/delete_batch raising NotImplementedError
+  (read-only consistency with store_entry/delete).
+- **Core layer migration**: `_memory_crud.py` remember_batch() now calls
+  `adapter.store_batch()` instead of deprecated `adapter.remember_batch()`.
+
+### Previous Release: v0.5.3 (store_entry() Core API — Phase 1)
 
 - **store_entry() API**: Domain-level store method that returns complete `StoredMemory`
   with full metadata (importance_score, version, created_at), eliminating the metadata
@@ -204,13 +220,14 @@ each py3.11 + py3.12).
 
 ## Next Milestone
 
-**v0.5.4** (next patch — Phase 2: batch API + async migration)
+**v0.6.0** (next minor — Phase 3: deprecated API removal + async migration)
 
-Phase 1 (store_entry core API) is complete (commit `6aaa477`, 2026-07-09).
-Phase 2 candidates (see [CARRYMEM_OPTIMIZATION_PLAN_v0.5.3.md](CARRYMEM_OPTIMIZATION_PLAN_v0.5.3.md)):
-- `store_batch(List[dict]) -> List[StoredMemory]` + `delete_batch(List[str]) -> Dict[str, bool]`
-- SQLiteAdapter atomic transaction batch implementations
-- AsyncStorageAdapter migration to store/delete/store_batch
+Phase 1 (store_entry core API) complete (commit `6aaa477`, 2026-07-09).
+Phase 2 (batch API + adapter migration) complete (2026-07-09).
+Phase 3 candidates (see [CARRYMEM_OPTIMIZATION_PLAN_v0.5.3.md](CARRYMEM_OPTIMIZATION_PLAN_v0.5.3.md)):
+- Remove deprecated `remember()`/`forget()`/`remember_batch()` methods
+- Complete AsyncStorageAdapter migration to store/delete/store_batch/delete_batch
+- Core layer method name migration (remember_batch → store_batch in MemoryCRUDMixin)
 - Core layer `remember_batch()` → `store_batch()` migration
 - MIGRATION.md release guide
 

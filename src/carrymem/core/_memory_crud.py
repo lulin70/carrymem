@@ -80,8 +80,8 @@ class MemoryCRUDMixin:
         # 1. Validate & resolve (coreference + redaction check)
         # _validate_and_resolve is provided by ClassificationMixin at runtime
         validator = self._validate_and_resolve  # type: ignore[attr-defined]
-        resolved_message, should_continue, redact_result, coreference_resolved = (
-            validator(message, context, force_type, session_id)
+        resolved_message, should_continue, redact_result, coreference_resolved = validator(
+            message, context, force_type, session_id
         )
         if not should_continue:
             return {
@@ -115,9 +115,7 @@ class MemoryCRUDMixin:
                 "error": str(e),  # type: ignore[typeddict-unknown-key]
             }
         if isinstance(classify_result, list) and len(classify_result) == 0:
-            base_result = self.classify_message(
-                resolved_message, context=context, language=language
-            )
+            base_result = self.classify_message(resolved_message, context=context, language=language)
             return {
                 **base_result,
                 "stored": False,
@@ -135,29 +133,17 @@ class MemoryCRUDMixin:
                 force_type,
                 session_id,
             )
-            if (
-                self._adapter
-                and hasattr(self._adapter, "_audit")
-                and self._adapter._audit
-            ):
+            if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:
                 self._adapter._audit.log_operation(
                     "remember",
-                    storage_key=result.get("storage_keys", [None])[0]
-                    if result.get("storage_keys")
-                    else None,
-                    memory_type=classify_result.get("memory_type")
-                    if isinstance(classify_result, dict)
-                    else None,
+                    storage_key=result.get("storage_keys", [None])[0] if result.get("storage_keys") else None,
+                    memory_type=classify_result.get("memory_type") if isinstance(classify_result, dict) else None,
                     success=True,
                     details={"message_preview": message[:100]},
                 )
             return result  # type: ignore[no-any-return]
         except Exception as exc:
-            if (
-                self._adapter
-                and hasattr(self._adapter, "_audit")
-                and self._adapter._audit
-            ):
+            if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:
                 self._adapter._audit.log_operation(
                     "remember",
                     success=False,
@@ -231,7 +217,7 @@ class MemoryCRUDMixin:
 
             if entries:
                 try:
-                    stored = self._adapter.remember_batch(entries)
+                    stored = self._adapter.store_batch(entries)
                     for s in stored:
                         storage_keys.append(s.storage_key)
                 except (ValueError, KeyError, TypeError, RuntimeError) as e:
@@ -240,9 +226,7 @@ class MemoryCRUDMixin:
             # Slow path: classify each message individually.
             for msg in messages:
                 try:
-                    result = self.classify_and_remember(
-                        msg, session_id=session_id, user_id=user_id
-                    )
+                    result = self.classify_and_remember(msg, session_id=session_id, user_id=user_id)
                     storage_keys.extend(result.get("storage_keys", []))
                 except (ValueError, KeyError, TypeError, RuntimeError) as e:
                     errors.append(str(e))
@@ -265,9 +249,7 @@ class MemoryCRUDMixin:
         validate_message(message, max_length=MAX_MESSAGE_LENGTH)
         validate_context(context)
         validate_language(language)
-        result = self._engine.process_message(
-            message, context=context, language=language
-        )
+        result = self._engine.process_message(message, context=context, language=language)
 
         matches = result.get("matches", [])
         entries = []
@@ -419,11 +401,7 @@ class MemoryCRUDMixin:
 
         result = self._adapter.update_memory(storage_key, new_content, reason)
         if result is None:
-            if (
-                self._adapter
-                and hasattr(self._adapter, "_audit")
-                and self._adapter._audit
-            ):
+            if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:
                 self._adapter._audit.log_operation(
                     "update",
                     storage_key=storage_key,
@@ -511,9 +489,7 @@ class MemoryCRUDMixin:
         ns_list = namespaces or [self._namespace]
         all_memories = []
         for ns in ns_list:
-            results = self._adapter.recall(
-                "", limit=BATCH_RECALL_LIMIT, namespaces=[ns]
-            )
+            results = self._adapter.recall("", limit=BATCH_RECALL_LIMIT, namespaces=[ns])
             all_memories.extend([r.to_dict() for r in results])
 
         conflicts_before = len(all_memories)

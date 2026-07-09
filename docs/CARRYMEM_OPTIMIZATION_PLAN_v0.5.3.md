@@ -3,13 +3,23 @@
 **版本**: v0.5.3 规划
 **日期**: 2026-07-08
 **参与者**: PM + Architect 共识
-**状态**: Phase 1 已完成 ✅ | Phase 2-3 待实施
+**状态**: Phase 1 已完成 ✅ | Phase 2 已完成 ✅ | Phase 3 待实施
 
 > **Phase 1 交付记录**（2026-07-09）：
 > - Commit: `6aaa477` (push 到 origin/new-main)
 > - 文件变更: 44 files, +348/-70
 > - CI 验证: Tests (py3.12) ✅ + 6 job 通过（Syntax/Docs/i18n/Security/Build/Optional Deps）
 > - 已知问题: Lint (Quality Gate) ❌ — 预存 Black 格式问题（`_memory_crud.py` + `test_performance_benchmark.py`），在 4ac2ed3 就存在，非 Phase 1 回归，留待 tech debt cleanup 处理
+
+> **Phase 2 交付记录**（2026-07-09）：
+> - 版本: v0.5.3 → v0.5.4 (MINOR 递增，新增向后兼容的批量 API)
+> - 新增 API: `store_batch(List[MemoryEntry]) -> List[StoredMemory]` + `delete_batch(List[str]) -> Dict[str, bool]`
+> - 原子事务: SQLiteAdapter 使用 BEGIN/commit/rollback 实现 all-or-nothing 语义
+> - 迁移: `_memory_crud.py` remember_batch 调用从 adapter.remember_batch → adapter.store_batch
+> - Deprecated: `remember_batch()` 标记 deprecated，委托 store_batch，v0.6.0 移除
+> - 测试: 4 个新测试 (store_batch/delete_batch/atomic_rollback/deprecation_warning) + 2 个契约测试
+> - 回归: 495+ 测试 0 失败（排除 e2e_large_dataset 预存超时）
+> - 文件变更: crud.py + sqlite/__init__.py + obsidian_adapter.py + _memory_crud.py + base.py + test_carrymem.py + __version__.py + CHANGELOG.md + PROJECT_STATUS.md + 本文档
 
 ## 1. 问题诊断
 
@@ -77,14 +87,50 @@
 
 ### Phase 2: 批量 API + Async 迁移（v0.5.4，P0）
 
-| 步骤 | 文件 | 内容 |
-|------|------|------|
-| 2.1 | `adapters/base.py` | 新增 `store_batch(List[dict]) -> List[StoredMemory]` |
-| 2.2 | `adapters/base.py` | 新增 `delete_batch(List[str]) -> Dict[str, bool]` |
-| 2.3 | `adapters/sqlite/__init__.py` | 实现原子事务版 store_batch/delete_batch |
-| 2.4 | `core/_memory_crud.py` | `remember_batch()` 迁移为 `store_batch()` |
-| 2.5 | `adapters/base.py` | AsyncStorageAdapter 迁移到 store/delete/store_batch |
-| 2.6 | MIGRATION.md | 发布迁移指南 |
+#### API 设计（Architect 共识）
+
+**设计原则**：与 Phase 1 的 `store_entry` 保持一致——"对象进对象出"的领域 API。
+
+```python
+# 新增方法
+def store_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:
+    """Batch store entries, returning full metadata for each.
+
+    Default impl: loop store_entry(). Override for atomic transactions.
+    """
+
+def delete_batch(self, storage_keys: List[str]) -> Dict[str, bool]:
+    """Batch delete by storage keys.
+
+    Default impl: loop delete(). Returns {key: success} mapping.
+    Override for atomic transactions (all-or-nothing rollback).
+    """
+```
+
+**签名决策**：
+- `store_batch(List[MemoryEntry])` 而非 `List[dict]` — 与 `store_entry` 一致，对象进对象出
+- `delete_batch(List[str]) -> Dict[str, bool]` — 返回每个 key 的结果，便于部分失败诊断
+- 原子事务策略：SQLiteAdapter 全部成功或全部回滚（BEGIN/commit/rollback）
+
+#### 实施步骤
+
+| 步骤 | 文件 | 内容 | 复杂度 | 状态 |
+|------|------|------|--------|------|
+| 2.1 | `adapters/base.py` | `StorageAdapter.store_batch()` 默认实现（循环 store_entry） | 低 | ✅ |
+| 2.2 | `adapters/base.py` | `StorageAdapter.delete_batch()` 默认实现（循环 delete） | 低 | ✅ |
+| 2.3 | `adapters/base.py` | `remember_batch` 标记 deprecated，委托 `store_batch` | 低 | ✅ |
+| 2.4 | `adapters/base.py` | `AsyncStorageAdapter` Protocol 新增 store_entry/store/delete/store_batch/delete_batch | 中 | ✅ |
+| 2.5 | `sqlite/crud.py` | `store_batch` 复用现有 `remember_batch` 原子事务逻辑 | 低 | ✅ |
+| 2.6 | `sqlite/crud.py` | `delete_batch` 原子事务版（BEGIN/commit/rollback） | 中 | ✅ |
+| 2.7 | `sqlite/__init__.py` | SQLiteAdapter 新增 store_batch/delete_batch 转发 | 低 | ✅ |
+| 2.8 | `core/_memory_crud.py` | `remember_batch()` 中 `remember_batch` → `store_batch` | 低 | ✅ |
+| 2.9 | `json_adapter.py` | 继承默认实现（无需修改） | 低 | ✅ |
+| 2.10 | `obsidian_adapter.py` | `store_batch`/`delete_batch` raise NotImplementedError (只读) | 低 | ✅ |
+| 2.11 | `core/_protocols.py` | MemoryCRUDOps Protocol 保持不变（核心层方法名未迁移） | 低 | ✅ |
+| 2.12 | `adapters/base.py` | TestStorageAdapterContract 新增 store_batch/delete_batch 契约测试 | 中 | ✅ |
+| 2.13 | 测试修复 | _MinimalAdapter + DummyAdapter 继承默认实现（无需修改） | 低 | ✅ |
+| 2.14 | CHANGELOG + PROJECT_STATUS | 版本号 + 文档更新（MIGRATION.md 延迟至 v0.6.0） | 低 | ✅ |
+| 2.15 | 全量回归 | pytest + black --line-length=120 + flake8 + isort + mypy | - | ✅ |
 
 ### Phase 3: 架构清理（v0.6.0，P1）
 

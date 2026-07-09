@@ -43,6 +43,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Memory leak**: Fixed `lru_cache` on instance method pinning `self` in `semantic/expander.py` (18% → 91% GC recovery)
 - **CI gate**: Fixed `| tee` swallowing pytest exit code and removed `--maxfail=10` limit
 
+## [0.5.4] - 2026-07-09 (Batch API — Phase 2)
+
+### Added
+- **`StorageAdapter.store_batch()`**: Atomic batch store method accepting
+  `List[MemoryEntry]` and returning `List[StoredMemory]` with full metadata.
+  Default implementation loops `store_entry()`; SQLiteAdapter overrides with
+  BEGIN/commit/rollback for all-or-nothing semantics.
+- **`StorageAdapter.delete_batch()`**: Atomic batch delete method accepting
+  `List[str]` storage_keys and returning `Dict[str, bool]` per-key results.
+  Default implementation loops `delete()`; SQLiteAdapter overrides with atomic
+  transaction (keys not found return False, not an error).
+- **`SQLiteAdapter.store_batch()`/`delete_batch()`**: Atomic transaction
+  implementations using file_lock + BEGIN/commit/rollback pattern.
+- **`ObsidianAdapter.store_batch()`/`delete_batch()`**: Explicit
+  NotImplementedError (read-only consistency with store_entry/delete).
+- **`AsyncStorageAdapter` Protocol**: Updated with current API signatures
+  (store_entry/store/store_batch/delete/delete_batch/recall/forget_expired/get_stats).
+- **`TestStorageAdapterContract`**: New `test_store_batch` and `test_delete_batch`
+  contract tests for all adapter implementations.
+- **`TestSQLiteAdapter`**: 4 new tests — `test_store_batch`,
+  `test_delete_batch`, `test_store_batch_atomic_rollback`,
+  `test_remember_batch_deprecation_warning`.
+
+### Changed
+- **`remember_batch()` deprecated**: Now emits `DeprecationWarning` and delegates
+  to `store_batch()`. Will be removed in v0.6.0. Applies to both
+  `StorageAdapter.remember_batch()` (base) and `CRUDOperations.remember_batch()`
+  (SQLite).
+- **`_memory_crud.py`**: `remember_batch()` method now calls
+  `adapter.store_batch()` instead of deprecated `adapter.remember_batch()`.
+- **`SQLiteAdapter`**: Added `store_batch()`/`delete_batch()` forwarding methods
+  to `__init__.py` facade.
+
+### Fixed
+- N/A (no bug fixes in this release — feature addition only)
+
 ## [0.5.3] - 2026-07-08 (store_entry() Core API — Phase 1)
 
 ### Added
