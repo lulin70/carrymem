@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 from ..utils.helpers import content_hash, escape_like
-from .base import StorageAdapter
+from .base import MemoryEntry, StorageAdapter, StoredMemory
 
 _OBSIDIAN_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS notes (
@@ -222,6 +222,10 @@ class ObsidianAdapter(StorageAdapter):
             self.index_vault()
 
     def store(self, entry: dict) -> str:
+        """ObsidianAdapter is read-only — storing is not supported."""
+        raise NotImplementedError("ObsidianAdapter is read-only")
+
+    def store_entry(self, entry: MemoryEntry) -> StoredMemory:
         """ObsidianAdapter is read-only — storing is not supported."""
         raise NotImplementedError("ObsidianAdapter is read-only")
 

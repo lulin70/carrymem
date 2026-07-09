@@ -30,7 +30,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 - Second digit changes for GA milestones (API stability guarantee)
 - No "v1.0.0 jump" — earn it through proven production usage
 
-> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. Current version is v0.5.2, including auto-backup, encrypted .carry files, concurrent safety, E2E tests, **PrefEval 83.0%** (200-sample, 3-condition canonical), state/event version chain, security hardening, preference injection optimization, context.py modularization, and consolidation scheduling. Next milestone: v0.5.3.
+> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. Current version is v0.5.3, including auto-backup, encrypted .carry files, concurrent safety, E2E tests, **PrefEval 83.0%** (200-sample, 3-condition canonical), state/event version chain, security hardening, preference injection optimization, context.py modularization, consolidation scheduling, and store_entry() core API (Phase 1 optimization). Next milestone: v0.5.4 (batch API + async migration).
 
 ---
 
@@ -740,5 +740,5 @@ carrymem unpack team-identity.carry
 
 ---
 
-**Next Milestone**: v0.5.3 (next patch — planning TBD)
+**Next Milestone**: v0.5.4 (batch API + async migration — Phase 2 of optimization plan)
 **Status**: ✅ **v0.4.0 complete (4198 tests, 80%+ coverage, Memory + Rules + Knowledge + Enterprise)**

@@ -348,7 +348,7 @@ class MemoryCRUDMixin:
         stored_memories = []
         storage_keys = []
         for entry in matches:
-            stored = self._adapter.remember(entry)
+            stored = self._adapter.store_entry(entry)
             stored_memories.append(stored.to_dict())
             storage_keys.append(stored.storage_key)
 
@@ -390,7 +390,7 @@ class MemoryCRUDMixin:
             raise StorageNotConfiguredError()
 
         validate_storage_key(memory_id)
-        result = self._adapter.forget(memory_id)
+        result = self._adapter.delete(memory_id)
         self._auto_backup()  # type: ignore[attr-defined]
 
         if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:

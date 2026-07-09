@@ -43,6 +43,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Memory leak**: Fixed `lru_cache` on instance method pinning `self` in `semantic/expander.py` (18% → 91% GC recovery)
 - **CI gate**: Fixed `| tee` swallowing pytest exit code and removed `--maxfail=10` limit
 
+## [0.5.3] - 2026-07-08 (store_entry() Core API — Phase 1)
+
+### Added
+- **`StorageAdapter.store_entry()` abstract method**: Domain-level store API that
+  accepts a `MemoryEntry` object and returns a complete `StoredMemory` with all
+  storage metadata (importance_score, version, created_at, updated_at) populated
+  by the adapter. This eliminates the metadata loss bug where `store()` (dict→str)
+  discarded the `StoredMemory` returned by the internal CRUD layer.
+- **`TestStorageAdapterContract.test_store_entry_returns_full_metadata`**: Contract
+  test verifying that `store_entry()` returns a `StoredMemory` with
+  `importance_score > 0.0`, `version >= 1`, and non-null `created_at`/`updated_at`.
+- **`CARRYMEM_OPTIMIZATION_PLAN_v0.5.3.md`**: PM+Architect consensus optimization
+  plan covering 3 phases (store_entry API → batch/async → deprecated removal).
+
+### Changed
+- **Core layer migrated to `store_entry()`**: 5 call sites in `_memory_crud.py`,
+  `_classification.py`, `_profile_export.py`, `_prompt_delegate.py` (×2) migrated
+  from deprecated `remember()` to `store_entry()`, preserving full metadata flow.
+- **`remember_batch()` default implementation**: Now calls `store_entry()` instead
+  of `store()` + `StoredMemory.from_memory_entry()`, eliminating metadata loss
+  (importance_score was defaulting to 0.0 in the old path).
+- **`_maintenance.py`**: 2 `forget()` call sites migrated to `delete()`.
+- **`MemoryCRUDOps` Protocol**: Added `remember_batch` method signature to fix
+  Protocol coverage test (`test_mixin_public_methods_covered_by_protocol`).
+- **mypy `python_version`**: 3.9 → 3.12 (aligned with black target-version and
+  actual runtime).
+- **All 3 adapters** (SQLite/JSON/Obsidian): Implemented `store_entry()`.
+  SQLiteAdapter delegates to `_crud.remember()`, JSONAdapter delegates to
+  `_store_entry()`, ObsidianAdapter raises `NotImplementedError` (read-only).
+
+### Fixed
+- **`test_storage_error_propagates_on_critical_operation`**: Updated mock target
+  from `remember()` to `store_entry()` to match the migrated `classify_and_remember`
+  call path. The test verifies that storage errors propagate correctly.
+- **`_MinimalAdapter` and 3 `DummyAdapter` test helpers**: Added `store_entry()`
+  implementations to resolve `TypeError: Can't instantiate abstract class` after
+  `store_entry` was added as `@abstractmethod`.
+
 ### Performance (P0-4: SQLite Connection Management Optimization)
 
 - **Connection reuse optimization**: Thread-local connection caching via `threading.local()`.

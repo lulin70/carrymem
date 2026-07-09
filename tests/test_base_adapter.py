@@ -174,6 +174,9 @@ class _MinimalAdapter(StorageAdapter):
         self._initialized = True
 
     def remember(self, entry: MemoryEntry) -> StoredMemory:
+        return self.store_entry(entry)
+
+    def store_entry(self, entry: MemoryEntry) -> StoredMemory:
         return StoredMemory.from_memory_entry(entry, storage_key=f"key_{id(entry)}")
 
     def store(self, entry: dict) -> str:

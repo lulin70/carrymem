@@ -318,7 +318,7 @@ class ProfileExportMixin:
                         "imported_at": datetime.now(timezone.utc).isoformat(),
                     },
                 )
-                self._adapter.remember(entry)
+                self._adapter.store_entry(entry)
                 imported += 1
             except (ValueError, KeyError, TypeError) as e:
                 logger.warning("Failed to import memory entry: %s", e)

@@ -208,7 +208,7 @@ class ClassificationMixin:
                         if updated:
                             updated_memories.append(updated)
 
-                    stored = self._adapter.remember(entry)  # type: ignore[union-attr]
+                    stored = self._adapter.store_entry(entry)  # type: ignore[union-attr]
                     stored_memories.append(stored.to_dict())
                     storage_keys.append(stored.storage_key)
                 except (ValueError, KeyError, TypeError) as e:

@@ -143,7 +143,7 @@ class PromptDelegateMixin:
 
         if store:
             entry = MemoryEntry.from_dict(summary_entry)
-            stored = self._adapter.remember(entry)
+            stored = self._adapter.store_entry(entry)
             return stored.to_dict()
 
         return summary_entry
@@ -197,7 +197,7 @@ class PromptDelegateMixin:
             for r in results:
                 try:
                     entry = MemoryEntry.from_dict(r)
-                    stored = self._adapter.remember(entry)
+                    stored = self._adapter.store_entry(entry)
                     stored_results.append(stored.to_dict())
                 except (ValueError, KeyError, TypeError) as e:
                     logger.warning("Failed to store aggregated memory: %s", e)

@@ -60,7 +60,10 @@ def _boost_confidence(cm, content_fragment, confidence=0.95):
         (f"%{content_fragment}%",),
     ).fetchall()
     for row in rows:
-        conn.execute("UPDATE memories SET confidence = ? WHERE storage_key = ?", (confidence, row[0]))
+        conn.execute(
+            "UPDATE memories SET confidence = ? WHERE storage_key = ?",
+            (confidence, row[0]),
+        )
     conn.commit()
 
 
@@ -188,7 +191,10 @@ class TestComputeRecalcScoresExtra:
         all_mems, _ = pb._recall_base_memories("Python", limit=30)
 
         # Patch recalculate_confidence to raise
-        with patch("carrymem.prompt_builder.recalculate_confidence", side_effect=ValueError("bad")):
+        with patch(
+            "carrymem.prompt_builder.recalculate_confidence",
+            side_effect=ValueError("bad"),
+        ):
             scores = pb._compute_recalc_scores(all_mems)
         # Should return empty or partial scores without crashing
         assert isinstance(scores, dict)
@@ -824,7 +830,11 @@ class TestContextModuleExtra:
         """Line 559-560: correction type."""
         from carrymem.context import format_memory_entry
 
-        m = {"type": "correction", "content": "My name is Alice not Bob", "confidence": 0.9}
+        m = {
+            "type": "correction",
+            "content": "My name is Alice not Bob",
+            "confidence": 0.9,
+        }
         result = format_memory_entry(m)
         assert "Do NOT repeat" in result
 
@@ -840,7 +850,11 @@ class TestContextModuleExtra:
         """Line 563-564: session_summary type."""
         from carrymem.context import format_memory_entry
 
-        m = {"type": "session_summary", "content": "Discussed Python frameworks", "confidence": 0.8}
+        m = {
+            "type": "session_summary",
+            "content": "Discussed Python frameworks",
+            "confidence": 0.8,
+        }
         result = format_memory_entry(m)
         assert "previous conversations" in result.lower()
 
@@ -889,7 +903,11 @@ class TestContextModuleExtra:
         """format_knowledge_entry formats knowledge items."""
         from carrymem.context import format_knowledge_entry
 
-        k = {"title": "Python Guide", "content": "Python is great", "tags": ["python", "guide"]}
+        k = {
+            "title": "Python Guide",
+            "content": "Python is great",
+            "tags": ["python", "guide"],
+        }
         result = format_knowledge_entry(k)
         assert "Python Guide" in result
         assert "python" in result
@@ -1030,6 +1048,11 @@ class TestCarryMemExtra:
             def store(self, entry):
                 return ""
 
+            def store_entry(self, entry):
+                from carrymem.adapters.base import StoredMemory
+
+                return StoredMemory.from_memory_entry(entry, storage_key="")
+
             def recall(self, *a, **kw):
                 return []
 
@@ -1072,6 +1095,11 @@ class TestCarryMemExtra:
             def store(self, entry):
                 return ""
 
+            def store_entry(self, entry):
+                from carrymem.adapters.base import StoredMemory
+
+                return StoredMemory.from_memory_entry(entry, storage_key="")
+
             def recall(self, *a, **kw):
                 return []
 
@@ -1113,6 +1141,11 @@ class TestCarryMemExtra:
 
             def store(self, entry):
                 return ""
+
+            def store_entry(self, entry):
+                from carrymem.adapters.base import StoredMemory
+
+                return StoredMemory.from_memory_entry(entry, storage_key="")
 
             def recall(self, *a, **kw):
                 return []
@@ -1163,7 +1196,10 @@ class TestCarryMemExtra:
         # Patch BackupManager.create_backup to raise an exception
         from unittest.mock import patch
 
-        with patch("carrymem.backup.BackupManager.create_backup", side_effect=OSError("disk full")):
+        with patch(
+            "carrymem.backup.BackupManager.create_backup",
+            side_effect=OSError("disk full"),
+        ):
             result = cm.backup()
         assert result.get("backed_up") is False or result.get("error") is not None
         cm.close()

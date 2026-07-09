@@ -383,6 +383,23 @@ class StorageAdapter(ABC):
         ...
 
     @abstractmethod
+    def store_entry(self, entry: MemoryEntry) -> StoredMemory:
+        """Store a MemoryEntry and return the complete StoredMemory with metadata.
+
+        This is the domain-level store method that preserves the full
+        MemoryEntry object and returns a StoredMemory with all storage
+        metadata (importance_score, version, created_at, etc.) populated
+        by the adapter.
+
+        Args:
+            entry: The MemoryEntry object to persist.
+
+        Returns:
+            StoredMemory with storage_key and all metadata fields populated.
+        """
+        ...
+
+    @abstractmethod
     def delete(self, entry_id: str) -> bool:
         """Delete a memory by its entry ID.
 
@@ -466,7 +483,7 @@ class StorageAdapter(ABC):
             StoredMemory with storage metadata attached
         """
         warnings.warn(
-            "remember() is deprecated, use store() instead. " "Will be removed in v0.6.0.",
+            "remember() is deprecated, use store() instead. Will be removed in v0.6.0.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -476,7 +493,8 @@ class StorageAdapter(ABC):
     def remember_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:
         """Store multiple memory entries.
 
-        Default implementation calls store() for each entry.
+        Default implementation calls store_entry() for each entry to preserve
+        full storage metadata (importance_score, version, created_at, etc.).
         Override for atomic batch operations.
 
         Args:
@@ -487,8 +505,7 @@ class StorageAdapter(ABC):
         """
         results = []
         for entry in entries:
-            result_key = self.store(entry.to_dict())
-            results.append(StoredMemory.from_memory_entry(entry, storage_key=result_key))
+            results.append(self.store_entry(entry))
         return results
 
     def forget(self, storage_key: str) -> bool:
@@ -504,7 +521,7 @@ class StorageAdapter(ABC):
             True if deleted, False if not found
         """
         warnings.warn(
-            "forget() is deprecated, use delete() instead. " "Will be removed in v0.6.0.",
+            "forget() is deprecated, use delete() instead. Will be removed in v0.6.0.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -704,6 +721,31 @@ class TestStorageAdapterContract:
         assert stored.type == "user_preference"
         assert stored.content == "I prefer dark mode"
         assert stored.created_at is not None
+
+    def test_store_entry_returns_full_metadata(self):
+        """store_entry() must return StoredMemory with full metadata populated.
+
+        Unlike store() which returns only the storage_key, store_entry() must
+        return a StoredMemory with importance_score, version, created_at, and
+        updated_at populated by the adapter — not the default 0.0/1/None/None
+        values produced by StoredMemory.from_memory_entry().
+        """
+        entry = MemoryEntry(
+            id="test-store-entry-001",
+            type="user_preference",
+            content="I prefer dark mode",
+            confidence=0.9,
+        )
+        stored = self.adapter.store_entry(entry)
+
+        assert isinstance(stored, StoredMemory)
+        assert stored.storage_key != ""
+        assert stored.type == "user_preference"
+        assert stored.content == "I prefer dark mode"
+        assert stored.created_at is not None
+        assert stored.updated_at is not None
+        assert stored.importance_score > 0.0
+        assert stored.version >= 1
 
     def test_recall_finds_stored_memory(self):
         """recall() must find memories by content."""

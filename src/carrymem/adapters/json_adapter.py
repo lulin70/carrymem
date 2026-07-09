@@ -304,8 +304,18 @@ class JSONAdapter(StorageAdapter):
             The storage_key of the stored memory.
         """
         mem_entry = MemoryEntry.from_dict(entry)
-        stored = self._store_entry(mem_entry)
-        return stored.storage_key
+        return self.store_entry(mem_entry).storage_key
+
+    def store_entry(self, entry: MemoryEntry) -> StoredMemory:
+        """Store a MemoryEntry and return the complete StoredMemory with metadata.
+
+        Args:
+            entry: The MemoryEntry object to persist.
+
+        Returns:
+            StoredMemory with storage_key and metadata fields populated.
+        """
+        return self._store_entry(entry)
 
     def delete(self, entry_id: str) -> bool:
         """Delete a memory by its storage_key."""

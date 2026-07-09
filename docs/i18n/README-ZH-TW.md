@@ -650,7 +650,7 @@ cm.import_memories(input_path="backup.json")
 
 ## 專案狀態
 
-**目前版本**：v0.5.2 (Beta)
+**目前版本**：v0.5.3 (Beta)
 **測試**：4198 passing
 **覆蓋率**：80%+
 

@@ -354,6 +354,19 @@ class MemoryCRUDOps(Protocol):
         """Delete a single memory by ID."""
         ...
 
+    def remember_batch(
+        self,
+        messages: List[str],
+        force_type: Optional[str] = None,
+        session_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Persist multiple messages in a single transaction.
+
+        When force_type is provided, skips per-message classification.
+        """
+        ...
+
     def update_memory(
         self,
         storage_key: str,

@@ -1,20 +1,30 @@
 # CarryMem — Project Status
 
-**Version**: v0.5.2
-**Last Updated**: 2026-07-03
+**Version**: v0.5.3
+**Last Updated**: 2026-07-08
 **Maintainer**: CarryMem Team
 
 ---
 
-## Current Release: v0.5.2
+## Current Release: v0.5.3
 
-**Theme**: Summary Layer + Progressive Disclosure — token-efficient prompt injection
+**Theme**: store_entry() Core API — Phase 1 of CarryMem optimization plan
 
-**Release Date**: 2026-07-02
-**PyPI**: `carrymem==0.5.2` ([PyPI](https://pypi.org/project/carrymem/))
-**Git Tag**: [v0.5.2](https://github.com/lulin70/carrymem/releases/tag/v0.5.2)
+**Release Date**: 2026-07-08
+**PyPI**: `carrymem==0.5.3` ([PyPI](https://pypi.org/project/carrymem/))
+**Git Tag**: [v0.5.3](https://github.com/lulin70/carrymem/releases/tag/v0.5.3)
 
-### Core Features (v0.5.2)
+### Core Features (v0.5.3)
+
+- **store_entry() API**: Domain-level store method that returns complete `StoredMemory`
+  with full metadata (importance_score, version, created_at), eliminating the metadata
+  loss bug in `store()` (dict→str) path.
+- **Core layer migration**: 5 call sites migrated from deprecated `remember()` to
+  `store_entry()`, 2 `forget()` call sites migrated to `delete()`.
+- **remember_batch() fix**: Default implementation now uses `store_entry()` to preserve
+  metadata (was losing importance_score via `StoredMemory.from_memory_entry()`).
+- **TestStorageAdapterContract**: New `test_store_entry_returns_full_metadata` contract
+  test for all adapter implementations.
 
 - **Summary Layer**: Field-level `summary` cache on memories table (schema migration `_V052`)
 - **Progressive Disclosure**: Bucket-based depth mapping
@@ -185,6 +195,7 @@ each py3.11 + py3.12).
 
 | Version | Date | Theme | Status |
 |---------|------|-------|--------|
+| v0.5.3 | 2026-07-08 | store_entry() Core API — Phase 1 | ✅ Released |
 | v0.5.2 | 2026-07-02 | Summary Layer + Progressive Disclosure | ✅ Released |
 | v0.5.1 | 2026-07-02 | Entity Normalization (Ontology-lite) | ✅ Released |
 | v0.5.0 | 2026-07-01 | Rules Engine + Maturity Fixes | ✅ Released |

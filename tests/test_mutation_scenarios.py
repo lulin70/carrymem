@@ -362,13 +362,13 @@ class TestExceptionSwallowing:
         try:
             cm = CarryMem(db_path=db_path)
 
-            # 模拟存储层故障
-            original_remember = cm._adapter.remember
+            # 模拟存储层故障（store_entry 是 classify_and_remember 的实际调用路径）
+            original_store_entry = cm._adapter.store_entry
 
-            def failing_remember(entry):
+            def failing_store_entry(entry):
                 raise RuntimeError("Simulated storage failure")
 
-            cm._adapter.remember = failing_remember
+            cm._adapter.store_entry = failing_store_entry
 
             # MUTATION CHECK: 如果异常被吞没（except: pass），
             # 这里不会抛出异常，而是返回假成功
@@ -380,7 +380,7 @@ class TestExceptionSwallowing:
             assert len(error_msg) > 0, "Error should have meaningful message"
 
             # 恢复
-            cm._adapter.remember = original_remember
+            cm._adapter.store_entry = original_store_entry
             cm.close()
         finally:
             for ext in ("", "-wal", "-shm"):

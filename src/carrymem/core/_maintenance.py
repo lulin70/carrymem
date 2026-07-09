@@ -180,7 +180,7 @@ class MaintenanceMixin:
             key = item.get("storage_key")
             if key:
                 try:
-                    adapter.forget(key)
+                    adapter.delete(key)
                     forgotten_count += 1
                 except (KeyError, ValueError) as e:
                     logger.warning("Failed to forget %s: %s", key, e)
@@ -192,7 +192,7 @@ class MaintenanceMixin:
             new_conf = round(current_conf * decay, DECAY_ROUNDING_PRECISION)
             if new_conf < DECAY_CONFIDENCE_FLOOR:
                 try:
-                    adapter.forget(key)
+                    adapter.delete(key)
                     forgotten_count += 1
                 except (KeyError, ValueError) as e:
                     logger.warning("Failed to forget decayed %s: %s", key, e)
