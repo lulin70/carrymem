@@ -382,9 +382,9 @@ class TestAdapterSwitching:
         """
         # Adapter layer
         assert cm.adapter is not None, "Adapter should be initialized"
-        assert hasattr(cm.adapter, "remember"), "Adapter should have remember method"
+        assert hasattr(cm.adapter, "store_entry"), "Adapter should have store_entry method"
         assert hasattr(cm.adapter, "recall"), "Adapter should have recall method"
-        assert hasattr(cm.adapter, "forget"), "Adapter should have forget method"
+        assert hasattr(cm.adapter, "delete"), "Adapter should have delete method"
 
         # Engine layer
         assert cm.engine is not None, "Engine should be initialized"
