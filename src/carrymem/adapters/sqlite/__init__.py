@@ -441,9 +441,9 @@ class SQLiteAdapter(StorageAdapter):
                     "SELECT COUNT(*) FROM memories WHERE " + " AND ".join(conditions),
                     params,
                 )
-                return cursor.fetchone()[0]
+                return int(cursor.fetchone()[0])
         cursor.execute("SELECT COUNT(*) FROM memories")
-        return cursor.fetchone()[0]
+        return int(cursor.fetchone()[0])
 
     def health_check(self) -> dict:
         """Run a health check on the SQLite backend.

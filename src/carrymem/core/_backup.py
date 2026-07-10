@@ -31,8 +31,8 @@ class BackupMixin:
             return
         if not self._adapter or not self._adapter.capabilities.get("backup", False):
             return
-        db_path = self._adapter.db_path
-        if db_path == ":memory:":
+        db_path = getattr(self._adapter, "db_path", None)
+        if not db_path or db_path == ":memory:":
             return
 
         from carrymem.backup import BackupManager
@@ -58,7 +58,7 @@ class BackupMixin:
         if self._write_count >= self._auto_backup_interval:
             self._write_count = 0
             try:
-                db_path = self._adapter.db_path
+                db_path = getattr(self._adapter, "db_path", None)
                 if db_path and db_path != ":memory:":
                     from carrymem.backup import BackupManager
 
@@ -80,8 +80,8 @@ class BackupMixin:
 
         from carrymem.backup import BackupManager
 
-        db_path = self._adapter.db_path
-        if db_path == ":memory:":
+        db_path = getattr(self._adapter, "db_path", None)
+        if not db_path or db_path == ":memory:":
             return {"error": "Cannot backup in-memory database"}
 
         manager = BackupManager(db_path, backup_dir=backup_dir)
@@ -98,7 +98,9 @@ class BackupMixin:
 
         from carrymem.backup import BackupManager
 
-        db_path = self._adapter.db_path
+        db_path = getattr(self._adapter, "db_path", None)
+        if not db_path:
+            return []
         manager = BackupManager(db_path, backup_dir=backup_dir)
         return manager.list_backups()
 
@@ -109,8 +111,8 @@ class BackupMixin:
 
         from carrymem.backup import BackupManager
 
-        db_path = self._adapter.db_path
-        if db_path == ":memory:":
+        db_path = getattr(self._adapter, "db_path", None)
+        if not db_path or db_path == ":memory:":
             return {"error": "Cannot restore to in-memory database"}
 
         if backup_dir is None:

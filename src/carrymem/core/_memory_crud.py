@@ -399,7 +399,7 @@ class MemoryCRUDMixin:
         if not self._adapter.capabilities.get("versioning", False):
             raise ValueError("Memory versioning not supported by this adapter")
 
-        result = self._adapter.update_memory(storage_key, new_content, reason)
+        result = self._adapter.update_memory(storage_key, new_content, reason)  # type: ignore[attr-defined]
         if result is None:
             if self._adapter:
                 self._adapter.log_audit(
@@ -410,8 +410,8 @@ class MemoryCRUDMixin:
                 )
             return {"updated": False, "error": f"Memory not found: {storage_key}"}
 
-        if self._adapter._cache:
-            self._adapter._cache.invalidate()
+        if self._adapter._cache:  # type: ignore[attr-defined]
+            self._adapter._cache.invalidate()  # type: ignore[attr-defined]
 
         self._auto_backup()  # type: ignore[attr-defined]
 
@@ -441,7 +441,7 @@ class MemoryCRUDMixin:
         if not self._adapter.capabilities.get("versioning", False):
             raise ValueError("Memory versioning not supported by this adapter")
 
-        return self._adapter.get_memory_history(storage_key)
+        return self._adapter.get_memory_history(storage_key)  # type: ignore[attr-defined, no-any-return]
 
     def rollback_memory(
         self,
@@ -455,12 +455,12 @@ class MemoryCRUDMixin:
         if not self._adapter.capabilities.get("versioning", False):
             raise ValueError("Memory versioning not supported by this adapter")
 
-        result = self._adapter.rollback_memory(storage_key, version)
+        result = self._adapter.rollback_memory(storage_key, version)  # type: ignore[attr-defined]
         if result is None:
             return {"rolled_back": False, "error": "Memory or version not found"}
 
-        if self._adapter._cache:
-            self._adapter._cache.invalidate()
+        if self._adapter._cache:  # type: ignore[attr-defined]
+            self._adapter._cache.invalidate()  # type: ignore[attr-defined]
 
         self._auto_backup()  # type: ignore[attr-defined]
 

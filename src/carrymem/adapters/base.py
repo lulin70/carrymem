@@ -634,7 +634,7 @@ class StorageAdapter(ABC):
         Returns:
             List of matching entry dicts.
         """
-        results = self.recall(query, update_access=False)
+        results: List[StoredMemory] = self.recall(query, update_access=False)
         return [r.to_dict() for r in results]
 
     def log_audit(
@@ -675,7 +675,7 @@ class StorageAdapter(ABC):
         """
         audit = getattr(self, "_audit", None)
         if audit:
-            return audit.query(filter_)
+            return audit.query(filter_)  # type: ignore[no-any-return]
         return []
 
 
