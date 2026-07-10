@@ -628,7 +628,7 @@ class SQLiteAdapter:
 
 | 操作 | 使用するロック | スコープ | 動作 |
 |------|-------------|---------|------|
-| 書き込み（remember/forget/update/recalculate/remember_batch） | `self._file_lock` | インスタンス間 | 同じ DB ファイルへの全書き込みを直列化 |
+| 書き込み（store_entry/store_batch/delete/update/recalculate） | `self._file_lock` | インスタンス間 | 同じ DB ファイルへの全書き込みを直列化 |
 | 読み取り（recall/list） | `self._lock` | インスタンス内 | 他のインスタンスの読み取りをブロックしない |
 
 **セカンダリ保護**: WAL モード + `busy_timeout=10000ms`
@@ -824,7 +824,7 @@ cm = CarryMem(storage="postgresql")
 
 ```python
 # Atomic batch with transaction
-adapter.remember_batch(entries)
+adapter.store_batch(entries)
 # → BEGIN → INSERT... → COMMIT (or ROLLBACK on error)
 ```
 

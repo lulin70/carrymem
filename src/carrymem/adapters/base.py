@@ -20,7 +20,6 @@ Available official adapters (planned):
 Community adapters are welcome!
 """
 
-import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -309,24 +308,23 @@ class StorageAdapter(ABC):
     Every downstream storage system that wants to receive MCE's
     classification output must implement this interface.
 
-    Standardized Interface (current):
+    Standardized Interface:
     - store(): Store a memory entry (dict-based, returns entry_id)
+    - store_entry(): Store a MemoryEntry object, returns StoredMemory with full metadata
+    - store_batch(): Batch store MemoryEntry objects in atomic transaction, returns list of StoredMemory
     - recall(): Retrieve memories matching query
     - delete(): Delete a memory by ID
+    - delete_batch(): Batch delete by storage keys in atomic transaction, returns dict of results
     - count(): Count stored memories
     - initialize(): Initialize adapter with configuration
     - health_check(): Run health check on backend
     - close(): Release all resources
 
-    Legacy Interface (deprecated):
-    - remember(): Use ``store()`` instead. Will be removed in v0.6.0.
-    - forget(): Use ``delete()`` instead. Will be removed in v0.6.0.
-
     Implementation guide:
     1. Subclass StorageAdapter
     2. Implement all abstract methods (store, recall, delete, count, initialize, health_check, close)
     3. Set name and capabilities properties
-    4. Legacy methods (remember, forget) have default implementations that delegate to the new methods
+    4. store_entry/store_batch/delete_batch have default implementations that delegate to store/delete
     5. Pass TestStorageAdapterContract (see tests/adapters/)
 
     Example:
@@ -511,66 +509,6 @@ class StorageAdapter(ABC):
                 results[key] = False
         return results
 
-    # ── Legacy Interface (deprecated, with default implementations) ─────
-
-    def remember(self, entry: MemoryEntry) -> StoredMemory:
-        """Store a memory entry.
-
-        .. deprecated:: 0.4.0
-            Use ``store()`` instead. Will be removed in v0.6.0.
-
-        Args:
-            entry: The MemoryEntry to persist
-
-        Returns:
-            StoredMemory with storage metadata attached
-        """
-        warnings.warn(
-            "remember() is deprecated, use store() instead. Will be removed in v0.6.0.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        result_key = self.store(entry.to_dict())
-        return StoredMemory.from_memory_entry(entry, storage_key=result_key)
-
-    def remember_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:
-        """Store multiple memory entries.
-
-        .. deprecated:: 0.5.4
-            Use ``store_batch()`` instead. Will be removed in v0.6.0.
-
-        Args:
-            entries: List of MemoryEntry objects to persist
-
-        Returns:
-            List of StoredMemory objects (same order as input)
-        """
-        warnings.warn(
-            "remember_batch() is deprecated, use store_batch() instead. " "Will be removed in v0.6.0.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.store_batch(entries)
-
-    def forget(self, storage_key: str) -> bool:
-        """Delete a memory by its storage key.
-
-        .. deprecated:: 0.4.0
-            Use ``delete()`` instead. Will be removed in v0.6.0.
-
-        Args:
-            storage_key: The storage_key from StoredMemory
-
-        Returns:
-            True if deleted, False if not found
-        """
-        warnings.warn(
-            "forget() is deprecated, use delete() instead. Will be removed in v0.6.0.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.delete(storage_key)
-
     def forget_expired(self) -> int:
         """Delete all expired memories.
 
@@ -739,17 +677,6 @@ class AsyncStorageAdapter(Protocol):
     def capabilities(self) -> Dict[str, bool]:
         """Mapping of capability name to whether it is supported."""
 
-    # ── Legacy API (deprecated, will be removed in v0.6.0) ──────────────
-
-    async def remember(self, entry: MemoryEntry) -> StoredMemory:
-        """Store a memory entry asynchronously. (deprecated, use store_entry)"""
-
-    async def remember_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:
-        """Store multiple memory entries asynchronously. (deprecated, use store_batch)"""
-
-    async def forget(self, storage_key: str) -> bool:
-        """Delete a memory by key asynchronously. (deprecated, use delete)"""
-
 
 class TestStorageAdapterContract:
     """Base class for adapter contract tests.
@@ -769,15 +696,15 @@ class TestStorageAdapterContract:
 
     adapter: StorageAdapter
 
-    def test_remember_returns_stored_memory(self):
-        """remember() must return StoredMemory with storage_key."""
+    def test_store_entry_returns_stored_memory(self):
+        """store_entry() must return StoredMemory with storage_key and metadata."""
         entry = MemoryEntry(
             id="test-001",
             type="user_preference",
             content="I prefer dark mode",
             confidence=0.9,
         )
-        stored = self.adapter.remember(entry)
+        stored = self.adapter.store_entry(entry)
 
         assert isinstance(stored, StoredMemory)
         assert stored.storage_key != ""
@@ -818,7 +745,7 @@ class TestStorageAdapterContract:
             content="Python 3.9 is the minimum version",
             confidence=0.85,
         )
-        self.adapter.remember(entry)
+        self.adapter.store_entry(entry)
 
         results = self.adapter.recall("Python")
         assert len(results) >= 1
@@ -829,27 +756,19 @@ class TestStorageAdapterContract:
         entry1 = MemoryEntry(id="f1", type="user_preference", content="pref content")
         entry2 = MemoryEntry(id="f2", type="fact_declaration", content="fact content")
 
-        self.adapter.remember(entry1)
-        self.adapter.remember(entry2)
+        self.adapter.store_entry(entry1)
+        self.adapter.store_entry(entry2)
 
         results = self.adapter.recall("content", filters={"type": "user_preference"})
         assert all(r.type == "user_preference" for r in results)
 
-    def test_forget_removes_memory(self):
-        """forget() must delete memory and return True."""
+    def test_delete_removes_memory(self):
+        """delete() must delete memory and return True."""
         entry = MemoryEntry(id="test-003", type="task_pattern", content="test task")
-        stored = self.adapter.remember(entry)
+        stored = self.adapter.store_entry(entry)
 
-        assert self.adapter.forget(stored.storage_key) is True
-        assert self.adapter.forget(stored.storage_key) is False  # Already deleted
-
-    def test_remember_batch(self):
-        """remember_batch() must store all entries."""
-        entries = [MemoryEntry(id=f"batch-{i}", type="fact_declaration", content=f"fact {i}") for i in range(5)]
-
-        stored = self.adapter.remember_batch(entries)
-        assert len(stored) == 5
-        assert all(s.storage_key != "" for s in stored)
+        assert self.adapter.delete(stored.storage_key) is True
+        assert self.adapter.delete(stored.storage_key) is False  # Already deleted
 
     def test_store_batch(self):
         """store_batch() must store all entries and return StoredMemory list.

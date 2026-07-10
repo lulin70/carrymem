@@ -41,8 +41,8 @@ def _seed_two_entries(adapter: SQLiteAdapter):
         confidence=0.9,
         tier=2,
     )
-    stored_a = adapter.remember(entry_a)
-    stored_b = adapter.remember(entry_b)
+    stored_a = adapter.store_entry(entry_a)
+    stored_b = adapter.store_entry(entry_b)
     return stored_a, stored_b
 
 
@@ -79,7 +79,7 @@ class TestCacheInvalidationForget(unittest.TestCase):
         filters_a, filters_b = self._prime_cache_with_both_queries()
 
         # Delete key_a — should invalidate only query_a, preserve query_b
-        self.adapter.forget(self.key_a)
+        self.adapter.delete(self.key_a)
 
         # query_b (fact_declaration) should still be cached (hit)
         cached_b = self.adapter._cache.get(NS, "", filters_b, 10)
@@ -95,7 +95,7 @@ class TestCacheInvalidationForget(unittest.TestCase):
         size_before = self.adapter._cache.stats["size"]
 
         # Forget a key that does not exist → result=False → no invalidation
-        self.adapter.forget("nonexistent_key_xyz")
+        self.adapter.delete("nonexistent_key_xyz")
 
         size_after = self.adapter._cache.stats["size"]
         self.assertEqual(size_before, size_after, "forget on missing key must not invalidate cache")
@@ -105,7 +105,7 @@ class TestCacheInvalidationForget(unittest.TestCase):
         filters_a = {"type": TYPE_A}
         self.adapter.recall("", filters=filters_a, limit=10)
 
-        self.adapter.forget(self.key_a)
+        self.adapter.delete(self.key_a)
 
         results = self.adapter.recall("", filters=filters_a, limit=10)
         self.assertEqual(len(results), 0, "deleted memory should not appear in recall")
@@ -212,7 +212,7 @@ class TestCacheConsistencyUserJourney(unittest.TestCase):
             confidence=0.9,
             tier=2,
         )
-        stored = self.adapter.remember(entry)
+        stored = self.adapter.store_entry(entry)
         key = stored.storage_key
         filters = {"type": TYPE_A}
 
@@ -235,7 +235,7 @@ class TestCacheConsistencyUserJourney(unittest.TestCase):
         )
 
         # Step 5: forget
-        self.adapter.forget(key)
+        self.adapter.delete(key)
 
         # Step 6: recall again — must return empty (memory deleted)
         results_after_forget = self.adapter.recall("", filters=filters, limit=10)
@@ -254,7 +254,7 @@ class TestCacheConsistencyUserJourney(unittest.TestCase):
             )
             for t in [TYPE_A, TYPE_B, "decision"]
         ]
-        stored_list = [self.adapter.remember(e) for e in entries]
+        stored_list = [self.adapter.store_entry(e) for e in entries]
         keys = [s.storage_key for s in stored_list]
 
         # Prime cache with 3 type-filtered queries

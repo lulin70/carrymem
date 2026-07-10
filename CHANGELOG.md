@@ -10,6 +10,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > historical records from the pre-reset development cycle and should not be confused with
 > the current v0.2.x series.
 
+## [0.6.0] - 2026-07-09 (Breaking Change — Deprecated API Removal)
+
+### ⚠️ Breaking Changes
+- **Removed `StorageAdapter.remember()`** — Use `store_entry()` instead.
+- **Removed `StorageAdapter.remember_batch()`** — Use `store_batch()` instead.
+- **Removed `StorageAdapter.forget()`** — Use `delete()` instead.
+- **Removed `SQLiteAdapter.remember()`** — Use `store_entry()` instead.
+- **Removed `SQLiteAdapter.remember_batch()`** — Use `store_batch()` instead.
+- **Removed `SQLiteAdapter.forget()`** — Use `delete()` instead.
+- **Removed `JSONAdapter.remember()`** — Use `store_entry()` instead.
+- **Removed `JSONAdapter.forget()`** — Use `delete()` instead.
+- **Removed `ObsidianAdapter.remember()`** — Use `store_entry()` instead.
+- **Removed `ObsidianAdapter.remember_batch()`** — Use `store_batch()` instead.
+- **Removed `ObsidianAdapter.forget()`** — Use `delete()` instead.
+- **Removed `AsyncStorageAdapter.remember/remember_batch/forget` Protocol signatures** — Use `store_entry/store_batch/delete` instead.
+- **Renamed `CarryMem.remember_batch(messages)` → `CarryMem.store_messages(messages)`** — Core layer public API renamed to disambiguate from adapter-level `store_batch(List[MemoryEntry])`. The core-layer method receives `List[str]` messages (requires classification), while the adapter-level method receives `List[MemoryEntry]` objects (direct atomic storage).
+
+### Migration Guide
+```python
+# Before v0.6.0 (deprecated)
+stored = adapter.remember(entry)        # → adapter.store_entry(entry)
+results = adapter.remember_batch(entries)  # → adapter.store_batch(entries)
+deleted = adapter.forget(key)          # → adapter.delete(key)
+result = cm.remember_batch(messages)   # → cm.store_messages(messages)
+
+# v0.6.0+
+stored = adapter.store_entry(entry)
+results = adapter.store_batch(entries)
+deleted = adapter.delete(key)
+result = cm.store_messages(messages)
+```
+
+### Changed
+- `SQLiteAdapter.import_data()` migrated from `self._crud.remember()` to `self.store_entry()`.
+- `TestStorageAdapterContract` updated: `test_remember_returns_stored_memory` → `test_store_entry_returns_stored_memory`, `test_forget_removes_memory` → `test_delete_removes_memory`, `test_remember_batch` removed (covered by `test_store_batch`).
+- `StorageAdapter` class docstring updated to reflect new standardized interface (store/store_entry/store_batch/recall/delete/delete_batch).
+- Removed `import warnings` from `base.py`, `sqlite/__init__.py`, `crud.py`, `json_adapter.py` (no longer needed).
+
+### Internal
+- `CRUDOperations.remember()` and `CRUDOperations.forget()` retained as internal implementations (called by `store_entry()` and `delete()` respectively). Not part of public API.
+- `CRUDOperations.remember_batch()` deprecated delegate removed (was added in v0.5.4).
+
 ## [Unreleased]
 
 ### Added

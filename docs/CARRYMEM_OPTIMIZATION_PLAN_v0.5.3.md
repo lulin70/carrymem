@@ -132,16 +132,107 @@ def delete_batch(self, storage_keys: List[str]) -> Dict[str, bool]:
 | 2.14 | CHANGELOG + PROJECT_STATUS | 版本号 + 文档更新（MIGRATION.md 延迟至 v0.6.0） | 低 | ✅ |
 | 2.15 | 全量回归 | pytest + black --line-length=120 + flake8 + isort + mypy | - | ✅ |
 
-### Phase 3: 架构清理（v0.6.0，P1）
+### Phase 3: 架构清理（v0.6.0，P1）— Breaking Change ✅ 已完成
 
-| 步骤 | 文件 | 内容 |
+> **Phase 3 交付记录**（2026-07-09）：
+> - 版本: v0.5.4 → v0.6.0 (MINOR 递增，breaking change — deprecated API 移除)
+> - 移除 deprecated 方法: 19 个方法定义从 src/ 中移除（StorageAdapter/SQLiteAdapter/JSONAdapter/ObsidianAdapter/AsyncStorageAdapter Protocol）
+> - 核心层 API 重命名: `CarryMem.remember_batch(messages)` → `CarryMem.store_messages(messages)`
+> - 测试迁移: 50+ 调用点从 deprecated API 迁移到新 API（11 个测试文件 + 3 个测试辅助类）
+> - 内部清理: 4 个源文件移除不再使用的 `import warnings`
+> - 回归: 1599+ 测试通过（1 个预存 macOS flaky test 与 Phase 3 无关）
+
+> **Breaking Change 声明**: v0.6.0 移除所有 deprecated API。用户需迁移：
+> - `adapter.remember(entry)` → `adapter.store_entry(entry)`
+> - `adapter.remember_batch(entries)` → `adapter.store_batch(entries)`
+> - `adapter.forget(key)` → `adapter.delete(key)`
+> - `cm.remember_batch(messages)` → `cm.store_messages(messages)`
+
+#### 3.1 源码 deprecated 方法移除
+
+**决策依据**（Architect）：
+- `crud.py` 的 `remember()`/`forget()` 是 **内部实现**（被 `store_entry()`/`delete()` 调用），**不是 deprecated 方法** — 保持原名，不重命名（Surgical Changes 原则）
+- `SQLiteAdapter` 的 `remember()`/`remember_batch()`/`forget()` 是 **deprecated 转发方法** — 直接删除
+- `base.py` 的 `remember()`/`remember_batch()`/`forget()` 是 **deprecated 委托方法** — 直接删除
+- `AsyncStorageAdapter` Protocol 的 deprecated 签名 — 直接删除
+- 核心层 `MemoryCRUDMixin.remember_batch()` 是 **公共 API**（接收 `List[str]` messages），与 adapter 的 `store_batch(List[MemoryEntry])` 语义不同 — 重命名为 `store_messages()` 消除歧义
+
+| 步骤 | 文件 | 修改 | 行号 |
+|------|------|------|------|
+| 3.1.1 | `adapters/base.py` | 删除 `StorageAdapter.remember()` deprecated 委托 | 516-534 |
+| 3.1.2 | `adapters/base.py` | 删除 `StorageAdapter.remember_batch()` deprecated 委托 | 536-553 |
+| 3.1.3 | `adapters/base.py` | 删除 `StorageAdapter.forget()` deprecated 委托 | 555-572 |
+| 3.1.4 | `adapters/base.py` | 删除 `AsyncStorageAdapter` Protocol 的 remember/remember_batch/forget 签名 | 742-751 |
+| 3.1.5 | `adapters/base.py` | 更新 `TestStorageAdapterContract` 测试方法调用 (remember→store_entry, forget→delete, remember_batch→store_batch) | 772-852 |
+| 3.1.6 | `adapters/sqlite/__init__.py` | 删除 `remember()` 转发方法 | 535-542 |
+| 3.1.7 | `adapters/sqlite/__init__.py` | 删除 `remember_batch()` 转发方法 | 544-546 |
+| 3.1.8 | `adapters/sqlite/__init__.py` | 删除 `forget()` 转发方法 | 548-555 |
+| 3.1.9 | `adapters/sqlite/__init__.py` | `import_data()` 中 `self._crud.remember()` → `self.store_entry()` | 496 |
+| 3.1.10 | `adapters/sqlite/crud.py` | 删除 `remember_batch()` deprecated 委托 | 188-199 |
+| 3.1.11 | `adapters/obsidian_adapter.py` | 删除 `remember()`, `remember_batch()`, `forget()` | 364, 368, 515 |
+| 3.1.12 | `adapters/json_adapter.py` | 删除 `remember()`, `forget()` | 138, 244 |
+
+#### 3.2 核心层方法名迁移
+
+| 步骤 | 文件 | 修改 | 行号 |
+|------|------|------|------|
+| 3.2.1 | `core/_memory_crud.py` | `remember_batch()` → `store_messages()` (公共 API 重命名) | 154 |
+| 3.2.2 | `core/_protocols.py` | `MemoryCRUDOps.remember_batch` → `store_messages` | 357 |
+
+**重命名理由**：
+- `cm.remember_batch(messages: List[str])` 接收原始消息字符串，需先分类再存储
+- `adapter.store_batch(entries: List[MemoryEntry])` 接收已构造的 MemoryEntry，直接原子事务存储
+- 两者语义完全不同，重命名为 `store_messages` 消除歧义，明确"存储多条消息"的意图
+
+#### 3.3 测试迁移（50+ 调用点）
+
+| 文件 | 调用点 | 迁移 |
+|------|--------|------|
+| `tests/test_concurrent_access.py` | 4 处 `.remember()` | → `.store_entry()` |
+| `tests/test_json_adapter_extra.py` | 4 处 `.remember()` | → `.store_entry()` |
+| `tests/test_base_adapter.py` | 1 处 `.remember_batch()` | → `.store_batch()` |
+| `tests/test_summary_layer.py` | 1 处 `.remember()` | → `.store_entry()` |
+| `tests/test_sqlite_adapter_ext.py` | 2 处 `.remember()`, 2 处 `.remember_batch()` | → `.store_entry()`/`.store_batch()` |
+| `tests/test_performance_benchmark.py` | 1 处 `cm.remember_batch()` (核心层) | → `cm.store_messages()` |
+| `tests/test_mcp_json_async.py` | 8 处 `.remember()`, 1 处 `.forget()` | → `.store_entry()`/`.delete()` |
+| `tests/test_phase4.py` | 6 处 `.remember()` | → `.store_entry()` |
+| `tests/test_carrymem.py` | 4 处 `.remember()`, 1 处 `.forget()`, 1 处 `.remember_batch()` | → `.store_entry()`/`.delete()`/`.store_batch()` |
+| `tests/test_raw_text.py` | 8 处 `.remember()` | → `.store_entry()` |
+| `tests/test_vector_search.py` | 4 处 `.remember()` | → `.store_entry()` |
+| `tests/test_memory_optimization.py` | 3 处 `.remember_batch()` | → `.store_batch()` |
+| `tests/test_integration_error_propagation.py` | 需检查 | 按需迁移 |
+
+#### 3.4 文档更新
+
+| 步骤 | 文件 | 修改 |
 |------|------|------|
-| 3.1 | 移除 remember/forget/remember_batch deprecated 方法 |
-| 3.2 | recall() 签名修正（namespaces 提升到基类或并入 filters） |
-| 3.3 | 核心层硬耦合解耦（capabilities 替代 isinstance） |
-| 3.4 | count() 性能优化（直接 SELECT COUNT(*)） |
-| 3.5 | 审计访问公共化（audit() 方法替代 _audit 私有访问） |
-| 3.6 | search_fulltext 语义修正 |
+| 3.4.1 | `docs/i18n/ARCHITECTURE-CN.md` | `remember_batch` 示例 → `store_batch` |
+| 3.4.2 | `docs/i18n/ARCHITECTURE-JP.md` | 同上 |
+| 3.4.3 | `CHANGELOG.md` | 新增 v0.6.0 breaking change 条目 |
+| 3.4.4 | `docs/PROJECT_STATUS.md` | 版本更新 v0.5.4→v0.6.0 |
+| 3.4.5 | `__version__.py` | 0.5.4 → 0.6.0 |
+| 3.4.6 | 本文档 | Phase 3 完成记录 |
+
+#### 3.5 后续架构清理项（延迟到 v0.7.0）
+
+| 步骤 | 内容 | 延迟理由 |
+|------|------|----------|
+| 3.6 | recall() 签名修正（namespaces 提升到基类或并入 filters） | 涉及 API 签名变更，需独立评审 |
+| 3.7 | 核心层硬耦合解耦（capabilities 替代 isinstance） | 架构重构，需独立设计 |
+| 3.8 | count() 性能优化（直接 SELECT COUNT(*)） | 性能优化，非 breaking change |
+| 3.9 | 审计访问公共化（audit() 方法替代 _audit 私有访问） | 涉及抽象层重构 |
+| 3.10 | search_fulltext 语义修正 | 需明确语义后再修正 |
+
+#### 验证标准
+
+Phase 3 完成后必须通过：
+1. `black --line-length=120` 0 errors
+2. `flake8` 0 errors
+3. `isort` 0 errors
+4. `mypy` 0 errors（python_version=3.12）
+5. `pytest tests/` 全量通过（含 protocol 覆盖测试）
+6. **无新增 DeprecationWarning**（grep 确认 src/ 中无 `warnings.warn(...DeprecationWarning)` for remember/forget）
+7. E2E 测试：classify_and_remember → recall 全链路验证
 
 ## 4. 验证标准
 

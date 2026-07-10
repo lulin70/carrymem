@@ -706,7 +706,7 @@ class TestSQLiteAdapter(unittest.TestCase):
             reasoning="test",
             suggested_action="store",
         )
-        stored = self.adapter.remember(entry)
+        stored = self.adapter.store_entry(entry)
         self.assertIsNotNone(stored.storage_key)
         results = self.adapter.recall("dark mode")
         self.assertGreater(len(results), 0)
@@ -722,8 +722,8 @@ class TestSQLiteAdapter(unittest.TestCase):
             reasoning="test",
             suggested_action="store",
         )
-        stored = self.adapter.remember(entry)
-        deleted = self.adapter.forget(stored.storage_key)
+        stored = self.adapter.store_entry(entry)
+        deleted = self.adapter.delete(stored.storage_key)
         self.assertTrue(deleted)
 
     def test_get_stats(self):
@@ -737,7 +737,7 @@ class TestSQLiteAdapter(unittest.TestCase):
             reasoning="test",
             suggested_action="store",
         )
-        self.adapter.remember(entry)
+        self.adapter.store_entry(entry)
         stats = self.adapter.get_stats()
         self.assertGreater(stats["total_count"], 0)
 
@@ -752,7 +752,7 @@ class TestSQLiteAdapter(unittest.TestCase):
             reasoning="test",
             suggested_action="store",
         )
-        self.adapter.remember(entry)
+        self.adapter.store_entry(entry)
         profile = self.adapter.get_profile()
         self.assertGreater(profile["total_memories"], 0)
 
@@ -823,23 +823,6 @@ class TestSQLiteAdapter(unittest.TestCase):
 
         count_before = self.adapter.count()
         self.assertGreaterEqual(count_before, 2)
-
-    def test_remember_batch_deprecation_warning(self):
-        """remember_batch() must emit DeprecationWarning and delegate to store_batch()."""
-        import warnings
-
-        entries = [MemoryEntry(id="dep_1", type="fact_declaration", content="deprecation test", confidence=0.8)]
-
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            stored = self.adapter.remember_batch(entries)
-
-            self.assertEqual(len(w), 1)
-            self.assertTrue(issubclass(w[0].category, DeprecationWarning))
-            self.assertIn("store_batch", str(w[0].message))
-
-        self.assertEqual(len(stored), 1)
-        self.assertNotEqual(stored[0].storage_key, "")
 
 
 # ============================================================

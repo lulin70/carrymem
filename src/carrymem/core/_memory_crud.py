@@ -151,7 +151,7 @@ class MemoryCRUDMixin:
                 )
             raise
 
-    def remember_batch(
+    def store_messages(
         self,
         messages: List[str],
         force_type: Optional[str] = None,
@@ -190,6 +190,7 @@ class MemoryCRUDMixin:
             }
 
         import time as _time
+
         from carrymem.constants import DEFAULT_FORCE_TYPE_CONFIDENCE
 
         start = _time.perf_counter()

@@ -173,9 +173,6 @@ class _MinimalAdapter(StorageAdapter):
     def initialize(self, config: dict) -> None:
         self._initialized = True
 
-    def remember(self, entry: MemoryEntry) -> StoredMemory:
-        return self.store_entry(entry)
-
     def store_entry(self, entry: MemoryEntry) -> StoredMemory:
         return StoredMemory.from_memory_entry(entry, storage_key=f"key_{id(entry)}")
 
@@ -191,9 +188,6 @@ class _MinimalAdapter(StorageAdapter):
         update_access: bool = True,
     ) -> list[StoredMemory]:
         return []
-
-    def forget(self, storage_key: str) -> bool:
-        return False
 
     def delete(self, entry_id: str) -> bool:
         return False
@@ -214,7 +208,7 @@ class TestStorageAdapterDefaults:
 
     def test_remember_batch_default(self):
         adapter = self._make_adapter()
-        result = adapter.remember_batch([])
+        result = adapter.store_batch([])
         assert isinstance(result, list)
 
     def test_forget_expired_default(self):

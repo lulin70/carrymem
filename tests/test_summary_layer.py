@@ -528,7 +528,7 @@ class TestSummaryInvalidation:
             raw_text="I prefer tea over coffee",
             confidence=0.9,
         )
-        stored = adapter.remember(entry)
+        stored = adapter.store_entry(entry)
 
         # Manually set summary
         conn = adapter._conn_mgr.get_connection()

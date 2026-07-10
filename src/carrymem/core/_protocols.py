@@ -354,7 +354,7 @@ class MemoryCRUDOps(Protocol):
         """Delete a single memory by ID."""
         ...
 
-    def remember_batch(
+    def store_messages(
         self,
         messages: List[str],
         force_type: Optional[str] = None,

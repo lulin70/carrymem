@@ -25,7 +25,7 @@ class TestRawTextStorage(unittest.TestCase):
             raw_text="We decided to use PostgreSQL because of its great JSON support",
             confidence=0.9,
         )
-        stored = self.adapter.remember(entry)
+        stored = self.adapter.store_entry(entry)
         self.assertEqual(stored.raw_text, "We decided to use PostgreSQL because of its great JSON support")
         self.assertEqual(stored.content, "Database preference: PostgreSQL")
 
@@ -36,7 +36,7 @@ class TestRawTextStorage(unittest.TestCase):
             content="Python 3.9 is the minimum version",
             confidence=0.85,
         )
-        stored = self.adapter.remember(entry)
+        stored = self.adapter.store_entry(entry)
         self.assertEqual(stored.raw_text, "")
         self.assertEqual(stored.content, "Python 3.9 is the minimum version")
 
@@ -48,7 +48,7 @@ class TestRawTextStorage(unittest.TestCase):
             raw_text="We decided to use PostgreSQL because of its great JSON support",
             confidence=0.9,
         )
-        self.adapter.remember(entry)
+        self.adapter.store_entry(entry)
 
         results = self.adapter.recall("PostgreSQL")
         self.assertGreaterEqual(len(results), 1)
@@ -63,7 +63,7 @@ class TestRawTextStorage(unittest.TestCase):
             raw_text="We decided to use PostgreSQL because of its great JSON support",
             confidence=0.9,
         )
-        self.adapter.remember(entry)
+        self.adapter.store_entry(entry)
 
         results = self.adapter.recall("database preference")
         self.assertGreaterEqual(len(results), 1)
@@ -78,7 +78,7 @@ class TestRawTextStorage(unittest.TestCase):
             raw_text="We decided to use PostgreSQL because of its great JSON support",
             confidence=0.9,
         )
-        self.adapter.remember(entry)
+        self.adapter.store_entry(entry)
 
         results = self.adapter.recall("JSON support")
         self.assertGreaterEqual(len(results), 1, "Should find memory via raw_text phrase not in content")
@@ -90,7 +90,7 @@ class TestRawTextStorage(unittest.TestCase):
             content="Database preference: PostgreSQL",
             confidence=0.9,
         )
-        self.adapter.remember(entry1)
+        self.adapter.store_entry(entry1)
 
         entry2 = MemoryEntry(
             id="rt-006",
@@ -99,7 +99,7 @@ class TestRawTextStorage(unittest.TestCase):
             raw_text="We decided to use PostgreSQL",
             confidence=0.9,
         )
-        stored = self.adapter.remember(entry2)
+        stored = self.adapter.store_entry(entry2)
         self.assertEqual(stored.raw_text, "We decided to use PostgreSQL")
 
     def test_dedup_keeps_existing_raw_text(self):
@@ -110,7 +110,7 @@ class TestRawTextStorage(unittest.TestCase):
             raw_text="We decided to use PostgreSQL",
             confidence=0.9,
         )
-        self.adapter.remember(entry1)
+        self.adapter.store_entry(entry1)
 
         entry2 = MemoryEntry(
             id="rt-007",
@@ -119,7 +119,7 @@ class TestRawTextStorage(unittest.TestCase):
             raw_text="",
             confidence=0.9,
         )
-        stored = self.adapter.remember(entry2)
+        stored = self.adapter.store_entry(entry2)
         self.assertEqual(stored.raw_text, "We decided to use PostgreSQL")
 
     def test_raw_text_in_to_dict(self):

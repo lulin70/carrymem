@@ -1,28 +1,40 @@
 # CarryMem — Project Status
 
-**Version**: v0.5.4
+**Version**: v0.6.0
 **Last Updated**: 2026-07-09
 **Maintainer**: CarryMem Team
 
 ---
 
-## Current Release: v0.5.4
+## Current Release: v0.6.0
 
-**Theme**: Batch API (store_batch/delete_batch) — Phase 2 of CarryMem optimization plan
+**Theme**: Deprecated API Removal — Phase 3 of CarryMem optimization plan (Breaking Change)
 
 **Release Date**: 2026-07-09
-**PyPI**: `carrymem==0.5.4` ([PyPI](https://pypi.org/project/carrymem/))
-**Git Tag**: [v0.5.4](https://github.com/lulin70/carrymem/releases/tag/v0.5.4)
+**PyPI**: `carrymem==0.6.0` ([PyPI](https://pypi.org/project/carrymem/))
+**Git Tag**: [v0.6.0](https://github.com/lulin70/carrymem/releases/tag/v0.6.0)
 
-### Core Features (v0.5.4)
+### Core Features (v0.6.0)
+
+- **Deprecated API removed**: All `remember()`/`remember_batch()`/`forget()` methods removed
+  from `StorageAdapter`, `SQLiteAdapter`, `JSONAdapter`, `ObsidianAdapter`, and
+  `AsyncStorageAdapter` Protocol. Users must migrate to `store_entry()`/`store_batch()`/`delete()`.
+- **Core layer API rename**: `CarryMem.remember_batch(messages)` → `CarryMem.store_messages(messages)`
+  to disambiguate from adapter-level `store_batch(List[MemoryEntry])`.
+- **TestStorageAdapterContract updated**: `test_remember_*` → `test_store_entry_*`,
+  `test_forget_*` → `test_delete_*`, `test_remember_batch` removed (covered by `test_store_batch`).
+- **50+ test call sites migrated**: All deprecated API calls in tests migrated to new API.
+- **Internal cleanup**: `import warnings` removed from 4 source files no longer needing it.
+
+### Previous Release: v0.5.4 (Batch API — Phase 2)
 
 - **store_batch() API**: Atomic batch store method accepting `List[MemoryEntry]` and
   returning `List[StoredMemory]` with full metadata. SQLiteAdapter uses BEGIN/commit/rollback
   for all-or-nothing semantics.
 - **delete_batch() API**: Atomic batch delete method accepting `List[str]` storage_keys
   and returning `Dict[str, bool]` per-key results. SQLiteAdapter uses atomic transaction.
-- **remember_batch() deprecated**: Now emits DeprecationWarning and delegates to
-  `store_batch()`. Will be removed in v0.6.0.
+- **remember_batch() deprecated**: Emitted DeprecationWarning and delegated to
+  `store_batch()`. **Removed in v0.6.0.**
 - **AsyncStorageAdapter Protocol**: Updated with store_entry/store/store_batch/delete/
   delete_batch current API signatures.
 - **ObsidianAdapter**: Explicit store_batch/delete_batch raising NotImplementedError
@@ -220,19 +232,22 @@ each py3.11 + py3.12).
 
 ## Next Milestone
 
-**v0.6.0** (next minor — Phase 3: deprecated API removal + async migration)
+**v0.7.0** (next minor — Phase 3 remaining architecture cleanup)
 
 Phase 1 (store_entry core API) complete (commit `6aaa477`, 2026-07-09).
 Phase 2 (batch API + adapter migration) complete (2026-07-09).
-Phase 3 candidates (see [CARRYMEM_OPTIMIZATION_PLAN_v0.5.3.md](CARRYMEM_OPTIMIZATION_PLAN_v0.5.3.md)):
-- Remove deprecated `remember()`/`forget()`/`remember_batch()` methods
-- Complete AsyncStorageAdapter migration to store/delete/store_batch/delete_batch
-- Core layer method name migration (remember_batch → store_batch in MemoryCRUDMixin)
-- Core layer `remember_batch()` → `store_batch()` migration
-- MIGRATION.md release guide
+Phase 3 (deprecated API removal) complete (2026-07-09).
+
+Phase 3 remaining architecture cleanup items (deferred to v0.7.0, see
+[CARRYMEM_OPTIMIZATION_PLAN_v0.5.3.md](CARRYMEM_OPTIMIZATION_PLAN_v0.5.3.md)):
+- recall() signature normalization (namespaces parameter)
+- Core layer hard-coupling decoupling (capabilities vs isinstance)
+- count() performance optimization (direct SELECT COUNT(*))
+- Audit access publicization (audit() method vs _audit private access)
+- search_fulltext semantic correction
 
 Known tech debt to address:
-- Pre-existing Black/isort format issues in `_memory_crud.py` + `test_performance_benchmark.py`
-  (Lint CI job failure, not a Phase 1 regression — present since 4ac2ed3)
+- Pre-existing macOS flaky test: `test_e2e_edge_cases.py::TestE2EPermissionScenarios::test_no_write_permission_on_file`
+  (disk I/O error vs readonly matching, not a regression)
 
 See [ROADMAP.md](ROADMAP.md) for long-term planning.

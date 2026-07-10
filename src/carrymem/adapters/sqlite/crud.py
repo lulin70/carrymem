@@ -3,7 +3,6 @@
 import json
 import sqlite3
 import struct
-import warnings
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
@@ -184,19 +183,6 @@ class CRUDOperations:
         if self._adapter._enable_cache and self._adapter._cache:
             self._adapter._cache.invalidate(self._adapter.namespace)
         return results
-
-    def remember_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:
-        """Insert multiple entries in a single transaction.
-
-        .. deprecated:: 0.5.4
-            Use :meth:`store_batch` instead. Will be removed in v0.6.0.
-        """
-        warnings.warn(
-            "remember_batch() is deprecated, use store_batch() instead. " "Will be removed in v0.6.0.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.store_batch(entries)
 
     def delete_batch(self, storage_keys: List[str]) -> Dict[str, bool]:
         """Delete multiple memories by storage_key in a single atomic transaction.

@@ -625,7 +625,7 @@ class SQLiteAdapter:
 
 | 操作 | 使用的锁 | 作用范围 | 行为 |
 |------|---------|---------|------|
-| 写操作（remember/forget/update/recalculate/remember_batch） | `self._file_lock` | 跨实例 | 序列化对同一 DB 文件的所有写操作 |
+| 写操作（store_entry/store_batch/delete/update/recalculate） | `self._file_lock` | 跨实例 | 序列化对同一 DB 文件的所有写操作 |
 | 读操作（recall/list） | `self._lock` | 单实例 | 不阻塞其他实例的读操作 |
 
 **二级保护**：WAL 模式 + `busy_timeout=10000ms`
@@ -821,7 +821,7 @@ cm = CarryMem(storage="postgresql")
 
 ```python
 # 事务性批量操作
-adapter.remember_batch(entries)
+adapter.store_batch(entries)
 # → BEGIN → INSERT... → COMMIT（出错则 ROLLBACK）
 ```
 

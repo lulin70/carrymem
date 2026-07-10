@@ -30,7 +30,7 @@ class TestJsonAdapterExtra:
         nested_path = str(tmp_path / "nested" / "dir" / "db.json")
         adapter = JSONAdapter(path=nested_path)
         entry = MemoryEntry(content="test content", type="personal_fact")
-        adapter.remember(entry)
+        adapter.store_entry(entry)
         assert os.path.exists(nested_path)
 
     def test_recall_with_update_access_false(self, tmp_path):
@@ -39,7 +39,7 @@ class TestJsonAdapterExtra:
 
         adapter = JSONAdapter(path=str(tmp_path / "test.json"))
         entry = MemoryEntry(content="I prefer Python", type="user_preference")
-        adapter.remember(entry)
+        adapter.store_entry(entry)
 
         # Recall with update_access=True
         r1 = adapter.recall("Python", limit=5, update_access=True)
@@ -64,9 +64,9 @@ class TestJsonAdapterExtra:
         from carrymem.adapters.json_adapter import JSONAdapter
 
         adapter = JSONAdapter(path=str(tmp_path / "multi.json"))
-        adapter.remember(MemoryEntry(content="I prefer Python", type="user_preference"))
-        adapter.remember(MemoryEntry(content="Do NOT use Java", type="correction"))
-        adapter.remember(MemoryEntry(content="Meeting at 3pm", type="personal_fact"))
+        adapter.store_entry(MemoryEntry(content="I prefer Python", type="user_preference"))
+        adapter.store_entry(MemoryEntry(content="Do NOT use Java", type="correction"))
+        adapter.store_entry(MemoryEntry(content="Meeting at 3pm", type="personal_fact"))
 
         all_mems = adapter.recall("Python", limit=10)
         assert len(all_mems) >= 1

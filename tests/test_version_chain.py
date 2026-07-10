@@ -134,7 +134,7 @@ class TestVersionChain:
     def test_state_memory_gets_chain_id(self, db):
         """State memory should get version_chain_id set to its storage_key."""
         e = MemoryEntry(type="user_preference", content="I prefer dark mode")
-        s = db.remember(e)
+        s = db.store_entry(e)
         assert s.memory_nature == "state"
         # Chain ID should be set (by the post-supersede UPDATE)
         results = db.recall(query="dark mode")
@@ -144,16 +144,16 @@ class TestVersionChain:
     def test_event_memory_no_chain(self, db):
         """Event memory should not get version_chain_id (no versioning needed)."""
         e = MemoryEntry(type="session_summary", content="User discussed React patterns")
-        s = db.remember(e)
+        s = db.store_entry(e)
         assert s.memory_nature == "event"
 
     def test_supersede_creates_version_chain(self, db):
         """When a preference is superseded, both memories should share a chain_id."""
         e1 = MemoryEntry(type="user_preference", content="I prefer dark mode")
-        s1 = db.remember(e1)
+        s1 = db.store_entry(e1)
 
         e2 = MemoryEntry(type="user_preference", content="I now prefer light mode")
-        s2 = db.remember(e2)
+        s2 = db.store_entry(e2)
 
         # New memory should have version_number=2
         results = db.recall(query="mode preference")
@@ -165,10 +165,10 @@ class TestVersionChain:
     def test_superseded_memory_has_chain_id(self, db):
         """Superseded memory should also have version_chain_id."""
         e1 = MemoryEntry(type="user_preference", content="I prefer dark mode")
-        db.remember(e1)
+        db.store_entry(e1)
 
         e2 = MemoryEntry(type="user_preference", content="I now prefer light mode")
-        db.remember(e2)
+        db.store_entry(e2)
 
         # Get all memories including superseded
         results = db.recall(query="mode", filters={"include_superseded": True})
@@ -181,13 +181,13 @@ class TestVersionChain:
     def test_three_version_chain(self, db):
         """Three versions of the same preference should form a chain."""
         e1 = MemoryEntry(type="user_preference", content="I prefer dark mode")
-        db.remember(e1)
+        db.store_entry(e1)
 
         e2 = MemoryEntry(type="user_preference", content="I now prefer light mode")
-        db.remember(e2)
+        db.store_entry(e2)
 
         e3 = MemoryEntry(type="user_preference", content="I switched back to dark mode")
-        db.remember(e3)
+        db.store_entry(e3)
 
         # Latest should be version 3
         results = db.recall(query="mode")
@@ -197,10 +197,10 @@ class TestVersionChain:
     def test_different_preferences_separate_chains(self, db):
         """Different preferences should have separate chains."""
         e1 = MemoryEntry(type="user_preference", content="I prefer dark mode")
-        db.remember(e1)
+        db.store_entry(e1)
 
         e2 = MemoryEntry(type="user_preference", content="I like Python")
-        db.remember(e2)
+        db.store_entry(e2)
 
         results = db.recall(query="prefer like")
         active = [r for r in results if not r.superseded_at]
@@ -212,10 +212,10 @@ class TestVersionChain:
     def test_recall_excludes_superseded_by_default(self, db):
         """recall should exclude superseded memories by default."""
         e1 = MemoryEntry(type="user_preference", content="I prefer dark mode")
-        db.remember(e1)
+        db.store_entry(e1)
 
         e2 = MemoryEntry(type="user_preference", content="I now prefer light mode")
-        db.remember(e2)
+        db.store_entry(e2)
 
         results = db.recall(query="mode")
         active = [r for r in results if not r.superseded_at]
@@ -227,10 +227,10 @@ class TestVersionChain:
     def test_recall_includes_superseded_when_requested(self, db):
         """recall with include_superseded=True should include old versions."""
         e1 = MemoryEntry(type="user_preference", content="I prefer dark mode")
-        db.remember(e1)
+        db.store_entry(e1)
 
         e2 = MemoryEntry(type="user_preference", content="I now prefer light mode")
-        db.remember(e2)
+        db.store_entry(e2)
 
         results = db.recall(query="mode", filters={"include_superseded": True})
         assert len(results) >= 2
@@ -250,7 +250,7 @@ class TestVersionChain:
     def test_migration_backfill(self, db):
         """Migration should backfill session_summary as event."""
         e = MemoryEntry(type="session_summary", content="User discussed React")
-        db.remember(e)
+        db.store_entry(e)
         results = db.recall(query="React")
         if results:
             assert results[0].memory_nature == "event"
@@ -258,45 +258,45 @@ class TestVersionChain:
     def test_decision_is_state(self, db):
         """Decision type should be state."""
         e = MemoryEntry(type="decision", content="Decided to use React for frontend")
-        s = db.remember(e)
+        s = db.store_entry(e)
         assert s.memory_nature == "state"
 
     def test_correction_is_state(self, db):
         """Correction type should be state."""
         e = MemoryEntry(type="correction", content="Correction: I meant TypeScript not JavaScript")
-        s = db.remember(e)
+        s = db.store_entry(e)
         assert s.memory_nature == "state"
 
     def test_fact_declaration_is_state(self, db):
         """Fact declaration type should be state."""
         e = MemoryEntry(type="fact_declaration", content="I live in Tokyo")
-        s = db.remember(e)
+        s = db.store_entry(e)
         assert s.memory_nature == "state"
 
     def test_relationship_is_state(self, db):
         """Relationship type should be state."""
         e = MemoryEntry(type="relationship", content="My colleague Alice is a designer")
-        s = db.remember(e)
+        s = db.store_entry(e)
         assert s.memory_nature == "state"
 
     def test_sentiment_marker_is_state(self, db):
         """Sentiment marker type should be state."""
         e = MemoryEntry(type="sentiment_marker", content="User seems frustrated with slow responses")
-        s = db.remember(e)
+        s = db.store_entry(e)
         assert s.memory_nature == "state"
 
     def test_task_pattern_is_event(self, db):
         """Task pattern type should be event."""
         e = MemoryEntry(type="task_pattern", content="User always reviews code before merging")
-        s = db.remember(e)
+        s = db.store_entry(e)
         assert s.memory_nature == "event"
 
     def test_version_chain_id_persistence(self, db):
         """Version chain ID should persist across recall."""
         e1 = MemoryEntry(type="user_preference", content="I prefer dark mode")
-        db.remember(e1)
+        db.store_entry(e1)
         e2 = MemoryEntry(type="user_preference", content="I now prefer light mode")
-        db.remember(e2)
+        db.store_entry(e2)
 
         # First recall
         r1 = db.recall(query="mode", filters={"include_superseded": True})

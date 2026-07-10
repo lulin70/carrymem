@@ -316,7 +316,7 @@ class TestSQLiteAdapterSessionSummary:
             suggested_action="store",
             metadata={"session_id": "sess-1"},
         )
-        adapter.remember(entry)
+        adapter.store_entry(entry)
         results = adapter.recall("session", limit=10)
         types = [r.type for r in results]
         assert "session_summary" not in types
@@ -333,7 +333,7 @@ class TestSQLiteAdapterSessionSummary:
             suggested_action="store",
             metadata={"session_id": "sess-1"},
         )
-        adapter.remember(entry)
+        adapter.store_entry(entry)
         results = adapter.recall("session", filters={"include_session_summary": True}, limit=10)
         types = [r.type for r in results]
         assert "session_summary" in types
@@ -350,7 +350,7 @@ class TestSQLiteAdapterSessionSummary:
             suggested_action="store",
             metadata={"session_id": "sess-1"},
         )
-        adapter.remember(entry)
+        adapter.store_entry(entry)
         results = adapter.recall("", filters={"type": "session_summary"}, limit=10)
         assert len(results) >= 1
         assert results[0].type == "session_summary"
@@ -367,7 +367,7 @@ class TestSQLiteAdapterSessionSummary:
             suggested_action="store",
             metadata={"session_id": "sess-xyz-999"},
         )
-        stored = adapter.remember(entry)
+        stored = adapter.store_entry(entry)
         assert stored.metadata.get("session_id") == "sess-xyz-999"
 
     def test_session_id_filter(self, adapter):
@@ -382,7 +382,7 @@ class TestSQLiteAdapterSessionSummary:
             suggested_action="store",
             metadata={"session_id": "sess-filter-test"},
         )
-        adapter.remember(entry)
+        adapter.store_entry(entry)
         results = adapter.recall("", filters={"session_id": "sess-filter-test"}, limit=10)
         assert len(results) >= 1
         assert results[0].metadata.get("session_id") == "sess-filter-test"
@@ -431,6 +431,6 @@ class TestCarryMemIntegration:
             suggested_action="store",
             metadata={"session_id": "sess-bc-1"},
         )
-        carrymem._adapter.remember(entry)
+        carrymem._adapter.store_entry(entry)
         ctx = carrymem.build_context(context="dark mode", max_memories=10)
         assert ctx["memory_count"] >= 1

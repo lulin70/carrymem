@@ -42,7 +42,7 @@ class TestJSONAdapter(unittest.TestCase):
             tier=2,
             source_layer="rule",
         )
-        stored = self.adapter.remember(entry)
+        stored = self.adapter.store_entry(entry)
         self.assertIsNotNone(stored)
         self.assertEqual(stored.content, "I prefer dark mode")
 
@@ -60,8 +60,8 @@ class TestJSONAdapter(unittest.TestCase):
             tier=2,
             source_layer="rule",
         )
-        self.adapter.remember(entry)
-        self.adapter.remember(entry)
+        self.adapter.store_entry(entry)
+        self.adapter.store_entry(entry)
         results = self.adapter.recall(query="dark mode")
         self.assertEqual(len(results), 1)
 
@@ -75,8 +75,8 @@ class TestJSONAdapter(unittest.TestCase):
             tier=2,
             source_layer="rule",
         )
-        stored = self.adapter.remember(entry)
-        result = self.adapter.forget(stored.storage_key)
+        stored = self.adapter.store_entry(entry)
+        result = self.adapter.delete(stored.storage_key)
         self.assertTrue(result)
         results = self.adapter.recall(query="dark mode")
         self.assertEqual(len(results), 0)
@@ -91,7 +91,7 @@ class TestJSONAdapter(unittest.TestCase):
             tier=2,
             source_layer="rule",
         )
-        self.adapter.remember(entry)
+        self.adapter.store_entry(entry)
         stats = self.adapter.get_stats()
         self.assertEqual(stats["adapter"], "json")
         self.assertEqual(stats["total_count"], 1)
@@ -106,7 +106,7 @@ class TestJSONAdapter(unittest.TestCase):
             tier=3,
             source_layer="rule",
         )
-        stored = self.adapter.remember(entry)
+        stored = self.adapter.store_entry(entry)
         self.assertGreater(stored.importance_score, 0)
 
     def test_file_persistence(self):
@@ -119,7 +119,7 @@ class TestJSONAdapter(unittest.TestCase):
             tier=3,
             source_layer="rule",
         )
-        self.adapter.remember(entry)
+        self.adapter.store_entry(entry)
         self.assertTrue(os.path.exists(self.path))
 
         adapter2 = JSONAdapter(path=self.path, namespace="default")
@@ -136,7 +136,7 @@ class TestJSONAdapter(unittest.TestCase):
             tier=2,
             source_layer="rule",
         )
-        self.adapter.remember(entry)
+        self.adapter.store_entry(entry)
         adapter2 = JSONAdapter(path=self.path, namespace="other")
         results = adapter2.recall(query="dark mode")
         self.assertEqual(len(results), 0)

@@ -18,7 +18,6 @@ Limitations:
 import json
 import os
 import threading
-import warnings
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -135,19 +134,6 @@ class JSONAdapter(StorageAdapter):
 
             return StoredMemory.from_dict(stored_dict)
 
-    def remember(self, entry: MemoryEntry, _skip_commit: bool = False) -> StoredMemory:
-        """Store a memory entry.
-
-        .. deprecated:: 0.4.0
-            Use ``store()`` instead. Will be removed in v0.6.0.
-        """
-        warnings.warn(
-            "remember() is deprecated, use store() instead. " "Will be removed in v0.6.0.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self._store_entry(entry, _skip_commit)
-
     def recall(  # type: ignore[override]
         self,
         query: str,
@@ -240,19 +226,6 @@ class JSONAdapter(StorageAdapter):
                 self._save()
                 return True
             return False
-
-    def forget(self, storage_key: str) -> bool:
-        """Delete a memory by its storage key.
-
-        .. deprecated:: 0.4.0
-            Use ``delete()`` instead. Will be removed in v0.6.0.
-        """
-        warnings.warn(
-            "forget() is deprecated, use delete() instead. " "Will be removed in v0.6.0.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self._delete_entry(storage_key)
 
     def get_stats(self) -> Dict[str, Any]:
         """Return summary statistics about stored memories."""

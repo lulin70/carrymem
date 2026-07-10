@@ -1065,12 +1065,6 @@ class TestCarryMemExtra:
             def health_check(self):
                 return {"status": "healthy", "latency_ms": 0.0}
 
-            def remember(self, *a, **kw):
-                return None
-
-            def forget(self, *a, **kw):
-                return False
-
             def close(self):
                 pass
 
@@ -1112,12 +1106,6 @@ class TestCarryMemExtra:
             def health_check(self):
                 return {"status": "healthy", "latency_ms": 0.0}
 
-            def remember(self, *a, **kw):
-                return None
-
-            def forget(self, *a, **kw):
-                return False
-
             def close(self):
                 pass
 
@@ -1158,12 +1146,6 @@ class TestCarryMemExtra:
 
             def health_check(self):
                 return {"status": "healthy", "latency_ms": 0.0}
-
-            def remember(self, *a, **kw):
-                return None
-
-            def forget(self, *a, **kw):
-                return False
 
             def close(self):
                 pass

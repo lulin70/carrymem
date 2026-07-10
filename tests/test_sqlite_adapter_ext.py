@@ -32,7 +32,7 @@ def adapter_with_data(adapter):
         content="I prefer dark mode",
         type="user_preference",
     )
-    adapter.remember(entry)
+    adapter.store_entry(entry)
     return adapter
 
 
@@ -41,7 +41,7 @@ class TestContextManager:
         with SQLiteAdapter(db_path, enable_semantic_recall=False, enable_cache=False) as a:
             assert a is not None
             entry = MemoryEntry(content="Test", type="user_preference")
-            a.remember(entry)
+            a.store_entry(entry)
 
 
 class TestProperties:
@@ -63,12 +63,12 @@ class TestProperties:
 class TestRememberBatch:
     def test_batch_basic(self, adapter):
         entries = [MemoryEntry(content=f"Memory {i}", type="user_preference") for i in range(3)]
-        results = adapter.remember_batch(entries)
+        results = adapter.store_batch(entries)
         assert isinstance(results, list)
         assert len(results) == 3
 
     def test_batch_empty(self, adapter):
-        results = adapter.remember_batch([])
+        results = adapter.store_batch([])
         assert isinstance(results, list)
         assert len(results) == 0
 

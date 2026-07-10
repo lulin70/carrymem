@@ -62,7 +62,7 @@ def populated_db_fn(tmp_path):
         )
         for i in range(200)
     ]
-    cm._adapter.remember_batch(entries)
+    cm._adapter.store_batch(entries)
 
     return cm, db_path
 
@@ -94,7 +94,7 @@ class TestNoMemoryLeakOnRepeatedRecall:
             )
             for i in range(100)
         ]
-        cm._adapter.remember_batch(entries)
+        cm._adapter.store_batch(entries)
 
         tracemalloc.start()
 
@@ -205,7 +205,7 @@ class TestBulkInsertMemoryGrowthLinear:
                             source_layer="manual",
                         )
                     )
-                cm._adapter.remember_batch(entries)
+                cm._adapter.store_batch(entries)
                 inserted += batch_size
 
                 if inserted in checkpoints:

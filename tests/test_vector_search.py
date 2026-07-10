@@ -90,7 +90,7 @@ class TestEmbeddingStorage:
             type="user_preference",
             raw_text="I prefer dark mode for my IDE",
         )
-        stored = adapter_with_vector.remember(entry)
+        stored = adapter_with_vector.store_entry(entry)
         assert stored is not None
 
         conn = adapter_with_vector._get_connection()
@@ -103,7 +103,7 @@ class TestEmbeddingStorage:
             type="decision",
             raw_text="We decided to use PostgreSQL for the database",
         )
-        adapter_with_vector.remember(entry)
+        adapter_with_vector.store_entry(entry)
 
         conn = adapter_with_vector._get_connection()
         vec = conn.execute("SELECT memory_id FROM memory_vectors").fetchone()
@@ -114,7 +114,7 @@ class TestEmbeddingStorage:
             content="Server IP is 10.0.1.50",
             type="fact_declaration",
         )
-        adapter_with_vector.remember(entry)
+        adapter_with_vector.store_entry(entry)
 
         conn = adapter_with_vector._get_connection()
         count = conn.execute("SELECT COUNT(*) FROM memory_vectors").fetchone()[0]
@@ -126,7 +126,7 @@ class TestEmbeddingStorage:
             type="user_preference",
             raw_text="Test raw text",
         )
-        adapter_no_vector.remember(entry)
+        adapter_no_vector.store_entry(entry)
 
         try:
             conn = adapter_no_vector._get_connection()
@@ -153,9 +153,9 @@ class TestVectorRecall:
             type="fact_declaration",
             raw_text="The deployment server IP is 10.0.1.50",
         )
-        adapter_with_vector.remember(entry1)
-        adapter_with_vector.remember(entry2)
-        adapter_with_vector.remember(entry3)
+        adapter_with_vector.store_entry(entry1)
+        adapter_with_vector.store_entry(entry2)
+        adapter_with_vector.store_entry(entry3)
 
         results = adapter_with_vector.recall("what theme does the user like")
         assert len(results) >= 1
@@ -168,7 +168,7 @@ class TestVectorRecall:
             type="user_preference",
             raw_text="I prefer dark mode for my IDE",
         )
-        adapter_with_vector.remember(entry)
+        adapter_with_vector.store_entry(entry)
 
         results = adapter_with_vector.recall("dark mode")
         assert len(results) >= 1
@@ -188,7 +188,7 @@ class TestVectorRecall:
             content="Test fallback content",
             type="user_preference",
         )
-        a.remember(entry)
+        a.store_entry(entry)
 
         a._enable_vector = False
         results = a.recall("fallback content")
@@ -203,13 +203,13 @@ class TestForgetDeletesVector:
             type="user_preference",
             raw_text="This memory will be deleted",
         )
-        stored = adapter_with_vector.remember(entry)
+        stored = adapter_with_vector.store_entry(entry)
 
         conn = adapter_with_vector._get_connection()
         count_before = conn.execute("SELECT COUNT(*) FROM memory_vectors").fetchone()[0]
         assert count_before == 1
 
-        adapter_with_vector.forget(stored.storage_key)
+        adapter_with_vector.delete(stored.storage_key)
 
         count_after = conn.execute("SELECT COUNT(*) FROM memory_vectors").fetchone()[0]
         assert count_after == 0

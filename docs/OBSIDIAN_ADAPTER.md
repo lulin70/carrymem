@@ -313,9 +313,9 @@ ObsidianAdapter(vault_path: str, db_path: Optional[str] = None, content_truncate
 | `get_stats` | `() -> Dict[str, Any]` | Returns `{"adapter", "total_notes", "unique_tags", "top_tags", "capabilities"}` |
 | `get_tags` | `() -> Dict[str, int]` | Returns all tags with their occurrence counts, sorted by frequency |
 | `get_linked_notes` | `(note_title: str) -> List[Dict[str, Any]]` | Find all notes that wiki-link to the given title |
-| `remember` | `(entry) -> Any` | **Raises NotImplementedError** — read-only adapter |
-| `remember_batch` | `(entries: list) -> list` | **Raises NotImplementedError** — read-only adapter |
-| `forget` | `(storage_key: str) -> bool` | **Raises NotImplementedError** — read-only adapter |
+| `store_entry` | `(entry: MemoryEntry) -> StoredMemory` | **Raises NotImplementedError** — read-only adapter |
+| `store_batch` | `(entries: list) -> list` | **Raises NotImplementedError** — read-only adapter |
+| `delete` | `(entry_id: str) -> bool` | **Raises NotImplementedError** — read-only adapter |
 | `close` | `() -> None` | Close all database connections |
 
 ### Search Result Format
@@ -385,7 +385,7 @@ else:
 
 ## Limitations
 
-- **Read-only**: The adapter cannot write to or modify vault files. `remember()`, `remember_batch()`, and `forget()` all raise `NotImplementedError`. To delete a note, remove it from your vault and re-index.
+- **Read-only**: The adapter cannot write to or modify vault files. `store_entry()`, `store_batch()`, and `delete()` all raise `NotImplementedError`. To delete a note, remove it from your vault and re-index.
 - **No vector search**: Semantic similarity search is not supported. Only FTS5 full-text search is available.
 - **No TTL support**: Notes do not expire. They remain in the index until the source file is removed from the vault.
 - **No `storage="obsidian"`**: You cannot pass `storage="obsidian"` to `CarryMem()`. The Obsidian adapter must be used as `knowledge_adapter`, not as the primary storage adapter.

@@ -361,14 +361,6 @@ class ObsidianAdapter(StorageAdapter):
             "skipped": skipped_count,
         }
 
-    def remember(self, entry) -> Any:
-        """Store a memory entry (unsupported on read-only Obsidian adapter)."""
-        raise NotImplementedError("ObsidianAdapter is read-only. Use SQLiteAdapter for storing memories.")
-
-    def remember_batch(self, entries: list) -> list:
-        """Store multiple memory entries (unsupported on read-only Obsidian adapter)."""
-        raise NotImplementedError("ObsidianAdapter is read-only. Use SQLiteAdapter for storing memories.")
-
     def recall(
         self,
         query: str,
@@ -511,10 +503,6 @@ class ObsidianAdapter(StorageAdapter):
         rows = self._get_connection().execute(sql, params).fetchall()
 
         return [self._row_to_dict(row) for row in rows]
-
-    def forget(self, storage_key: str) -> bool:
-        """Delete a memory entry (unsupported on read-only Obsidian adapter)."""
-        raise NotImplementedError("ObsidianAdapter is read-only. Delete notes from your vault directly.")
 
     def get_stats(self) -> Dict[str, Any]:
         """Return summary statistics about the indexed vault."""

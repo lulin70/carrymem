@@ -143,28 +143,21 @@ class TestClassifyAndRememberLatency:
         # Cold-start is a one-time cost; verify it's bounded but don't let it
         # fail the warm-performance gate.
         assert cold_ms < self.COLD_START_MAX_MS, (
-            f"Cold-start latency {cold_ms:.1f}ms exceeds {self.COLD_START_MAX_MS}ms "
-            f"(model loading too slow)"
+            f"Cold-start latency {cold_ms:.1f}ms exceeds {self.COLD_START_MAX_MS}ms " f"(model loading too slow)"
         )
 
         # Warm performance gates.
         # P95 is the primary gate: stable, insensitive to 1-in-50 system
         # jitter (GC pauses, SQLite fsync, macOS scheduler). Steady-state
         # P95 is ~50ms; 100ms catches real regressions with margin.
-        assert p95 < P95_LATENCY_MS, (
-            f"Warm P95 latency {p95:.1f}ms exceeds {P95_LATENCY_MS}ms threshold"
-        )
-        assert avg < AVG_LATENCY_MS, (
-            f"Warm average latency {avg:.1f}ms exceeds {AVG_LATENCY_MS}ms threshold"
-        )
+        assert p95 < P95_LATENCY_MS, f"Warm P95 latency {p95:.1f}ms exceeds {P95_LATENCY_MS}ms threshold"
+        assert avg < AVG_LATENCY_MS, f"Warm average latency {avg:.1f}ms exceeds {AVG_LATENCY_MS}ms threshold"
 
         # P99 is a secondary reference gate with relaxed threshold: macOS
         # system-level jitter (GC, fsync, scheduler) can produce 400-700ms
         # outliers on 1-in-50 calls even with no code regression. 1000ms
         # catches catastrophic regressions without false-positiving on jitter.
-        assert p99 < P99_LATENCY_MS, (
-            f"Warm P99 latency {p99:.1f}ms exceeds {P99_LATENCY_MS}ms threshold"
-        )
+        assert p99 < P99_LATENCY_MS, f"Warm P99 latency {p99:.1f}ms exceeds {P99_LATENCY_MS}ms threshold"
 
 
 # ---------------------------------------------------------------------------
@@ -187,9 +180,7 @@ class TestRecall1000Records:
             elapsed_ms = (time.perf_counter() - start) * 1000
             latencies.append(elapsed_ms)
 
-            assert isinstance(results, list), (
-                f"Recall should return list, got {type(results)}"
-            )
+            assert isinstance(results, list), f"Recall should return list, got {type(results)}"
 
         max_latency = max(latencies)
         avg_latency = statistics.mean(latencies)
@@ -203,9 +194,9 @@ class TestRecall1000Records:
             f"total_time={total_time_s:.2f}s, throughput={throughput:.0f} QPS"
         )
 
-        assert max_latency < RECALL_MAX_MS, (
-            f"Max recall latency {max_latency:.1f}ms exceeds {RECALL_MAX_MS}ms threshold for 1000 records"
-        )
+        assert (
+            max_latency < RECALL_MAX_MS
+        ), f"Max recall latency {max_latency:.1f}ms exceeds {RECALL_MAX_MS}ms threshold for 1000 records"
 
 
 # ---------------------------------------------------------------------------
@@ -246,7 +237,7 @@ class TestBatchInsert100:
             messages = self._generate_messages(100)
 
             start = time.perf_counter()
-            result = cm.remember_batch(messages, force_type="fact_declaration")
+            result = cm.store_messages(messages, force_type="fact_declaration")
             elapsed_s = time.perf_counter() - start
 
             throughput = result["stored_count"] / elapsed_s if elapsed_s > 0 else 0
@@ -258,15 +249,13 @@ class TestBatchInsert100:
             )
 
             assert len(result["errors"]) == 0, f"Errors: {result['errors'][:5]}"
-            assert result["stored_count"] == 100, (
-                f"Only stored {result['stored_count']}/100"
-            )
-            assert elapsed_s < BATCH_INSERT_S, (
-                f"Fast batch insert took {elapsed_s:.3f}s, exceeds {BATCH_INSERT_S}s threshold"
-            )
-            assert throughput >= BATCH_THROUGHPUT_OPS, (
-                f"Throughput {throughput:.0f} ops/s below expected {BATCH_THROUGHPUT_OPS} ops/s"
-            )
+            assert result["stored_count"] == 100, f"Only stored {result['stored_count']}/100"
+            assert (
+                elapsed_s < BATCH_INSERT_S
+            ), f"Fast batch insert took {elapsed_s:.3f}s, exceeds {BATCH_INSERT_S}s threshold"
+            assert (
+                throughput >= BATCH_THROUGHPUT_OPS
+            ), f"Throughput {throughput:.0f} ops/s below expected {BATCH_THROUGHPUT_OPS} ops/s"
         finally:
             cm.close()
 
@@ -309,9 +298,9 @@ class TestBatchInsert100:
             # reflects this known baseline; the test guards against further
             # regression, not against the inherent cost of classification.
             classify_budget = BATCH_INSERT_S * 20
-            assert elapsed_s < classify_budget, (
-                f"Classify batch insert took {elapsed_s:.3f}s, exceeds {classify_budget}s threshold"
-            )
+            assert (
+                elapsed_s < classify_budget
+            ), f"Classify batch insert took {elapsed_s:.3f}s, exceeds {classify_budget}s threshold"
         finally:
             cm.close()
 
@@ -351,12 +340,8 @@ class TestExportProfileLarge:
         )
 
         assert total_exported > 0, "Should have exported memories"
-        assert json_time < EXPORT_S, (
-            f"JSON export took {json_time:.3f}s, exceeds {EXPORT_S}s threshold"
-        )
-        assert md_time < EXPORT_S, (
-            f"Markdown export took {md_time:.3f}s, exceeds {EXPORT_S}s threshold"
-        )
+        assert json_time < EXPORT_S, f"JSON export took {json_time:.3f}s, exceeds {EXPORT_S}s threshold"
+        assert md_time < EXPORT_S, f"Markdown export took {md_time:.3f}s, exceeds {EXPORT_S}s threshold"
         assert os.path.exists(export_path), "JSON export file should exist"
         assert os.path.exists(md_path), "Markdown export file should exist"
 
@@ -371,10 +356,7 @@ class TestEncryptionOverhead:
 
     def _generate_test_data(self, count=100):
         """Generate test data for encryption benchmarks."""
-        return [
-            f"Test message {i}: Sensitive data that needs encryption protection"
-            for i in range(count)
-        ]
+        return [f"Test message {i}: Sensitive data that needs encryption protection" for i in range(count)]
 
     def test_encryption_overhead(self):
         """Encryption overhead should be < 10x vs no-encryption."""
@@ -429,27 +411,19 @@ class TestEncryptionOverhead:
         # NoEncryption is essentially a no-op (~0.0001ms), making even a fast
         # Fernet call (0.02ms) appear as 200x overhead. Absolute latency is
         # what users actually experience.
-        assert avg_enc < 1.0, (
-            f"Average encrypt time {avg_enc:.3f}ms exceeds 1ms per operation"
-        )
-        assert avg_dec < 1.0, (
-            f"Average decrypt time {avg_dec:.3f}ms exceeds 1ms per operation"
-        )
+        assert avg_enc < 1.0, f"Average encrypt time {avg_enc:.3f}ms exceeds 1ms per operation"
+        assert avg_dec < 1.0, f"Average decrypt time {avg_dec:.3f}ms exceeds 1ms per operation"
 
         # Relative overhead as a secondary sanity check. NoEncryption baseline
         # is near-zero (~74ns), so relative ratios are inherently large and
         # vary with system load (measured range: 187x-746x across runs). The
         # 1000x ceiling catches catastrophic regressions only; the absolute
         # gates above (avg < 1ms) are the real quality bar.
-        assert overhead_ratio < 1000, (
-            f"Encryption overhead {overhead_ratio:.1f}x is excessive (>1000x baseline)"
-        )
+        assert overhead_ratio < 1000, f"Encryption overhead {overhead_ratio:.1f}x is excessive (>1000x baseline)"
 
         # Total throughput: encrypt 200 items should complete well under 5s
         total_enc_time = sum(enc_times)
-        assert total_enc_time < 5.0, (
-            f"Total encrypt time for 200 items: {total_enc_time:.3f}s exceeds 5s"
-        )
+        assert total_enc_time < 5.0, f"Total encrypt time for 200 items: {total_enc_time:.3f}s exceeds 5s"
 
 
 # ---------------------------------------------------------------------------
@@ -475,9 +449,7 @@ class TestConcurrentReadThroughput:
             local_errors = []
 
             for i in range(ops_per_thread):
-                query = (
-                    f"{['Python', 'database', 'DevOps', 'testing'][thread_id % 4]} {i}"
-                )
+                query = f"{['Python', 'database', 'DevOps', 'testing'][thread_id % 4]} {i}"
                 try:
                     start = time.perf_counter()
                     _ = cm.recall_memories(query=query, limit=10)
@@ -523,9 +495,7 @@ class TestConcurrentReadThroughput:
         )
 
         assert len(all_errors) == 0, f"Concurrent read errors: {all_errors[:5]}"
-        assert total_ops == num_threads * ops_per_thread, (
-            f"Expected {num_threads * ops_per_thread} ops, got {total_ops}"
-        )
-        assert qps > CONCURRENT_QPS_MIN, (
-            f"Concurrent read QPS {qps:.0f} below minimum {CONCURRENT_QPS_MIN} QPS"
-        )
+        assert (
+            total_ops == num_threads * ops_per_thread
+        ), f"Expected {num_threads * ops_per_thread} ops, got {total_ops}"
+        assert qps > CONCURRENT_QPS_MIN, f"Concurrent read QPS {qps:.0f} below minimum {CONCURRENT_QPS_MIN} QPS"

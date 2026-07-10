@@ -524,7 +524,7 @@ class TestSharedDbPathInstances:
                                 f"Instance-{instance_id} decision {i}: " f"We decided to use React for the frontend"
                             )
                             entry = _make_entry(instance_id, i, content)
-                            stored = adapter.remember(entry)
+                            stored = adapter.store_entry(entry)
                             if stored.storage_key:
                                 local_stored += 1
 
@@ -747,7 +747,7 @@ class TestHighContentionStress:
                         try:
                             content = f"Rapid-{worker_id} item {i}: I prefer spaces over tabs"
                             entry = _make_entry(worker_id, i, content)
-                            stored = adapter.remember(entry)
+                            stored = adapter.store_entry(entry)
                             if stored.storage_key:
                                 local_success += 1
                         except Exception as e:
@@ -819,7 +819,7 @@ class TestHighContentionStress:
             init_adapter = SQLiteAdapter(db_path=db_path)
             for i in range(5):
                 entry = _make_entry(0, i, f"Initial data {i}: I prefer Python")
-                init_adapter.remember(entry)
+                init_adapter.store_entry(entry)
             init_adapter.close()
 
             def adapter_writer(writer_id: int):
@@ -829,7 +829,7 @@ class TestHighContentionStress:
                         try:
                             content = f"Writer-{writer_id} at {time.time():.0f}: I prefer dark mode"
                             entry = _make_entry(writer_id, 0, content)
-                            adapter.remember(entry)
+                            adapter.store_entry(entry)
                             with lock:
                                 write_count["value"] += 1
                         except Exception as e:
