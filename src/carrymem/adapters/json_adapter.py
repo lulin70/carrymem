@@ -134,7 +134,7 @@ class JSONAdapter(StorageAdapter):
 
             return StoredMemory.from_dict(stored_dict)
 
-    def recall(  # type: ignore[override]
+    def recall(
         self,
         query: str,
         filters: Optional[Dict[str, Any]] = None,
@@ -378,18 +378,6 @@ class JSONAdapter(StorageAdapter):
                     count += 1
             self._save()
         return count
-
-    def search_fulltext(self, query: str) -> list[dict]:
-        """Full-text search across all stored entries.
-
-        Args:
-            query: Free-text search string.
-
-        Returns:
-            List of matching entry dicts.
-        """
-        results = self.recall(query, update_access=False)
-        return [r.to_dict() for r in results]
 
     def close(self):
         """Release resources held by the adapter (no-op for JSON)."""

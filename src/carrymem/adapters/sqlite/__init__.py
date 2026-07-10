@@ -296,6 +296,10 @@ class SQLiteAdapter(StorageAdapter):
             "batch": True,
             "graph": False,
             "semantic_recall": self._enable_semantic,
+            "versioning": True,
+            "backup": True,
+            "audit": True,
+            "namespace_filtering": True,
         }
 
     @property
@@ -421,11 +425,25 @@ class SQLiteAdapter(StorageAdapter):
         Returns:
             Number of matching memories.
         """
-        stats = self.get_stats()
-        if filter_ and "type" in filter_:
-            by_type = stats.get("by_type", {})
-            return by_type.get(filter_["type"], 0)  # type: ignore[no-any-return]
-        return stats.get("total_count", 0)  # type: ignore[no-any-return]
+        conn = self._conn_mgr.get_connection()
+        cursor = conn.cursor()
+        if filter_:
+            conditions: list[str] = []
+            params: list = []
+            if "type" in filter_:
+                conditions.append("type = ?")
+                params.append(filter_["type"])
+            if "namespace" in filter_:
+                conditions.append("namespace = ?")
+                params.append(filter_["namespace"])
+            if conditions:
+                cursor.execute(
+                    "SELECT COUNT(*) FROM memories WHERE " + " AND ".join(conditions),
+                    params,
+                )
+                return cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM memories")
+        return cursor.fetchone()[0]
 
     def health_check(self) -> dict:
         """Run a health check on the SQLite backend.
@@ -496,18 +514,6 @@ class SQLiteAdapter(StorageAdapter):
             count += 1
         return count
 
-    def search_fulltext(self, query: str) -> list[dict]:
-        """Full-text search across all stored entries.
-
-        Args:
-            query: Free-text search string.
-
-        Returns:
-            List of matching entry dicts.
-        """
-        results = self.recall(query, update_access=False)
-        return [r.to_dict() for r in results]
-
     def close(self):
         """Close the underlying connection manager and release resources."""
         self._conn_mgr.close()
@@ -550,7 +556,7 @@ class SQLiteAdapter(StorageAdapter):
 
     # ── Recall operations ───────────────────────────────────────
 
-    def recall(  # type: ignore[override]
+    def recall(
         self,
         query: str,
         filters: Optional[Dict[str, Any]] = None,

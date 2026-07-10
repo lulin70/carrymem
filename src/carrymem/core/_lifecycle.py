@@ -184,7 +184,7 @@ class LifecycleMixin:
         self._input_validator: Optional[Any] = None
 
         # Perform initial backup on first creation with SQLite
-        if self._adapter and isinstance(self._adapter, SQLiteAdapter):
+        if self._adapter and self._adapter.capabilities.get("backup", False):
             db_file = self._adapter.db_path
             if db_file and db_file != ":memory:" and os.path.exists(db_file):
                 try:

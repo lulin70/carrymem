@@ -449,6 +449,7 @@ class StorageAdapter(ABC):
         query: str,
         filters: Optional[Dict[str, Any]] = None,
         limit: int = 20,
+        namespaces: Optional[list] = None,
         update_access: bool = True,
     ) -> List[StoredMemory]:
         """Retrieve memories matching a query.
@@ -457,6 +458,8 @@ class StorageAdapter(ABC):
             query: Search query (keywords or natural language)
             filters: Optional filters (e.g., {"type": "user_preference", "tier": 1})
             limit: Maximum number of results
+            namespaces: Optional list of namespace names to restrict search scope.
+                        When None, searches across all namespaces.
             update_access: If True, update access_count/importance_score/last_accessed_at.
                            Set to False for internal reads (build_context/build_qa_prompt)
                            to avoid write side effects during prompt construction.
@@ -574,6 +577,10 @@ class StorageAdapter(ABC):
         - ttl: Time-to-live / auto-expiry
         - batch: Atomic batch operations
         - graph: Graph-based relationships
+        - versioning: Memory versioning (update/merge with history)
+        - backup: Database backup/restore
+        - audit: Audit log query
+        - namespace_filtering: Recall with namespace scope filtering
         """
         return {
             "vector_search": False,
@@ -581,6 +588,10 @@ class StorageAdapter(ABC):
             "ttl": False,
             "batch": False,
             "graph": False,
+            "versioning": False,
+            "backup": False,
+            "audit": False,
+            "namespace_filtering": False,
         }
 
     # ── Optional methods (default: raise NotImplementedError) ────────────
@@ -613,19 +624,59 @@ class StorageAdapter(ABC):
     def search_fulltext(self, query: str) -> list[dict]:
         """Full-text search across all stored entries.
 
-        Unlike :meth:`recall`, this searches raw content without
-        ranking or relevance scoring.
+        This is a convenience wrapper around :meth:`recall` with
+        ``update_access=False``. Results are ranked by the adapter's
+        recall ranking mechanism. Override for adapter-specific raw search.
 
         Args:
             query: Free-text search query string.
 
         Returns:
             List of matching entry dicts.
-
-        Raises:
-            NotImplementedError: If the adapter does not support full-text search.
         """
-        raise NotImplementedError(f"{self.__class__.__name__} does not implement search_fulltext()")
+        results = self.recall(query, update_access=False)
+        return [r.to_dict() for r in results]
+
+    def log_audit(
+        self,
+        operation: str,
+        storage_key: Optional[str] = None,
+        memory_type: Optional[str] = None,
+        success: bool = True,
+        details: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Log an audit event. No-op if audit is not configured.
+
+        Args:
+            operation: Operation name (e.g., "remember", "update", "delete").
+            storage_key: Storage key of the affected memory, if applicable.
+            memory_type: Type of the memory, if applicable.
+            success: Whether the operation succeeded.
+            details: Additional details dict.
+        """
+        audit = getattr(self, "_audit", None)
+        if audit:
+            audit.log_operation(
+                operation,
+                storage_key=storage_key,
+                memory_type=memory_type,
+                success=success,
+                details=details,
+            )
+
+    def query_audit(self, filter_: Optional[Any] = None) -> list:
+        """Query audit log entries. Returns empty list if audit is not configured.
+
+        Args:
+            filter_: AuditFilter object to narrow results.
+
+        Returns:
+            List of audit event dicts, or empty list if audit is not configured.
+        """
+        audit = getattr(self, "_audit", None)
+        if audit:
+            return audit.query(filter_)
+        return []
 
 
 @runtime_checkable
@@ -660,6 +711,8 @@ class AsyncStorageAdapter(Protocol):
         query: str,
         filters: Optional[Dict[str, Any]] = None,
         limit: int = 20,
+        namespaces: Optional[list] = None,
+        update_access: bool = True,
     ) -> List[StoredMemory]:
         """Retrieve memories matching the query asynchronously."""
 

@@ -6,7 +6,6 @@ import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from carrymem.adapters.obsidian_adapter import ObsidianAdapter
-from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.constants import DEFAULT_RECALL_LIMIT, RULE_MATCH_LIMIT_CAP
 from carrymem.core._lifecycle import KnowledgeNotConfiguredError, StorageNotConfiguredError
 from carrymem.types import StoredMemoryDict
@@ -124,16 +123,13 @@ class RecallMixin:
 
         validate_query(query or "")
         validate_limit(limit)
-        if isinstance(self._adapter, SQLiteAdapter) and namespaces:
-            results = self._adapter.recall(
-                query or "",
-                filters=filters,
-                limit=limit,
-                namespaces=namespaces,
-                update_access=update_access,
-            )
-        else:
-            results = self._adapter.recall(query or "", filters=filters, limit=limit, update_access=update_access)
+        results = self._adapter.recall(
+            query or "",
+            filters=filters,
+            limit=limit,
+            namespaces=namespaces,
+            update_access=update_access,
+        )
         return [r.to_dict() for r in results]
 
     def recall_aggregated(

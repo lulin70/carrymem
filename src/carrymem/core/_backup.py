@@ -6,7 +6,6 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.constants import AUDIT_LOG_DEFAULT_LIMIT
 
 if TYPE_CHECKING:
@@ -30,7 +29,7 @@ class BackupMixin:
         """Create initial backup when CarryMem first opens an existing database."""
         if self._initial_backup_done:
             return
-        if not self._adapter or not isinstance(self._adapter, SQLiteAdapter):
+        if not self._adapter or not self._adapter.capabilities.get("backup", False):
             return
         db_path = self._adapter.db_path
         if db_path == ":memory:":
@@ -50,7 +49,7 @@ class BackupMixin:
 
     def _auto_backup(self) -> None:
         """Check if auto-backup should run based on write count, and execute if needed."""
-        if not self._adapter or not isinstance(self._adapter, SQLiteAdapter):
+        if not self._adapter or not self._adapter.capabilities.get("backup", False):
             return
         if self._auto_backup_interval <= 0:
             return
@@ -76,8 +75,8 @@ class BackupMixin:
 
     def backup(self, backup_dir: Optional[str] = None) -> Dict[str, Any]:
         """Create a database backup and return the result dict."""
-        if not self._adapter or not isinstance(self._adapter, SQLiteAdapter):
-            return {"error": "Backup only supported with SQLiteAdapter"}
+        if not self._adapter or not self._adapter.capabilities.get("backup", False):
+            return {"error": "Backup not supported by this adapter"}
 
         from carrymem.backup import BackupManager
 
@@ -94,7 +93,7 @@ class BackupMixin:
 
     def list_backups(self, backup_dir: Optional[str] = None) -> List[Dict[str, Any]]:
         """List available backups for the adapter's database."""
-        if not self._adapter or not isinstance(self._adapter, SQLiteAdapter):
+        if not self._adapter or not self._adapter.capabilities.get("backup", False):
             return []
 
         from carrymem.backup import BackupManager
@@ -105,8 +104,8 @@ class BackupMixin:
 
     def restore_backup(self, backup_path: str, backup_dir: Optional[str] = None) -> Dict[str, Any]:
         """Restore the database from a backup file and return the result dict."""
-        if not self._adapter or not isinstance(self._adapter, SQLiteAdapter):
-            return {"error": "Restore only supported with SQLiteAdapter"}
+        if not self._adapter or not self._adapter.capabilities.get("backup", False):
+            return {"error": "Restore not supported by this adapter"}
 
         from carrymem.backup import BackupManager
 
@@ -132,10 +131,7 @@ class BackupMixin:
         limit: int = AUDIT_LOG_DEFAULT_LIMIT,
     ) -> List[Dict[str, Any]]:
         """Return audit log entries matching the filter criteria."""
-        if not self._adapter or not isinstance(self._adapter, SQLiteAdapter):
-            return []
-
-        if not self._adapter._audit:
+        if not self._adapter or not self._adapter.capabilities.get("audit", False):
             return []
 
         from carrymem.security.audit import AuditFilter
@@ -144,7 +140,7 @@ class BackupMixin:
         if operation:
             filter_.action = operation
 
-        events = self._adapter._audit.query(filter_)
+        events = self._adapter.query_audit(filter_)
         # Map action→operation for API compatibility with legacy callers
         result = []
         for e in events:

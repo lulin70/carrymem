@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from carrymem.__version__ import __version__ as _version
 from carrymem.adapters.base import MemoryEntry
-from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.constants import (
     CORRECTION_RECALL_LIMIT,
     DEFAULT_CONFIDENCE_SCORE,
@@ -181,7 +180,7 @@ class ProfileExportMixin:
 
         all_memories = self._adapter.recall("", limit=export_limit)
 
-        if ns != "default" and isinstance(self._adapter, SQLiteAdapter):
+        if ns != "default" and self._adapter.capabilities.get("namespace_filtering", False):
             all_memories = self._adapter.recall("", limit=export_limit, namespaces=[ns])
 
         export_data = {

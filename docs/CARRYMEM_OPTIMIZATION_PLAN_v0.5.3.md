@@ -213,15 +213,88 @@ def delete_batch(self, storage_keys: List[str]) -> Dict[str, bool]:
 | 3.4.5 | `__version__.py` | 0.5.4 → 0.6.0 |
 | 3.4.6 | 本文档 | Phase 3 完成记录 |
 
-#### 3.5 后续架构清理项（延迟到 v0.7.0）
+#### 3.5 v0.6.1 架构清理项（Patch — 重构优化解耦，非功能追加）
 
-| 步骤 | 内容 | 延迟理由 |
-|------|------|----------|
-| 3.6 | recall() 签名修正（namespaces 提升到基类或并入 filters） | 涉及 API 签名变更，需独立评审 |
-| 3.7 | 核心层硬耦合解耦（capabilities 替代 isinstance） | 架构重构，需独立设计 |
-| 3.8 | count() 性能优化（直接 SELECT COUNT(*)） | 性能优化，非 breaking change |
-| 3.9 | 审计访问公共化（audit() 方法替代 _audit 私有访问） | 涉及抽象层重构 |
-| 3.10 | search_fulltext 语义修正 | 需明确语义后再修正 |
+> **版本号决策**：重构/优化/解耦属于无功能变更的工作，按 SemVer 规则只递增 PATCH（v0.6.0→v0.6.1）。
+> 实施顺序按风险从低到高：3.8 → 3.6 → 3.9 → 3.7 → 3.10。
+
+##### 3.8 count() 性能优化（风险：低）✅ 已完成
+
+- **问题**：`SQLiteAdapter.count()` 调用 `get_stats()` 全量聚合（by_type/by_tier/by_namespace），
+  但 count() 只需要一个数字。`get_stats()` 内部执行多个 GROUP BY 查询，浪费 I/O。
+- **当前代码** (`sqlite/__init__.py:415-428`)：
+  ```python
+  def count(self, filter_=None):
+      stats = self.get_stats()  # 全量聚合
+      if filter_ and "type" in filter_:
+          return stats.get("by_type", {}).get(filter_["type"], 0)
+      return stats.get("total_count", 0)
+  ```
+- **修复方案**：直接 `SELECT COUNT(*) FROM memories`，有 type 过滤时加 `WHERE type = ?`
+- **影响文件**：`sqlite/__init__.py`
+- **验证**：count() 返回值与 get_stats() 一致 + 性能提升
+
+##### 3.6 recall() 签名修正（风险：低）✅ 已完成
+
+- **问题**：基类 `StorageAdapter.recall()` 无 `namespaces` 参数，但 SQLiteAdapter/
+  JSONAdapter/ObsidianAdapter 都有，用 `# type: ignore[override]` 绕过类型检查。
+  核心层 `_recall.py:127` 用 `isinstance(self._adapter, SQLiteAdapter)` 判断是否传
+  namespaces — 这是硬耦合的根源之一。
+- **当前签名对比**：
+  - 基类 (`base.py:447-453`)：`recall(query, filters, limit, update_access)`
+  - SQLiteAdapter (`sqlite/__init__.py:553-562`)：`recall(query, filters, limit, namespaces, update_access)` + `# type: ignore[override]`
+- **修复方案**：基类 `recall()` 添加 `namespaces: Optional[list] = None` 参数，
+  移除子类的 `# type: ignore[override]`，移除 _recall.py 的 isinstance 检查
+- **影响文件**：`base.py`, `sqlite/__init__.py`, `json_adapter.py`, `obsidian_adapter.py`, `_recall.py`, `_protocols.py`
+- **验证**：mypy 0 errors（无需 type: ignore）+ recall 带 namespaces 参数正常工作
+
+##### 3.9 审计访问公共化（风险：中）✅ 已完成
+
+- **问题**：核心层 14 处通过 `hasattr(self._adapter, "_audit") and self._adapter._audit`
+  直接访问适配器的私有 `_audit` 属性，破坏封装。模式重复 6 对（log_operation 调用）。
+- **当前代码** (`_memory_crud.py:136-143`)：
+  ```python
+  if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:
+      self._adapter._audit.log_operation("remember", storage_key=..., ...)
+  ```
+- **修复方案**：在 StorageAdapter 基类添加公共方法：
+  ```python
+  def log_audit(self, operation, storage_key=None, memory_type=None, success=True, details=None):
+      """Log an audit event. No-op if audit is not configured."""
+      if hasattr(self, "_audit") and self._audit:
+          self._audit.log_operation(operation, storage_key, memory_type, success, details)
+  ```
+  核心层 14 处替换为 `self._adapter.log_audit(...)` 单行调用
+- **影响文件**：`base.py`, `_memory_crud.py`, `_backup.py`
+- **验证**：审计日志正常记录 + 无 hasattr/_audit 私有访问
+
+##### 3.7 核心层硬耦合解耦（风险：中高）✅ 已完成
+
+- **问题**：核心层 14 处 `isinstance(self._adapter, SQLiteAdapter)` 硬编码类型检查，
+  阻止其他适配器扩展相同能力。
+- **分布**：`_memory_crud.py` 4处, `_backup.py` 6处, `_recall.py` 1处,
+  `_lifecycle.py` 1处, `_profile_export.py` 1处, `_maintenance.py` 1处
+- **修复方案**：用 capabilities 字典替代 isinstance。StorageAdapter 基类已有
+  `capabilities` 属性（各适配器声明 vector_search/fts/ttl/batch 等）。
+  新增能力键：`versioning`, `backup`, `audit`, `namespace_filtering`。
+  核心层改为 `if not self._adapter.capabilities.get("versioning", False):`
+- **实施结果**：12/13 处替换为 capabilities.get()。`_maintenance.py:105` 保留 isinstance
+  因其使用 SQLite 特有的 `_get_connection()` 内部方法进行原始 SQL 查询（list_expired），
+  无法通过能力键安全替换。`_memory_crud.py`、`_backup.py`、`_profile_export.py` 移除
+  `SQLiteAdapter` import；`_lifecycle.py` 保留 import（用于实例化）。
+- **影响文件**：`base.py`, `sqlite/__init__.py`, `_memory_crud.py`, `_backup.py`,
+  `_lifecycle.py`, `_profile_export.py`
+- **验证**：483 tests passed ✅
+
+##### 3.10 search_fulltext 语义修正（风险：待评估）✅ 已完成
+
+- **问题**：基类文档说"不做排名/相关性评分"，但 SQLiteAdapter 和 JSONAdapter 的实现
+  都委托给 `recall()`（做排名），语义矛盾。基类默认抛 NotImplementedError。
+- **修复方案**：基类提供默认实现（委托 `recall(query, update_access=False)`），删除
+  SQLiteAdapter 和 JSONAdapter 中的重复实现。修正文档从"不做排名"改为"按 recall 排名"。
+  ObsidianAdapter 自动继承默认实现（无需单独实现）。
+- **影响文件**：`base.py`, `sqlite/__init__.py`, `json_adapter.py`
+- **验证**：lint 通过 + smoke test 通过 ✅
 
 #### 验证标准
 
@@ -250,3 +323,4 @@ Phase 3 完成后必须通过：
 | v0.5.3 | Phase 1: store_entry 核心 API | 核心层脱离 deprecated API |
 | v0.5.4 | Phase 2: 批量 API + Async 迁移 | API 统一为 store/delete 系列 |
 | v0.6.0 | Phase 3: 移除 deprecated + 架构清理 | 双轨制终结 |
+| v0.6.1 ✅ | Phase 3.5: 架构清理项（重构优化解耦） | recall 签名统一 + isinstance 解耦 + count 优化 + 审计公共化 + search_fulltext 修正 |

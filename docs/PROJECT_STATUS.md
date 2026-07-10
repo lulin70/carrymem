@@ -1,20 +1,34 @@
 # CarryMem — Project Status
 
-**Version**: v0.6.0
-**Last Updated**: 2026-07-09
+**Version**: v0.6.1
+**Last Updated**: 2026-07-10
 **Maintainer**: CarryMem Team
 
 ---
 
-## Current Release: v0.6.0
+## Current Release: v0.6.1
 
-**Theme**: Deprecated API Removal — Phase 3 of CarryMem optimization plan (Breaking Change)
+**Theme**: Architecture Cleanup — Phase 3.5 refactoring & decoupling (PATCH release)
 
-**Release Date**: 2026-07-09
-**PyPI**: `carrymem==0.6.0` ([PyPI](https://pypi.org/project/carrymem/))
-**Git Tag**: [v0.6.0](https://github.com/lulin70/carrymem/releases/tag/v0.6.0)
+**Release Date**: 2026-07-10
+**PyPI**: `carrymem==0.6.1` ([PyPI](https://pypi.org/project/carrymem/))
+**Git Tag**: [v0.6.1](https://github.com/lulin70/carrymem/releases/tag/v0.6.1)
 
-### Core Features (v0.6.0)
+### Core Features (v0.6.1)
+
+- **recall() signature unified**: `namespaces` parameter promoted to `StorageAdapter` base class.
+  Removed 3 `type: ignore[override]` annotations and core-layer `isinstance` check.
+- **count() optimized**: Direct `SELECT COUNT(*)` replaces `get_stats()` full aggregation.
+  Added namespace/type filter support.
+- **Audit access publicized**: `log_audit()`/`query_audit()` public methods on base class replace
+  private `_audit` attribute access in core layer.
+- **Core layer decoupled**: 12 `isinstance(adapter, SQLiteAdapter)` checks replaced with
+  `adapter.capabilities.get()` checks. New capability keys: `versioning`, `backup`, `audit`,
+  `namespace_filtering`.
+- **search_fulltext fixed**: Base class provides default implementation (delegates to `recall()`).
+  Removed duplicate implementations from SQLiteAdapter and JSONAdapter.
+
+### Previous Release: v0.6.0 (Breaking Change — Deprecated API Removal)
 
 - **Deprecated API removed**: All `remember()`/`remember_batch()`/`forget()` methods removed
   from `StorageAdapter`, `SQLiteAdapter`, `JSONAdapter`, `ObsidianAdapter`, and

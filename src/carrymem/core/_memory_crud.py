@@ -6,7 +6,6 @@ import logging
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 from carrymem.adapters.base import MemoryEntry
-from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.constants import BATCH_RECALL_LIMIT, MAX_MESSAGE_LENGTH
 from carrymem.core._lifecycle import StorageNotConfiguredError
 from carrymem.exceptions import ClassificationError
@@ -133,8 +132,8 @@ class MemoryCRUDMixin:
                 force_type,
                 session_id,
             )
-            if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:
-                self._adapter._audit.log_operation(
+            if self._adapter:
+                self._adapter.log_audit(
                     "remember",
                     storage_key=result.get("storage_keys", [None])[0] if result.get("storage_keys") else None,
                     memory_type=classify_result.get("memory_type") if isinstance(classify_result, dict) else None,
@@ -143,8 +142,8 @@ class MemoryCRUDMixin:
                 )
             return result  # type: ignore[no-any-return]
         except Exception as exc:
-            if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:
-                self._adapter._audit.log_operation(
+            if self._adapter:
+                self._adapter.log_audit(
                     "remember",
                     success=False,
                     details={"error": str(exc), "message_preview": message[:100]},
@@ -337,8 +336,8 @@ class MemoryCRUDMixin:
 
         self._auto_backup()  # type: ignore[attr-defined]
 
-        if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:
-            self._adapter._audit.log_operation(
+        if self._adapter:
+            self._adapter.log_audit(
                 "declare",
                 storage_key=storage_keys[0] if storage_keys else None,
                 success=True,
@@ -376,8 +375,8 @@ class MemoryCRUDMixin:
         result = self._adapter.delete(memory_id)
         self._auto_backup()  # type: ignore[attr-defined]
 
-        if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:
-            self._adapter._audit.log_operation(
+        if self._adapter:
+            self._adapter.log_audit(
                 "forget",
                 storage_key=memory_id,
                 success=result,
@@ -397,13 +396,13 @@ class MemoryCRUDMixin:
         if not self._adapter:
             raise StorageNotConfiguredError()
 
-        if not isinstance(self._adapter, SQLiteAdapter):
-            raise ValueError("Memory versioning only supported with SQLiteAdapter")
+        if not self._adapter.capabilities.get("versioning", False):
+            raise ValueError("Memory versioning not supported by this adapter")
 
         result = self._adapter.update_memory(storage_key, new_content, reason)
         if result is None:
-            if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:
-                self._adapter._audit.log_operation(
+            if self._adapter:
+                self._adapter.log_audit(
                     "update",
                     storage_key=storage_key,
                     success=False,
@@ -416,8 +415,8 @@ class MemoryCRUDMixin:
 
         self._auto_backup()  # type: ignore[attr-defined]
 
-        if self._adapter and hasattr(self._adapter, "_audit") and self._adapter._audit:
-            self._adapter._audit.log_operation(
+        if self._adapter:
+            self._adapter.log_audit(
                 "update",
                 storage_key=storage_key,
                 success=True,
@@ -439,8 +438,8 @@ class MemoryCRUDMixin:
         if not self._adapter:
             raise StorageNotConfiguredError()
 
-        if not isinstance(self._adapter, SQLiteAdapter):
-            raise ValueError("Memory versioning only supported with SQLiteAdapter")
+        if not self._adapter.capabilities.get("versioning", False):
+            raise ValueError("Memory versioning not supported by this adapter")
 
         return self._adapter.get_memory_history(storage_key)
 
@@ -453,8 +452,8 @@ class MemoryCRUDMixin:
         if not self._adapter:
             raise StorageNotConfiguredError()
 
-        if not isinstance(self._adapter, SQLiteAdapter):
-            raise ValueError("Memory versioning only supported with SQLiteAdapter")
+        if not self._adapter.capabilities.get("versioning", False):
+            raise ValueError("Memory versioning not supported by this adapter")
 
         result = self._adapter.rollback_memory(storage_key, version)
         if result is None:
@@ -484,8 +483,8 @@ class MemoryCRUDMixin:
         if not self._adapter:
             raise StorageNotConfiguredError()
 
-        if not isinstance(self._adapter, SQLiteAdapter):
-            return {"error": "Merge only supported with SQLiteAdapter"}
+        if not self._adapter.capabilities.get("versioning", False):
+            return {"error": "Merge not supported by this adapter"}
 
         ns_list = namespaces or [self._namespace]
         all_memories = []

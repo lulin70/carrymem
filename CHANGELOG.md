@@ -10,6 +10,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > historical records from the pre-reset development cycle and should not be confused with
 > the current v0.2.x series.
 
+## [0.6.1] - 2026-07-10 (Architecture Cleanup — Refactoring & Decoupling)
+
+### Changed
+- **recall() signature unified**: `namespaces` parameter promoted to `StorageAdapter` base class
+  (was SQLiteAdapter-specific). Removed 3 `# type: ignore[override]` annotations. Core layer
+  `_recall.py` no longer imports `SQLiteAdapter` or uses `isinstance` check.
+- **count() performance optimization**: `SQLiteAdapter.count()` now uses direct `SELECT COUNT(*)`
+  instead of `get_stats()` full aggregation. Added namespace/type filter support.
+- **Audit access publicized**: `StorageAdapter` base class now provides `log_audit()` and
+  `query_audit()` public methods (were private `_audit` attribute access). Core layer
+  `_memory_crud.py` and `_backup.py` migrated from `self._adapter._audit.log_operation()` to
+  `self._adapter.log_audit()`.
+- **Core layer decoupled from SQLiteAdapter**: 12 `isinstance(adapter, SQLiteAdapter)` checks
+  replaced with `adapter.capabilities.get()` checks. New capability keys: `versioning`, `backup`,
+  `audit`, `namespace_filtering`. `_memory_crud.py`, `_backup.py`, `_profile_export.py` no longer
+  import `SQLiteAdapter` (`_lifecycle.py` retains import for instantiation; `_maintenance.py`
+  retains isinstance for raw SQL access via `_get_connection()`).
+- **search_fulltext semantics fixed**: Base class now provides default implementation (delegates
+  to `recall()` with `update_access=False`). Removed duplicate implementations from
+  `SQLiteAdapter` and `JSONAdapter`. Docstring corrected from "without ranking" to accurately
+  describe ranking behavior.
+
 ## [0.6.0] - 2026-07-09 (Breaking Change — Deprecated API Removal)
 
 ### ⚠️ Breaking Changes

@@ -173,6 +173,7 @@ class TestCarryMemMerge:
         from carrymem.adapters.base import StorageAdapter
 
         mock_adapter = MagicMock(spec=StorageAdapter)
+        mock_adapter.capabilities.get.return_value = False
         cm = CarryMem(storage=mock_adapter)
         result = cm.merge_memories()
         assert "error" in result
@@ -447,6 +448,7 @@ class TestCarryMemListExpired:
         from carrymem.adapters.base import StorageAdapter
 
         mock_adapter = MagicMock(spec=StorageAdapter)
+        mock_adapter.capabilities.get.return_value = False
         cm = CarryMem(storage=mock_adapter)
         result = cm.list_expired()
         assert result == []

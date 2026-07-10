@@ -366,8 +366,8 @@ class ObsidianAdapter(StorageAdapter):
         query: str,
         filters: Optional[Dict[str, Any]] = None,
         limit: int = 20,
-        update_access: bool = True,
         namespaces: Optional[List[str]] = None,
+        update_access: bool = True,
         **kwargs,
     ) -> list:
         """Full-text search the indexed vault notes."""
