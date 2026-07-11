@@ -10,6 +10,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > historical records from the pre-reset development cycle and should not be confused with
 > the current v0.2.x series.
 
+## [0.6.2] - 2026-07-11 (Security Fix + Access Frequency Weighting)
+
+### Security
+- **cryptography CVE-2026-34073 fixed**: Upgraded version constraint from `>=42.0` to
+  `>=46.0.6` in `setup.py` (encryption + full extras). Fixes X.509 certificate validation
+  bypass vulnerability (CVSS 7.8, potential MITM attack).
+- **PyYAML usage audited**: Verified all `yaml.load()` calls in codebase use `safe_load()`.
+  No RCE risk found.
+
+### Changed
+- **Access frequency weighting with recency decay**: `selection.py` now applies a time-based
+  decay factor to access_count boost. Memories accessed long ago have their boost attenuated
+  via `2^(-0.1 * days_since_last_access)`. Memories without `last_accessed_at` are unaffected
+  (backward-compatible). New helper `_days_since_last_access()` and constant
+  `RECENCY_DECAY_RATE = 0.1`.
+
+### Documentation
+- **PROJECT_STATUS.md**: Version history table updated with v0.5.4/v0.6.0/v0.6.1 entries.
+  Next Milestone section rewritten to reflect completed Phase 3.5 architecture cleanup.
+- **DEPENDENCY_AUDIT.md**: cryptography CVE-2026-34073 marked as resolved. PyYAML marked
+  as verified. Audit date updated to 2026-07-11.
+
+### Tests
+- Added 13 new tests: `TestDaysSinceLastAccess` (7 tests) + `TestRecencyDecay` (6 tests).
+  Total: 4211 tests (was 4198).
+
 ## [0.6.1] - 2026-07-10 (Architecture Cleanup — Refactoring & Decoupling)
 
 ### Changed

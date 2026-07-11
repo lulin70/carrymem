@@ -324,3 +324,4 @@ Phase 3 完成后必须通过：
 | v0.5.4 | Phase 2: 批量 API + Async 迁移 | API 统一为 store/delete 系列 |
 | v0.6.0 | Phase 3: 移除 deprecated + 架构清理 | 双轨制终结 |
 | v0.6.1 ✅ | Phase 3.5: 架构清理项（重构优化解耦） | recall 签名统一 + isinstance 解耦 + count 优化 + 审计公共化 + search_fulltext 修正 |
+| v0.6.2 ✅ | 安全修复 + 访问频率加权 | cryptography CVE-2026-34073 修复 + selection.py recency 衰减 + 文档一致性修复 |

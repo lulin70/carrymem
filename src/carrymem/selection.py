@@ -4,12 +4,39 @@ Extracted from context.py for modularity.
 """
 
 import re
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from .utils.language import has_cjk
 
 ACCESS_BOOST_PER_ACCESS = 0.01
 ACCESS_BOOST_CAP = 0.1
+RECENCY_DECAY_RATE = 0.1  # Halve every ~7 days: 2^(-0.1*7) ≈ 0.616
+
+
+def _days_since_last_access(last_accessed_at: Any) -> Optional[float]:
+    """Calculate days since last access from a datetime or ISO string.
+
+    Args:
+        last_accessed_at: ISO string, datetime, or None.
+
+    Returns:
+        Days as float (>=0), or None if the value cannot be parsed.
+    """
+    if not last_accessed_at:
+        return None
+    dt = last_accessed_at
+    if isinstance(dt, str):
+        try:
+            dt = datetime.fromisoformat(dt)
+        except (ValueError, TypeError):
+            return None
+    if isinstance(dt, datetime):
+        now = datetime.now(timezone.utc)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return max(0.0, (now - dt).total_seconds() / 86400)
+    return None
 
 
 def _estimate_tokens(text: str) -> int:
@@ -222,7 +249,13 @@ def select_memories(
         final += type_boost
 
         access_count = max(0, m.get("access_count", 0) or 0)
-        final += min(access_count * ACCESS_BOOST_PER_ACCESS, ACCESS_BOOST_CAP)
+        access_boost = min(access_count * ACCESS_BOOST_PER_ACCESS, ACCESS_BOOST_CAP)
+        # Recency decay: frequently accessed but long-unaccessed memories fade
+        if access_count > 0:
+            days_since = _days_since_last_access(m.get("last_accessed_at"))
+            if days_since is not None:
+                access_boost *= 2 ** (-RECENCY_DECAY_RATE * days_since)
+        final += access_boost
 
         if is_temporal:
             content_lower = (m.get("content", "") or "").lower()

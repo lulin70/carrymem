@@ -42,7 +42,9 @@ class PostDevelopCommand(develop):
 def get_version():
     version_file = os.path.join(
         os.path.dirname(__file__),
-        "src", "carrymem", "__version__.py",
+        "src",
+        "carrymem",
+        "__version__.py",
     )
     if os.path.exists(version_file):
         with open(version_file, encoding="utf-8") as f:
@@ -51,12 +53,10 @@ def get_version():
                 return match.group(1)
     try:
         from carrymem.__version__ import __version__
+
         return __version__
     except ImportError:
-        raise RuntimeError(
-            "Cannot determine CarryMem version. "
-            "Ensure the package is properly installed."
-        )
+        raise RuntimeError("Cannot determine CarryMem version. " "Ensure the package is properly installed.")
 
 
 def get_long_description():
@@ -70,7 +70,9 @@ def get_long_description():
 setup(
     name="carrymem",
     version=get_version(),
-    description="Your portable AI memory layer. Classify, store, and recall what matters across models, tools, and devices.",
+    description=(
+        "Your portable AI memory layer. Classify, store, and recall what matters " "across models, tools, and devices."
+    ),
     long_description=get_long_description(),
     long_description_content_type="text/markdown",
     url="https://github.com/lulin70/carrymem",
@@ -117,7 +119,7 @@ setup(
             "mypy>=1.0",
         ],
         "encryption": [
-            "cryptography>=42.0",
+            "cryptography>=46.0.6",  # CVE-2026-34073: X.509 cert validation bypass fix
         ],
         "llm": [
             "openai>=1.0",
@@ -129,7 +131,7 @@ setup(
         "full": [
             "pycld2>=0.41",
             "langdetect>=1.0.9",
-            "cryptography>=42.0",
+            "cryptography>=46.0.6",  # CVE-2026-34073: X.509 cert validation bypass fix
             "textual>=0.40",
             "sqlite-vec>=0.1.0",
             "pysqlite3>=0.6.0",
