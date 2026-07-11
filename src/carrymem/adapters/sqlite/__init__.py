@@ -16,7 +16,8 @@ Public API is fully backward compatible with the monolithic sqlite_adapter.
 """
 
 import os
-from typing import Any, Dict, Optional
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 from ..base import MemoryEntry, StorageAdapter, StoredMemory
 from .connection import ConnectionManager
@@ -271,6 +272,7 @@ class SQLiteAdapter(StorageAdapter):
 
         # --- Knowledge graph (v0.7.0: lazy init on first access) ---
         self._knowledge_graph: Optional[Any] = None
+        self._memify: Optional[Any] = None  # v0.7.2: lazy init MemifyEngine
 
     # ── Properties ──────────────────────────────────────────────
 
@@ -611,6 +613,49 @@ class SQLiteAdapter(StorageAdapter):
         )
         return self._knowledge_graph
 
+    def _get_memify(self):
+        """Lazily initialize the MemifyEngine instance (v0.7.2)."""
+        if self._memify is not None:
+            return self._memify
+        from ...layers.memify import MemifyEngine
+
+        self._memify = MemifyEngine(adapter=self)
+        return self._memify
+
+    def consolidate_memories(
+        self,
+        namespace: Optional[str] = None,
+        min_co_occurrence: int = 3,
+        max_derived: int = 10,
+        stale_days: int = 90,
+        min_importance: float = 0.3,
+    ) -> Dict[str, Any]:
+        """Consolidate memories via Memify three-phase refinement (v0.7.2).
+
+        Phase 1: derive_facts — create derived memories from co-occurring entities.
+        Phase 2: reinforce_edges — strengthen graph relations for co-occurring entities.
+        Phase 3: auto_decay — reduce importance of stale, low-access memories.
+
+        Args:
+            namespace: Namespace scope (default: adapter's namespace).
+            min_co_occurrence: Minimum co-occurrence for derive/reinforce (default 3).
+            max_derived: Maximum derived facts per run (default 10).
+            stale_days: Days without access for decay (default 90).
+            min_importance: Importance threshold for decay (default 0.3).
+
+        Returns:
+            Dict with derived_facts, edges_reinforced, decayed counts.
+        """
+        ns = namespace or self.namespace
+        memify = self._get_memify()
+        return {
+            "derived_facts": memify.derive_facts(
+                namespace=ns, min_co_occurrence=min_co_occurrence, max_derived=max_derived
+            ),
+            "edges_reinforced": memify.reinforce_edges(namespace=ns, min_co_occurrence=min_co_occurrence),
+            "decayed": memify.auto_decay(namespace=ns, stale_days=stale_days, min_importance=min_importance),
+        }
+
     def recall_by_entity(
         self,
         entity_text: str,
@@ -745,6 +790,173 @@ class SQLiteAdapter(StorageAdapter):
         """
         ns = namespace or self.namespace
         return int(self._get_knowledge_graph().extract_and_store_entities(storage_key, text, ns))
+
+    # ── Multi-Mode Retrieval (v0.7.1) ──────────────────────────
+
+    def recall_by_time(
+        self,
+        start: datetime,
+        end: Optional[datetime] = None,
+        filters: Optional[Dict[str, Any]] = None,
+        limit: int = 50,
+        namespaces: Optional[list] = None,
+    ) -> list:
+        """Retrieve memories within a time range (v0.7.1).
+
+        Args:
+            start: Start datetime (inclusive).
+            end: End datetime (exclusive). Defaults to now.
+            filters: Optional metadata filters.
+            limit: Maximum results.
+            namespaces: Optional namespace filter.
+
+        Returns:
+            List of memory dicts ordered by created_at descending.
+        """
+        results = self._recall_engine.search_by_time(start, end, filters, limit, namespaces)
+        return [r.to_dict() for r in results if r]
+
+    def recall_semantic(
+        self,
+        query: str,
+        top_k: int = 10,
+        filters: Optional[Dict[str, Any]] = None,
+        namespaces: Optional[list] = None,
+    ) -> list:
+        """Pure vector similarity search (v0.7.1).
+
+        Bypasses FTS5 and RRF fusion — returns raw vector similarity results.
+        Requires vector search enabled (capabilities["vector_search"] == True).
+
+        Args:
+            query: Natural language query.
+            top_k: Number of results.
+            filters: Optional metadata filters.
+            namespaces: Optional namespace filter.
+
+        Returns:
+            List of memory dicts ordered by vector similarity descending.
+        """
+        if not self._enable_vector:
+            from ...utils.logger import logger
+
+            logger.warning("recall_semantic called but vector search is not enabled")
+            return []
+        results = self._recall_engine.vector_search_only(query, filters, top_k, namespaces)
+        return [r.to_dict() for r in results if r]
+
+    def recall_hybrid(
+        self,
+        query: str,
+        fts_weight: Optional[float] = None,
+        vec_weight: Optional[float] = None,
+        rrf_k: Optional[int] = None,
+        limit: int = 20,
+        filters: Optional[Dict[str, Any]] = None,
+        namespaces: Optional[list] = None,
+    ) -> list:
+        """Explicit hybrid search with configurable RRF weights (v0.7.1).
+
+        Exposes the existing RRF fusion with per-call weight override.
+        If weights are None, uses adapter defaults.
+
+        Args:
+            query: Search query.
+            fts_weight: FTS rank weight (default: adapter config).
+            vec_weight: Vector rank weight (default: adapter config).
+            rrf_k: RRF constant k (default: adapter config).
+            limit: Maximum results.
+            filters: Optional metadata filters.
+            namespaces: Optional namespace filter.
+
+        Returns:
+            List of memory dicts ordered by fused RRF score descending.
+        """
+        results = self._recall_engine.hybrid_search(query, fts_weight, vec_weight, rrf_k, filters, limit, namespaces)
+        return [r.to_dict() for r in results if r]
+
+    def recall_multi_mode(
+        self,
+        query: str,
+        modes: Optional[List[str]] = None,
+        limit: int = 20,
+        filters: Optional[Dict[str, Any]] = None,
+        namespaces: Optional[list] = None,
+        time_range: Optional[tuple] = None,
+        entity: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Unified multi-mode retrieval interface (v0.7.1).
+
+        Args:
+            query: Search query (used for fts/vector/hybrid modes).
+            modes: Retrieval modes. Default: ["fts", "vector"].
+                   Options: "fts", "vector", "hybrid", "graph", "time", "entity".
+            limit: Maximum results per mode.
+            filters: Optional metadata filters.
+            namespaces: Optional namespace filter.
+            time_range: (start, end) for "time" mode.
+            entity: Entity text for "entity"/"graph" modes.
+
+        Returns:
+            Dict with "modes", "merged", "mode_count", "total_count".
+        """
+        if modes is None:
+            modes = ["fts", "vector"] if self._enable_vector else ["fts"]
+
+        mode_results: Dict[str, list] = {}
+        for mode in modes:
+            # Initialize every requested mode with empty list to ensure it appears in results
+            mode_results[mode] = []
+            try:
+                if mode == "fts":
+                    rows = self._recall_engine.recall(
+                        query, filters=filters, limit=limit, namespaces=namespaces, update_access=False
+                    )
+                    mode_results["fts"] = [r.to_dict() for r in rows if r]
+                elif mode == "vector":
+                    if self._enable_vector:
+                        rows = self._recall_engine.vector_search_only(query, filters, limit, namespaces)
+                        mode_results["vector"] = [r.to_dict() for r in rows if r]
+                elif mode == "hybrid":
+                    rows = self._recall_engine.hybrid_search(query, None, None, None, filters, limit, namespaces)
+                    mode_results["hybrid"] = [r.to_dict() for r in rows if r]
+                elif mode == "graph":
+                    if entity:
+                        graph_result = self.recall_graph(entity, limit=limit, namespace=self.namespace)
+                        mode_results["graph"] = list(graph_result.get("memories", []))
+                elif mode == "time":
+                    if time_range:
+                        start_dt, end_dt = time_range[0], time_range[1]
+                        rows = self._recall_engine.search_by_time(start_dt, end_dt, filters, limit, namespaces)
+                        mode_results["time"] = [r.to_dict() for r in rows if r]
+                elif mode == "entity":
+                    if entity:
+                        mode_results["entity"] = list(
+                            self.recall_by_entity(entity, limit=limit, namespace=self.namespace)
+                        )
+            except (ValueError, KeyError, TypeError, RuntimeError) as e:
+                from ...utils.logger import logger
+
+                logger.warning("recall_multi_mode mode '%s' failed: %s", mode, e)
+                mode_results[mode] = []
+
+        # Merge and deduplicate by storage_key
+        seen_keys: set = set()
+        merged: list = []
+        for mode_name, mems in mode_results.items():
+            for m in mems:
+                if isinstance(m, dict):
+                    key = m.get("storage_key", "")
+                    if key and key not in seen_keys:
+                        seen_keys.add(key)
+                        merged.append(m)
+
+        return {
+            "modes": mode_results,
+            "merged": merged[:limit],
+            "mode_count": len(mode_results),
+            "total_count": len(merged),
+        }
 
     # ── Version management ──────────────────────────────────────
 

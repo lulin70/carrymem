@@ -492,3 +492,206 @@ class RecallEngine:
         """
         all_params = params + like_params + [limit]
         return conn.execute(sql, all_params).fetchall()
+
+    # ── v0.7.1: Multi-Mode Retrieval Extensions ────────────────────────
+
+    def vector_search_only(
+        self,
+        query: str,
+        filters: Optional[Dict[str, Any]] = None,
+        limit: int = 10,
+        namespaces: Optional[List[str]] = None,
+    ) -> List[StoredMemory]:
+        """Pure vector similarity search without FTS or RRF fusion (v0.7.1).
+
+        Args:
+            query: Natural language query.
+            filters: Optional metadata filters.
+            limit: Maximum results.
+            namespaces: Optional namespace filter.
+
+        Returns:
+            List of StoredMemory ordered by vector similarity.
+        """
+        if not self._adapter._enable_vector or not self._adapter._embedding_model:
+            return []
+
+        from .query_builder import _ALLOWED_FILTER_KEYS, _VALID_MEMORY_TYPES
+
+        filters = filters or {}
+        for key in filters:
+            if key not in _ALLOWED_FILTER_KEYS:
+                raise ValueError(f"Invalid filter key: '{key}'")
+        if filters.get("type") and filters["type"] not in _VALID_MEMORY_TYPES:
+            raise ValueError(f"Invalid memory type: {filters['type']}")
+
+        ns = namespaces or [self._adapter.namespace]
+        placeholders = ",".join(["?"] * len(ns))
+        conditions = [f"namespace IN ({placeholders})"]
+        params: List[Any] = list(ns)
+
+        if filters.get("type"):
+            conditions.append("type = ?")
+            params.append(filters["type"])
+        if filters.get("tier") is not None:
+            conditions.append("tier = ?")
+            params.append(filters["tier"])
+        if not filters.get("include_superseded", False):
+            conditions.append("(superseded_at IS NULL OR superseded_at = '')")
+        if filters.get("created_after"):
+            conditions.append("created_at >= ?")
+            params.append(filters["created_after"])
+        if filters.get("created_before"):
+            conditions.append("created_at <= ?")
+            params.append(filters["created_before"])
+
+        where_clause = "WHERE " + " AND ".join(conditions)
+
+        with self._adapter._conn_mgr.lock:
+            vec_rows = self._vector_search(query, where_clause, params, limit)
+            results = [self._adapter._serializer.row_to_stored(r) for r in vec_rows if r]
+        return [r for r in results if r]
+
+    def hybrid_search(
+        self,
+        query: str,
+        fts_weight: Optional[float] = None,
+        vec_weight: Optional[float] = None,
+        rrf_k: Optional[int] = None,
+        filters: Optional[Dict[str, Any]] = None,
+        limit: int = 20,
+        namespaces: Optional[List[str]] = None,
+    ) -> List[StoredMemory]:
+        """Hybrid FTS+Vector search with per-call RRF weight override (v0.7.1).
+
+        Temporarily overrides adapter RRF config for this call, then restores.
+        """
+        from .query_builder import _ALLOWED_FILTER_KEYS, _VALID_MEMORY_TYPES
+
+        filters = filters or {}
+        for key in filters:
+            if key not in _ALLOWED_FILTER_KEYS:
+                raise ValueError(f"Invalid filter key: '{key}'")
+        if filters.get("type") and filters["type"] not in _VALID_MEMORY_TYPES:
+            raise ValueError(f"Invalid memory type: {filters['type']}")
+
+        ns = namespaces or [self._adapter.namespace]
+        placeholders = ",".join(["?"] * len(ns))
+        conditions = [f"namespace IN ({placeholders})"]
+        params: List[Any] = list(ns)
+
+        if filters.get("type"):
+            conditions.append("type = ?")
+            params.append(filters["type"])
+        elif not filters.get("include_session_summary", False):
+            conditions.append("type != ?")
+            params.append("session_summary")
+        if filters.get("tier") is not None:
+            conditions.append("tier = ?")
+            params.append(filters["tier"])
+        if not filters.get("include_superseded", False):
+            conditions.append("(superseded_at IS NULL OR superseded_at = '')")
+        if filters.get("created_after"):
+            conditions.append("created_at >= ?")
+            params.append(filters["created_after"])
+        if filters.get("created_before"):
+            conditions.append("created_at <= ?")
+            params.append(filters["created_before"])
+
+        where_clause = "WHERE " + " AND ".join(conditions)
+
+        # Save original RRF config
+        orig_fts_w = self._adapter._rrf_fts_weight
+        orig_vec_w = self._adapter._rrf_vec_weight
+        orig_k = self._adapter._rrf_k
+
+        # Apply per-call overrides
+        if fts_weight is not None:
+            self._adapter._rrf_fts_weight = fts_weight
+        if vec_weight is not None:
+            self._adapter._rrf_vec_weight = vec_weight
+        if rrf_k is not None:
+            self._adapter._rrf_k = rrf_k
+
+        try:
+            with self._adapter._conn_mgr.lock:
+                fts_rows = self._fts_search(query, where_clause, params, limit)
+                if self._adapter._enable_vector:
+                    vec_rows = self._vector_search(query, where_clause, params, limit)
+                else:
+                    vec_rows = []
+                if fts_rows and vec_rows:
+                    fused = self._rrf_fuse(fts_rows, vec_rows, limit)
+                elif fts_rows:
+                    fused = fts_rows
+                elif vec_rows:
+                    fused = vec_rows
+                else:
+                    fused = []
+                results = [self._adapter._serializer.row_to_stored(r) for r in fused if r]
+        finally:
+            # Restore original RRF config
+            self._adapter._rrf_fts_weight = orig_fts_w
+            self._adapter._rrf_vec_weight = orig_vec_w
+            self._adapter._rrf_k = orig_k
+
+        return [r for r in results if r]
+
+    def search_by_time(
+        self,
+        start: datetime,
+        end: Optional[datetime],
+        filters: Optional[Dict[str, Any]],
+        limit: int,
+        namespaces: Optional[List[str]],
+    ) -> List[StoredMemory]:
+        """Time-range retrieval (v0.7.1).
+
+        Returns memories with created_at in [start, end), ordered descending.
+        """
+        from .query_builder import _ALLOWED_FILTER_KEYS
+
+        filters = filters or {}
+        for key in filters:
+            if key not in _ALLOWED_FILTER_KEYS:
+                raise ValueError(f"Invalid filter key: '{key}'")
+
+        ns = namespaces or [self._adapter.namespace]
+        placeholders = ",".join(["?"] * len(ns))
+        conditions = [f"namespace IN ({placeholders})"]
+        params: List[Any] = list(ns)
+
+        # Time range
+        start_iso = start.isoformat() if isinstance(start, datetime) else str(start)
+        conditions.append("created_at >= ?")
+        params.append(start_iso)
+
+        if end is not None:
+            end_iso = end.isoformat() if isinstance(end, datetime) else str(end)
+            conditions.append("created_at < ?")
+            params.append(end_iso)
+
+        if filters.get("type"):
+            conditions.append("type = ?")
+            params.append(filters["type"])
+        if filters.get("tier") is not None:
+            conditions.append("tier = ?")
+            params.append(filters["tier"])
+        if not filters.get("include_superseded", False):
+            conditions.append("(superseded_at IS NULL OR superseded_at = '')")
+
+        where_clause = "WHERE " + " AND ".join(conditions)
+
+        with self._adapter._conn_mgr.lock:
+            conn = self._adapter._conn_mgr.get_connection()
+            sql = f"""
+                SELECT * FROM memories
+                {where_clause}
+                ORDER BY created_at DESC
+                LIMIT ?
+            """
+            params.append(limit)
+            rows = conn.execute(sql, params).fetchall()
+            results = [self._adapter._serializer.row_to_stored(r) for r in rows if r]
+
+        return [r for r in results if r]

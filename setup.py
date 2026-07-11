@@ -1,9 +1,10 @@
 import os
 import re
 import sys
-from setuptools import setup, find_packages
-from setuptools.command.install import install
+
+from setuptools import find_packages, setup
 from setuptools.command.develop import develop
+from setuptools.command.install import install
 
 
 class PostInstallCommand(install):
@@ -101,6 +102,9 @@ setup(
             "pysqlite3>=0.6.0",
             "sentence-transformers>=2.2.2",
         ],
+        "async": [
+            "aiosqlite>=0.19",
+        ],
         "dev": [
             "pytest>=7.0",
             "pytest-asyncio>=0.21",
@@ -138,6 +142,7 @@ setup(
             "sentence-transformers>=2.2.2",
             "openai>=1.0",
             "zhipuai>=2.0",
+            "aiosqlite>=0.19",
         ],
     },
     entry_points={

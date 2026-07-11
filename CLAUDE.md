@@ -7,7 +7,7 @@
 ## 项目概述
 
 - **CarryMem** 是一个可移植的 AI 记忆层：让 AI 自动记住用户的偏好、决策与纠正，跨模型 / 工具 / 设备复用，无需每次重复自我介绍。
-- **当前版本**：`0.5.3`（来源：`src/carrymem/__version__.py`）
+- **当前版本**：`0.7.2`（来源：`src/carrymem/__version__.py`）
 - **核心技术栈**：
   - Python 3.12+（`setup.py` 中 `python_requires=">=3.12"`）
   - SQLite + FTS5（默认存储与全文检索）
@@ -131,6 +131,7 @@ src/carrymem/
 │   ├── sqlite_adapter.py    #   SQLiteAdapter（默认，注册名 "sqlite"）
 │   ├── obsidian_adapter.py  #   ObsidianAdapter（注册名 "obsidian"，需 vault_path）
 │   ├── json_adapter.py      #   JSONAdapter（注册名 "json"）
+│   ├── async_sqlite.py      #   AsyncSQLiteAdapter（v0.7.2，[async] extra，aiosqlite）
 │   └── sqlite/              #   SQLite 实现细节（schema / crud / recall_engine / connection / versioning / supersede / security / stats / serializer / query_builder）
 ├── rules/                   # 规则引擎（自动匹配 + 注入 + 精炼 + 晋升管线）
 │   ├── __init__.py          #   RuleEngine 入口
@@ -152,11 +153,13 @@ src/carrymem/
 │   ├── audit.py             #   审计日志
 │   ├── input_validator.py   #   输入校验
 │   └── redaction.py         #   敏感信息脱敏
-├── layers/                  # 分类管线（噪声过滤 + 模式分析 + 语义聚合）
+├── layers/                  # 分类管线 + 知识图谱 + Memify 精炼
 │   ├── noise_detector.py    #   噪声检测
 │   ├── pattern_analyzer.py  #   模式分析
 │   ├── semantic_classifier.py / semantic_aggregator.py
 │   ├── rule_matcher.py / memory_pattern_detectors.py / feedback_detector.py / session_summarizer.py
+│   ├── knowledge_graph.py   #   KnowledgeGraph 层（v0.7.0，实体提取 + 图遍历）
+│   └── memify.py            #   MemifyEngine（v0.7.2，三阶段动态精炼）
 ├── engine.py                # MemoryClassificationEngine
 ├── carrymem.py / async_carrymem.py   # 同步 / 异步顶层封装
 ├── prompt.py / prompt_builder.py     # Prompt 构建

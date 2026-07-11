@@ -971,10 +971,10 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 
 ## Project Status
 
-**Current Version**: v0.5.3
-**Tests**: 4044 passing, 0 failed, 65 slow skipped
-**Coverage**: 82%+
-**mypy**: 0 errors (143 source files, CI blocking gate)
+**Current Version**: v0.7.2
+**Tests**: 4200+ passing, 0 failed (pre-existing CLI subprocess timeout excluded), 18 skipped
+**Coverage**: 80%+
+**mypy**: 0 errors (150+ source files, CI blocking gate)
 **ruff**: 0 errors
 **Maturity**: 80/100 (B) per 7-dimension DevSquad evaluation
 

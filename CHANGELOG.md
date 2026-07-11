@@ -10,6 +10,100 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > historical records from the pre-reset development cycle and should not be confused with
 > the current v0.2.x series.
 
+## [0.7.2] - 2026-07-11 (Memify Dynamic Refinement + Native Async I/O)
+
+### Added — Memify Engine (compresses v0.9.0 roadmap into PATCH)
+- **`MemifyEngine`** (`src/carrymem/layers/memify.py`): Three-phase dynamic memory refinement
+  inspired by Cognee's Memify pattern. Zero LLM, pure SQL analysis.
+  - **`derive_facts()`**: Finds frequently co-occurring entity pairs (≥min_co_occurrence)
+    via SQL JOIN on `memory_entities`, creates derived "relationship" memories with
+    `metadata.derived=true`. Conservative confidence: `min(0.6, 0.3 + count * 0.05)`.
+  - **`reinforce_edges()`**: For co-occurring pairs, creates/updates "co_occurs" relations
+    in `memory_relations` with weight increment and max_weight cap. Upsert pattern:
+    existing → UPDATE weight (capped), new → INSERT with `weight_increment * count`.
+  - **`auto_decay()`**: Three-way gate for decay (stale + low importance + zero access).
+    Marks `metadata.decayed=true` + `importance_score * 0.5`. Does NOT modify tier column.
+    Idempotent: skips already-decayed memories. Skips superseded memories.
+- **`consolidate_memories()`**: Unified API running all three phases. Exposed on
+  `SQLiteAdapter`, `StorageAdapter` base (default: empty result), `RecallMixin`,
+  and `RecallOps` Protocol.
+
+### Added — Native Async I/O (compresses v0.9.0 roadmap into PATCH)
+- **`AsyncSQLiteAdapter`** (`src/carrymem/adapters/async_sqlite.py`): Native async SQLite
+  adapter using aiosqlite. Same SQL as SQLiteAdapter but with async I/O for
+  high-concurrency scenarios. Implements: `connect`, `store_entry`, `recall`,
+  `forget_memory`, `count`, `close`. Async context manager protocol (`__aenter__`/`__aexit__`).
+  Graceful ImportError when aiosqlite not installed.
+- **`[async]` extra**: `pip install carrymem[async]` installs aiosqlite>=0.19.
+- **`AsyncCarryMem.native_async` mode**: New `native_async=True` parameter. When enabled,
+  uses `AsyncSQLiteAdapter` for true async I/O. Adds `connect()`, `store_entry()`,
+  `recall_async()`, `count_async()` methods. Sync methods raise `RuntimeError` when
+  `native_async=True` (and vice versa).
+
+### Architecture
+- **Dual-mode coexistence**: Sync `SQLiteAdapter` (zero-dep core) + `AsyncSQLiteAdapter`
+  ([async] extra). Not a subclass — different connection model (aiosqlite.Connection
+  vs sqlite3.Connection).
+- **FTS5 trigger reuse**: `AsyncSQLiteAdapter` reuses `_SCHEMA_SQL` triggers
+  (`memories_ai`/`memories_ad`/`memories_au`) for automatic FTS maintenance. No manual
+  FTS INSERT needed in `store_entry`.
+- **Protocol consistency**: `RecallOps` Protocol updated with `consolidate_memories` signature.
+- **`_require_sync()` helper**: `AsyncCarryMem` uses helper method to satisfy mypy
+  `Optional[CarryMem]` union-attr checks while preserving runtime safety.
+
+### Tests
+- Added 32 tests (`test_memify.py`): Happy Path (6) + Boundary (10) + Error Cases (6) +
+  Performance (2) + Configuration (4) + Integration (4). Uses real SQLiteAdapter
+  (in-memory, no Mock). Performance baselines: `derive_facts` 100 entities <500ms,
+  `auto_decay` 200 memories <200ms.
+- Added 26 tests (`test_async_sqlite.py`): Happy Path (6) + Boundary (6) + Error Cases (6) +
+  Performance (2) + Configuration (2) + Integration (4). Uses real aiosqlite (in-memory).
+  Performance baselines: bulk store 100 entries <2s, bulk recall <500ms.
+
+### Documentation
+- **V071_V072_PLAN.md**: Full implementation plan with DevSquad multi-role review.
+- **CARRYMEM_ARCHITECTURE_EVOLUTION_PLAN.md**: §3.2 (异步管道) and §4.2 (Memify) marked
+  as implemented in v0.7.2 (compressed from v0.9.0 roadmap).
+
+## [0.7.1] - 2026-07-11 (Multi-Mode Retrieval API)
+
+### Added — Multi-Mode Retrieval (compresses v0.8.0 roadmap into PATCH)
+- **`recall_by_time()`**: Time-range retrieval with `[start, end)` semantics, descending
+  order by `created_at`. Supports filters and namespace isolation. Performance: 1000
+  memories in <50ms.
+- **`recall_semantic()`**: Pure vector similarity search (no FTS, no RRF fusion).
+  Capability-gated: returns empty list when vector search is disabled.
+- **`recall_hybrid()`**: Explicit hybrid FTS+Vector search with per-call RRF weight
+  override (`fts_weight`, `vec_weight`, `rrf_k`). Temporarily overrides adapter RRF
+  config for the duration of the call, then restores in `finally` block.
+- **`recall_multi_mode()`**: Unified multi-mode retrieval interface. Supports 6 modes
+  (`fts`, `vector`, `hybrid`, `graph`, `time`, `entity`) in a single call. Returns
+  structured dict `{modes, merged, mode_count, total_count}` with deduplication by
+  `storage_key`. Unknown modes and missing-parameter modes are handled gracefully
+  (initialized as empty lists, not silently dropped).
+
+### Architecture
+- **RecallEngine extensions**: 3 new private methods (`vector_search_only`,
+  `hybrid_search`, `search_by_time`) — composable building blocks for the 4 public APIs.
+  `hybrid_search` uses save/restore pattern for RRF config to ensure thread safety.
+- **StorageAdapter base defaults**: All 4 new methods return safe empty defaults on
+  non-SQLite adapters for backward compatibility.
+- **RecallOps Protocol updated**: Added 4 new method signatures to maintain
+  protocol-implementation consistency.
+- **Zero new dependencies**: All functionality built on existing FTS5 + vector search
+  infrastructure. No schema migration required.
+
+### Tests
+- Added 40 new tests (`test_multi_mode_retrieval.py`): Happy Path (8) + Boundary (12) +
+  Error Cases (8) + Performance (2) + Configuration (4) + Integration (6).
+  Uses real SQLiteAdapter (in-memory, no Mock) per testing philosophy.
+  Performance baselines: `recall_by_time` 1000 memories <50ms, `recall_hybrid` <100ms.
+
+### Documentation
+- **V071_V072_PLAN.md**: Full implementation plan with DevSquad multi-role review.
+- **CARRYMEM_ARCHITECTURE_EVOLUTION_PLAN.md**: §3.1 (多模式检索) marked as implemented
+  in v0.7.1 (compressed from v0.8.0 roadmap).
+
 ## [0.7.0] - 2026-07-11 (Knowledge Graph + Session Dual-Layer Memory)
 
 ### Added — Knowledge Graph (SQLite-native, zero LLM)

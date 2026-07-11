@@ -585,6 +585,135 @@ class StorageAdapter(ABC):
         """
         return 0
 
+    # ── Memify Consolidation (v0.7.2+) ───────────────────────────────────
+
+    def consolidate_memories(
+        self,
+        namespace: Optional[str] = None,
+        min_co_occurrence: int = 3,
+        max_derived: int = 10,
+        stale_days: int = 90,
+        min_importance: float = 0.3,
+    ) -> Dict[str, Any]:
+        """Consolidate memories via Memify three-phase refinement.
+
+        Default: returns empty result (not supported). Override in adapters
+        with knowledge graph capability.
+
+        Returns:
+            Dict with derived_facts (list), edges_reinforced (int), decayed (int).
+        """
+        return {"derived_facts": [], "edges_reinforced": 0, "decayed": 0}
+
+    # ── Multi-Mode Retrieval (v0.7.1+) ──────────────────────────────────
+
+    def recall_by_time(
+        self,
+        start: datetime,
+        end: Optional[datetime] = None,
+        filters: Optional[Dict[str, Any]] = None,
+        limit: int = 50,
+        namespaces: Optional[list] = None,
+    ) -> List[Dict[str, Any]]:
+        """Retrieve memories within a time range.
+
+        Default implementation returns empty list. Override in adapters with
+        time-range query support.
+
+        Args:
+            start: Start datetime (inclusive). Timezone-aware recommended.
+            end: End datetime (exclusive). Defaults to now.
+            filters: Optional metadata filters.
+            limit: Maximum results (default 50).
+            namespaces: Optional namespace filter.
+
+        Returns:
+            List of memory dicts ordered by created_at descending.
+        """
+        return []
+
+    def recall_semantic(
+        self,
+        query: str,
+        top_k: int = 10,
+        filters: Optional[Dict[str, Any]] = None,
+        namespaces: Optional[list] = None,
+    ) -> List[Dict[str, Any]]:
+        """Pure vector similarity search.
+
+        Default implementation returns empty list. Override in adapters with
+        ``vector_search: True`` capability.
+
+        Args:
+            query: Natural language query.
+            top_k: Number of results (default 10).
+            filters: Optional metadata filters.
+            namespaces: Optional namespace filter.
+
+        Returns:
+            List of memory dicts ordered by vector similarity descending.
+        """
+        return []
+
+    def recall_hybrid(
+        self,
+        query: str,
+        fts_weight: Optional[float] = None,
+        vec_weight: Optional[float] = None,
+        rrf_k: Optional[int] = None,
+        limit: int = 20,
+        filters: Optional[Dict[str, Any]] = None,
+        namespaces: Optional[list] = None,
+    ) -> List[Dict[str, Any]]:
+        """Explicit hybrid search with configurable RRF weights.
+
+        Default implementation returns empty list. Override in adapters with
+        both FTS and vector search capabilities.
+
+        Args:
+            query: Search query.
+            fts_weight: FTS rank weight (default: adapter config).
+            vec_weight: Vector rank weight (default: adapter config).
+            rrf_k: RRF constant k (default: adapter config).
+            limit: Maximum results.
+            filters: Optional metadata filters.
+            namespaces: Optional namespace filter.
+
+        Returns:
+            List of memory dicts ordered by fused RRF score descending.
+        """
+        return []
+
+    def recall_multi_mode(
+        self,
+        query: str,
+        modes: Optional[List[str]] = None,
+        limit: int = 20,
+        filters: Optional[Dict[str, Any]] = None,
+        namespaces: Optional[list] = None,
+        time_range: Optional[tuple] = None,
+        entity: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Unified multi-mode retrieval interface.
+
+        Default implementation returns empty result. Override in adapters
+        with multi-mode support.
+
+        Args:
+            query: Search query (used for fts/vector/hybrid modes).
+            modes: Retrieval modes to execute. Default: ["fts", "vector"].
+                   Options: "fts", "vector", "hybrid", "graph", "time", "entity".
+            limit: Maximum results per mode.
+            filters: Optional metadata filters.
+            namespaces: Optional namespace filter.
+            time_range: (start, end) for "time" mode.
+            entity: Entity text for "entity"/"graph" modes.
+
+        Returns:
+            Dict with "modes", "merged", "mode_count", "total_count".
+        """
+        return {"modes": {}, "merged": [], "mode_count": 0, "total_count": 0}
+
     # ── Batch Operations (v0.5.4+) ──────────────────────────────────────
 
     def store_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:

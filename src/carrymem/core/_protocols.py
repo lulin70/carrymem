@@ -20,8 +20,9 @@ Design principles:
 
 from __future__ import annotations
 
+from datetime import datetime
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Protocol, Type, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Protocol, Tuple, Type, Union
 
 if TYPE_CHECKING:
     from carrymem.adapters.base import StorageAdapter
@@ -277,6 +278,64 @@ class RecallOps(Protocol):
 
     def promote_to_permanent(self, memory_key: str) -> bool:
         """Boost a memory's importance for permanent retention."""
+        ...
+
+    # ── Memify Consolidation (v0.7.2) ───────────────────────────
+
+    def consolidate_memories(
+        self,
+        namespace: Optional[str] = None,
+        min_co_occurrence: int = 3,
+        max_derived: int = 10,
+        stale_days: int = 90,
+        min_importance: float = 0.3,
+    ) -> Dict[str, Any]:
+        """Consolidate memories via Memify three-phase refinement."""
+        ...
+
+    # ── Multi-Mode Retrieval (v0.7.1) ────────────────────────────
+
+    def recall_by_time(
+        self,
+        start: datetime,
+        end: Optional[datetime] = None,
+        filters: Optional[Dict[str, Any]] = None,
+        limit: int = 50,
+    ) -> List[Dict[str, Any]]:
+        """Retrieve memories within a time range."""
+        ...
+
+    def recall_semantic(
+        self,
+        query: str,
+        top_k: int = 10,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Pure vector similarity search."""
+        ...
+
+    def recall_hybrid(
+        self,
+        query: str,
+        fts_weight: Optional[float] = None,
+        vec_weight: Optional[float] = None,
+        rrf_k: Optional[int] = None,
+        limit: int = 20,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Explicit hybrid search with configurable RRF weights."""
+        ...
+
+    def recall_multi_mode(
+        self,
+        query: str,
+        modes: Optional[List[str]] = None,
+        limit: int = 20,
+        filters: Optional[Dict[str, Any]] = None,
+        time_range: Optional[Tuple[datetime, datetime]] = None,
+        entity: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Unified multi-mode retrieval interface."""
         ...
 
 

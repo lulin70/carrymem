@@ -372,3 +372,167 @@ class RecallMixin:
         except (AttributeError, TypeError, RuntimeError) as e:
             logger.warning("promote_to_permanent failed: %s", e)
             return False
+
+    # ── Memify Consolidation (v0.7.2) ───────────────────────────
+
+    def consolidate_memories(
+        self,
+        namespace: Optional[str] = None,
+        min_co_occurrence: int = 3,
+        max_derived: int = 10,
+        stale_days: int = 90,
+        min_importance: float = 0.3,
+    ) -> Dict[str, Any]:
+        """Consolidate memories via Memify three-phase refinement (v0.7.2).
+
+        Phase 1: derive_facts — create derived memories from co-occurring entities.
+        Phase 2: reinforce_edges — strengthen graph relations for co-occurring entities.
+        Phase 3: auto_decay — reduce importance of stale, low-access memories.
+
+        Args:
+            namespace: Namespace scope (default: current namespace).
+            min_co_occurrence: Minimum co-occurrence for derive/reinforce.
+            max_derived: Maximum derived facts per run.
+            stale_days: Days without access for decay.
+            min_importance: Importance threshold for decay.
+
+        Returns:
+            Dict with derived_facts, edges_reinforced, decayed.
+        """
+        if not self._adapter:
+            raise StorageNotConfiguredError()
+        ns = namespace or self._namespace
+        return self._adapter.consolidate_memories(
+            namespace=ns,
+            min_co_occurrence=min_co_occurrence,
+            max_derived=max_derived,
+            stale_days=stale_days,
+            min_importance=min_importance,
+        )
+
+    # ── Multi-Mode Retrieval (v0.7.1) ────────────────────────────
+
+    def recall_by_time(
+        self,
+        start: datetime,
+        end: Optional[datetime] = None,
+        filters: Optional[Dict[str, Any]] = None,
+        limit: int = 50,
+    ) -> List[Dict[str, Any]]:
+        """Retrieve memories within a time range (v0.7.1).
+
+        Args:
+            start: Start datetime (inclusive). Timezone-aware recommended.
+            end: End datetime (exclusive). Defaults to now.
+            filters: Optional metadata filters (same as recall()).
+            limit: Maximum results (default 50).
+
+        Returns:
+            List of memory dicts ordered by created_at descending.
+        """
+        if not self._adapter:
+            raise StorageNotConfiguredError()
+        if not start:
+            raise ValueError("start datetime is required")
+        results = self._adapter.recall_by_time(start, end, filters, limit, [self._namespace])
+        return list(results)
+
+    def recall_semantic(
+        self,
+        query: str,
+        top_k: int = 10,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Pure vector similarity search (v0.7.1).
+
+        Bypasses FTS5 and RRF fusion — returns raw vector similarity results.
+        Requires vector search enabled (capabilities["vector_search"] == True).
+
+        Args:
+            query: Natural language query.
+            top_k: Number of results (default 10).
+            filters: Optional metadata filters.
+
+        Returns:
+            List of memory dicts ordered by vector similarity descending.
+        """
+        if not self._adapter:
+            raise StorageNotConfiguredError()
+        if not query or not query.strip():
+            raise ValueError("query must be a non-empty string")
+        if not self._adapter.capabilities.get("vector_search", False):
+            return []
+        return list(self._adapter.recall_semantic(query, top_k, filters, [self._namespace]))
+
+    def recall_hybrid(
+        self,
+        query: str,
+        fts_weight: Optional[float] = None,
+        vec_weight: Optional[float] = None,
+        rrf_k: Optional[int] = None,
+        limit: int = 20,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Explicit hybrid search with configurable RRF weights (v0.7.1).
+
+        Exposes the existing RRF fusion with per-call weight override.
+        If weights are None, uses adapter defaults.
+
+        Args:
+            query: Search query.
+            fts_weight: FTS rank weight (default: adapter config).
+            vec_weight: Vector rank weight (default: adapter config).
+            rrf_k: RRF constant k (default: adapter config).
+            limit: Maximum results.
+            filters: Optional metadata filters.
+
+        Returns:
+            List of memory dicts ordered by fused RRF score descending.
+        """
+        if not self._adapter:
+            raise StorageNotConfiguredError()
+        validate_query(query or "")
+        validate_limit(limit)
+        return list(
+            self._adapter.recall_hybrid(query, fts_weight, vec_weight, rrf_k, limit, filters, [self._namespace])
+        )
+
+    def recall_multi_mode(
+        self,
+        query: str,
+        modes: Optional[List[str]] = None,
+        limit: int = 20,
+        filters: Optional[Dict[str, Any]] = None,
+        time_range: Optional[tuple] = None,
+        entity: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Unified multi-mode retrieval interface (v0.7.1).
+
+        Executes multiple retrieval modes and returns results grouped by mode,
+        plus a merged "best" list deduplicated by storage_key.
+
+        Args:
+            query: Search query (used for fts/vector/hybrid modes).
+            modes: Retrieval modes. Default: ["fts", "vector"] or ["fts"].
+                   Options: "fts", "vector", "hybrid", "graph", "time", "entity".
+            limit: Maximum results per mode.
+            filters: Optional metadata filters.
+            time_range: (start, end) for "time" mode.
+            entity: Entity text for "entity"/"graph" modes.
+
+        Returns:
+            Dict with "modes", "merged", "mode_count", "total_count".
+        """
+        if not self._adapter:
+            raise StorageNotConfiguredError()
+        validate_limit(limit)
+        result = self._adapter.recall_multi_mode(
+            query,
+            modes,
+            limit,
+            filters,
+            [self._namespace],
+            time_range,
+            entity,
+        )
+        return dict(result)

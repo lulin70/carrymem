@@ -1,20 +1,55 @@
 # CarryMem — Project Status
 
-**Version**: v0.7.0
+**Version**: v0.7.2
 **Last Updated**: 2026-07-11
 **Maintainer**: CarryMem Team
 
 ---
 
-## Current Release: v0.7.0
+## Current Release: v0.7.2
 
-**Theme**: Knowledge Graph + Session Dual-Layer Memory (MINOR release)
+**Theme**: Memify Dynamic Refinement + Native Async I/O (PATCH release, compresses v0.9.0 roadmap)
 
 **Release Date**: 2026-07-11
-**PyPI**: `carrymem==0.7.0` ([PyPI](https://pypi.org/project/carrymem/))
-**Git Tag**: [v0.7.0](https://github.com/lulin70/carrymem/releases/tag/v0.7.0)
+**PyPI**: `carrymem==0.7.2` ([PyPI](https://pypi.org/project/carrymem/))
+**Git Tag**: [v0.7.2](https://github.com/lulin70/carrymem/releases/tag/v0.7.2)
 
-### Core Features (v0.7.0)
+### Core Features (v0.7.2)
+
+- **`MemifyEngine`**: Three-phase dynamic memory refinement (zero LLM, pure SQL).
+  - `derive_facts()`: Creates derived "relationship" memories from co-occurring entity pairs.
+  - `reinforce_edges()`: Reinforces graph edge weights for co-occurring entities (upsert with max_weight cap).
+  - `auto_decay()`: Decays stale, low-importance, zero-access memories (three-way gate, idempotent).
+- **`consolidate_memories()`**: Unified API running all three Memify phases. Exposed on
+  SQLiteAdapter, StorageAdapter base, RecallMixin, and RecallOps Protocol.
+- **`AsyncSQLiteAdapter`**: Native async SQLite adapter using aiosqlite. Same SQL as
+  SQLiteAdapter but with async I/O. Implements connect/store_entry/recall/forget_memory/count/close
+  + async context manager protocol.
+- **`[async]` extra**: `pip install carrymem[async]` installs aiosqlite>=0.19.
+- **`AsyncCarryMem.native_async` mode**: True async I/O via AsyncSQLiteAdapter when
+  `native_async=True`. Adds connect/store_entry/recall_async/count_async methods.
+- **Dual-mode coexistence**: Sync SQLiteAdapter (zero-dep) + AsyncSQLiteAdapter ([async] extra).
+- **Protocol consistency**: `RecallOps` Protocol updated with `consolidate_memories` signature.
+- **58 new tests**: 32 (test_memify.py) + 26 (test_async_sqlite.py). 6 dimensions each,
+  no Mock, real SQLite/aiosqlite adapters.
+
+### Previous Release: v0.7.1 (Multi-Mode Retrieval API)
+
+- **`recall_by_time()`**: Time-range retrieval with `[start, end)` semantics, descending
+  order. Supports filters and namespace isolation. Performance: 1000 memories <50ms.
+- **`recall_semantic()`**: Pure vector similarity search (no FTS, no RRF fusion).
+  Capability-gated: returns empty list when vector search is disabled.
+- **`recall_hybrid()`**: Explicit hybrid FTS+Vector search with per-call RRF weight
+  override (`fts_weight`, `vec_weight`, `rrf_k`).
+- **`recall_multi_mode()`**: Unified interface supporting 6 modes (`fts`, `vector`,
+  `hybrid`, `graph`, `time`, `entity`) in a single call. Returns structured dict with
+  deduplication by `storage_key`.
+- **Zero new dependencies**: Built on existing FTS5 + vector search infrastructure.
+- **Protocol consistency**: `RecallOps` protocol updated with 4 new method signatures.
+- **40 new tests**: Happy Path (8) + Boundary (12) + Error Cases (8) + Performance (2) +
+  Configuration (4) + Integration (6). Uses real SQLiteAdapter (no Mock).
+
+### Previous Release: v0.7.0 (Knowledge Graph + Session Dual-Layer Memory)
 
 - **SQLite-native Knowledge Graph**: Two new tables (`memory_entities` + `memory_relations`)
   with 8 indexes for namespace-isolated entity/relation storage. Zero LLM — entity extraction
@@ -23,8 +58,8 @@
 - **Session Dual-Layer Memory**: Per-session LRU cache (`session_max_size=128`) for O(1) recall
   within a conversation session. `set_session()` / `preload_session()` / `end_session()` API.
   `promote_to_permanent()` boosts importance for permanent retention.
-- **Bug fixes**: `promote_to_permanent()` rowcount check (previously always returned True);
-  FK constraint on `memory_entities.memory_key` relaxed to nullable for standalone entities.
+- **Bug fixes**: `promote_to_permanent()` rowcount check; FK constraint on
+  `memory_entities.memory_key` relaxed to nullable for standalone entities.
 - **Protocol consistency**: `RecallOps` protocol updated with 8 new method signatures.
 
 ### Previous Release: v0.6.2 (Security Fix + Access Frequency Weighting)
@@ -250,6 +285,8 @@ each py3.11 + py3.12).
 
 | Version | Date | Theme | Status |
 |---------|------|-------|--------|
+| v0.7.2 | 2026-07-11 | Memify Dynamic Refinement + Native Async I/O | ✅ Released |
+| v0.7.1 | 2026-07-11 | Multi-Mode Retrieval API | ✅ Released |
 | v0.7.0 | 2026-07-11 | Knowledge Graph + Session Dual-Layer Memory | ✅ Released |
 | v0.6.2 | 2026-07-11 | Security Fix + Access Frequency Weighting | ✅ Released |
 | v0.6.1 | 2026-07-10 | Architecture Cleanup — Phase 3.5 refactoring & decoupling | ✅ Released |
@@ -264,15 +301,35 @@ each py3.11 + py3.12).
 
 ## Next Milestone
 
-**v0.8.0** (next minor — multi-mode retrieval + relationship graph enrichment)
+**v0.8.0** (next MINOR — TBD based on user feedback and architecture evolution plan)
 
-Architecture Evolution (per CARRYMEM_ARCHITECTURE_EVOLUTION_PLAN.md):
-- Multi-mode retrieval: combine FTS5 + graph traversal + session cache into unified
-  `recall_multi()` API with relevance fusion
-- Relationship graph enrichment: entity co-occurrence detection, relation inference
-  from memory content patterns
-- Session summarization integration: leverage existing Summary Layer for session
-  pre-loading optimization
+Potential areas (per CARRYMEM_ARCHITECTURE_EVOLUTION_PLAN.md):
+- Vector search enhancements (HNSW indexing, approximate nearest neighbor)
+- Cross-namespace knowledge transfer
+- LLM-assisted entity extraction (optional, capability-gated)
+- Memory compaction and summarization strategies
+
+### v0.7.2 Completed (2026-07-11)
+
+- MemifyEngine: derive_facts (co-occurring entity pairs → derived relationship memories) ✅
+- MemifyEngine: reinforce_edges (co_occurs relation upsert with max_weight cap) ✅
+- MemifyEngine: auto_decay (three-way gate: stale + low importance + zero access) ✅
+- consolidate_memories() unified API on SQLiteAdapter + base + RecallMixin + Protocol ✅
+- AsyncSQLiteAdapter: native async I/O via aiosqlite ([async] extra) ✅
+- AsyncCarryMem: native_async=True mode with connect/store_entry/recall_async/count_async ✅
+- [async] extra in setup.py + added to [full] extra ✅
+- 58 new tests (32 test_memify.py + 26 test_async_sqlite.py) — 6 dimensions, no Mock ✅
+
+### v0.7.1 Completed (2026-07-11)
+
+- `recall_by_time()`: time-range retrieval with [start, end) semantics ✅
+- `recall_semantic()`: pure vector similarity search (capability-gated) ✅
+- `recall_hybrid()`: hybrid FTS+Vector with per-call RRF weight override ✅
+- `recall_multi_mode()`: unified 6-mode interface with deduplication ✅
+- RecallEngine extensions: vector_search_only + hybrid_search + search_by_time ✅
+- StorageAdapter base defaults for backward compatibility ✅
+- RecallOps Protocol updated with 4 new method signatures ✅
+- 40 new tests (test_multi_mode_retrieval.py) — 6 dimensions, no Mock ✅
 
 ### v0.7.0 Completed (2026-07-11)
 
