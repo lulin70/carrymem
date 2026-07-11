@@ -630,7 +630,7 @@ class SQLiteAdapter(StorageAdapter):
             List of memory dicts.
         """
         ns = namespace or self.namespace
-        return self._get_knowledge_graph().recall_by_entity(entity_text, entity_type, ns, limit)
+        return list(self._get_knowledge_graph().recall_by_entity(entity_text, entity_type, ns, limit))
 
     def recall_by_relation(
         self,
@@ -653,7 +653,7 @@ class SQLiteAdapter(StorageAdapter):
             List of memory dicts.
         """
         ns = namespace or self.namespace
-        return self._get_knowledge_graph().recall_by_relation(entity_text, relation_type, direction, ns, limit)
+        return list(self._get_knowledge_graph().recall_by_relation(entity_text, relation_type, direction, ns, limit))
 
     def recall_graph(
         self,
@@ -674,7 +674,7 @@ class SQLiteAdapter(StorageAdapter):
             Dict with "entities" and "memories" lists.
         """
         ns = namespace or self.namespace
-        return self._get_knowledge_graph().recall_graph(entity_text, max_hops, ns, limit)
+        return dict(self._get_knowledge_graph().recall_graph(entity_text, max_hops, ns, limit))
 
     def add_graph_relation(
         self,
@@ -699,13 +699,15 @@ class SQLiteAdapter(StorageAdapter):
             True if relation was added.
         """
         ns = namespace or self.namespace
-        return self._get_knowledge_graph().add_relation(
-            src_entity_text,
-            dst_entity_text,
-            relation_type,
-            source_memory_key,
-            weight,
-            ns,
+        return bool(
+            self._get_knowledge_graph().add_relation(
+                src_entity_text,
+                dst_entity_text,
+                relation_type,
+                source_memory_key,
+                weight,
+                ns,
+            )
         )
 
     def list_graph_entities(
@@ -713,19 +715,19 @@ class SQLiteAdapter(StorageAdapter):
     ) -> list:
         """List entities in the knowledge graph (v0.7.0)."""
         ns = namespace or self.namespace
-        return self._get_knowledge_graph().list_entities(ns, entity_type, limit)
+        return list(self._get_knowledge_graph().list_entities(ns, entity_type, limit))
 
     def list_graph_relations(
         self, namespace: Optional[str] = None, relation_type: Optional[str] = None, limit: int = 100
     ) -> list:
         """List relations in the knowledge graph (v0.7.0)."""
         ns = namespace or self.namespace
-        return self._get_knowledge_graph().list_relations(ns, relation_type, limit)
+        return list(self._get_knowledge_graph().list_relations(ns, relation_type, limit))
 
     def get_graph_stats(self, namespace: Optional[str] = None) -> Dict[str, Any]:
         """Get knowledge graph statistics (v0.7.0)."""
         ns = namespace or self.namespace
-        return self._get_knowledge_graph().get_stats(ns)
+        return dict(self._get_knowledge_graph().get_stats(ns))
 
     def store_graph_entities(self, storage_key: str, text: str, namespace: Optional[str] = None) -> int:
         """Extract entities from text and store them in the knowledge graph (v0.7.0).
@@ -742,7 +744,7 @@ class SQLiteAdapter(StorageAdapter):
             Number of entities stored.
         """
         ns = namespace or self.namespace
-        return self._get_knowledge_graph().extract_and_store_entities(storage_key, text, ns)
+        return int(self._get_knowledge_graph().extract_and_store_entities(storage_key, text, ns))
 
     # ── Version management ──────────────────────────────────────
 

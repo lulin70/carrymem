@@ -25,6 +25,7 @@ class RecallMixin:
     _adapter: Optional[StorageAdapter]
     _knowledge_adapter: Optional[StorageAdapter]
     _namespace: str
+    _session_id: Optional[str]
 
     def index_knowledge(self) -> Dict[str, Any]:
         """Index the configured knowledge base and return summary stats."""
@@ -292,17 +293,19 @@ class RecallMixin:
         """
         if not session_id or not isinstance(session_id, str):
             raise ValueError("session_id must be a non-empty string")
-        self._session_id = session_id  # type: ignore[attr-defined]
+        self._session_id = session_id
 
     def end_session(self) -> None:
         """End the current session and clear session cache (v0.7.0)."""
         session_id = getattr(self, "_session_id", None)
         if session_id and self._adapter and hasattr(self._adapter, "_cache"):
-            try:
-                self._adapter._cache.invalidate_session(session_id)  # type: ignore[attr-defined]
-            except (AttributeError, TypeError) as e:
-                logger.debug("Session cache invalidation skipped: %s", e)
-        self._session_id = None  # type: ignore[attr-defined]
+            cache = getattr(self._adapter, "_cache", None)
+            if cache:
+                try:
+                    cache.invalidate_session(session_id)
+                except (AttributeError, TypeError) as e:
+                    logger.debug("Session cache invalidation skipped: %s", e)
+        self._session_id = None
 
     def preload_session(self, limit: int = 50) -> int:
         """Pre-load high-frequency memories into the session cache (v0.7.0).
@@ -319,7 +322,7 @@ class RecallMixin:
         session_id = getattr(self, "_session_id", None)
         if not session_id or not self._adapter:
             return 0
-        if not hasattr(self._adapter, "_cache") or not self._adapter._cache:  # type: ignore[attr-defined]
+        if not hasattr(self._adapter, "_cache") or not self._adapter._cache:
             return 0
 
         # Recall top memories by importance (broad query to get diverse set)
@@ -333,7 +336,9 @@ class RecallMixin:
             )
             memories = [r.to_dict() if hasattr(r, "to_dict") else r for r in results]
             if memories:
-                return self._adapter._cache.session_preload(session_id, memories)  # type: ignore[attr-defined]
+                cache = getattr(self._adapter, "_cache", None)
+                if cache:
+                    return int(cache.session_preload(session_id, memories))
         except (KeyError, ValueError, TypeError, RuntimeError) as e:
             logger.warning("Session preload failed: %s", e)
         return 0
@@ -363,7 +368,7 @@ class RecallMixin:
                 (datetime.now(timezone.utc).isoformat(), memory_key),
             )
             conn.commit()
-            return cursor.rowcount > 0
+            return bool(cursor.rowcount > 0)
         except (AttributeError, TypeError, RuntimeError) as e:
             logger.warning("promote_to_permanent failed: %s", e)
             return False

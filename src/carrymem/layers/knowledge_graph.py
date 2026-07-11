@@ -437,7 +437,7 @@ class KnowledgeGraph:
                 (entity_text, namespace),
             ).fetchone()
             if row:
-                return row["id"]
+                return int(row["id"])
             # Standalone entity (not linked to a specific memory) — memory_key is NULL
             cursor = conn.execute(
                 "INSERT INTO memory_entities "
@@ -445,7 +445,7 @@ class KnowledgeGraph:
                 "VALUES (?, ?, ?, ?, ?, ?)",
                 (None, "concept", entity_text, 0.5, namespace, now),
             )
-            return cursor.lastrowid
+            return int(cursor.lastrowid) if cursor.lastrowid is not None else None
         except sqlite3.Error as e:
             logger.debug("find_or_create_entity failed: %s", e)
             return None

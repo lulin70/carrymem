@@ -212,9 +212,10 @@ class ClassificationMixin:
                     stored_memories.append(stored.to_dict())
                     storage_keys.append(stored.storage_key)
                     # v0.7.0: Populate knowledge graph entities
-                    if self._adapter.capabilities.get("graph", False):
+                    adapter = self._adapter
+                    if adapter and adapter.capabilities.get("graph", False):
                         try:
-                            self._adapter.store_graph_entities(stored.storage_key, resolved_message, self._namespace)
+                            adapter.store_graph_entities(stored.storage_key, resolved_message, self._namespace)
                         except (ValueError, RuntimeError, AttributeError) as e:
                             logger.debug("Knowledge graph entity extraction skipped: %s", e)
                 except (ValueError, KeyError, TypeError) as e:
