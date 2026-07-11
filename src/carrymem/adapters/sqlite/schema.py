@@ -155,6 +155,43 @@ _V052_MIGRATION_SQL = [
     "ALTER TABLE memories ADD COLUMN summary_level INTEGER",
 ]
 
+_V062_GRAPH_SQL = """
+CREATE TABLE IF NOT EXISTS memory_entities (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    memory_key TEXT,
+    entity_type TEXT NOT NULL,
+    entity_text TEXT NOT NULL,
+    confidence REAL NOT NULL DEFAULT 0.5,
+    namespace TEXT NOT NULL DEFAULT 'default',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (memory_key) REFERENCES memories(storage_key) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS memory_relations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    src_entity_id INTEGER NOT NULL,
+    dst_entity_id INTEGER NOT NULL,
+    relation_type TEXT NOT NULL,
+    source_memory_key TEXT,
+    weight REAL NOT NULL DEFAULT 1.0,
+    namespace TEXT NOT NULL DEFAULT 'default',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (src_entity_id) REFERENCES memory_entities(id),
+    FOREIGN KEY (dst_entity_id) REFERENCES memory_entities(id)
+);
+"""
+
+_V062_GRAPH_INDEX_SQL = [
+    "CREATE INDEX IF NOT EXISTS idx_entities_text ON memory_entities(entity_text)",
+    "CREATE INDEX IF NOT EXISTS idx_entities_type ON memory_entities(entity_type)",
+    "CREATE INDEX IF NOT EXISTS idx_entities_memory ON memory_entities(memory_key)",
+    "CREATE INDEX IF NOT EXISTS idx_entities_namespace ON memory_entities(namespace)",
+    "CREATE INDEX IF NOT EXISTS idx_relations_src ON memory_relations(src_entity_id)",
+    "CREATE INDEX IF NOT EXISTS idx_relations_dst ON memory_relations(dst_entity_id)",
+    "CREATE INDEX IF NOT EXISTS idx_relations_type ON memory_relations(relation_type)",
+    "CREATE INDEX IF NOT EXISTS idx_relations_namespace ON memory_relations(namespace)",
+]
+
 _V060_FTS_REBUILD_SQL = [
     "DROP TABLE IF EXISTS memories_fts",
     """CREATE VIRTUAL TABLE memories_fts USING fts5(
@@ -224,6 +261,7 @@ class SchemaManager:
         self.migrate_namespace()
         self.migrate_v050()
         self.migrate_v060()
+        self.migrate_v062()
         if enable_vector:
             self.init_vec_schema()
             self.migrate_v070()
@@ -351,6 +389,20 @@ class SchemaManager:
                 logger.info("FTS5 rebuilt with raw_text column")
             except sqlite3.Error as e:
                 logger.warning("Failed to rebuild FTS5: %s", e)
+
+    def migrate_v062(self):
+        """Create knowledge graph tables (memory_entities + memory_relations) for v0.7.0."""
+        conn = self._conn_mgr.get_connection()
+        try:
+            conn.executescript(_V062_GRAPH_SQL)
+            for sql in _V062_GRAPH_INDEX_SQL:
+                try:
+                    conn.execute(sql)
+                except _OpError:
+                    pass
+            conn.commit()
+        except sqlite3.Error as e:
+            logger.warning("Failed to create knowledge graph tables: %s", e)
 
     def init_vec_schema(self, embedding_dim: int = 384):
         """Create the vector search virtual table."""

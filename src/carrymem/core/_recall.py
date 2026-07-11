@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from carrymem.adapters.obsidian_adapter import ObsidianAdapter
@@ -161,3 +162,208 @@ class RecallMixin:
 
         results = self._adapter.recall_timeline(topic=topic, limit=limit)
         return [r.to_dict() for r in results]
+
+    # ── Knowledge Graph (v0.7.0) ────────────────────────────────
+
+    def recall_by_entity(
+        self,
+        entity_text: str,
+        entity_type: Optional[str] = None,
+        limit: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """Find memories mentioning a specific entity (v0.7.0).
+
+        Uses the knowledge graph to find all memories that mention the
+        given entity. Requires an adapter with ``graph: True`` capability.
+
+        Args:
+            entity_text: The entity text to search for.
+            entity_type: Optional entity type filter (acronym/concept/tool).
+            limit: Maximum results (default 10).
+
+        Returns:
+            List of memory dicts containing the entity.
+        """
+        if not self._adapter:
+            raise StorageNotConfiguredError()
+        if not self._adapter.capabilities.get("graph", False):
+            return []
+        return self._adapter.recall_by_entity(entity_text, entity_type, self._namespace, limit)
+
+    def recall_by_relation(
+        self,
+        entity_text: str,
+        relation_type: Optional[str] = None,
+        direction: str = "both",
+        limit: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """Find memories connected to an entity via relations (v0.7.0).
+
+        Traverses the knowledge graph to find memories linked to the given
+        entity through explicit relations (e.g., "prefers", "works_on").
+
+        Args:
+            entity_text: The entity to find relations for.
+            relation_type: Optional relation type filter.
+            direction: "outgoing", "incoming", or "both" (default).
+            limit: Maximum results.
+
+        Returns:
+            List of memory dicts connected via relations.
+        """
+        if not self._adapter:
+            raise StorageNotConfiguredError()
+        if not self._adapter.capabilities.get("graph", False):
+            return []
+        return self._adapter.recall_by_relation(entity_text, relation_type, direction, self._namespace, limit)
+
+    def recall_graph(
+        self,
+        entity_text: str,
+        max_hops: int = 2,
+        limit: int = 20,
+    ) -> Dict[str, Any]:
+        """Multi-hop graph traversal from an entity (v0.7.0).
+
+        Performs BFS traversal of the knowledge graph starting from the
+        given entity, collecting all connected entities and memories
+        within ``max_hops`` hops.
+
+        Args:
+            entity_text: The starting entity.
+            max_hops: Maximum traversal depth (default 2).
+            limit: Maximum memories to return.
+
+        Returns:
+            Dict with "entities" (list of connected entities) and
+            "memories" (list of connected memories).
+        """
+        if not self._adapter:
+            raise StorageNotConfiguredError()
+        if not self._adapter.capabilities.get("graph", False):
+            return {"entities": [], "memories": []}
+        return self._adapter.recall_graph(entity_text, max_hops, self._namespace, limit)
+
+    def add_graph_relation(
+        self,
+        src_entity: str,
+        dst_entity: str,
+        relation_type: str,
+        source_memory_key: Optional[str] = None,
+        weight: float = 1.0,
+    ) -> bool:
+        """Add a relation between two entities in the knowledge graph (v0.7.0).
+
+        Args:
+            src_entity: Source entity text.
+            dst_entity: Destination entity text.
+            relation_type: Relation type (e.g. "prefers", "works_on").
+            source_memory_key: Optional memory key that evidences this relation.
+            weight: Relation strength (default 1.0).
+
+        Returns:
+            True if relation was added successfully.
+        """
+        if not self._adapter:
+            raise StorageNotConfiguredError()
+        if not self._adapter.capabilities.get("graph", False):
+            return False
+        return self._adapter.add_graph_relation(
+            src_entity,
+            dst_entity,
+            relation_type,
+            source_memory_key,
+            weight,
+            self._namespace,
+        )
+
+    # ── Session Dual-Layer Memory (v0.7.0) ──────────────────────
+
+    def set_session(self, session_id: str) -> None:
+        """Set the current session for dual-layer memory (v0.7.0).
+
+        When a session is active, recall operations check the session cache
+        first (O(1)) before falling back to the persistent layer (FTS5).
+        New memories stored during the session are also added to the session
+        cache for fast subsequent retrieval.
+
+        Args:
+            session_id: Unique session identifier.
+        """
+        if not session_id or not isinstance(session_id, str):
+            raise ValueError("session_id must be a non-empty string")
+        self._session_id = session_id  # type: ignore[attr-defined]
+
+    def end_session(self) -> None:
+        """End the current session and clear session cache (v0.7.0)."""
+        session_id = getattr(self, "_session_id", None)
+        if session_id and self._adapter and hasattr(self._adapter, "_cache"):
+            try:
+                self._adapter._cache.invalidate_session(session_id)  # type: ignore[attr-defined]
+            except (AttributeError, TypeError) as e:
+                logger.debug("Session cache invalidation skipped: %s", e)
+        self._session_id = None  # type: ignore[attr-defined]
+
+    def preload_session(self, limit: int = 50) -> int:
+        """Pre-load high-frequency memories into the session cache (v0.7.0).
+
+        Loads the top-N memories by importance_score from the persistent
+        layer into the session cache for O(1) recall within the session.
+
+        Args:
+            limit: Maximum memories to pre-load (default 50).
+
+        Returns:
+            Number of memories pre-loaded.
+        """
+        session_id = getattr(self, "_session_id", None)
+        if not session_id or not self._adapter:
+            return 0
+        if not hasattr(self._adapter, "_cache") or not self._adapter._cache:  # type: ignore[attr-defined]
+            return 0
+
+        # Recall top memories by importance (broad query to get diverse set)
+        try:
+            results = self._adapter.recall(
+                "",
+                filters=None,
+                limit=limit,
+                namespaces=[self._namespace],
+                update_access=False,
+            )
+            memories = [r.to_dict() if hasattr(r, "to_dict") else r for r in results]
+            if memories:
+                return self._adapter._cache.session_preload(session_id, memories)  # type: ignore[attr-defined]
+        except (KeyError, ValueError, TypeError, RuntimeError) as e:
+            logger.warning("Session preload failed: %s", e)
+        return 0
+
+    def promote_to_permanent(self, memory_key: str) -> bool:
+        """Boost a memory's importance for permanent retention (v0.7.0).
+
+        Increases the access_count and importance_score of a memory so it
+        survives longer in the cache and ranks higher in recall results.
+
+        Args:
+            memory_key: The storage_key of the memory to promote.
+
+        Returns:
+            True if the memory was promoted.
+        """
+        if not self._adapter or not memory_key:
+            return False
+        try:
+            conn = self._adapter._get_connection()  # type: ignore[attr-defined]
+            cursor = conn.execute(
+                "UPDATE memories SET "
+                "access_count = access_count + 1, "
+                "importance_score = MIN(importance_score + 0.05, 1.0), "
+                "last_accessed_at = ? "
+                "WHERE storage_key = ?",
+                (datetime.now(timezone.utc).isoformat(), memory_key),
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+        except (AttributeError, TypeError, RuntimeError) as e:
+            logger.warning("promote_to_permanent failed: %s", e)
+            return False

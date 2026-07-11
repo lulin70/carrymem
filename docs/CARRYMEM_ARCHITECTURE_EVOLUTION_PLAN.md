@@ -30,7 +30,9 @@ CarryMem 的核心定位是 **AI 身份层**（Memory + Rules + Knowledge），�
 
 ## 2. 中期方案（v0.7.0 — v0.8.0）
 
-### 2.1 关系图谱 — SQLite 原生（v0.7.0，P2）
+### 2.1 关系图谱 — SQLite 原生（v0.7.0，P2）✅ 已实现
+
+**实现状态**: v0.7.0 已完成（2026-07-11）
 
 **借鉴**: Cognee ECL 管道 + Codebase-Memory SQLite 图谱
 
@@ -83,7 +85,9 @@ CREATE INDEX idx_relations_src ON memory_relations(src_entity_id);
 - 多跳推理能力（"用户偏好 PostgreSQL" → "用户纠正了 MySQL 用法" 关联）
 - 检索准确率提升（通过实体关系路径找到相关记忆）
 
-### 2.2 Session 双层记忆（v0.7.0，P2）
+### 2.2 Session 双层记忆（v0.7.0，P2）✅ 已实现
+
+**实现状态**: v0.7.0 已完成（2026-07-11）
 
 **借鉴**: Cognee Session + Permanent 双层记忆
 

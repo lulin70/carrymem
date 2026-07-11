@@ -220,6 +220,65 @@ class RecallOps(Protocol):
         """Recall memories chronologically for a topic."""
         ...
 
+    # ── Knowledge Graph (v0.7.0) ────────────────────────────────
+
+    def recall_by_entity(
+        self,
+        entity_text: str,
+        entity_type: Optional[str] = None,
+        limit: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """Find memories mentioning a specific entity."""
+        ...
+
+    def recall_by_relation(
+        self,
+        entity_text: str,
+        relation_type: Optional[str] = None,
+        direction: str = "both",
+        limit: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """Find memories connected to an entity via relations."""
+        ...
+
+    def recall_graph(
+        self,
+        entity_text: str,
+        max_hops: int = 2,
+        limit: int = 20,
+    ) -> Dict[str, Any]:
+        """Multi-hop graph traversal from an entity."""
+        ...
+
+    def add_graph_relation(
+        self,
+        src_entity: str,
+        dst_entity: str,
+        relation_type: str,
+        source_memory_key: Optional[str] = None,
+        weight: float = 1.0,
+    ) -> bool:
+        """Add a relation between two entities in the knowledge graph."""
+        ...
+
+    # ── Session Dual-Layer Memory (v0.7.0) ──────────────────────
+
+    def set_session(self, session_id: str) -> None:
+        """Set the current session for dual-layer memory."""
+        ...
+
+    def end_session(self) -> None:
+        """End the current session and clear session cache."""
+        ...
+
+    def preload_session(self, limit: int = 50) -> int:
+        """Pre-load high-frequency memories into the session cache."""
+        ...
+
+    def promote_to_permanent(self, memory_key: str) -> bool:
+        """Boost a memory's importance for permanent retention."""
+        ...
+
 
 # ---------------------------------------------------------------------------
 # ClassificationMixin → Internal classification pipeline

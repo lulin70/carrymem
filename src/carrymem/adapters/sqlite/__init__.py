@@ -269,6 +269,9 @@ class SQLiteAdapter(StorageAdapter):
         # --- Recall engine (depends on all above) ---
         self._recall_engine = RecallEngine(self)
 
+        # --- Knowledge graph (v0.7.0: lazy init on first access) ---
+        self._knowledge_graph: Optional[Any] = None
+
     # ── Properties ──────────────────────────────────────────────
 
     @property
@@ -294,7 +297,7 @@ class SQLiteAdapter(StorageAdapter):
             "fts": True,
             "ttl": True,
             "batch": True,
-            "graph": False,
+            "graph": True,
             "semantic_recall": self._enable_semantic,
             "versioning": True,
             "backup": True,
@@ -576,6 +579,170 @@ class SQLiteAdapter(StorageAdapter):
     def recall_timeline(self, topic: str, namespaces: Optional[list] = None, limit: int = 20) -> list:
         """Return a chronological timeline of memories for a topic."""
         return self._stats.recall_timeline(topic, namespaces, limit)
+
+    # ── Knowledge graph (v0.7.0) ────────────────────────────────
+
+    def _get_knowledge_graph(self):
+        """Lazily initialize the KnowledgeGraph instance.
+
+        Reuses the EntityNormalizer from the classification layer if
+        available; otherwise creates a standalone EntityNormalizer.
+        """
+        if self._knowledge_graph is not None:
+            return self._knowledge_graph
+        from ...layers.knowledge_graph import KnowledgeGraph
+
+        entity_normalizer = None
+        try:
+            from ...layers.entity_normalizer import EntityNormalizer
+
+            entity_normalizer = EntityNormalizer(
+                conn_mgr=self._conn_mgr,
+                input_validator=None,
+            )
+        except (ImportError, TypeError) as e:
+            from ...utils.logger import logger
+
+            logger.debug("KnowledgeGraph EntityNormalizer init failed: %s", e)
+
+        self._knowledge_graph = KnowledgeGraph(
+            conn_mgr=self._conn_mgr,
+            entity_normalizer=entity_normalizer,
+        )
+        return self._knowledge_graph
+
+    def recall_by_entity(
+        self,
+        entity_text: str,
+        entity_type: Optional[str] = None,
+        namespace: Optional[str] = None,
+        limit: int = 10,
+    ) -> list:
+        """Find memories mentioning a specific entity (v0.7.0).
+
+        Args:
+            entity_text: The entity text to search for.
+            entity_type: Optional entity type filter.
+            namespace: Optional namespace filter (defaults to adapter's).
+            limit: Maximum results.
+
+        Returns:
+            List of memory dicts.
+        """
+        ns = namespace or self.namespace
+        return self._get_knowledge_graph().recall_by_entity(entity_text, entity_type, ns, limit)
+
+    def recall_by_relation(
+        self,
+        entity_text: str,
+        relation_type: Optional[str] = None,
+        direction: str = "both",
+        namespace: Optional[str] = None,
+        limit: int = 10,
+    ) -> list:
+        """Find memories connected to an entity via relations (v0.7.0).
+
+        Args:
+            entity_text: The entity to find relations for.
+            relation_type: Optional relation type filter.
+            direction: "outgoing", "incoming", or "both".
+            namespace: Optional namespace filter.
+            limit: Maximum results.
+
+        Returns:
+            List of memory dicts.
+        """
+        ns = namespace or self.namespace
+        return self._get_knowledge_graph().recall_by_relation(entity_text, relation_type, direction, ns, limit)
+
+    def recall_graph(
+        self,
+        entity_text: str,
+        max_hops: int = 2,
+        namespace: Optional[str] = None,
+        limit: int = 20,
+    ) -> Dict[str, Any]:
+        """Multi-hop graph traversal from an entity (v0.7.0).
+
+        Args:
+            entity_text: The starting entity.
+            max_hops: Maximum traversal depth.
+            namespace: Optional namespace filter.
+            limit: Maximum memories to return.
+
+        Returns:
+            Dict with "entities" and "memories" lists.
+        """
+        ns = namespace or self.namespace
+        return self._get_knowledge_graph().recall_graph(entity_text, max_hops, ns, limit)
+
+    def add_graph_relation(
+        self,
+        src_entity_text: str,
+        dst_entity_text: str,
+        relation_type: str,
+        source_memory_key: Optional[str] = None,
+        weight: float = 1.0,
+        namespace: Optional[str] = None,
+    ) -> bool:
+        """Add a relation between two entities in the knowledge graph (v0.7.0).
+
+        Args:
+            src_entity_text: Source entity text.
+            dst_entity_text: Destination entity text.
+            relation_type: Relation type (e.g. "prefers", "works_on").
+            source_memory_key: Optional evidence memory key.
+            weight: Relation strength (default 1.0).
+            namespace: Optional namespace (defaults to adapter's).
+
+        Returns:
+            True if relation was added.
+        """
+        ns = namespace or self.namespace
+        return self._get_knowledge_graph().add_relation(
+            src_entity_text,
+            dst_entity_text,
+            relation_type,
+            source_memory_key,
+            weight,
+            ns,
+        )
+
+    def list_graph_entities(
+        self, namespace: Optional[str] = None, entity_type: Optional[str] = None, limit: int = 100
+    ) -> list:
+        """List entities in the knowledge graph (v0.7.0)."""
+        ns = namespace or self.namespace
+        return self._get_knowledge_graph().list_entities(ns, entity_type, limit)
+
+    def list_graph_relations(
+        self, namespace: Optional[str] = None, relation_type: Optional[str] = None, limit: int = 100
+    ) -> list:
+        """List relations in the knowledge graph (v0.7.0)."""
+        ns = namespace or self.namespace
+        return self._get_knowledge_graph().list_relations(ns, relation_type, limit)
+
+    def get_graph_stats(self, namespace: Optional[str] = None) -> Dict[str, Any]:
+        """Get knowledge graph statistics (v0.7.0)."""
+        ns = namespace or self.namespace
+        return self._get_knowledge_graph().get_stats(ns)
+
+    def store_graph_entities(self, storage_key: str, text: str, namespace: Optional[str] = None) -> int:
+        """Extract entities from text and store them in the knowledge graph (v0.7.0).
+
+        Called automatically after store_entry() to populate the graph.
+        Uses EntityNormalizer (pattern-based, zero LLM).
+
+        Args:
+            storage_key: The memory's storage_key.
+            text: Text to extract entities from.
+            namespace: Optional namespace (defaults to adapter's).
+
+        Returns:
+            Number of entities stored.
+        """
+        ns = namespace or self.namespace
+        return self._get_knowledge_graph().extract_and_store_entities(storage_key, text, ns)
 
     # ── Version management ──────────────────────────────────────
 

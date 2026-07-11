@@ -1,30 +1,33 @@
 # CarryMem — Project Status
 
-**Version**: v0.6.2
+**Version**: v0.7.0
 **Last Updated**: 2026-07-11
 **Maintainer**: CarryMem Team
 
 ---
 
-## Current Release: v0.6.2
+## Current Release: v0.7.0
 
-**Theme**: Security Fix + Access Frequency Weighting (PATCH release)
+**Theme**: Knowledge Graph + Session Dual-Layer Memory (MINOR release)
 
 **Release Date**: 2026-07-11
-**PyPI**: `carrymem==0.6.2` ([PyPI](https://pypi.org/project/carrymem/))
-**Git Tag**: [v0.6.2](https://github.com/lulin70/carrymem/releases/tag/v0.6.2)
+**PyPI**: `carrymem==0.7.0` ([PyPI](https://pypi.org/project/carrymem/))
+**Git Tag**: [v0.7.0](https://github.com/lulin70/carrymem/releases/tag/v0.7.0)
 
-### Core Features (v0.6.2)
+### Core Features (v0.7.0)
 
-- **cryptography CVE-2026-34073 fixed**: Version constraint upgraded from `>=42.0` to
-  `>=46.0.6` in setup.py (encryption + full extras). Fixes X.509 certificate validation
-  bypass vulnerability (CVSS 7.8).
-- **PyYAML usage audited**: Verified all `yaml.load()` calls use `safe_load()`. No RCE risk.
-- **Access frequency weighting with recency decay**: `selection.py` now applies time-based
-  decay to access_count boost via `2^(-0.1 * days_since_last_access)`. Memories without
-  `last_accessed_at` are unaffected (backward-compatible).
+- **SQLite-native Knowledge Graph**: Two new tables (`memory_entities` + `memory_relations`)
+  with 8 indexes for namespace-isolated entity/relation storage. Zero LLM — entity extraction
+  reuses `EntityNormalizer`'s pattern-based approach. Multi-hop BFS graph traversal via
+  `recall_graph()`. Automatic entity extraction during classification pipeline.
+- **Session Dual-Layer Memory**: Per-session LRU cache (`session_max_size=128`) for O(1) recall
+  within a conversation session. `set_session()` / `preload_session()` / `end_session()` API.
+  `promote_to_permanent()` boosts importance for permanent retention.
+- **Bug fixes**: `promote_to_permanent()` rowcount check (previously always returned True);
+  FK constraint on `memory_entities.memory_key` relaxed to nullable for standalone entities.
+- **Protocol consistency**: `RecallOps` protocol updated with 8 new method signatures.
 
-### Previous Release: v0.6.1 (Architecture Cleanup — Phase 3.5)
+### Previous Release: v0.6.2 (Security Fix + Access Frequency Weighting)
 
 - **recall() signature unified**: `namespaces` parameter promoted to `StorageAdapter` base class.
   Removed 3 `type: ignore[override]` annotations and core-layer `isinstance` check.
@@ -247,6 +250,7 @@ each py3.11 + py3.12).
 
 | Version | Date | Theme | Status |
 |---------|------|-------|--------|
+| v0.7.0 | 2026-07-11 | Knowledge Graph + Session Dual-Layer Memory | ✅ Released |
 | v0.6.2 | 2026-07-11 | Security Fix + Access Frequency Weighting | ✅ Released |
 | v0.6.1 | 2026-07-10 | Architecture Cleanup — Phase 3.5 refactoring & decoupling | ✅ Released |
 | v0.6.0 | 2026-07-09 | Deprecated API Removal (Breaking Change — Phase 3) | ✅ Released |
@@ -260,18 +264,28 @@ each py3.11 + py3.12).
 
 ## Next Milestone
 
-**v0.6.2** (next patch — security fix + access frequency weighting)
+**v0.8.0** (next minor — multi-mode retrieval + relationship graph enrichment)
 
-Security:
-- cryptography CVE-2026-34073 fix (>=42.0 → >=46.0.6 in setup.py)
+Architecture Evolution (per CARRYMEM_ARCHITECTURE_EVOLUTION_PLAN.md):
+- Multi-mode retrieval: combine FTS5 + graph traversal + session cache into unified
+  `recall_multi()` API with relevance fusion
+- Relationship graph enrichment: entity co-occurrence detection, relation inference
+  from memory content patterns
+- Session summarization integration: leverage existing Summary Layer for session
+  pre-loading optimization
 
-Optimization:
-- Access frequency weighting: introduce recency decay factor into selection.py
-  boost logic (currently linear access_count boost without time decay)
+### v0.7.0 Completed (2026-07-11)
 
-Documentation:
-- PROJECT_STATUS version history sync (v0.5.4/v0.6.0/v0.6.1 added)
-- DEPENDENCY_AUDIT.md cryptography CVE marked as resolved
+- SQLite-native Knowledge Graph (memory_entities + memory_relations tables) ✅
+- KnowledgeGraph layer with BFS multi-hop traversal ✅
+- SQLiteAdapter graph API (8 methods, capability-gated) ✅
+- Automatic entity extraction in classification pipeline ✅
+- Session Dual-Layer Memory (per-session LRU cache, O(1) recall) ✅
+- CarryMem session API (set_session/preload_session/end_session/promote_to_permanent) ✅
+- Bug fix: promote_to_permanent() rowcount check ✅
+- Bug fix: FK constraint on memory_entities.memory_key relaxed to nullable ✅
+- Protocol consistency: RecallOps updated with 8 new method signatures ✅
+- 74 new tests (test_knowledge_graph.py + test_session_memory.py) ✅
 
 ### Completed Milestones
 

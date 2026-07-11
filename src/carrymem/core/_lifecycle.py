@@ -88,6 +88,7 @@ class LifecycleMixin:
         """Initialize storage adapter, engine, and shared lifecycle state."""
         self._engine = MemoryClassificationEngine()
         self._namespace = namespace
+        self._session_id: Optional[str] = None  # v0.7.0: Session dual-layer memory
 
         if db_path is None:
             db_path = os.environ.get("CARRYMEM_DB_PATH")

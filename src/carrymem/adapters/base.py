@@ -469,6 +469,122 @@ class StorageAdapter(ABC):
         """
         ...
 
+    # ── Knowledge Graph (v0.7.0+) ───────────────────────────────────────
+
+    def recall_by_entity(
+        self,
+        entity_text: str,
+        entity_type: Optional[str] = None,
+        namespace: Optional[str] = None,
+        limit: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """Find memories mentioning a specific entity.
+
+        Default implementation returns empty list (adapter does not support
+        knowledge graph). Override in adapters with ``graph: True`` capability.
+
+        Args:
+            entity_text: The entity text to search for.
+            entity_type: Optional entity type filter.
+            namespace: Optional namespace filter.
+            limit: Maximum results.
+
+        Returns:
+            List of memory dicts.
+        """
+        return []
+
+    def recall_by_relation(
+        self,
+        entity_text: str,
+        relation_type: Optional[str] = None,
+        direction: str = "both",
+        namespace: Optional[str] = None,
+        limit: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """Find memories connected to an entity via relations.
+
+        Default implementation returns empty list. Override in adapters with
+        ``graph: True`` capability.
+
+        Args:
+            entity_text: The entity to find relations for.
+            relation_type: Optional relation type filter.
+            direction: "outgoing", "incoming", or "both".
+            namespace: Optional namespace filter.
+            limit: Maximum results.
+
+        Returns:
+            List of memory dicts.
+        """
+        return []
+
+    def recall_graph(
+        self,
+        entity_text: str,
+        max_hops: int = 2,
+        namespace: Optional[str] = None,
+        limit: int = 20,
+    ) -> Dict[str, Any]:
+        """Multi-hop graph traversal from an entity.
+
+        Default implementation returns empty result. Override in adapters
+        with ``graph: True`` capability.
+
+        Args:
+            entity_text: The starting entity.
+            max_hops: Maximum traversal depth.
+            namespace: Optional namespace filter.
+            limit: Maximum memories to return.
+
+        Returns:
+            Dict with "entities" and "memories" lists.
+        """
+        return {"entities": [], "memories": []}
+
+    def add_graph_relation(
+        self,
+        src_entity_text: str,
+        dst_entity_text: str,
+        relation_type: str,
+        source_memory_key: Optional[str] = None,
+        weight: float = 1.0,
+        namespace: Optional[str] = None,
+    ) -> bool:
+        """Add a relation between two entities in the knowledge graph.
+
+        Default implementation returns False (not supported). Override in
+        adapters with ``graph: True`` capability.
+
+        Args:
+            src_entity_text: Source entity text.
+            dst_entity_text: Destination entity text.
+            relation_type: Relation type (e.g. "prefers", "works_on").
+            source_memory_key: Optional evidence memory key.
+            weight: Relation strength (default 1.0).
+            namespace: Optional namespace.
+
+        Returns:
+            True if relation was added.
+        """
+        return False
+
+    def store_graph_entities(self, storage_key: str, text: str, namespace: Optional[str] = None) -> int:
+        """Extract entities from text and store in the knowledge graph.
+
+        Default implementation returns 0 (not supported). Override in
+        adapters with ``graph: True`` capability.
+
+        Args:
+            storage_key: The memory's storage_key.
+            text: Text to extract entities from.
+            namespace: Optional namespace.
+
+        Returns:
+            Number of entities stored.
+        """
+        return 0
+
     # ── Batch Operations (v0.5.4+) ──────────────────────────────────────
 
     def store_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:

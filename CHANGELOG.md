@@ -10,6 +10,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > historical records from the pre-reset development cycle and should not be confused with
 > the current v0.2.x series.
 
+## [0.7.0] - 2026-07-11 (Knowledge Graph + Session Dual-Layer Memory)
+
+### Added — Knowledge Graph (SQLite-native, zero LLM)
+- **`memory_entities` + `memory_relations` tables**: Schema migration `migrate_v062()` creates
+  two new tables with 8 indexes for namespace-isolated entity/relation storage. `memory_key`
+  is nullable to support standalone entities (not linked to a specific memory).
+- **`KnowledgeGraph` layer** (`src/carrymem/layers/knowledge_graph.py`): Entity extraction
+  (delegates to `EntityNormalizer`), recall by entity/relation, multi-hop BFS graph traversal
+  (`recall_graph`), relation management (`add_relation`), listing and stats.
+- **SQLiteAdapter graph API**: 8 new methods (`recall_by_entity`, `recall_by_relation`,
+  `recall_graph`, `add_graph_relation`, `list_graph_entities`, `list_graph_relations`,
+  `get_graph_stats`, `store_graph_entities`) with lazy-init `KnowledgeGraph` instance.
+  Capability `graph: True` declared.
+- **StorageAdapter base defaults**: All graph methods return safe empty defaults (empty list,
+  False, 0) on non-SQLite adapters for backward compatibility.
+- **CarryMem facade API**: `recall_by_entity()`, `recall_by_relation()`, `recall_graph()`,
+  `add_graph_relation()` — all capability-gated (return empty if adapter lacks graph support).
+- **Automatic entity extraction**: `_classification.py._store_entries()` now calls
+  `store_graph_entities()` after each `store_entry()`, populating the graph automatically.
+
+### Added — Session Dual-Layer Memory (O(1) session recall)
+- **RecallCache session extension**: `session_preload()`, `session_search()`, `session_put()`,
+  `invalidate_session()`, `session_stats()` — per-session LRU cache (`session_max_size=128`)
+  with case-insensitive substring search on `content` + `raw_text`.
+- **CarryMem session API**: `set_session()`, `end_session()`, `preload_session()`,
+  `promote_to_permanent()` — session-scoped memory pre-loading for O(1) recall within a
+  conversation. `promote_to_permanent()` boosts `importance_score +0.05` (cap 1.0) and
+  `access_count +1`.
+- **Session cache stats**: `RecallCache.stats` now includes `session_count`, `session_hits`,
+  `session_misses`, `session_hit_rate`.
+
+### Fixed
+- **`promote_to_permanent()` rowcount bug**: Previously returned `True` even when the UPDATE
+  affected 0 rows (nonexistent key). Now checks `cursor.rowcount > 0` and returns `False`
+  for nonexistent memory keys.
+- **FK constraint on `memory_entities.memory_key`**: Changed from `NOT NULL` to nullable
+  with `ON DELETE SET NULL`, allowing standalone entities created via `add_relation()`
+  (not linked to a specific memory). Previously, `PRAGMA foreign_keys=ON` caused
+  `_find_or_create_entity()` to silently fail when inserting `"__graph_standalone__"`.
+
+### Protocol
+- **`RecallOps` protocol updated**: Added 8 new method signatures (graph + session) to
+  maintain protocol-implementation consistency.
+
+### Tests
+- Added 74 new tests: `test_knowledge_graph.py` (34 tests) + `test_session_memory.py` (40 tests).
+  Coverage dimensions: Happy Path, Boundary, Error Cases, Performance, Configuration, Integration.
+  Uses real SQLite in-memory DB (no Mock) per testing philosophy.
+
+### Documentation
+- **CARRYMEM_ARCHITECTURE_EVOLUTION_PLAN.md**: §2.1 (关系图谱) and §2.2 (Session 双层记忆)
+  marked as implemented in v0.7.0.
+- **PROJECT_STATUS.md**: Version updated to v0.7.0.
+
 ## [0.6.2] - 2026-07-11 (Security Fix + Access Frequency Weighting)
 
 ### Security
