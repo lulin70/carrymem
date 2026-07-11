@@ -29,7 +29,7 @@ CarryMem fixes this. It's a lightweight, zero-dependency memory system that stor
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-4044-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-4330-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-82%25%2B-green" alt="Coverage">
   <img src="https://img.shields.io/badge/mypy-0%20errors-brightgreen" alt="mypy">
   <img src="https://img.shields.io/badge/ruff-0%20errors-brightgreen" alt="ruff">
@@ -178,8 +178,8 @@ These are what make CarryMem different from every other memory solution:
 - Single .db file — carry your identity anywhere
 - Works with Cursor, Claude Code, ChatGPT, any MCP client
 
-### 4. Industrial-Grade Engineering — 4044 Tests / mypy 0 / ruff 0
-- **4044 tests passing** with 82%+ coverage (tested: 7 memory types × 4 tiers × lifecycle)
+### 4. Industrial-Grade Engineering — 4330 Tests / mypy 0 / ruff 0
+- **4330 tests passing** with 82%+ coverage (tested: 7 memory types × 4 tiers × lifecycle)
 - **mypy 0 errors** across 143 source files — fully type-safe (CI blocking gate)
 - **ruff 0 errors** — clean codebase, no lint violations
 - **24 sensitive-pattern redaction** — auto-detects API keys, passwords, tokens before storage

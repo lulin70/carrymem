@@ -121,6 +121,7 @@ setup(
             "black>=23.0",
             "isort>=5.12",
             "mypy>=1.0",
+            "radon>=6.0",
         ],
         "encryption": [
             "cryptography>=46.0.6",  # CVE-2026-34073: X.509 cert validation bypass fix

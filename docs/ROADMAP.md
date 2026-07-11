@@ -1,8 +1,8 @@
 # CarryMem Product Roadmap
 
-**Last Updated**: 2026-06-18
+**Last Updated**: 2026-07-11
 **Product Positioning**: AI Identity Layer — Memory + Rules + Knowledge
-**Version Scheme**: v0.4.x (Incremental) → v0.5.0 (GA Milestone)
+**Version Scheme**: v0.5.x (Stable APIs) → v0.6.x (Architecture Cleanup) → v0.7.x (Knowledge Graph + Multi-Mode Retrieval + Memify)
 
 ---
 
@@ -23,6 +23,20 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
   ├── v0.3.0  GA Release           (Production Ready + Knowledge Adapter) ✅
   ├── v0.4.0  Enterprise           (Scopes + Skill + Merge + VS Code)     ✅
   └── v0.4.1  Core Loop Fix        (Auto Rule Suggestion + Security)      ✅
+
+  ├── v0.5.0  Access Weighting    (Configurable scoring signals)           ✅
+  ├── v0.5.1  Entity Normalizer   (Ontology-lite, zero-LLM fuzzy match)    ✅
+  ├── v0.5.2  Summary Layer       (Progressive disclosure for tokens)      ✅
+  ├── v0.5.3  store_entry() API   (Phase 1 optimization core API)          ✅
+  ├── v0.5.4  Batch API           (store_batch + Phase 2 optimization)     ✅
+  │
+  ├── v0.6.0  Breaking Change     (Deprecated API removal: remember/forget)✅
+  ├── v0.6.1  Architecture Cleanup (Recall signature unify + decouple)     ✅
+  ├── v0.6.2  Security Fix        (CVE-2026-34073 + recency decay)         ✅
+  │
+  ├── v0.7.0  Knowledge Graph     (SQLite-native + Session dual-layer)     ✅
+  ├── v0.7.1  Multi-Mode Retrieval (time/semantic/hybrid/multi_mode APIs)  ✅
+  └── v0.7.2  Memify + Async I/O  (Dynamic refinement + AsyncSQLiteAdapter)✅
 ```
 
 **Versioning Rules**:
@@ -30,7 +44,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 - Second digit changes for GA milestones (API stability guarantee)
 - No "v1.0.0 jump" — earn it through proven production usage
 
-> **Note**: The v0.3.0–v0.4.1 versions listed above represent the project's development history. Current version is v0.5.3, including auto-backup, encrypted .carry files, concurrent safety, E2E tests, **PrefEval 83.0%** (200-sample, 3-condition canonical), state/event version chain, security hardening, preference injection optimization, context.py modularization, consolidation scheduling, and store_entry() core API (Phase 1 optimization). Next milestone: v0.5.4 (batch API + async migration).
+> **Note**: The v0.3.0–v0.7.2 versions listed above represent the project's development history. **Current version is v0.7.2**, including: v0.5.x (Entity Normalizer, Summary Layer, store_entry/store_batch core APIs), v0.6.x (deprecated API removal, architecture cleanup decoupling core from SQLiteAdapter, CVE-2026-34073 security fix, recency decay weighting), v0.7.0 (SQLite-native Knowledge Graph + Session dual-layer O(1) recall), v0.7.1 (multi-mode retrieval: recall_by_time/recall_semantic/recall_hybrid/recall_multi_mode), v0.7.2 (MemifyEngine three-phase dynamic refinement + AsyncSQLiteAdapter native async I/O). **4330 tests passing, 80%+ coverage, mypy 0 errors.** Next milestone: v0.8.0 (semantic embeddings integration + cloud MCP server).
 
 ---
 
@@ -60,7 +74,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 │  │  • Cross-language semantic recall (FTS5)          │    │
 │  │  • Session-aware storage + knowledge supersession (v0.1.7)    │    │
 │  │  • Time reasoning + structured prompt injection (v0.1.7)      │    │
-│  │|  •  4198 tests passing, 80%+ coverage           ││    │
+│  │|  •  4330 tests passing, 80%+ coverage           ││    │
 │  └──────────────────────────────────────────────────┘    │
 │              ↑ reads from          ↑ injects into         │
 │  Layer 1: Knowledge (WHAT you know) ← v0.3.0 PLANNED     │
@@ -401,20 +415,137 @@ See CHANGELOG.md for detailed history.
 
 **Next**: Phase 4 — Session Summary + Semantic Aggregation (requires LLM)
 
-### v0.5.0 — Intelligence Enhancement (Partially Complete)
-> **Status**: Partially complete — Consolidation Engine and PrefEval achieved in pre-reset cycle. Remaining items deferred to v0.6.0+.
-- [x] Consolidation Engine (P0: dedup+decay, P1: pattern→rules, P2: semantic merge)
-- [x] PrefEval 96.0% preference adherence (50 items, ICLR 2025 Oral)
-- [x] 28 MCP tools (added consolidate_memories)
+### ✅ v0.5.0 — Access Frequency Weighting Enhancement (DONE)
+- [x] Configurable `ACCESS_SCALE`, `ACCESS_SIGNAL_SCALE`, `ACCESS_SIGNAL_WEIGHT` via env vars
+- [x] Backward-compatible defaults preserved
 
-> **Note on PrefEval numbers**: Different sample sizes and seeds produce different results. The canonical result is **83.0%** (200 items, 3-condition comparison: CarryMem 83.0% > reminder 80.0% > zero-shot 71.5%), as documented in the README. Other figures (85.0%, 87.9%, 96.0%) reflect different evaluation configurations and should not be compared directly.
-- [ ] Consolidation scheduled trigger (auto dedup+decay)
+### ✅ v0.5.1 — Entity Normalization (DONE)
+- [x] `EntityNormalizer` module: zero-LLM entity extraction + `difflib.SequenceMatcher` fuzzy matching (ratio ≥ 0.8)
+- [x] Ontology-lite: maps surface forms to canonical forms without external NLP libs
+
+### ✅ v0.5.2 — Summary Layer + Progressive Disclosure (DONE)
+- [x] `SummaryLayer` module: field-level memory summary caching for token-efficient prompt injection
+- [x] `RuleBasedSummarizer`: 3 depth levels (keywords/medium/full), zero-LLM
+
+### ✅ v0.5.3 — store_entry() Core API (DONE)
+- [x] `StorageAdapter.store_entry()` abstract method: domain-level store API accepting `MemoryEntry`
+- [x] Returns `StoredMemory` with full metadata (importance_score, version, timestamps)
+- [x] `SQLiteAdapter` optimized implementation with FTS5 trigger integration
+
+### ✅ v0.5.4 — Batch API (DONE)
+- [x] `StorageAdapter.store_batch()`: atomic batch store accepting `List[MemoryEntry]`
+- [x] Returns `List[StoredMemory]` with full metadata
+- [x] `SQLiteAdapter` optimized override with single transaction
+
+---
+
+### ✅ v0.6.0 — Breaking Change: Deprecated API Removal (DONE)
+**Theme**: Remove deprecated `remember()`/`remember_batch()`/`forget()` APIs across all adapters
+- [x] Removed `StorageAdapter.remember()` → use `store_entry()` instead
+- [x] Removed `StorageAdapter.remember_batch()` → use `store_batch()` instead
+- [x] Removed `StorageAdapter.forget()` → use `delete()` instead
+- [x] Removed legacy methods from SQLiteAdapter, JSONAdapter, ObsidianAdapter
+- [x] Renamed `CarryMem.remember_batch(messages)` → `CarryMem.store_messages(messages)` (disambiguate adapter-level `store_batch(List[MemoryEntry])`)
+
+### ✅ v0.6.1 — Architecture Cleanup (DONE)
+**Theme**: Decouple core layer from SQLiteAdapter, unify recall() signature
+- [x] `recall()` `namespaces` parameter promoted to `StorageAdapter` base class
+- [x] `count()` performance optimization: direct `SELECT COUNT(*)` instead of `get_stats()` aggregation
+- [x] `log_audit()` / `query_audit()` publicized on `StorageAdapter` base
+- [x] 12 `isinstance(adapter, SQLiteAdapter)` checks replaced with `adapter.capabilities.get()` checks
+- [x] New capability keys: `versioning`, `backup`, `audit`, `namespace_filtering`
+- [x] Core layer (`_memory_crud.py`, `_backup.py`, `_profile_export.py`) no longer imports `SQLiteAdapter`
+
+### ✅ v0.6.2 — Security Fix + Access Frequency Weighting (DONE)
+**Theme**: CVE fix + recency decay for access frequency
+- [x] **cryptography CVE-2026-34073 fixed**: Upgraded constraint from `>=42.0` to `>=46.0.6` (X.509 cert validation bypass, CVSS 7.8)
+- [x] PyYAML audit: all `yaml.load()` calls verified to use `safe_load()`
+- [x] Access frequency recency decay: `2^(-0.1 * days_since_last_access)` factor attenuates old access boosts
+- [x] `_days_since_last_access()` helper + `RECENCY_DECAY_RATE = 0.1` constant
+
+---
+
+### ✅ v0.7.0 — Knowledge Graph + Session Dual-Layer Memory (DONE)
+**Theme**: SQLite-native knowledge graph + O(1) session recall
+**LLM Dependency**: None (pure SQL + rule-based)
+
+**P0 — Knowledge Graph (SQLite-native)**:
+- [x] `memory_entities` + `memory_relations` tables: Schema migration `migrate_v062()` with 8 indexes
+- [x] `KnowledgeGraph` layer: entity extraction (via `EntityNormalizer`), recall by entity/relation, multi-hop BFS traversal (`recall_graph`)
+- [x] SQLiteAdapter graph API: 8 new methods with lazy-init `KnowledgeGraph` instance, capability `graph: True`
+- [x] CarryMem facade: `recall_by_entity()`, `recall_by_relation()`, `recall_graph()`, `add_graph_relation()`
+- [x] Automatic entity extraction: `_store_entries()` calls `store_graph_entities()` after each `store_entry()`
+
+**P1 — Session Dual-Layer Memory (O(1) session recall)**:
+- [x] `RecallCache` session extension: `session_preload()`, `session_search()`, `session_put()`, `invalidate_session()`, `session_stats()`
+- [x] Per-session LRU cache (`session_max_size=128`) with case-insensitive substring search
+- [x] CarryMem session API: `set_session()`, `end_session()`, `preload_session()`, `promote_to_permanent()`
+- [x] Session cache stats: `session_count`, `session_hits`, `session_misses`, `session_hit_rate`
+
+**P2 — Fixes**:
+- [x] `promote_to_permanent()` rowcount bug fix: checks `cursor.rowcount > 0`
+- [x] FK constraint on `memory_entities.memory_key`: nullable with `ON DELETE SET NULL`
+
+**Tests**: 74 new tests (`test_knowledge_graph.py` 34 + `test_session_memory.py` 40)
+
+---
+
+### ✅ v0.7.1 — Multi-Mode Retrieval API (DONE)
+**Theme**: Compresses v0.8.0 roadmap into PATCH — 4 new retrieval modes
+**LLM Dependency**: None
+
+**P0 — Multi-Mode Retrieval**:
+- [x] `recall_by_time()`: Time-range retrieval with `[start, end)` semantics, descending order. Performance: 1000 memories <50ms
+- [x] `recall_semantic()`: Pure vector similarity search (no FTS, no RRF fusion). Capability-gated
+- [x] `recall_hybrid()`: Explicit FTS+Vector search with per-call RRF weight override (`fts_weight`, `vec_weight`, `rrf_k`). Save/restore pattern for thread safety
+- [x] `recall_multi_mode()`: Unified interface supporting 6 modes (`fts`/`vector`/`hybrid`/`graph`/`time`/`entity`). Returns structured dict with deduplication by `storage_key`
+
+**Architecture**:
+- [x] RecallEngine extensions: 3 new private methods (`vector_search_only`, `hybrid_search`, `search_by_time`)
+- [x] StorageAdapter base defaults: all 4 methods return safe empty defaults on non-SQLite adapters
+- [x] RecallOps Protocol updated with 4 new signatures
+- [x] Zero new dependencies — built on existing FTS5 + vector search infrastructure
+
+**Tests**: 40 new tests (`test_multi_mode_retrieval.py`)
+
+---
+
+### ✅ v0.7.2 — Memify Dynamic Refinement + Native Async I/O (DONE)
+**Theme**: Compresses v0.9.0 roadmap into PATCH — Memify engine + async adapter
+**LLM Dependency**: None
+
+**P0 — MemifyEngine (Three-phase dynamic memory refinement)**:
+- [x] `derive_facts()`: Finds co-occurring entity pairs (≥min_co_occurrence) via SQL JOIN, creates derived "relationship" memories with `metadata.derived=true`
+- [x] `reinforce_edges()`: Creates/updates "co_occurs" relations with weight increment and max_weight cap. Upsert pattern
+- [x] `auto_decay()`: Three-way gate (stale + low importance + zero access). Marks `metadata.decayed=true` + `importance_score * 0.5`. Idempotent
+- [x] `consolidate_memories()`: Unified API running all three phases. Exposed on SQLiteAdapter, StorageAdapter base, RecallMixin, RecallOps Protocol
+
+**P1 — Native Async I/O**:
+- [x] `AsyncSQLiteAdapter` (`src/carrymem/adapters/async_sqlite.py`): Native async SQLite using aiosqlite. Same SQL as SQLiteAdapter with async I/O
+- [x] Implements: `connect`, `store_entry`, `recall`, `forget_memory`, `count`, `close`. Async context manager protocol
+- [x] `[async]` extra: `pip install carrymem[async]` installs aiosqlite>=0.19
+- [x] `AsyncCarryMem.native_async` mode: `native_async=True` parameter. Sync methods raise `RuntimeError` when enabled (and vice versa)
+- [x] Dual-mode coexistence: sync `SQLiteAdapter` (zero-dep) + `AsyncSQLiteAdapter` ([async] extra)
+
+**Architecture**:
+- [x] FTS5 trigger reuse: `AsyncSQLiteAdapter` reuses `_SCHEMA_SQL` triggers for automatic FTS maintenance
+- [x] Protocol consistency: `RecallOps` Protocol updated with `consolidate_memories` signature
+- [x] `_require_sync()` helper: satisfies mypy `Optional[CarryMem]` union-attr checks
+
+**Tests**: 58 new tests (`test_memify.py` 32 + `test_async_sqlite.py` 26)
+
+---
+
+### Future Roadmap (Post-v0.7.2)
+- [ ] Semantic embeddings integration (sentence-transformers for vector search)
+- [ ] Cloud MCP Server (remote memory storage with encryption)
+- [ ] Smithery marketplace publication (requires .mcpb bundle or HTTP transport)
+- [ ] Consolidation scheduled trigger (auto dedup+decay via APScheduler)
 - [ ] Motive memory type (pending→activated→completed lifecycle)
 - [ ] PrefEval evaluation standardization (reproducible scripts + report template)
-- Vector-based semantic matching (optional embedding model)
-- Rule recommendation engine
-- Cross-user rule sharing (with anonymization)
-- Ontology-based trigger matching
+- [ ] Rule recommendation engine
+- [ ] Cross-user rule sharing (with anonymization)
+- [ ] Ontology-based trigger matching
 
 ### ✅ v0.2.2 — PrefEval Violation Optimization + Version Chain
 
@@ -663,6 +794,17 @@ carrymem unpack team-identity.carry
 | v0.4.0 (pre-reset) | 1814 | ~77% | +Rule Scopes +Skill Format +VS Code Extension |
 | v0.4.1 (pre-reset) | 2056 | 79% | +Core Loop Fix +Auto Rule Suggestion +Security |
 | **v0.4.0 (current)** | **4198 tests** | **80%+** | **+Recall Purity +Scope Injection +PrefEval **83.0%** +8-client MCP** |
+| v0.5.0 | 4198 | 80%+ | +Access frequency weighting config |
+| v0.5.1 | 4198 | 80%+ | +EntityNormalizer (zero-LLM fuzzy match) |
+| v0.5.2 | 4211 | 80%+ | +SummaryLayer progressive disclosure |
+| v0.5.3 | 4211 | 80%+ | +store_entry() core API (Phase 1) |
+| v0.5.4 | 4211 | 80%+ | +store_batch() atomic API (Phase 2) |
+| v0.6.0 | 4211 | 80%+ | +Deprecated API removal (breaking change) |
+| v0.6.1 | 4211 | 80%+ | +Architecture cleanup (core↔adapter decouple) |
+| v0.6.2 | 4211 | 80%+ | +CVE-2026-34073 fix + recency decay |
+| v0.7.0 | 4285 | 80%+ | +Knowledge Graph + Session dual-layer (74 tests) |
+| v0.7.1 | 4325 | 80%+ | +Multi-mode retrieval (40 tests) |
+| **v0.7.2 (current)** | **4330 tests** | **80%+** | **+MemifyEngine (32 tests) + AsyncSQLiteAdapter (26 tests)** |
 
 ---
 
@@ -740,5 +882,5 @@ carrymem unpack team-identity.carry
 
 ---
 
-**Next Milestone**: v0.5.4 (batch API + async migration — Phase 2 of optimization plan)
-**Status**: ✅ **v0.4.0 complete (4198 tests, 80%+ coverage, Memory + Rules + Knowledge + Enterprise)**
+**Next Milestone**: v0.8.0 (semantic embeddings integration + cloud MCP server + Smithery marketplace)
+**Status**: ✅ **v0.7.2 complete (4330 tests, 80%+ coverage, Memory + Rules + Knowledge + Enterprise + Knowledge Graph + Multi-Mode Retrieval + Memify + Async I/O)**

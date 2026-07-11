@@ -21,8 +21,11 @@ from datetime import timezone
 
 import pytest
 
-from carrymem.adapters.async_sqlite import AsyncSQLiteAdapter
-from carrymem.adapters.base import MemoryEntry
+# Skip entire module if aiosqlite is not installed (e.g., CI without [async] extra)
+pytest.importorskip("aiosqlite")
+
+from carrymem.adapters.async_sqlite import AsyncSQLiteAdapter  # noqa: E402
+from carrymem.adapters.base import MemoryEntry  # noqa: E402
 
 pytestmark = pytest.mark.asyncio
 
