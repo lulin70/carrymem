@@ -523,6 +523,27 @@ class SQLiteAdapter(StorageAdapter):
         """Close the underlying connection manager and release resources."""
         self._conn_mgr.close()
 
+    # ── Cache Management (overrides base no-op) ──────────────────────
+
+    @property
+    def has_cache(self) -> bool:
+        """Whether this adapter has an active recall cache."""
+        return bool(self._enable_cache and self._cache)
+
+    def clear_cache(self) -> None:
+        """Clear the entire recall cache."""
+        if self._enable_cache and self._cache:
+            self._cache.clear()
+
+    def invalidate_cache(self, keys: Optional[set] = None) -> None:
+        """Invalidate cache entries for given keys, or all if None."""
+        if not self._enable_cache or not self._cache:
+            return
+        if keys is None:
+            self._cache.invalidate()
+        else:
+            self._cache.invalidate_keys(self.namespace, keys)
+
     def __enter__(self):
         return self
 
@@ -567,7 +588,7 @@ class SQLiteAdapter(StorageAdapter):
         filters: Optional[Dict[str, Any]] = None,
         limit: int = 20,
         namespaces: Optional[list] = None,
-        update_access: bool = True,
+        update_access: bool = False,
     ) -> list:
         """Retrieve memories matching a query with optional filters."""
         return self._recall_engine.recall(query, filters, limit, namespaces, update_access)

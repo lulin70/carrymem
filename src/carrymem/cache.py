@@ -58,7 +58,7 @@ class RecallCache:
     ) -> str:
         filters_str = json.dumps(filters or {}, sort_keys=True, ensure_ascii=False)
         raw = f"{namespace}:{query}:{filters_str}:{limit}"
-        return hashlib.md5(raw.encode()).hexdigest()
+        return hashlib.md5(raw.encode(), usedforsecurity=False).hexdigest()
 
     def get(
         self,

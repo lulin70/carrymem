@@ -25,15 +25,14 @@ CarryMem fixes this. It's a lightweight, zero-dependency memory system that stor
 ---
 
 <p align="center">
-  <a href="https://github.com/lulin70/carrymem/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/lulin70/carrymem/ci.yml?branch=main&label=CI&logo=github" alt="CI"></a>
+  <a href="https://github.com/lulin70/carrymem/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/lulin70/carrymem/ci.yml?branch=new-main&label=CI&logo=github" alt="CI"></a>
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-4330-brightgreen" alt="Tests">
-  <img src="https://img.shields.io/badge/coverage-82%25%2B-green" alt="Coverage">
+  <img src="https://img.shields.io/badge/tests-4322-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="Coverage">
   <img src="https://img.shields.io/badge/mypy-0%20errors-brightgreen" alt="mypy">
-  <img src="https://img.shields.io/badge/ruff-0%20errors-brightgreen" alt="ruff">
-  <img src="https://img.shields.io/badge/security-24%20patterns-blue" alt="Security">
+  <img src="https://img.shields.io/badge/security-bandit%2Bpip--audit-blue" alt="Security">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval Academic Benchmark"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
   <img src="https://img.shields.io/badge/deploy-Local%20No%20Docker-success" alt="Deploy">
@@ -178,10 +177,10 @@ These are what make CarryMem different from every other memory solution:
 - Single .db file — carry your identity anywhere
 - Works with Cursor, Claude Code, ChatGPT, any MCP client
 
-### 4. Industrial-Grade Engineering — 4330 Tests / mypy 0 / ruff 0
-- **4330 tests passing** with 82%+ coverage (tested: 7 memory types × 4 tiers × lifecycle)
+### 4. Industrial-Grade Engineering — 4322 Tests / mypy 0 / flake8 0
+- **4322 tests passing** with 80%+ coverage (tested: 7 memory types × 4 tiers × lifecycle)
 - **mypy 0 errors** across 143 source files — fully type-safe (CI blocking gate)
-- **ruff 0 errors** — clean codebase, no lint violations
+- **flake8 0 errors** — clean codebase, no lint violations (black + isort formatted)
 - **24 sensitive-pattern redaction** — auto-detects API keys, passwords, tokens before storage
 - **PatternAnalyzer God Class split** (1547→171 LOC facade + 3 modules) — maintainable architecture
 - **394 docstrings added** — 50%→100% public API documentation coverage
@@ -972,13 +971,24 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 ## Project Status
 
 **Current Version**: v0.7.2
-**Tests**: 4200+ passing, 0 failed (pre-existing CLI subprocess timeout excluded), 18 skipped
+**Tests**: 4322 passing, 0 failed, 18 skipped
 **Coverage**: 80%+
 **mypy**: 0 errors (150+ source files, CI blocking gate)
-**ruff**: 0 errors
+**flake8**: 0 errors (black + isort formatted)
 **Maturity**: 80/100 (B) per 7-dimension DevSquad evaluation
 
 **Changelog**:
+- **v0.7.2**: Native Async I/O — async_sqlite adapter (aiosqlite), async recall/store APIs, Memify enhancement. P0 security fixes (fail-closed access control, MCP dispatcher injection), CI/CD hardening (bandit blocking, pip-audit, Docker non-root, pre-release test gate).
+- **v0.7.1**: Multi-Mode Retrieval — vector + FTS + semantic fusion with RRF, Memify content enrichment API.
+- **v0.7.0**: Knowledge Graph + Session Dual-Layer Memory — entity graph storage, session-scoped memory isolation, dual-layer recall.
+- **v0.6.2**: Security fix — access frequency weighting refinement, PBKDF2 260K→600K (OWASP 2023).
+- **v0.6.1**: Architecture cleanup — capabilities decoupling, adapter optimization (PATCH).
+- **v0.6.0**: Phase 3 Deprecated API Removal (Breaking Change) — legacy API cleanup, store_entry unified entry point.
+- **v0.5.4**: Batch API — store_batch/delete_batch for bulk operations (Phase 2 optimization).
+- **v0.5.3**: store_entry() core API — unified entry point (Phase 1 optimization).
+- **v0.5.2**: Summary Layer + Progressive Disclosure — token-efficient prompt injection, auto-summarization.
+- **v0.5.1**: Entity Normalization (Ontology-lite) — rule-based fuzzy entity matching.
+- **v0.5.0**: Configurable access frequency weighting + selection access_boost.
 - **v0.4.0** (tech debt cleanup): PatternAnalyzer God Class split (1547→171 LOC facade + NoiseDetector + FeedbackDetector + MemoryPatternDetectors), mypy 536→0 errors with CI blocking gate, 394 public API docstrings added (50%→100%), 67 loose assertions strengthened (assertTrue→assertGreater), mypy.ini cleaned (python_version 3.10, removed unused sections). Maturity 74→80 (B-→B).
 - **v0.4.0**: Quality Sprint — 134 unit tests for core Mixins, health_check MCP tool (28 total), TUI delete/edit, CLI rules subcommand grouping, audit SQLite persistence, removed @runtime_checkable, merged StorageAdapterProtocol, all Any types replaced (24→0), mypy+bandit CI
 - **v0.4.0**: Protocol & Maturity Sprint — Mixin+Facade+Protocol 三层架构, 10个 Protocol 接口, 错误码体系 (CM-001~999), SQLite 连接池 (WAL+线程缓存), 加密升级 (PBKDF2 260K), E2E 测试补全 (+78), 监控框架 MVP, 插件系统 MVP, 权限系统 MVP, i18n 框架, 类型注解 ~82%, 72 new tests

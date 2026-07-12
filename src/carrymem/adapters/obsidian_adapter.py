@@ -137,7 +137,7 @@ class ObsidianAdapter(StorageAdapter):
 
             carrymem_dir = DEFAULT_CONFIG_DIR
             carrymem_dir.mkdir(exist_ok=True)
-            vault_hash = hashlib.md5(str(self._vault_path).encode()).hexdigest()[:8]
+            vault_hash = hashlib.md5(str(self._vault_path).encode(), usedforsecurity=False).hexdigest()[:8]
             db_path = str(carrymem_dir / f"obsidian_{vault_hash}.db")
 
         self._db_path = db_path

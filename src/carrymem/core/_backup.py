@@ -70,8 +70,8 @@ class BackupMixin:
 
     def clear_cache(self) -> None:
         """Invalidate the adapter's in-memory cache."""
-        if self._adapter and hasattr(self._adapter, "_cache") and self._adapter._cache:
-            self._adapter._cache.clear()
+        if self._adapter:
+            self._adapter.clear_cache()
 
     def backup(self, backup_dir: Optional[str] = None) -> Dict[str, Any]:
         """Create a database backup and return the result dict."""

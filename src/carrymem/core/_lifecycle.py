@@ -84,9 +84,10 @@ class LifecycleMixin:
         config: Optional[Dict[str, Any]] = None,
         encryption_key: Optional[str] = None,
         auto_backup_interval: int = 20,
+        engine: Optional[MemoryClassificationEngine] = None,
     ) -> None:
         """Initialize storage adapter, engine, and shared lifecycle state."""
-        self._engine = MemoryClassificationEngine()
+        self._engine = engine if engine is not None else MemoryClassificationEngine()
         self._namespace = namespace
         self._session_id: Optional[str] = None  # v0.7.0: Session dual-layer memory
 

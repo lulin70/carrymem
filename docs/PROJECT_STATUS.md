@@ -201,7 +201,7 @@ the **mypy** step in the Lint job, not the coverage gate in the Tests job.
 | flake8 | ✅ Pass | `--max-line-length=120` |
 | Black | ✅ Pass | `--line-length=120`, target py312 |
 | isort | ✅ Pass | profile=black, line_length=120 |
-| mypy | ✅ Pass (local) | `mypy.ini` with `ignore_missing_imports=True` |
+| mypy | ✅ Pass (local) | `pyproject.toml [tool.mypy]` with `ignore_missing_imports=True` |
 
 ### Coverage
 

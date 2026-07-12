@@ -87,17 +87,16 @@ isort --check-only --diff src/ tests/
 # Lint（max-line-length=120，配置见 .flake8）
 flake8 src/ tests/ --count --max-line-length=120 --statistics
 
-# 类型检查（注意：使用 mypy.ini，而非 pyproject.toml 里的 [tool.mypy]）
-mypy src/ --config-file mypy.ini
+# 类型检查（配置在 pyproject.toml [tool.mypy]）
+mypy src/
 ```
 
 ### 配置文件
 
 | 文件 | 作用 | 关键设置 |
 | --- | --- | --- |
-| `pyproject.toml` | pytest / coverage / black / isort / mypy（备） | line-length=120；`[tool.mypy] python_version="3.9"` |
+| `pyproject.toml` | pytest / coverage / black / isort / mypy | line-length=120；`[tool.mypy] python_version="3.12"`，`warn_unused_ignores=True`，`strict_equality=True` |
 | `.flake8` | flake8 | `max-line-length=120`；`extend-ignore` 含 E203/W503/F403/F405/E402/E731 等 |
-| `mypy.ini` | mypy 实际生效配置 | `python_version=3.10`，`warn_unused_ignores=True`，`strict_equality=True` |
 | `.pre-commit-config.yaml` | pre-commit 钩子 | black 26.5.0 / isort 6.1.0 / flake8 7.3.0 / mypy v2.1.0 |
 
 ```bash
@@ -187,7 +186,7 @@ src/carrymem/
 
 2. **FTS5 vtable 的 schema 变更会影响所有连接的 schema cookie**。新增 / 修改 FTS5 vtable 时，必须评估对既有连接（连接池、并发 worker）的影响，避免运行期 `SQLITE_SCHEMA` 错误。
 
-3. **`# type: ignore` 使用 `import-not-found` 码**（而非 `import-untyped`）。mypy.ini 设置 `warn_unused_ignores=True`，错误或多余的 ignore 码会被报告，新增 ignore 注释请使用正确错误码。
+3. **`# type: ignore` 使用 `import-not-found` 码**（而非 `import-untyped`）。pyproject.toml `[tool.mypy]` 设置 `warn_unused_ignores=True`，错误或多余的 ignore 码会被报告，新增 ignore 注释请使用正确错误码。
 
 4. **`.flake8` 不全局屏蔽 F401/F841/F821/F811**（已清理完毕）。`extend-ignore` 仅含 F403/F405 等；F401/F841 仅在 `tests/*` 按 `per-file-ignores` 忽略。不要把这些码加回全局 ignore。
 
@@ -195,7 +194,7 @@ src/carrymem/
 
 6. **Python 版本**：`setup.py` 要求 `>=3.12`，CI 在 3.12 运行；black `target-version=['py312']`。不要使用 3.12 以下才有的语法糖之外的新特性。
 
-7. **mypy 实际生效配置是 `mypy.ini`**（`python_version=3.10`），不是 `pyproject.toml` 中的 `[tool.mypy]`。CI 命令为 `mypy src/ --config-file mypy.ini`。
+7. **mypy 配置统一在 `pyproject.toml`** `[tool.mypy]`（`python_version="3.12"`）。CI 命令为 `mypy src/`（自动发现 pyproject.toml）。
 
 8. **CI 默认分支为 `new-main`**，PR 与 push 的 gate 触发分支均为 `new-main`，勿误用 `main`。
 
@@ -216,7 +215,7 @@ src/carrymem/
 | 路线图 | `docs/ROADMAP.md` |
 | CI 流水线 | `.github/workflows/ci.yml`、`nightly.yml`、`release.yml`、`benchmark.yml` |
 | 测试套件 | `tests/`（含 12 个 `test_e2e_*.py`） |
-| Lint / 类型配置 | `.flake8`、`mypy.ini`、`.pre-commit-config.yaml` |
+| Lint / 类型配置 | `.flake8`、`pyproject.toml [tool.mypy]`、`.pre-commit-config.yaml` |
 | 国际化文案 | `src/carrymem/i18n/en.py`、`zh_CN.py` 等 |
 
 ---

@@ -450,7 +450,7 @@ class StorageAdapter(ABC):
         filters: Optional[Dict[str, Any]] = None,
         limit: int = 20,
         namespaces: Optional[list] = None,
-        update_access: bool = True,
+        update_access: bool = False,
     ) -> List[StoredMemory]:
         """Retrieve memories matching a query.
 
@@ -468,6 +468,35 @@ class StorageAdapter(ABC):
             List of StoredMemory objects matching the query
         """
         ...
+
+    # ── Cache Management (public API for core layer) ────────────────────
+
+    @property
+    def has_cache(self) -> bool:
+        """Whether this adapter has an active recall cache.
+
+        Default is False. Override in adapters that implement caching.
+        """
+        return False
+
+    def clear_cache(self) -> None:
+        """Clear the entire recall cache.
+
+        Default implementation is a no-op (adapter has no cache).
+        Override in adapters that implement caching.
+        """
+        pass
+
+    def invalidate_cache(self, keys: Optional[set] = None) -> None:
+        """Invalidate cache entries.
+
+        Args:
+            keys: Set of storage keys to invalidate. If None, invalidates all.
+
+        Default implementation is a no-op (adapter has no cache).
+        Override in adapters that implement caching.
+        """
+        pass
 
     # ── Knowledge Graph (v0.7.0+) ───────────────────────────────────────
 
@@ -957,7 +986,7 @@ class AsyncStorageAdapter(Protocol):
         filters: Optional[Dict[str, Any]] = None,
         limit: int = 20,
         namespaces: Optional[list] = None,
-        update_access: bool = True,
+        update_access: bool = False,
     ) -> List[StoredMemory]:
         """Retrieve memories matching the query asynchronously."""
 

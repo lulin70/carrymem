@@ -1,7 +1,5 @@
 """
 CarryMem Rules Engine — Input Sanitizer
-[RESERVED] Rule-engine extension point — not yet integrated into main pipeline.
-Planned for v0.4.0 rule-security hardening.
 
 Security-focused input validation for rules to prevent:
 - Prompt injection attacks
@@ -9,11 +7,13 @@ Security-focused input validation for rules to prevent:
 - Template injection
 - HTML/script injection
 - Excessively long inputs
+
+RuleSanitizer is integrated into RuleEngine.add_rule(), update_rule(),
+and all rule promotion/refinement pipelines.
 """
 
 import re
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 
 class RuleSanitizer:
@@ -241,32 +241,3 @@ class RuleSanitizer:
             return True
         except ValueError:
             return False
-
-
-class SecurityEvent:
-    """Records security-related events for audit logging"""
-
-    def __init__(
-        self,
-        event_type: str,
-        severity: str,
-        details: str,
-        input_data: Optional[str] = None,
-    ):
-        self.event_type = event_type  # "blocked_pattern", "sql_attempt", etc.
-        self.severity = severity  # "low", "medium", "high", "critical"
-        self.details = details
-        self.input_data = input_data
-        self.timestamp = datetime.now(timezone.utc).isoformat()
-
-    def to_dict(self) -> dict:
-        """Convert to dictionary for logging"""
-        return {
-            "event_type": self.event_type,
-            "severity": self.severity,
-            "details": self.details,
-            "input_data": (
-                self.input_data[:100] + "..." if self.input_data and len(self.input_data) > 100 else self.input_data
-            ),
-            "timestamp": self.timestamp,
-        }

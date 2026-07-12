@@ -65,6 +65,7 @@ build/
 
 # Type checking cache
 .mypy_cache/
+.ruff_cache/
 
 # Sensitive: encryption keys
 config/encryption_keys.json

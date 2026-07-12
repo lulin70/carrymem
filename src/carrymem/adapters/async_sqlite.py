@@ -20,6 +20,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import sqlite3
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -31,7 +32,7 @@ from carrymem.utils.logger import logger
 try:
     import aiosqlite
 except ImportError:
-    aiosqlite = None  # type: ignore[assignment]
+    aiosqlite = None
 
 
 class AsyncSQLiteAdapter:
@@ -102,8 +103,12 @@ class AsyncSQLiteAdapter:
         for sql in _V051_MIGRATION_SQL:
             try:
                 await self._conn.execute(sql)
-            except Exception:
-                pass
+            except sqlite3.OperationalError as e:
+                if "already exists" in str(e).lower():
+                    continue
+                logger.warning("AsyncSQLiteAdapter: v0.5.1 migration step failed: %s", e)
+            except Exception as e:
+                logger.warning("AsyncSQLiteAdapter: v0.5.1 migration unexpected error: %s", e)
 
         try:
             await self._conn.executescript(_V062_GRAPH_SQL)
@@ -113,8 +118,12 @@ class AsyncSQLiteAdapter:
         for sql in _V080_MIGRATION_SQL:
             try:
                 await self._conn.execute(sql)
-            except Exception:
-                pass
+            except sqlite3.OperationalError as e:
+                if "already exists" in str(e).lower():
+                    continue
+                logger.warning("AsyncSQLiteAdapter: v0.8.0 migration step failed: %s", e)
+            except Exception as e:
+                logger.warning("AsyncSQLiteAdapter: v0.8.0 migration unexpected error: %s", e)
 
     async def store_entry(self, entry: MemoryEntry) -> StoredMemory:
         """Store a MemoryEntry and return the complete StoredMemory."""
@@ -218,7 +227,7 @@ class AsyncSQLiteAdapter:
 
         cursor = await self._conn.execute("DELETE FROM memories WHERE storage_key = ?", (storage_key,))
         await self._conn.commit()
-        return cursor.rowcount > 0
+        return int(cursor.rowcount) > 0
 
     async def count(self, namespace: Optional[str] = None) -> int:
         """Count memories in a namespace."""

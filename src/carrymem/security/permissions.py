@@ -2,7 +2,7 @@
 
 Provides a simple user-ID-based access policy model:
 
-- ``Permission``: Enum-like constants for read/write/delete/admin.
+- ``Permission``: Enum for read/write/delete/admin.
 - ``AccessPolicy``: Owner-based policy — owner has all permissions,
   other users have none.  Designed to be swapped out for RBAC/ABAC later.
 
@@ -14,11 +14,14 @@ Integration points:
 
 from __future__ import annotations
 
+from enum import Enum
+from typing import Union
+
 from carrymem.errors import SecurityError
 
 
-class Permission:
-    """Permission level constants.
+class Permission(Enum):
+    """Permission levels for access control.
 
     Usage::
 
@@ -33,12 +36,12 @@ class Permission:
     DELETE = "delete"
     ADMIN = "admin"
 
-    _ALL = {READ, WRITE, DELETE, ADMIN}
-
     @classmethod
-    def is_valid(cls, value: str) -> bool:
-        """Return True if ``value`` is a recognized permission."""
-        return value in cls._ALL
+    def is_valid(cls, value: Union["Permission", str]) -> bool:
+        """Return True if *value* is a recognized permission."""
+        if isinstance(value, Permission):
+            return True
+        return value in {p.value for p in cls}
 
 
 class AccessPolicy:
@@ -74,11 +77,11 @@ class AccessPolicy:
         Returns:
             ``True`` if the user has the requested permission.
         """
-        if not Permission.is_valid(permission):  # type: ignore[arg-type]
+        if not Permission.is_valid(permission):
             raise SecurityError(
                 code="CM-403",
                 message=f"Invalid permission: {permission!r}",
-                hint=f"Valid permissions: {Permission._ALL}",
+                hint=f"Valid permissions: {[p.value for p in Permission]}",
             )
         return user_id == self.owner_id
 
@@ -106,7 +109,7 @@ class AccessPolicy:
                 log_denied(
                     resource=resource,
                     user_id=user_id,
-                    action=permission.upper(),  # type: ignore[attr-defined]
+                    action=permission.value.upper(),
                     details={"required_permission": permission, "owner_id": self.owner_id},
                 )
             except Exception:

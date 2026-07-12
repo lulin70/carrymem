@@ -21,27 +21,28 @@ class TestPermission:
     """Tests for Permission constant class."""
 
     def test_read_constant(self):
-        assert Permission.READ == "read"
+        assert Permission.READ.value == "read"
 
     def test_write_constant(self):
-        assert Permission.WRITE == "write"
+        assert Permission.WRITE.value == "write"
 
     def test_delete_constant(self):
-        assert Permission.DELETE == "delete"
+        assert Permission.DELETE.value == "delete"
 
     def test_admin_constant(self):
-        assert Permission.ADMIN == "admin"
+        assert Permission.ADMIN.value == "admin"
 
     def test_valid_permission_accepted(self):
+        assert Permission.is_valid(Permission.READ) is True
+        assert Permission.is_valid(Permission.ADMIN) is True
         assert Permission.is_valid("read") is True
-        assert Permission.is_valid("admin") is True
 
     def test_invalid_permission_rejected(self):
         assert Permission.is_valid("execute") is False
         assert Permission.is_valid("") is False
 
     def test_all_permissions_covered(self):
-        assert len(Permission._ALL) == 4
+        assert len(list(Permission)) == 4
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -141,3 +142,67 @@ class TestAccessPolicyRequire:
         with pytest.raises(SecurityError) as exc_info:
             self.policy.require("stranger", Permission.WRITE, resource="secret_data")
         assert "secret_data" in exc_info.value.message
+
+
+# ══════════════════════════════════════════════════════════════════
+#  Fail-closed integration: policy set + user_id=None (P0-1 fix)
+# ══════════════════════════════════════════════════════════════════
+
+
+class TestPermissionFailClosed:
+    """P0-1 regression: when an access policy is configured, writes/deletes
+    with user_id=None MUST raise SecurityError (fail-closed).
+
+    Previously the check was skipped entirely when user_id was None,
+    making AccessPolicy dead code in MCP context.
+    """
+
+    def setup_method(self):
+        import tempfile
+
+        from carrymem import CarryMem
+
+        self._db = tempfile.mktemp(suffix=".db")
+        self.cm = CarryMem(db_path=self._db)
+        self.cm.access_policy = AccessPolicy(owner_id="alice")
+
+    def teardown_method(self):
+        self.cm.close()
+        import os
+
+        if os.path.exists(self._db):
+            os.unlink(self._db)
+
+    def test_write_without_user_id_raises(self):
+        with pytest.raises(SecurityError, match="CM-403"):
+            self.cm.classify_and_remember("test message")
+
+    def test_delete_without_user_id_raises(self):
+        with pytest.raises(SecurityError, match="CM-403"):
+            self.cm.forget_memory("any_id")
+
+    def test_declare_without_user_id_raises(self):
+        with pytest.raises(SecurityError, match="CM-403"):
+            self.cm.declare("I prefer tea")
+
+    def test_owner_write_passes(self):
+        self.cm.classify_and_remember("test", user_id="alice")
+
+    def test_non_owner_write_raises(self):
+        with pytest.raises(SecurityError, match="CM-403"):
+            self.cm.classify_and_remember("test", user_id="bob")
+
+    def test_no_policy_allows_anonymous_write(self):
+        """Single-user mode (no policy) should allow writes without user_id."""
+        import tempfile
+
+        from carrymem import CarryMem
+
+        db = tempfile.mktemp(suffix=".db")
+        cm = CarryMem(db_path=db)
+        cm.access_policy = None  # explicitly no policy
+        cm.classify_and_remember("test without policy")
+        cm.close()
+        import os
+
+        os.unlink(db)

@@ -418,7 +418,7 @@ def safe_text_match(
     compiled = None
     if sys.version_info >= (3, 11):
         try:
-            compiled = re.compile(pattern, flags, timeout=timeout_ms / 1000.0)
+            compiled = re.compile(pattern, flags, timeout=timeout_ms / 1000.0)  # type: ignore[call-overload]
         except TypeError:
             pass  # fallback below
         except re.error as e:

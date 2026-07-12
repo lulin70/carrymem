@@ -15,7 +15,7 @@ RUN python -m build --wheel --no-isolation
 # ── Runtime stage: minimal image with only runtime dependencies ─────────────
 FROM python:3.12-slim
 
-ARG VERSION=0.5.2
+ARG VERSION=0.7.2
 
 LABEL org.opencontainers.image.title="CarryMem MCP Server"
 LABEL org.opencontainers.image.description="Your portable AI memory layer — MCP server for memory classification"
@@ -35,7 +35,11 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir "${whl}[full]" && \
     rm -f /tmp/*.whl
 
-RUN mkdir -p /data
+# Create non-root user for security (P1-10 fix)
+RUN groupadd -r carrymem && useradd -r -g carrymem -d /app -s /sbin/nologin carrymem && \
+    mkdir -p /data && chown -R carrymem:carrymem /data /app
+
+USER carrymem
 
 VOLUME ["/data"]
 

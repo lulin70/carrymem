@@ -586,6 +586,88 @@ class TestHandlersClass:
         )
         handlers.cleanup()
 
+    # ── P0-2 regression: suggest_rules / promote_rules get _carrymem ──
+
+    @pytest.mark.asyncio
+    async def test_suggest_rules_gets_carrymem_injected(self, temp_db):
+        """P0-2: dispatcher must inject _carrymem so suggest_rules works."""
+        handlers = Handlers(storage="sqlite", data_path=temp_db)
+        # Store a memory so there's something to analyze
+        handlers._carrymem.classify_and_remember("I prefer Python over Java")
+        result = await handlers.handle_tool("suggest_rules", {})
+        assert result.get("success") is True
+        data = result.get("data", {})
+        # Should NOT return the old error about missing CarryMem instance
+        assert "No CarryMem instance" not in str(data.get("error", ""))
+        assert "suggestions" in data or "total" in data
+        handlers.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_promote_rules_gets_carrymem_injected(self, temp_db):
+        """P0-2: dispatcher must inject _carrymem so promote_rules works."""
+        handlers = Handlers(storage="sqlite", data_path=temp_db)
+        handlers._carrymem.classify_and_remember("I prefer dark mode")
+        result = await handlers.handle_tool("promote_rules", {})
+        assert result.get("success") is True
+        data = result.get("data", {})
+        assert "No CarryMem instance" not in str(data.get("error", ""))
+        handlers.cleanup()
+
+    # ── P0-3 regression: health_check reads audit from adapter._audit ──
+
+    @pytest.mark.asyncio
+    async def test_health_check_audit_from_adapter(self, temp_db):
+        """P0-3: health_check must read _audit from carrymem._adapter, not carrymem."""
+        handlers = Handlers(storage="sqlite", data_path=temp_db)
+        # Perform a write so audit logger has at least one event
+        handlers._carrymem.classify_and_remember("I prefer tea over coffee")
+        result = await handlers.handle_tool("health_check", {})
+        assert result.get("success") is True
+        data = result.get("data", {})
+        audit = data.get("audit", {})
+        # Audit should have actual stats, not just {"status": "not_available"}
+        # (The SQLite adapter initializes _audit as AuditLogger on first use)
+        assert "status" not in audit or audit.get("status") != "not_available"
+        # Should have audit stats keys like total_events
+        assert "total_events" in audit or "by_action" in audit
+        handlers.cleanup()
+
+    # ── P0-1 regression: default_user_id injection for write handlers ──
+
+    @pytest.mark.asyncio
+    async def test_default_user_id_injected_for_write(self, temp_db):
+        """P0-1: when default_user_id is set, write handlers should pass it through."""
+        from carrymem.security.permissions import AccessPolicy
+
+        handlers = Handlers(
+            storage="sqlite",
+            data_path=temp_db,
+            default_user_id="alice",
+        )
+        handlers._carrymem.access_policy = AccessPolicy(owner_id="alice")
+        result = await handlers.handle_tool(
+            "classify_and_remember",
+            {"message": "I prefer dark mode"},
+        )
+        assert result.get("success") is True
+        handlers.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_write_blocked_without_user_id_when_policy_set(self, temp_db):
+        """P0-1: without default_user_id, writes should fail when policy is configured."""
+        from carrymem.security.permissions import AccessPolicy
+
+        handlers = Handlers(storage="sqlite", data_path=temp_db)
+        handlers._carrymem.access_policy = AccessPolicy(owner_id="alice")
+        result = await handlers.handle_tool(
+            "classify_and_remember",
+            {"message": "I prefer dark mode"},
+        )
+        # The handler should catch the SecurityError and return error
+        data = result.get("data", result)
+        assert result.get("success") is False or "error" in data
+        handlers.cleanup()
+
 
 class TestHandleSummarizeAndStore:
     def test_no_session_id(self, cm):

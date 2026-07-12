@@ -168,7 +168,7 @@ jobs:
         run: isort --check-only --diff src/ tests/
 
       - name: mypy
-        run: mypy src/ --config-file mypy.ini
+        run: mypy src/
 
       - name: radon cc check (advisory — target: blocking for complexity >=21)
         continue-on-error: true
@@ -234,17 +234,16 @@ jobs:
           EOF
 
   # ═══════════════════════════════════════
-  # ADVISORY: Security Scan (non-blocking)
+  # SECURITY: Security Scan (blocking for HIGH+)
   # ═══════════════════════════════════════
   security:
-    name: Security (Advisory)
+    name: Security Scan
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v5
 
       - name: Install security tools
-        run: pip install bandit
+        run: pip install bandit pip-audit
 
       - name: Check secrets
         run: |
@@ -257,8 +256,14 @@ jobs:
           grep -rn "except:" src/ --include="*.py" | grep -v "except Exception" | grep -v "except (" && \
             echo "WARNING: bare except found" || echo "OK: no bare except"
 
-      - name: bandit scan
-        run: bandit -r src/ -ll -ii --format=txt || true
+      - name: bandit scan (blocking for HIGH severity)
+        run: bandit -r src/ -lll --format=txt
+
+      - name: pip-audit (dependency vulnerability scan)
+        run: |
+          pip install -e .
+          # --no-deps: carrymem itself is local (not on PyPI); audit only dependencies
+          pip-audit --desc
 
   # ═══════════════════════════════════════
   # ADVISORY: Docs Check (non-blocking)

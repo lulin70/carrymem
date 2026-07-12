@@ -263,8 +263,11 @@ class TestE2EPermissionScenarios:
                         "WAL mode creates new sidecar files (environment-specific)"
                     )
                 except Exception as e:
+                    # On Linux: "attempt to write a readonly database"
+                    # On macOS: "disk I/O error" (WAL file read-only triggers
+                    # this at commit time, not at write time)
                     assert re.search(
-                        r"readonly|read-only|permission", str(e), re.IGNORECASE
+                        r"readonly|read-only|permission|disk I/O", str(e), re.IGNORECASE
                     ), f"Unexpected exception: {e}"
             finally:
                 cm_ro.close()

@@ -41,20 +41,46 @@ class MemoryCRUDMixin:
     # ── Permission helpers (P1-8 MVP) ──────────────────────────────
 
     def _check_write_permission(self, user_id: Optional[str] = None) -> None:
-        """Raise SecurityError(CM-403) if user lacks WRITE permission."""
-        policy = self._access_policy  # type: ignore[attr-defined]
-        if policy is not None and user_id is not None:
-            from carrymem.security.permissions import Permission
+        """Raise SecurityError(CM-403) if user lacks WRITE permission.
 
-            policy.require(user_id, Permission.WRITE, resource="memory write")
+        Fail-closed: when an access policy is configured, a user_id MUST be
+        provided.  In single-user mode (no policy), all writes are allowed.
+        """
+        policy = self._access_policy  # type: ignore[attr-defined]
+        if policy is None:
+            return  # Single-user mode — no policy configured
+        if user_id is None:
+            from carrymem.errors import SecurityError
+
+            raise SecurityError(
+                code="CM-403",
+                message=("WRITE permission required but no user_id provided " "(access policy is configured)."),
+                hint=("Provide a user_id via the API or configure the MCP " "handler with a default_user_id."),
+            )
+        from carrymem.security.permissions import Permission
+
+        policy.require(user_id, Permission.WRITE, resource="memory write")
 
     def _check_delete_permission(self, user_id: Optional[str] = None) -> None:
-        """Raise SecurityError(CM-403) if user lacks DELETE permission."""
-        policy = self._access_policy  # type: ignore[attr-defined]
-        if policy is not None and user_id is not None:
-            from carrymem.security.permissions import Permission
+        """Raise SecurityError(CM-403) if user lacks DELETE permission.
 
-            policy.require(user_id, Permission.DELETE, resource="memory delete")
+        Fail-closed: when an access policy is configured, a user_id MUST be
+        provided.  In single-user mode (no policy), all deletes are allowed.
+        """
+        policy = self._access_policy  # type: ignore[attr-defined]
+        if policy is None:
+            return  # Single-user mode — no policy configured
+        if user_id is None:
+            from carrymem.errors import SecurityError
+
+            raise SecurityError(
+                code="CM-403",
+                message=("DELETE permission required but no user_id provided " "(access policy is configured)."),
+                hint=("Provide a user_id via the API or configure the MCP " "handler with a default_user_id."),
+            )
+        from carrymem.security.permissions import Permission
+
+        policy.require(user_id, Permission.DELETE, resource="memory delete")
 
     def classify_and_remember(
         self,
@@ -410,8 +436,7 @@ class MemoryCRUDMixin:
                 )
             return {"updated": False, "error": f"Memory not found: {storage_key}"}
 
-        if self._adapter._cache:  # type: ignore[attr-defined]
-            self._adapter._cache.invalidate()  # type: ignore[attr-defined]
+        self._adapter.invalidate_cache()
 
         self._auto_backup()  # type: ignore[attr-defined]
 
@@ -459,8 +484,7 @@ class MemoryCRUDMixin:
         if result is None:
             return {"rolled_back": False, "error": "Memory or version not found"}
 
-        if self._adapter._cache:  # type: ignore[attr-defined]
-            self._adapter._cache.invalidate()  # type: ignore[attr-defined]
+        self._adapter.invalidate_cache()
 
         self._auto_backup()  # type: ignore[attr-defined]
 

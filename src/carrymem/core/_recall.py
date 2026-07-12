@@ -322,7 +322,7 @@ class RecallMixin:
         session_id = getattr(self, "_session_id", None)
         if not session_id or not self._adapter:
             return 0
-        if not hasattr(self._adapter, "_cache") or not self._adapter._cache:
+        if not self._adapter.has_cache:
             return 0
 
         # Recall top memories by importance (broad query to get diverse set)

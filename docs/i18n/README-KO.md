@@ -28,7 +28,7 @@ CarryMem이 이 문제를 해결합니다. 가볍고 의존성이 없는 기억 
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-4330-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-4322-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="Coverage">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval Academic Benchmark"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">

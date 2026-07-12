@@ -26,7 +26,7 @@ def load_adapter(name: str) -> Optional[Type[StorageAdapter]]:
         if hasattr(eps, "select"):
             adapter_eps = eps.select(group="carrymem.adapters", name=name)
         else:
-            adapter_eps = eps.get("carrymem.adapters", [])  # type: ignore[arg-type]
+            adapter_eps = eps.get("carrymem.adapters", [])  # type: ignore[attr-defined]
             adapter_eps = [ep for ep in adapter_eps if ep.name == name]  # type: ignore[assignment]
 
         for ep in adapter_eps:
@@ -56,7 +56,7 @@ def list_available_adapters() -> dict:
         if hasattr(eps, "select"):
             adapter_eps = eps.select(group="carrymem.adapters")
         else:
-            adapter_eps = eps.get("carrymem.adapters", [])  # type: ignore[arg-type]
+            adapter_eps = eps.get("carrymem.adapters", [])  # type: ignore[attr-defined]
         for ep in adapter_eps:
             result[ep.name] = f"{ep.value} (plugin)"
     except (ImportError, AttributeError):

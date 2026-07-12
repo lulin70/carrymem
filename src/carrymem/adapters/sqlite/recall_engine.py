@@ -11,13 +11,6 @@ from ...utils.language import _STOP_WORDS, has_cjk
 from ...utils.logger import logger
 from ..base import StoredMemory
 
-try:
-    pass
-
-    SEMANTIC_AVAILABLE = True
-except ImportError:
-    SEMANTIC_AVAILABLE = False
-
 
 class RecallEngine:
     """Multi-phase recall engine: FTS → Vector → Expansion → Semantic."""

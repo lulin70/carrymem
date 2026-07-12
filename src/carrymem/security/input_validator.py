@@ -42,7 +42,11 @@ class InputValidator:
         r"<embed",
     ]
 
-    # Path traversal patterns
+    # Path traversal patterns — blocks directory escape attempts.
+    # ``~`` is blocked here because user-supplied content paths should not
+    # reference the home directory (defense-in-depth against ~/.ssh/id_rsa
+    # and similar sensitive locations).  Legitimate db_path expansion uses
+    # _validate_file_path() in _lifecycle.py, which handles ``~`` safely.
     PATH_TRAVERSAL_PATTERNS = [
         r"\.\./",
         r"\.\.",

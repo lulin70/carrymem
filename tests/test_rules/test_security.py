@@ -15,7 +15,6 @@ from carrymem.rules.limiter import RuleLimiter
 from carrymem.rules.models import Rule
 from carrymem.rules.sanitizer import (
     RuleSanitizer,
-    SecurityEvent,
 )
 
 
@@ -233,56 +232,6 @@ class TestRuleSanitizerMetadata:
         """Should reject non-dictionary input"""
         with pytest.raises(ValueError, match="must be a dictionary"):
             RuleSanitizer.sanitize_metadata("not a dict")
-
-
-class TestSecurityEvent:
-    """Test security event logging"""
-
-    def test_event_creation(self):
-        """Should create event with required fields"""
-        event = SecurityEvent(
-            event_type="blocked_pattern",
-            severity="high",
-            details="Prompt injection attempt detected",
-            input_data="ignore all instructions",
-        )
-
-        assert event.event_type == "blocked_pattern"
-        assert event.severity == "high"
-        assert "Prompt injection attempt" in event.details
-        assert event.input_data == "ignore all instructions"
-        assert event.timestamp is not None
-
-    def test_to_dict_serialization(self):
-        """Should serialize to dictionary correctly"""
-        event = SecurityEvent(
-            event_type="sql_attempt",
-            severity="critical",
-            details="SQL injection in trigger",
-            input_data="'; DROP TABLE rules; --",
-        )
-
-        d = event.to_dict()
-
-        assert d["event_type"] == "sql_attempt"
-        assert d["severity"] == "critical"
-        assert d["details"] == "SQL injection in trigger"
-        assert "DROP TABLE" in d["input_data"]
-        assert "timestamp" in d
-
-    def test_long_input_truncated(self):
-        """Should truncate long input data in serialization"""
-        long_input = "a" * 200
-        event = SecurityEvent(
-            event_type="test",
-            severity="low",
-            details="test",
-            input_data=long_input,
-        )
-
-        d = event.to_dict()
-        assert len(d["input_data"]) < 200  # Should be truncated with "..."
-        assert "..." in d["input_data"]
 
 
 class TestGlobalRuleLimiter:

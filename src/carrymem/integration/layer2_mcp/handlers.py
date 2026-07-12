@@ -268,6 +268,7 @@ def handle_classify_and_remember(carrymem, arguments: Dict[str, Any]) -> Dict[st
     """Classify a message and persist the resulting memory entries."""
     message = arguments.get("message", "")
     context = arguments.get("context")
+    user_id = arguments.get("user_id")
 
     if not message.strip():
         return {"error": "Empty message provided"}
@@ -279,7 +280,7 @@ def handle_classify_and_remember(carrymem, arguments: Dict[str, Any]) -> Dict[st
     if context:
         ctx = {"ai_reply": context}
 
-    result = carrymem.classify_and_remember(message, context=ctx)
+    result = carrymem.classify_and_remember(message, context=ctx, user_id=user_id)
     return result  # type: ignore[no-any-return]
 
 
@@ -300,12 +301,13 @@ def handle_recall_memories(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any
 def handle_forget_memory(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
     """Delete a memory entry by its memory_id."""
     memory_id = arguments.get("memory_id", "")
+    user_id = arguments.get("user_id")
 
     if not memory_id:
         return {"error": "Missing required field: memory_id"}
 
     memory_id = _validate_input(memory_id, "memory_id")
-    deleted = carrymem.forget_memory(memory_id)
+    deleted = carrymem.forget_memory(memory_id, user_id=user_id)
     return {"deleted": deleted, "memory_id": memory_id}
 
 
@@ -350,12 +352,13 @@ def handle_recall_all(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
 def handle_declare_preference(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
     """Explicitly declare a preference/fact/decision from a message."""
     message = arguments.get("message", "")
+    user_id = arguments.get("user_id")
 
     if not message.strip():
         return {"error": "Missing required field: message"}
 
     message = _validate_input(message, "message")
-    result = carrymem.declare(message)
+    result = carrymem.declare(message, user_id=user_id)
     return result  # type: ignore[no-any-return]
 
 
@@ -858,9 +861,10 @@ def handle_health_check(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as e:
         result["adapter"] = {"status": "error", "error": str(e)}
 
-    # Audit logger stats
+    # Audit logger stats — _audit lives on the storage adapter, not on CarryMem
     try:
-        audit = getattr(carrymem, "_audit", None)
+        adapter = getattr(carrymem, "_adapter", None)
+        audit = getattr(adapter, "_audit", None) if adapter is not None else None
         if audit is not None and hasattr(audit, "get_stats"):
             result["audit"] = audit.get_stats()
         else:
@@ -933,6 +937,7 @@ class Handlers:
         storage: str = "sqlite",
         vault_path: Optional[str] = None,
         namespace: str = "default",
+        default_user_id: Optional[str] = None,
     ):
         from carrymem.adapters.obsidian_adapter import ObsidianAdapter
         from carrymem.carrymem import CarryMem
@@ -960,6 +965,27 @@ class Handlers:
         )
         self._rule_engine = RuleEngine(db_path=rule_db_path)
 
+        self._default_user_id = default_user_id
+
+    # Tools that perform write/delete operations and need user_id injection
+    # for access-control enforcement (P0-1 fix).
+    _WRITE_DELETE_TOOLS = frozenset(
+        {
+            "classify_and_remember",
+            "forget_memory",
+            "declare_preference",
+        }
+    )
+
+    # Tools that operate on rule_engine target but also need the CarryMem
+    # instance for memory recall (P0-2 fix).
+    _CARRYMEM_INJECTION_TOOLS = frozenset(
+        {
+            "suggest_rules",
+            "promote_rules",
+        }
+    )
+
     async def handle_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
         """Dispatch an MCP tool call to its handler, running it in an executor."""
         entry = handler_map.get(tool_name)
@@ -972,9 +998,22 @@ class Handlers:
         handler_func, target_key = entry
         target = _TARGET_MAP[target_key](self)
 
+        # Build arguments with injected context (do not mutate caller's dict)
+        injected_args = arguments or {}
+
+        # P0-1: Inject user_id for write/delete handlers when an access policy
+        # is configured.  In single-user mode (no policy), user_id is ignored.
+        if tool_name in self._WRITE_DELETE_TOOLS and "user_id" not in injected_args:
+            if self._default_user_id is not None:
+                injected_args = {**injected_args, "user_id": self._default_user_id}
+
+        # P0-2: Inject _carrymem for rule_engine handlers that need memory recall
+        if tool_name in self._CARRYMEM_INJECTION_TOOLS:
+            injected_args = {**injected_args, "_carrymem": self._carrymem}
+
         try:
             loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(None, lambda: handler_func(target, arguments or {}))
+            result = await loop.run_in_executor(None, lambda: handler_func(target, injected_args))
             return {"success": True, "data": result}
         except Exception as e:
             # NOTE: Broad exception in async MCP handler wrapper is intentional to catch
