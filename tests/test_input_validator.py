@@ -116,6 +116,54 @@ class TestPathTraversalDetection:
         result = validator.validate_path(os.path.join(home, "test.txt"))
         assert isinstance(result, Path)
 
+    # ── P1-2: URL-encoded traversal variants ──────────────────────
+
+    def test_url_encoded_traversal_detected(self, validator):
+        with pytest.raises(ValidationError, match="path traversal"):
+            validator.validate_path("%2e%2e%2fetc%2fpasswd")
+
+    def test_url_encoded_backslash_traversal_detected(self, validator):
+        with pytest.raises(ValidationError, match="path traversal"):
+            validator.validate_path("%2e%2e%5cwindows")
+
+    def test_double_url_encoded_traversal_detected(self, validator):
+        with pytest.raises(ValidationError, match="path traversal"):
+            validator.validate_path("%252e%252e%252fetc")
+
+    def test_mixed_encoded_traversal_detected(self, validator):
+        with pytest.raises(ValidationError, match="path traversal"):
+            validator.validate_path("..%2fetc%2fpasswd")
+
+    def test_mixed_encoded_backslash_traversal_detected(self, validator):
+        with pytest.raises(ValidationError, match="path traversal"):
+            validator.validate_path("..%5cwindows")
+
+    def test_unicode_fullwidth_traversal_detected(self, validator):
+        with pytest.raises(ValidationError, match="path traversal"):
+            validator.validate_path("\uff0e\uff0e\uff0fetc")
+
+    def test_html_entity_traversal_detected(self, validator):
+        with pytest.raises(ValidationError, match="path traversal"):
+            validator.validate_path("&#46;&#46;&#47;etc")
+
+    def test_html_hex_entity_traversal_detected(self, validator):
+        with pytest.raises(ValidationError, match="path traversal"):
+            validator.validate_path("&#x2e;&#x2e;&#x2f;etc")
+
+    def test_rtl_override_detected(self, validator):
+        with pytest.raises(ValidationError, match="path traversal"):
+            validator.validate_path("\u202e../../etc")
+
+    # ── P1-2: Symlink rejection ──────────────────────────────────
+
+    def test_symlink_rejected(self, validator, tmp_path):
+        target = tmp_path / "target.txt"
+        target.write_text("data")
+        link = tmp_path / "link.txt"
+        link.symlink_to(target)
+        with pytest.raises(ValidationError, match="Symlink"):
+            validator.validate_path(str(link))
+
 
 class TestContentValidation:
     def test_non_string_rejected(self, validator):

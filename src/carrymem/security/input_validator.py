@@ -4,9 +4,14 @@ Input Validation Module for CarryMem
 Provides comprehensive input validation to prevent security vulnerabilities
 including SQL injection, XSS, path traversal, and command injection.
 
+Defense-in-depth layer 3: This module is NOT the primary defense. The primary
+defenses are (1) SQLite parameterized queries for SQLi and (2) ``_validate_file_path``
+in ``_lifecycle.py`` for db_path validation. This regex blacklist provides fast
+rejection of obviously malicious input as a supplementary layer.
+
 Author: CarryMem Security Team
 Date: 2026-04-25
-Version: 1.0.0
+Version: 1.1.0
 """
 
 import re
@@ -56,6 +61,19 @@ class InputValidator:
         r"/sys/",
         r"C:\\",
         r"\\\\",
+        # URL-encoded traversal variants (single + double encoding)
+        r"%2e%2e%2f",
+        r"%2e%2e%5c",
+        r"%252e%252e%252f",
+        r"\.\.%2f",
+        r"\.\.%5c",
+        # Unicode fullwidth characters (．．／ U+FF0E U+FF0E U+FF0F)
+        r"\uff0e\uff0e\uff0f",
+        # HTML entity encoded traversal
+        r"&#0*46;&#0*46;&#0*47;",
+        r"&#x2e;&#x2e;&#x2f;",
+        # RTL override character (U+202E) — can reverse visual order to bypass checks
+        r"\u202e",
     ]
 
     # Command injection patterns
@@ -241,9 +259,15 @@ class InputValidator:
 
         # Convert to Path object
         try:
-            path_obj = Path(path).resolve()
+            raw_path = Path(path)
+            path_obj = raw_path.resolve()
         except (ValueError, OSError) as e:
             raise ValidationError(f"Invalid path: {e}")
+
+        # Reject symlinks — defense-in-depth against symlink-based traversal
+        # attacks where an attacker creates a symlink pointing outside allowed dirs
+        if raw_path.is_symlink():
+            raise ValidationError(f"Symlink paths are not allowed: {path}")
 
         # Check if path exists (if required)
         if must_exist and not path_obj.exists():

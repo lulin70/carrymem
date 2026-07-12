@@ -362,16 +362,16 @@ class RecallEngine:
                 all_expanded_rows = deduped
 
                 if len(all_expanded_rows) < limit:
-                    for exp_query in valid_expansions:
-                        if has_cjk(exp_query):
-                            like_rows = self._like_search(exp_query, where_clause, params, limit)
-                            for row in like_rows:
-                                row_id = row["id"] if hasattr(row, "__getitem__") else None
-                                if row_id and row_id not in seen_row_ids:
-                                    seen_row_ids.add(row_id)
-                                    all_expanded_rows.append(row)
-                                    if len(all_expanded_rows) >= limit:
-                                        break
+                    cjk_expansions = [e for e in valid_expansions if has_cjk(e)]
+                    if cjk_expansions:
+                        like_rows = self._combined_like_search(cjk_expansions, where_clause, params, limit)
+                        for row in like_rows:
+                            row_id = row["id"] if hasattr(row, "__getitem__") else None
+                            if row_id and row_id not in seen_row_ids:
+                                seen_row_ids.add(row_id)
+                                all_expanded_rows.append(row)
+                                if len(all_expanded_rows) >= limit:
+                                    break
             finally:
                 pass
 
@@ -476,6 +476,34 @@ class RecallEngine:
             " AND (content LIKE ? ESCAPE '\\' OR raw_text LIKE ? " "ESCAPE '\\' OR original_message LIKE ? ESCAPE '\\')"
         )
         like_params = [f"%{escaped}%", f"%{escaped}%", f"%{escaped}%"]
+        sql = f"""
+            SELECT * FROM memories
+            {where_clause}
+            {like_clause}
+            ORDER BY importance_score DESC, confidence DESC
+            LIMIT ?
+        """
+        all_params = params + like_params + [limit]
+        return conn.execute(sql, all_params).fetchall()
+
+    def _combined_like_search(self, terms, where_clause, params, limit):
+        """Batched LIKE search: combine multiple terms into a single OR query.
+
+        Replaces the N+1 pattern of calling ``_like_search`` per term with
+        a single SQL query that ORs all terms across the same three columns
+        (content, raw_text, original_message).  Each term is escaped via
+        ``escape_like`` and uses ``ESCAPE '\\'`` to prevent LIKE injection.
+        """
+        conn = self._adapter._conn_mgr.get_connection()
+        like_parts = []
+        like_params = []
+        for term in terms:
+            escaped = escape_like(term)
+            like_parts.append(
+                "(content LIKE ? ESCAPE '\\' OR raw_text LIKE ? ESCAPE '\\' " "OR original_message LIKE ? ESCAPE '\\')"
+            )
+            like_params.extend([f"%{escaped}%", f"%{escaped}%", f"%{escaped}%"])
+        like_clause = " AND (" + " OR ".join(like_parts) + ")"
         sql = f"""
             SELECT * FROM memories
             {where_clause}
