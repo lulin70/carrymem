@@ -120,6 +120,7 @@ benchmarks/archive/
 benchmarks/LongMemEval/
 benchmarks/MemEval/
 benchmarks/PrefEval_official/
+benchmarks/LaMP/LaMP-official/
 
 # Benchmark temp scripts
 benchmarks/_devsquad_review.py
