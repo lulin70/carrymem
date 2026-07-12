@@ -1,5 +1,6 @@
 """Recall engine with FTS, vector, semantic search, and RRF fusion."""
 
+import os
 import sqlite3
 import struct
 from datetime import datetime, timezone
@@ -15,8 +16,66 @@ from ..base import StoredMemory
 class RecallEngine:
     """Multi-phase recall engine: FTS → Vector → Expansion → Semantic."""
 
+    # Default throttle interval (seconds) for access_count/last_accessed_at updates.
+    # Overridable via CARRYMEM_ACCESS_UPDATE_INTERVAL env var. 0 = always update.
+    _DEFAULT_ACCESS_UPDATE_INTERVAL = 60
+
     def __init__(self, adapter):
         self._adapter = adapter
+
+    @classmethod
+    def _get_access_update_interval(cls) -> int:
+        """Get throttle interval from environment variable.
+
+        Returns:
+            Interval in seconds. 0 means always update (backward compat).
+        """
+        val = os.getenv("CARRYMEM_ACCESS_UPDATE_INTERVAL")
+        if val is None:
+            return cls._DEFAULT_ACCESS_UPDATE_INTERVAL
+        try:
+            interval = int(val)
+            return interval if interval >= 0 else cls._DEFAULT_ACCESS_UPDATE_INTERVAL
+        except (ValueError, TypeError):
+            return cls._DEFAULT_ACCESS_UPDATE_INTERVAL
+
+    def _should_update_access(self, stored, now: Optional[datetime] = None) -> bool:
+        """Throttle: skip access update if last_accessed_at is within interval.
+
+        Defense-in-depth: type guard handles last_accessed_at as str (from DB
+        deserialization) or datetime. Fail-open on parse error (trigger update).
+
+        Args:
+            stored: StoredMemory with last_accessed_at attribute.
+            now: Current datetime for testing. If None, uses datetime.now(timezone.utc).
+
+        Returns:
+            True if access should be updated; False to skip (throttled).
+        """
+        if now is None:
+            now = datetime.now(timezone.utc)
+
+        last = stored.last_accessed_at
+        if last is None:
+            return True  # First access — always update
+
+        # Type guard: last_accessed_at may be str from DB deserialization
+        if isinstance(last, str):
+            try:
+                last = datetime.fromisoformat(last)
+            except (ValueError, TypeError):
+                return True  # Fail-open: parse error → trigger update
+
+        # Normalize timezone-aware comparison
+        if last.tzinfo is None:
+            last = last.replace(tzinfo=timezone.utc)
+
+        interval = self._get_access_update_interval()
+        if interval <= 0:
+            return True  # 0 = always update (backward compat / test mode)
+
+        delta: float = (now - last).total_seconds()
+        return bool(delta >= interval)
 
     def recall(
         self,
@@ -272,10 +331,17 @@ class RecallEngine:
 
         If is_stored=True: rows are StoredMemory objects (from semantic expansion).
         If is_stored=False: rows are raw database rows (normal path with diversity filtering).
+
+        P1-4: Throttled write — same memory's access_count/last_accessed_at is
+        updated at most once per CARRYMEM_ACCESS_UPDATE_INTERVAL (default 60s).
+        Throttle skip means in-memory access_count/importance_score are NOT
+        incremented; they refresh from DB on next recall. Set interval=0 to
+        always update (backward compat / test mode).
         """
         filters = filters or {}
         conn = self._adapter._conn_mgr.get_connection()
-        now_iso = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(timezone.utc)
+        now_iso = now.isoformat()
         results = []
         seen_keys = set()
         batch_updates: List[tuple] = []
@@ -284,7 +350,7 @@ class RecallEngine:
             for stored in rows:
                 if stored.storage_key not in seen_keys:
                     seen_keys.add(stored.storage_key)
-                    if update_access:
+                    if update_access and self._should_update_access(stored, now):
                         self.increment_access(stored, batch_updates, now_iso)
                     results.append(stored)
             if update_access and batch_updates:
@@ -309,7 +375,7 @@ class RecallEngine:
                         continue
 
                     seen_keys.add(stored.storage_key)
-                    if update_access:
+                    if update_access and self._should_update_access(stored, now):
                         self.increment_access(stored, batch_updates, now_iso)
                     results.append(stored)
             if update_access and batch_updates:

@@ -121,6 +121,151 @@ class TestSemanticRecallBatchedLike(unittest.TestCase):
         self.assertIsInstance(results2, list)
 
 
+class TestRecallAccessThrottle(unittest.TestCase):
+    """P1-4: Verify WAL throttle mechanism for access_count/last_accessed_at updates.
+
+    Throttle skips access_count/last_accessed_at DB writes when the same memory
+    was accessed within CARRYMEM_ACCESS_UPDATE_INTERVAL (default 60s). Set to 0
+    to always update (backward compat / test mode).
+    """
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        db_path = os.path.join(self.tmpdir, "throttle.db")
+        os.environ.pop("CARRYMEM_ACCESS_UPDATE_INTERVAL", None)
+        self.cm = CarryMem(storage="sqlite", db_path=db_path, auto_backup_interval=0)
+        self.cm.declare("I prefer dark mode")
+
+    def tearDown(self):
+        self.cm.close()
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+        os.environ.pop("CARRYMEM_ACCESS_UPDATE_INTERVAL", None)
+
+    def _clear_cache(self):
+        """Clear recall cache so next recall goes through full pipeline (incl. throttle)."""
+        if self.cm._adapter and hasattr(self.cm._adapter, "clear_cache"):
+            self.cm._adapter.clear_cache()
+
+    def test_first_recall_updates_access(self):
+        """First recall (last_accessed_at=None) always triggers update."""
+        results = self.cm.recall_memories(query="dark mode")
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["access_count"], 1)
+        self.assertIsNotNone(results[0]["last_accessed_at"])
+
+    def test_throttle_skips_recent_access(self):
+        """Within 60s interval, second recall does not increment access_count."""
+        os.environ["CARRYMEM_ACCESS_UPDATE_INTERVAL"] = "60"
+        r1 = self.cm.recall_memories(query="dark mode")
+        self.assertEqual(r1[0]["access_count"], 1)
+        self._clear_cache()
+        r2 = self.cm.recall_memories(query="dark mode")
+        self.assertEqual(r2[0]["access_count"], 1)
+
+    def test_throttle_interval_zero_always_updates(self):
+        """Interval=0 disables throttle (backward compat / test mode)."""
+        os.environ["CARRYMEM_ACCESS_UPDATE_INTERVAL"] = "0"
+        r1 = self.cm.recall_memories(query="dark mode")
+        self.assertEqual(r1[0]["access_count"], 1)
+        self._clear_cache()
+        r2 = self.cm.recall_memories(query="dark mode")
+        self.assertEqual(r2[0]["access_count"], 2)
+
+    def test_throttle_allows_stale_access(self):
+        """_should_update_access returns True when last_accessed_at is stale."""
+        from datetime import datetime, timedelta, timezone
+
+        from carrymem.adapters.base import StoredMemory
+        from carrymem.adapters.sqlite.recall_engine import RecallEngine
+
+        engine = RecallEngine(adapter=None)
+        now = datetime.now(timezone.utc)
+        stale_stored = StoredMemory(last_accessed_at=now - timedelta(seconds=120))
+
+        os.environ["CARRYMEM_ACCESS_UPDATE_INTERVAL"] = "60"
+        self.assertTrue(engine._should_update_access(stale_stored, now))
+
+    def test_throttle_type_guard_string(self):
+        """_should_update_access handles last_accessed_at as ISO string."""
+        from datetime import datetime, timedelta, timezone
+
+        from carrymem.adapters.base import StoredMemory
+        from carrymem.adapters.sqlite.recall_engine import RecallEngine
+
+        engine = RecallEngine(adapter=None)
+        now = datetime.now(timezone.utc)
+        recent_str = (now - timedelta(seconds=5)).isoformat()
+        stale_str = (now - timedelta(seconds=120)).isoformat()
+
+        os.environ["CARRYMEM_ACCESS_UPDATE_INTERVAL"] = "60"
+        recent_stored = StoredMemory(last_accessed_at=recent_str)
+        stale_stored = StoredMemory(last_accessed_at=stale_str)
+        self.assertFalse(engine._should_update_access(recent_stored, now))
+        self.assertTrue(engine._should_update_access(stale_stored, now))
+
+    def test_throttle_fail_open_on_parse_error(self):
+        """Unparseable last_accessed_at string → fail-open (trigger update)."""
+        from datetime import datetime, timezone
+
+        from carrymem.adapters.base import StoredMemory
+        from carrymem.adapters.sqlite.recall_engine import RecallEngine
+
+        engine = RecallEngine(adapter=None)
+        now = datetime.now(timezone.utc)
+        bad_stored = StoredMemory(last_accessed_at="not-a-date")
+
+        os.environ["CARRYMEM_ACCESS_UPDATE_INTERVAL"] = "60"
+        self.assertTrue(engine._should_update_access(bad_stored, now))
+
+    def test_throttle_none_last_accessed_always_updates(self):
+        """last_accessed_at=None (first access) always triggers update."""
+        from datetime import datetime, timezone
+
+        from carrymem.adapters.base import StoredMemory
+        from carrymem.adapters.sqlite.recall_engine import RecallEngine
+
+        engine = RecallEngine(adapter=None)
+        now = datetime.now(timezone.utc)
+        new_stored = StoredMemory(last_accessed_at=None)
+
+        os.environ["CARRYMEM_ACCESS_UPDATE_INTERVAL"] = "60"
+        self.assertTrue(engine._should_update_access(new_stored, now))
+
+    def test_throttle_configurable_via_env(self):
+        """CARRYMEM_ACCESS_UPDATE_INTERVAL env var controls throttle interval."""
+        from datetime import datetime, timedelta, timezone
+
+        from carrymem.adapters.base import StoredMemory
+        from carrymem.adapters.sqlite.recall_engine import RecallEngine
+
+        engine = RecallEngine(adapter=None)
+        now = datetime.now(timezone.utc)
+        stored = StoredMemory(last_accessed_at=now - timedelta(seconds=30))
+
+        # 10s interval — 30s ago is stale → allow
+        os.environ["CARRYMEM_ACCESS_UPDATE_INTERVAL"] = "10"
+        self.assertTrue(engine._should_update_access(stored, now))
+
+        # 60s interval — 30s ago is recent → skip
+        os.environ["CARRYMEM_ACCESS_UPDATE_INTERVAL"] = "60"
+        self.assertFalse(engine._should_update_access(stored, now))
+
+    def test_throttle_naive_datetime_handled(self):
+        """Naive datetime (no tzinfo) is treated as UTC for comparison."""
+        from datetime import datetime, timedelta, timezone
+
+        from carrymem.adapters.base import StoredMemory
+        from carrymem.adapters.sqlite.recall_engine import RecallEngine
+
+        engine = RecallEngine(adapter=None)
+        now = datetime.now(timezone.utc)
+        naive_stale = (now - timedelta(seconds=120)).replace(tzinfo=None)
+
+        os.environ["CARRYMEM_ACCESS_UPDATE_INTERVAL"] = "60"
+        stored = StoredMemory(last_accessed_at=naive_stale)
+        self.assertTrue(engine._should_update_access(stored, now))
+
+
 class TestRecallAll(unittest.TestCase):
     """Tests for CarryMem.recall_all() (RecallMixin)."""
 
