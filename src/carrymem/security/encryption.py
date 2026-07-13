@@ -1,12 +1,13 @@
 """At-rest encryption for memory content.
 
-Zero-dependency encryption using Python standard library.
-
-Strategy:
+Encryption strategy (v0.7.3+):
 - Use hashlib.pbkdf2_hmac for key derivation (PBKDF2-HMAC-SHA256)
-- Use os.urandom for salt/nonce generation
-- Use hmac + hashlib for AES-CTR-like stream cipher (standard library only)
-- If cryptography library available, upgrade to Fernet (AES-128-CBC + HMAC)
+- Use Fernet (AES-128-CBC + HMAC) via the ``cryptography`` package
+- ``cryptography`` is a hard dependency (not optional) since v0.7.3
+
+Pre-v0.7.3 fallback cipher (HMAC-CTR stream cipher) has been removed.
+Users with pre-v0.7.3 databases must run ``scripts/migrate_encryption.py``
+to migrate stream cipher ciphertexts to Fernet before upgrading.
 
 Encrypted fields: content, original_message
 Plain fields: id, type, tier, confidence, namespace, etc. (needed for queries)
@@ -15,8 +16,7 @@ Key storage: ~/.carrymem/.key (file permission 600)
 Key integrity: ~/.carrymem/.key.digest (HMAC-SHA256 checksum)
 
 Security Levels:
-- "strong": Fernet backend (cryptography library available)
-- "weak":   HMAC-CTR fallback (standard library only, not recommended for production)
+- "strong": Fernet backend (cryptography library required)
 - "none":   NoEncryption pass-through (no security at all)
 """
 
@@ -28,8 +28,6 @@ import json
 import logging
 import os
 import shutil
-import struct
-import warnings
 from datetime import datetime, timezone
 from typing import Callable, Optional
 
@@ -38,8 +36,6 @@ from carrymem.constants import PBKDF2_ITERATIONS, PBKDF2_ITERATIONS_LEGACY
 logger = logging.getLogger(__name__)
 
 _SALT_SIZE = 16
-_NONCE_SIZE = 16
-_AUTH_TAG_SIZE = 32
 _KEY_SIZE = 32
 
 # Internal HMAC key for key-file integrity checks (not secret, deters casual tampering)
@@ -93,9 +89,12 @@ class NoEncryption:
 class MemoryEncryption:
     """At-rest encryption for memory content.
 
-    Supports dual-backend architecture:
-    - **Fernet** (preferred): AES-128-CBC + HMAC, requires ``cryptography`` package
-    - **HMAC-CTR** (fallback): Stream cipher using HMAC-SHA256 as PRF, stdlib only
+    Single-backend architecture (v0.7.3+):
+    - **Fernet**: AES-128-CBC + HMAC, requires ``cryptography`` package (hard dependency)
+
+    Pre-v0.7.3 fallback cipher (HMAC-CTR stream cipher) has been removed.
+    Users with pre-v0.7.3 databases must run ``scripts/migrate_encryption.py``
+    to migrate stream cipher ciphertexts to Fernet before upgrading.
 
     Key management:
     - Keys stored at ~/.carrymem/.key (permission 0o600)
@@ -110,47 +109,33 @@ class MemoryEncryption:
     def __init__(self, key: Optional[str] = None, key_file: Optional[str] = None):
         self._key_file = key_file
         self._fernet = None
-        self._fernet_available = False
-        self._fallback_warned = False
         self._current_iterations = PBKDF2_ITERATIONS
 
         try:
             from cryptography.fernet import Fernet  # noqa: F401
-
-            self._fernet_available = True
-        except ImportError:
-            self._fernet_available = False
-            warnings.warn(
-                "cryptography library not available. Using fallback encryption (HMAC-CTR). "
-                "For enhanced security, install cryptography: pip install 'carrymem[encryption]' "
-                "or pip install cryptography",
-                SecurityWarning,
-                stacklevel=2,
-            )
+        except ImportError as e:
+            raise EncryptionError(
+                "cryptography library is required since v0.7.3 but is not installed. "
+                "Install it with: pip install cryptography "
+                "(or pip install 'carrymem[full]'). "
+                "For databases encrypted with the pre-v0.7.3 stream cipher, "
+                "run scripts/migrate_encryption.py first."
+            ) from e
 
         if key:
             raw_key = self._derive_key(key)
             self._raw_key = raw_key
-            if self._fernet_available:
-                self._fernet = self._make_fernet(raw_key)
-            else:
-                self._key = raw_key
+            self._fernet = self._make_fernet(raw_key)
         else:
             loaded = self._load_key()
             if loaded:
                 self._raw_key = loaded
-                if self._fernet_available:
-                    self._fernet = self._make_fernet(loaded)
-                else:
-                    self._key = loaded
+                self._fernet = self._make_fernet(loaded)
             else:
                 generated = os.urandom(_KEY_SIZE)
                 self._raw_key = generated
                 self._save_key(generated)
-                if self._fernet_available:
-                    self._fernet = self._make_fernet(generated)
-                else:
-                    self._key = generated
+                self._fernet = self._make_fernet(generated)
 
     def _derive_key(self, password: str) -> bytes:
         """Derive a key from password using PBKDF2-HMAC-SHA256.
@@ -269,37 +254,20 @@ class MemoryEncryption:
             os.makedirs(path, mode=0o700, exist_ok=True)
 
     def encrypt(self, plaintext: str) -> str:
-        """Encrypt plaintext using the configured backend (Fernet or HMAC-CTR)."""
+        """Encrypt plaintext using Fernet (AES-128-CBC + HMAC)."""
         if not plaintext:
             return ""
-
-        if self._fernet_available and self._fernet:
-            return self._encrypt_fernet(plaintext)
-
-        self._warn_fallback()
-        return self._encrypt_stream(plaintext)
+        return self._encrypt_fernet(plaintext)
 
     def decrypt(self, ciphertext: str) -> str:
-        """Decrypt ciphertext using the configured backend (Fernet or HMAC-CTR)."""
+        """Decrypt ciphertext using Fernet (AES-128-CBC + HMAC).
+
+        Pre-v0.7.3 stream cipher ciphertexts are no longer supported.
+        Run ``scripts/migrate_encryption.py`` to migrate legacy ciphertexts.
+        """
         if not ciphertext:
             return ""
-
-        if self._fernet_available and self._fernet:
-            return self._decrypt_fernet(ciphertext)
-
-        self._warn_fallback()
-        return self._decrypt_stream(ciphertext)
-
-    def _warn_fallback(self) -> None:
-        """Emit a one-time warning when using the weak fallback cipher."""
-        if not self._fallback_warned:
-            self._fallback_warned = True
-            logger.warning(
-                "Using WEAK fallback encryption (HMAC-CTR). "
-                "This backend does NOT meet 2026 security standards. "
-                "Install 'cryptography' package for Fernet (AES-CBC + HMAC) support: "
-                "pip install cryptography"
-            )
+        return self._decrypt_fernet(ciphertext)
 
     def _encrypt_fernet(self, plaintext: str) -> str:
         try:
@@ -318,63 +286,6 @@ class MemoryEncryption:
             return decrypted.decode("utf-8")  # type: ignore[no-any-return]
         except (TypeError, ValueError, binascii.Error, InvalidToken) as e:
             raise EncryptionError(f"Fernet decryption failed: {e}") from e
-
-    def _encrypt_stream(self, plaintext: str) -> str:
-        """HMAC-SHA256 based stream cipher with authentication.
-
-        .. warning:: WEAK SECURITY LEVEL
-            This fallback cipher uses HMAC-SHA256 as a PRF to generate a keystream,
-            then XORs with plaintext. A separate HMAC tag provides integrity verification.
-            Note: This is NOT AES-CTR; it uses HMAC-SHA256 as the keystream generator.
-
-            **Security level: weak** — Not recommended for protecting sensitive data.
-            Prefer the Fernet backend (requires ``cryptography`` package).
-        """
-        nonce = os.urandom(_NONCE_SIZE)
-        key = self._key
-        keystream = self._generate_keystream(key, nonce, len(plaintext.encode("utf-8")))
-        data = plaintext.encode("utf-8")
-        encrypted = bytes(a ^ b for a, b in zip(data, keystream))
-        auth_tag = hmac_mod.new(key, nonce + encrypted, hashlib.sha256).digest()
-        payload = nonce + encrypted + auth_tag
-        return base64.b64encode(payload).decode("ascii")
-
-    def _decrypt_stream(self, ciphertext: str) -> str:
-        try:
-            payload = base64.b64decode(ciphertext)
-        except (binascii.Error, ValueError) as e:
-            raise EncryptionError(f"Invalid ciphertext format: {e}") from e
-
-        min_len = _NONCE_SIZE + _AUTH_TAG_SIZE
-        if len(payload) < min_len:
-            raise EncryptionError("Ciphertext too short")
-
-        nonce = payload[:_NONCE_SIZE]
-        auth_tag = payload[-_AUTH_TAG_SIZE:]
-        encrypted = payload[_NONCE_SIZE:-_AUTH_TAG_SIZE]
-        key = self._key
-
-        expected_tag = hmac_mod.new(key, nonce + encrypted, hashlib.sha256).digest()
-        if not hmac_mod.compare_digest(auth_tag, expected_tag):
-            raise EncryptionError("Integrity check failed: ciphertext has been tampered with")
-
-        keystream = self._generate_keystream(key, nonce, len(encrypted))
-        decrypted = bytes(a ^ b for a, b in zip(encrypted, keystream))
-        try:
-            return decrypted.decode("utf-8")
-        except UnicodeDecodeError as e:
-            raise EncryptionError(f"Decryption produced invalid UTF-8: {e}") from e
-
-    @staticmethod
-    def _generate_keystream(key: bytes, nonce: bytes, length: int) -> bytes:
-        keystream = bytearray()
-        counter = 0
-        while len(keystream) < length:
-            block_input = nonce + struct.pack(">Q", counter)
-            block = hmac_mod.new(key, block_input, hashlib.sha256).digest()
-            keystream.extend(block)
-            counter += 1
-        return bytes(keystream[:length])
 
     def rotate_key(self, new_password: Optional[str] = None) -> Callable[[str], str]:
         """Rotate the encryption key and return a re-encryption helper.
@@ -410,11 +321,10 @@ class MemoryEncryption:
 
         # Step 1: Capture old key material before generating new one
         old_key: Optional[bytes] = self._raw_key
-        old_backend = self.backend
 
         if old_key is None:
             # Fallback: try to read from disk (for edge cases)
-            if self._fernet_available and (self._key_file or self._default_key_path()):
+            if self._key_file or self._default_key_path():
                 kp = self._key_file or self._default_key_path()
                 old_key = self._load_key_no_verify(kp)
 
@@ -435,26 +345,26 @@ class MemoryEncryption:
 
         # Step 5: Update in-memory state
         self._raw_key = new_raw_key
-        if self._fernet_available:
-            self._fernet = self._make_fernet(new_raw_key)
-        else:
-            self._key = new_raw_key
+        self._fernet = self._make_fernet(new_raw_key)
 
         # Build re-encryption closure capturing old state
         def _re_encrypt(old_ciphertext: str) -> str:
-            """Decrypt with old key, encrypt with new key."""
-            # Decrypt with old key/backend
-            if old_backend == "fernet":
-                try:
-                    pass
+            """Decrypt with old key, encrypt with new key.
 
-                    old_f = self._make_fernet(old_key)
-                    plaintext = old_f.decrypt(old_ciphertext.encode("ascii")).decode("utf-8")
-                except (TypeError, ValueError, binascii.Error) as e:
-                    raise EncryptionError(f"Key rotation decryption failed: {e}") from e
-            else:
-                # Stream cipher fallback - use old_key directly
-                plaintext = self._decrypt_with_key(old_key, old_ciphertext)
+            Pre-v0.7.3 stream cipher ciphertexts are rejected; run
+            ``scripts/migrate_encryption.py`` to migrate them first.
+            """
+            # Detect legacy stream cipher ciphertext (Fernet always starts with gAAAAA)
+            if old_ciphertext and not old_ciphertext.startswith("gAAAAA"):
+                raise EncryptionError(
+                    "Refusing to rotate legacy stream cipher ciphertext. "
+                    "Run scripts/migrate_encryption.py to migrate to Fernet first."
+                )
+            try:
+                old_f = self._make_fernet(old_key)
+                plaintext = old_f.decrypt(old_ciphertext.encode("ascii")).decode("utf-8")
+            except (TypeError, ValueError, binascii.Error) as e:
+                raise EncryptionError(f"Key rotation decryption failed: {e}") from e
 
             # Encrypt with new key
             return self.encrypt(plaintext)
@@ -488,32 +398,6 @@ class MemoryEncryption:
         with open(key_path, "rb") as f:
             return f.read()
 
-    def _decrypt_with_key(self, key: bytes, ciphertext: str) -> str:
-        """Decrypt ciphertext using a specific raw key (for rotation)."""
-        try:
-            payload = base64.b64decode(ciphertext)
-        except (binascii.Error, ValueError) as e:
-            raise EncryptionError(f"Invalid ciphertext format: {e}") from e
-
-        min_len = _NONCE_SIZE + _AUTH_TAG_SIZE
-        if len(payload) < min_len:
-            raise EncryptionError("Ciphertext too short")
-
-        nonce = payload[:_NONCE_SIZE]
-        auth_tag = payload[-_AUTH_TAG_SIZE:]
-        encrypted = payload[_NONCE_SIZE:-_AUTH_TAG_SIZE]
-
-        expected_tag = hmac_mod.new(key, nonce + encrypted, hashlib.sha256).digest()
-        if not hmac_mod.compare_digest(auth_tag, expected_tag):
-            raise EncryptionError("Integrity check failed during key rotation")
-
-        keystream = self._generate_keystream(key, nonce, len(encrypted))
-        decrypted = bytes(a ^ b for a, b in zip(encrypted, keystream))
-        try:
-            return decrypted.decode("utf-8")
-        except UnicodeDecodeError as e:
-            raise EncryptionError(f"Decryption produced invalid UTF-8: {e}") from e
-
     def _backup_key(self, key_path: str) -> None:
         """Create a timestamped backup of the key file before rotation."""
         if not os.path.exists(key_path):
@@ -536,18 +420,14 @@ class MemoryEncryption:
 
     @property
     def backend(self) -> str:
-        """Return the active backend name ("fernet" or "hmac-ctr")."""
-        if self._fernet_available and self._fernet:
-            return "fernet"
-        return "hmac-ctr"
+        """Return the active backend name ("fernet")."""
+        return "fernet"
 
     @property
     def security_level(self) -> str:
         """Return the current security level of this encryption instance.
 
         Returns:
-            "strong" for Fernet, "weak" for HMAC-CTR fallback
+            "strong" (Fernet backend, always since v0.7.3)
         """
-        if self._fernet_available and self._fernet:
-            return "strong"
-        return "weak"
+        return "strong"

@@ -17,7 +17,6 @@ from carrymem.security.encryption import (
     EncryptionError,
     MemoryEncryption,
     NoEncryption,
-    SecurityWarning,
 )
 from carrymem.security.input_validator import (
     InputValidator,
@@ -120,10 +119,8 @@ class TestEncryptionBackend:
 
     def test_fernet_backend_primary(self, tmp_path):
         enc = MemoryEncryption(key="fernet-test", key_file=str(tmp_path / ".fk"))
-        if enc._fernet_available:
-            assert enc.backend == "fernet"
-        else:
-            assert enc.backend == "hmac-ctr"
+        assert enc.backend == "fernet"
+        assert enc.security_level == "strong"
 
     def test_is_active_true(self, tmp_path):
         assert MemoryEncryption(key="x", key_file=str(tmp_path / ".ia")).is_active is True

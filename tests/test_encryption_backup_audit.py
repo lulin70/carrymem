@@ -101,7 +101,7 @@ class TestMemoryEncryption(unittest.TestCase):
 
     def test_backend_is_set(self):
         enc = MemoryEncryption(key="test_password", key_file=self.key_file)
-        self.assertIn(enc.backend, ("fernet", "hmac-ctr"))
+        self.assertEqual(enc.backend, "fernet")
 
     def test_auto_key_generation(self):
         enc = MemoryEncryption(key_file=self.key_file)

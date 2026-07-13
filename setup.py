@@ -91,6 +91,7 @@ setup(
     scripts=["bin/carrymem"],
     install_requires=[
         "PyYAML>=5.0",
+        "cryptography>=46.0.6",  # CVE-2026-34073: X.509 cert validation bypass fix; hard dep since v0.7.3
     ],
     extras_require={
         "language": [
@@ -123,9 +124,6 @@ setup(
             "mypy>=1.0",
             "radon>=6.0",
         ],
-        "encryption": [
-            "cryptography>=46.0.6",  # CVE-2026-34073: X.509 cert validation bypass fix
-        ],
         "llm": [
             "openai>=1.0",
             "zhipuai>=2.0",
@@ -136,7 +134,6 @@ setup(
         "full": [
             "pycld2>=0.41",
             "langdetect>=1.0.9",
-            "cryptography>=46.0.6",  # CVE-2026-34073: X.509 cert validation bypass fix
             "textual>=0.40",
             "sqlite-vec>=0.1.0",
             "pysqlite3>=0.6.0",

@@ -2,20 +2,17 @@
 Security crypto upgrade tests (P0-5).
 
 Covers:
-- PBKDF2 iteration count upgrade (260000) and legacy backward compatibility
+- PBKDF2 iteration count upgrade (600000) and legacy backward compatibility
 - Key rotation API: encrypt -> rotate -> decrypt round-trip integrity
 - Key file integrity: HMAC-SHA256 digest, tampering detection
 - Security level attributes on NoEncryption / MemoryEncryption
-- Fallback cipher warning emission
+- v0.7.3: cryptography is a hard dependency (EncryptionError on missing)
 """
 
 import base64
 import json
-import logging
 import os
-import shutil
 import tempfile
-import textwrap
 
 import pytest
 
@@ -313,78 +310,26 @@ class TestSecurityLevelAttributes:
         assert "NO encryption" in NoEncryption.__doc__
 
     def test_memory_encryption_security_level_strong_when_fernet(self, encryptor):
-        """With Fernet available, security_level should be 'strong'."""
-        if encryptor._fernet_available:
-            assert encryptor.security_level == "strong"
-        else:
-            assert encryptor.security_level == "weak"
+        """With Fernet (always since v0.7.3), security_level should be 'strong'."""
+        assert encryptor.security_level == "strong"
+        assert encryptor.backend == "fernet"
 
-    def test_memory_encryption_security_level_weak_when_fallback(self):
-        """Without cryptography, security_level should be 'weak'."""
-        # We can't easily mock the import in all Python versions,
-        # so verify the property logic directly by checking the code path.
+    def test_memory_encryption_raises_when_cryptography_missing(self, monkeypatch):
+        """Without cryptography, __init__ should raise EncryptionError (v0.7.3+)."""
+        import builtins
+
+        real_import = builtins.__import__
+
+        def _block_cryptography(name, *args, **kwargs):
+            if name == "cryptography.fernet" or name.startswith("cryptography."):
+                raise ImportError("simulated: cryptography not installed")
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", _block_cryptography)
         with tempfile.TemporaryDirectory() as td:
             kf = os.path.join(td, ".key")
-            enc = MemoryEncryption(key_file=kf)
-            if not enc._fernet_available:
-                assert enc.security_level == "weak"
-                assert enc.backend == "hmac-ctr"
-            else:
-                # If cryptography IS installed, we can still verify
-                # that the property returns correct value for strong
-                assert enc.security_level == "strong"
-
-    @pytest.mark.skipif(
-        True,
-        reason="cryptography may or may not be installed; tested indirectly",
-    )
-    def test_stream_cipher_docstring_has_warning(self):
-        """_encrypt_stream docstring should warn about weak security."""
-        assert "WEAK SECURITY LEVEL" in MemoryEncryption._encrypt_stream.__doc__
-
-
-class TestFallbackWarning:
-    """Test that fallback cipher emits logger.warning on first use."""
-
-    @pytest.fixture(autouse=True)
-    def _enable_log_propagation(self):
-        """Temporarily enable propagation on the carrymem logger.
-
-        The carrymem logger disables propagation by default (see
-        utils/logger.py) to avoid duplicate console output. caplog attaches
-        its handler to the root logger and relies on propagation, so we
-        re-enable it here for the duration of each test in this class.
-        """
-        carry_logger = logging.getLogger("carrymem")
-        original_propagate = carry_logger.propagate
-        carry_logger.propagate = True
-        yield
-        carry_logger.propagate = original_propagate
-
-    def test_warning_emitted_on_first_encrypt(self, caplog):
-        """First encrypt call with fallback should log a warning."""
-        with caplog.at_level(logging.WARNING, logger="carrymem.security.encryption"):
-            with tempfile.TemporaryDirectory() as td:
-                kf = os.path.join(td, ".key")
-                enc = MemoryEncryption(key_file=kf)
-                if not enc._fernet_available:
-                    enc.encrypt("trigger warning")
-                    assert "WEAK fallback encryption" in caplog.text
-                    assert "cryptography" in caplog.text
-
-    def test_warning_only_once(self, caplog):
-        """Warning should only appear once, not on every call."""
-        with caplog.at_level(logging.WARNING, logger="carrymem.security.encryption"):
-            with tempfile.TemporaryDirectory() as td:
-                kf = os.path.join(td, ".key")
-                enc = MemoryEncryption(key_file=kf)
-                if not enc._fernet_available:
-                    enc.encrypt("first")
-                    enc.encrypt("second")
-                    enc.encrypt("third")
-                    # Count occurrences of the warning message
-                    warning_count = caplog.text.count("WEAK fallback encryption")
-                    assert warning_count == 1, f"Expected 1 warning, got {warning_count}"
+            with pytest.raises(EncryptionError, match="cryptography library is required"):
+                MemoryEncryption(key_file=kf)
 
 
 # ---------------------------------------------------------------------------
@@ -409,7 +354,7 @@ class TestBackwardCompatibility:
     def test_is_active_and_backend_properties(self, encryptor):
         """Public properties should remain functional."""
         assert encryptor.is_active is True
-        assert encryptor.backend in ("fernet", "hmac-ctr")
+        assert encryptor.backend == "fernet"
 
     def test_no_encryption_passthrough_unchanged(self):
         """NoEncryption behavior must not change."""

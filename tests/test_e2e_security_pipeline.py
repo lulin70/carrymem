@@ -180,7 +180,7 @@ class TestE2ESecurityPipeline(unittest.TestCase):
         """Verify: MemoryEncryption is active when encryption_key is provided."""
         enc = MemoryEncryption(key="test-encryption-password-123")
         self.assertTrue(enc.is_active, "Encryption should be active with a key")
-        self.assertIn(enc.backend, ("fernet", "hmac-ctr"), f"Backend should be fernet or hmac-ctr, got {enc.backend}")
+        self.assertEqual(enc.backend, "fernet", f"Backend should be fernet, got {enc.backend}")
 
     def test_encryption_roundtrip(self):
         """Verify: encrypt -> decrypt produces original plaintext."""

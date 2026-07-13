@@ -232,17 +232,18 @@ class TestMemoryEncryption:
         assert enc.is_active is False
         assert enc.backend == "none"
 
-    def test_stream_cipher_roundtrip(self):
+    def test_fernet_roundtrip(self):
         tmpdir = tempfile.mkdtemp()
         key_file = os.path.join(tmpdir, "test.key")
         try:
             enc = MemoryEncryption(key="test_password", key_file=key_file)
-            if enc.backend == "hmac-ctr":
-                plaintext = "Hello, World! こんにちは 你好"
-                ciphertext = enc.encrypt(plaintext)
-                assert ciphertext != plaintext
-                decrypted = enc.decrypt(ciphertext)
-                assert decrypted == plaintext
+            assert enc.backend == "fernet"
+            plaintext = "Hello, World! こんにちは 你好"
+            ciphertext = enc.encrypt(plaintext)
+            assert ciphertext != plaintext
+            assert ciphertext.startswith("gAAAAA")
+            decrypted = enc.decrypt(ciphertext)
+            assert decrypted == plaintext
         finally:
             for f in [key_file, key_file + ".salt"]:
                 if os.path.exists(f):
@@ -276,7 +277,7 @@ class TestMemoryEncryption:
         key_file = os.path.join(tmpdir, "backend.key")
         try:
             enc = MemoryEncryption(key="test", key_file=key_file)
-            assert enc.backend in ("hmac-ctr", "fernet")
+            assert enc.backend == "fernet"
         finally:
             for f in [key_file, key_file + ".salt"]:
                 if os.path.exists(f):
@@ -302,9 +303,8 @@ class TestMemoryEncryption:
         key_file = os.path.join(tmpdir, "invalid.key")
         try:
             enc = MemoryEncryption(key="test", key_file=key_file)
-            if enc.backend == "hmac-ctr":
-                with pytest.raises(EncryptionError):
-                    enc.decrypt("not_valid_base64!!!")
+            with pytest.raises(EncryptionError):
+                enc.decrypt("not_valid_base64!!!")
         finally:
             for f in [key_file, key_file + ".salt"]:
                 if os.path.exists(f):
