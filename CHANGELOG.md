@@ -10,6 +10,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > historical records from the pre-reset development cycle and should not be confused with
 > the current v0.2.x series.
 
+## [0.8.0] - 2026-07-13 (Graphify — MCP Graph Tools + Edge Confidence)
+
+### Added — P0-1: MCP Graph Tools (3 new tools)
+- **`query_graph`** MCP tool: Exposes existing `recall_graph()` as an MCP tool for
+  multi-hop entity graph traversal. Returns entities and connected memories.
+- **`shortest_path`** MCP tool: New bidirectional BFS algorithm
+  (`KnowledgeGraph.shortest_path()`) finds the shortest path between two entities.
+  O(b^(d/2)) complexity with hard cap of 10 hops. Returns path, length, and found flag.
+- **`get_memory_impact`** MCP tool: New impact scoring algorithm
+  (`KnowledgeGraph.get_memory_impact()`) computes a memory's influence in the graph.
+  Formula: `entity_count * 0.4 + relation_count * 0.4 + cross_namespace * 0.2`.
+- **MCP tool count**: 28 → 31 tools.
+- **API surface**: `CarryMem.recall_shortest_path()`, `CarryMem.recall_memory_impact()`,
+  `SQLiteAdapter.shortest_path()`, `SQLiteAdapter.get_memory_impact()`.
+- **Base class defaults**: `StorageAdapter.shortest_path()` and
+  `StorageAdapter.get_memory_impact()` return empty/zero results for non-graph adapters.
+
+### Added — P0-2: Edge Confidence Labels
+- **Schema migration v100**: `ALTER TABLE memory_relations ADD COLUMN confidence TEXT
+  NOT NULL DEFAULT 'EXTRACTED'`. Idempotent (checks column existence before altering).
+  Index `idx_relations_confidence` created for filtered queries.
+- **`_VALID_CONFIDENCE_LABELS`**: Frozen set of `{"EXTRACTED", "INFERRED", "AMBIGUOUS"}`.
+- **`KnowledgeGraph.add_relation(confidence=...)`**: Validates confidence label,
+  raises `ValueError` for invalid values. Defaults to `"EXTRACTED"`.
+- **Query enrichment**: `list_relations()` and `recall_by_relation()` now return
+  the `confidence`/`relation_confidence` field in results.
+- **Protocol update**: `StorageAdapter.add_graph_relation()` accepts `confidence`
+  parameter in both abstract base class and protocol definition.
+
+### Tests
+- 25 new tests in `tests/test_v080_graph_tools.py`:
+  - `TestShortestPath` (8): direct, multi-hop, same entity, no path, nonexistent,
+    max_hops limit, empty input, clamps max_hops
+  - `TestGetMemoryImpact` (5): basic, cross_namespace, empty, nonexistent, empty input
+  - `TestEdgeConfidence` (8): default, INFERRED, AMBIGUOUS, invalid raises, empty
+    raises, valid labels constant, list_relations returns confidence,
+    recall_by_relation returns confidence
+  - `TestCarryMemFacadeIntegration` (4): recall_shortest_path, recall_memory_impact,
+    add_graph_relation with confidence, invalid confidence raises
+
+### Migration Guide
+v0.8.0 is backward compatible. The schema migration runs automatically on first
+startup. Existing `memory_relations` rows get `confidence='EXTRACTED'` by default.
+No manual migration script required.
+
+---
+
 ## [0.7.3] - 2026-07-13 (Security Hardening — Fernet-Only Encryption)
 
 ### Changed — Breaking: cryptography is now a hard dependency

@@ -1,6 +1,6 @@
 # CarryMem Troubleshooting Guide
 
-**Version**: v0.7.3
+**Version**: v0.8.0
 
 ---
 

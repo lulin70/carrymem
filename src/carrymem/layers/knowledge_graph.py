@@ -20,6 +20,12 @@ from typing import Any, Dict, List, Optional
 
 from carrymem.utils.logger import logger
 
+# Valid edge confidence labels for memory_relations.confidence (v0.8.0).
+# EXTRACTED: deterministic extraction from EntityNormalizer pattern matching.
+# INFERRED: LLM semantic inference (future use).
+# AMBIGUOUS: ambiguous match needing user confirmation (future use).
+_VALID_CONFIDENCE_LABELS = frozenset({"EXTRACTED", "INFERRED", "AMBIGUOUS"})
+
 
 class KnowledgeGraph:
     """SQLite-native knowledge graph for memory entities and relations.
@@ -213,7 +219,7 @@ class KnowledgeGraph:
             params.append(namespace)
 
         query = (
-            "SELECT DISTINCT m.* FROM memories m "
+            "SELECT DISTINCT m.*, mr.confidence as relation_confidence FROM memories m "
             "INNER JOIN memory_relations mr ON mr.source_memory_key = m.storage_key "
             "INNER JOIN memory_entities src ON mr.src_entity_id = src.id "
             "INNER JOIN memory_entities dst ON mr.dst_entity_id = dst.id "
@@ -361,6 +367,311 @@ class KnowledgeGraph:
 
         return {"entities": entities_data, "memories": memories_data}
 
+    def shortest_path(
+        self,
+        src_entity: str,
+        dst_entity: str,
+        max_hops: int = 4,
+        namespace: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Find the shortest path between two entities via bidirectional BFS.
+
+        Performs bidirectional breadth-first search from both src and dst
+        entities simultaneously, meeting in the middle. Complexity is
+        O(b^(d/2)) where b is the average branching factor and d is the
+        path length — roughly 2x faster than unidirectional BFS.
+
+        Args:
+            src_entity: The source entity text.
+            dst_entity: The destination entity text.
+            max_hops: Maximum path length to search (default 4, hard cap 10).
+            namespace: Optional namespace filter. If None, searches all.
+
+        Returns:
+            Dict with:
+              - "path": list of entity texts from src to dst (empty if no path)
+              - "length": number of edges in path (0 if src==dst, -1 if no path)
+              - "found": bool indicating whether a path was found
+        """
+        safe_src = self._sanitize(src_entity)
+        safe_dst = self._sanitize(dst_entity)
+        if not safe_src or not safe_dst:
+            return {"path": [], "length": -1, "found": False}
+
+        if safe_src == safe_dst:
+            return {"path": [safe_src], "length": 0, "found": True}
+
+        # Clamp max_hops to hard cap
+        max_hops = max(1, min(max_hops, 10))
+
+        conn = self._conn_mgr.get_connection()
+        ns_filter = "AND namespace = ?" if namespace else ""
+        ns_params: list = [namespace] if namespace else []
+
+        # Look up entity IDs for src and dst
+        try:
+            src_ids = [
+                row["id"]
+                for row in conn.execute(
+                    f"SELECT id FROM memory_entities WHERE entity_text = ? {ns_filter}",
+                    [safe_src] + ns_params,
+                ).fetchall()
+            ]
+            dst_ids = [
+                row["id"]
+                for row in conn.execute(
+                    f"SELECT id FROM memory_entities WHERE entity_text = ? {ns_filter}",
+                    [safe_dst] + ns_params,
+                ).fetchall()
+            ]
+        except sqlite3.Error as e:
+            logger.warning("shortest_path entity lookup failed: %s", e)
+            return {"path": [], "length": -1, "found": False}
+
+        if not src_ids or not dst_ids:
+            return {"path": [], "length": -1, "found": False}
+
+        # Bidirectional BFS
+        # Forward frontier from src, backward frontier from dst
+        forward_visited: Dict[int, Optional[int]] = {sid: None for sid in src_ids}
+        backward_visited: Dict[int, Optional[int]] = {did: None for did in dst_ids}
+        forward_frontier = list(src_ids)
+        backward_frontier = list(dst_ids)
+
+        meeting_point: Optional[int] = None
+
+        for hop in range(max_hops):
+            # Expand forward frontier
+            if forward_frontier:
+                next_forward = self._expand_bfs(conn, forward_frontier, forward_visited, ns_filter, ns_params)
+                forward_frontier = next_forward
+                # Check for meeting point
+                for eid in forward_visited:
+                    if eid in backward_visited:
+                        meeting_point = eid
+                        break
+                if meeting_point is not None:
+                    break
+
+            # Expand backward frontier
+            if backward_frontier:
+                next_backward = self._expand_bfs(conn, backward_frontier, backward_visited, ns_filter, ns_params)
+                backward_frontier = next_backward
+                # Check for meeting point
+                for eid in backward_visited:
+                    if eid in forward_visited:
+                        meeting_point = eid
+                        break
+                if meeting_point is not None:
+                    break
+
+            if not forward_frontier and not backward_frontier:
+                break
+
+        if meeting_point is None:
+            return {"path": [], "length": -1, "found": False}
+
+        # Reconstruct path: src → meeting_point → dst
+        forward_path = self._reconstruct_path(forward_visited, meeting_point)
+        backward_path = self._reconstruct_path(backward_visited, meeting_point)
+        # backward_path is from dst to meeting_point; reverse and drop the meeting point
+        backward_path_reversed = list(reversed(backward_path))[1:]
+        full_path_ids = forward_path + backward_path_reversed
+
+        # Resolve entity IDs to text
+        entity_texts = self._resolve_entity_texts(conn, full_path_ids)
+        if len(entity_texts) != len(full_path_ids):
+            logger.warning("shortest_path: failed to resolve some entity texts")
+            return {"path": [], "length": -1, "found": False}
+
+        return {
+            "path": entity_texts,
+            "length": len(full_path_ids) - 1,
+            "found": True,
+        }
+
+    def _expand_bfs(
+        self,
+        conn: sqlite3.Connection,
+        frontier: List[int],
+        visited: Dict[int, Optional[int]],
+        ns_filter: str,
+        ns_params: list,
+    ) -> List[int]:
+        """Expand one BFS frontier step, returning the next frontier.
+
+        Updates ``visited`` in place with newly discovered nodes and their
+        parent (for path reconstruction). Returns list of newly discovered
+        node IDs that form the next frontier.
+
+        Args:
+            conn: SQLite connection.
+            frontier: Current frontier node IDs.
+            visited: This direction's visited map (node_id → parent_id or None).
+            ns_filter: SQL namespace filter clause.
+            ns_params: SQL namespace parameters.
+
+        Returns:
+            List of newly discovered node IDs.
+        """
+        if not frontier:
+            return []
+
+        placeholders = ",".join("?" * len(frontier))
+        next_frontier: List[int] = []
+
+        try:
+            # Outgoing edges: frontier → neighbors
+            rows = conn.execute(
+                f"SELECT src_entity_id, dst_entity_id FROM memory_relations "
+                f"WHERE src_entity_id IN ({placeholders}) {ns_filter}",
+                frontier + ns_params,
+            ).fetchall()
+            for row in rows:
+                dst_id = row["dst_entity_id"]
+                if dst_id not in visited:
+                    visited[dst_id] = row["src_entity_id"]
+                    next_frontier.append(dst_id)
+
+            # Incoming edges: neighbors → frontier
+            rows = conn.execute(
+                f"SELECT src_entity_id, dst_entity_id FROM memory_relations "
+                f"WHERE dst_entity_id IN ({placeholders}) {ns_filter}",
+                frontier + ns_params,
+            ).fetchall()
+            for row in rows:
+                src_id = row["src_entity_id"]
+                if src_id not in visited:
+                    visited[src_id] = row["dst_entity_id"]
+                    next_frontier.append(src_id)
+        except sqlite3.Error as e:
+            logger.warning("_expand_bfs failed: %s", e)
+            return []
+
+        return next_frontier
+
+    @staticmethod
+    def _reconstruct_path(visited: Dict[int, Optional[int]], meeting_point: int) -> List[int]:
+        """Reconstruct path from start to meeting_point using parent pointers."""
+        path: List[int] = []
+        current: Optional[int] = meeting_point
+        while current is not None:
+            path.append(current)
+            current = visited.get(current)
+        path.reverse()
+        return path
+
+    @staticmethod
+    def _resolve_entity_texts(conn: sqlite3.Connection, entity_ids: List[int]) -> List[str]:
+        """Resolve a list of entity IDs to their text values, preserving order."""
+        if not entity_ids:
+            return []
+        placeholders = ",".join("?" * len(entity_ids))
+        try:
+            id_to_text = {
+                row["id"]: row["entity_text"]
+                for row in conn.execute(
+                    f"SELECT id, entity_text FROM memory_entities WHERE id IN ({placeholders})",
+                    entity_ids,
+                ).fetchall()
+            }
+            return [id_to_text.get(eid, "") for eid in entity_ids]
+        except sqlite3.Error as e:
+            logger.warning("_resolve_entity_texts failed: %s", e)
+            return []
+
+    def get_memory_impact(
+        self,
+        memory_key: str,
+        namespace: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Compute the graph impact of a memory.
+
+        Calculates how influential a memory is in the knowledge graph based
+        on the number of entities it references, the number of relations it
+        evidences, and whether it connects entities across namespaces.
+
+        impact_score formula:
+            impact_score = entity_count * 0.4 + relation_count * 0.4 + cross_namespace * 0.2
+
+        The score is unbounded ([0, +inf)) — higher means more impactful.
+
+        Args:
+            memory_key: The memory's storage_key.
+            namespace: Optional namespace filter.
+
+        Returns:
+            Dict with:
+              - "memory_id": the input memory_key
+              - "entity_count": number of entities linked to this memory
+              - "relation_count": number of relations evidenced by this memory
+              - "cross_namespace": bool, True if the memory's entities span namespaces
+              - "impact_score": float impact score
+        """
+        safe_key = self._sanitize(memory_key)
+        if not safe_key:
+            return {
+                "memory_id": memory_key,
+                "entity_count": 0,
+                "relation_count": 0,
+                "cross_namespace": False,
+                "impact_score": 0.0,
+            }
+
+        conn = self._conn_mgr.get_connection()
+
+        # Count entities linked to this memory, optionally filtered by namespace
+        if namespace:
+            entity_query = (
+                "SELECT COUNT(*) as cnt, COUNT(DISTINCT namespace) as ns_cnt "
+                "FROM memory_entities WHERE memory_key = ? AND namespace = ?"
+            )
+            entity_params: list = [safe_key, namespace]
+        else:
+            entity_query = (
+                "SELECT COUNT(*) as cnt, COUNT(DISTINCT namespace) as ns_cnt "
+                "FROM memory_entities WHERE memory_key = ?"
+            )
+            entity_params = [safe_key]
+
+        try:
+            row = conn.execute(entity_query, entity_params).fetchone()
+            entity_count = int(row["cnt"]) if row else 0
+            ns_count = int(row["ns_cnt"]) if row else 0
+        except sqlite3.Error as e:
+            logger.warning("get_memory_impact entity count failed: %s", e)
+            entity_count = 0
+            ns_count = 0
+
+        # Count relations evidenced by this memory (source_memory_key)
+        if namespace:
+            rel_query = "SELECT COUNT(*) as cnt FROM memory_relations " "WHERE source_memory_key = ? AND namespace = ?"
+            rel_params = [safe_key, namespace]
+        else:
+            rel_query = "SELECT COUNT(*) as cnt FROM memory_relations WHERE source_memory_key = ?"
+            rel_params = [safe_key]
+
+        try:
+            row = conn.execute(rel_query, rel_params).fetchone()
+            relation_count = int(row["cnt"]) if row else 0
+        except sqlite3.Error as e:
+            logger.warning("get_memory_impact relation count failed: %s", e)
+            relation_count = 0
+
+        # Check cross-namespace: does the memory's entities span multiple namespaces?
+        cross_namespace = ns_count > 1
+
+        # Compute impact_score
+        impact_score = entity_count * 0.4 + relation_count * 0.4 + (0.2 if cross_namespace else 0.0)
+
+        return {
+            "memory_id": memory_key,
+            "entity_count": entity_count,
+            "relation_count": relation_count,
+            "cross_namespace": cross_namespace,
+            "impact_score": round(impact_score, 4),
+        }
+
     # ── Relation management ───────────────────────────────────────
 
     def add_relation(
@@ -371,6 +682,7 @@ class KnowledgeGraph:
         source_memory_key: Optional[str] = None,
         weight: float = 1.0,
         namespace: str = "default",
+        confidence: str = "EXTRACTED",
     ) -> bool:
         """Add a relation between two entities.
 
@@ -384,10 +696,21 @@ class KnowledgeGraph:
             source_memory_key: Optional memory that evidence this relation.
             weight: Relation strength (default 1.0).
             namespace: Trusted namespace from adapter.
+            confidence: Edge confidence label (v0.8.0). One of
+                "EXTRACTED" (deterministic, default), "INFERRED" (LLM
+                inference), "AMBIGUOUS" (needs confirmation).
 
         Returns:
             True if relation was added, False on failure.
+
+        Raises:
+            ValueError: If confidence is not one of the valid labels.
         """
+        if confidence not in _VALID_CONFIDENCE_LABELS:
+            raise ValueError(
+                f"Invalid confidence label: {confidence!r}. " f"Must be one of {sorted(_VALID_CONFIDENCE_LABELS)}"
+            )
+
         safe_src = self._sanitize(src_entity_text)
         safe_dst = self._sanitize(dst_entity_text)
         if not safe_src or not safe_dst or not relation_type:
@@ -411,8 +734,9 @@ class KnowledgeGraph:
             conn.execute(
                 "INSERT OR IGNORE INTO memory_relations "
                 "(src_entity_id, dst_entity_id, relation_type, source_memory_key, "
-                "weight, namespace, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (src_id, dst_id, relation_type, source_memory_key, weight, safe_ns, now),
+                "weight, namespace, created_at, confidence) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (src_id, dst_id, relation_type, source_memory_key, weight, safe_ns, now, confidence),
             )
             conn.commit()
             return True
@@ -517,7 +841,7 @@ class KnowledgeGraph:
         where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
         query = (
             "SELECT src.entity_text as src_entity, dst.entity_text as dst_entity, "
-            "mr.relation_type, mr.weight, mr.source_memory_key "
+            "mr.relation_type, mr.weight, mr.source_memory_key, mr.confidence "
             "FROM memory_relations mr "
             "INNER JOIN memory_entities src ON mr.src_entity_id = src.id "
             "INNER JOIN memory_entities dst ON mr.dst_entity_id = dst.id "
@@ -536,6 +860,7 @@ class KnowledgeGraph:
                     "relation_type": row["relation_type"],
                     "weight": row["weight"],
                     "source_memory_key": row["source_memory_key"],
+                    "confidence": row["confidence"],
                 }
                 for row in rows
             ]

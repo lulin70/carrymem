@@ -579,6 +579,7 @@ class StorageAdapter(ABC):
         source_memory_key: Optional[str] = None,
         weight: float = 1.0,
         namespace: Optional[str] = None,
+        confidence: str = "EXTRACTED",
     ) -> bool:
         """Add a relation between two entities in the knowledge graph.
 
@@ -592,11 +593,61 @@ class StorageAdapter(ABC):
             source_memory_key: Optional evidence memory key.
             weight: Relation strength (default 1.0).
             namespace: Optional namespace.
+            confidence: Edge confidence label (EXTRACTED/INFERRED/AMBIGUOUS).
 
         Returns:
             True if relation was added.
         """
         return False
+
+    def shortest_path(
+        self,
+        src_entity: str,
+        dst_entity: str,
+        max_hops: int = 4,
+        namespace: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Find the shortest path between two entities (v0.8.0).
+
+        Default implementation returns not-found. Override in adapters with
+        ``graph: True`` capability.
+
+        Args:
+            src_entity: Source entity text.
+            dst_entity: Destination entity text.
+            max_hops: Maximum path length to search.
+            namespace: Optional namespace filter.
+
+        Returns:
+            Dict with "path", "length", and "found" keys.
+        """
+        return {"path": [], "length": -1, "found": False}
+
+    def get_memory_impact(
+        self,
+        memory_key: str,
+        namespace: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Compute the graph impact score of a memory (v0.8.0).
+
+        Default implementation returns zero impact. Override in adapters with
+        ``graph: True`` capability.
+
+        Args:
+            memory_key: The memory's storage_key.
+            namespace: Optional namespace filter.
+
+        Returns:
+            Dict with "memory_id", "entity_count", "relation_count",
+            "cross_namespace", and "impact_score" keys.
+        """
+        return {
+            "memory_id": memory_key,
+            "entity_count": 0,
+            "relation_count": 0,
+            "cross_namespace": False,
+            "impact_score": 0.0,
+        }
 
     def store_graph_entities(self, storage_key: str, text: str, namespace: Optional[str] = None) -> int:
         """Extract entities from text and store in the knowledge graph.

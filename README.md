@@ -969,7 +969,7 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 
 ## Project Status
 
-**Current Version**: v0.7.3
+**Current Version**: v0.8.0
 **Tests**: 4400+ passing, 0 failed, 21 skipped (performance tests excluded)
 **Coverage**: 80%+
 **mypy**: 0 errors (150+ source files, CI blocking gate)
@@ -977,6 +977,7 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 **Maturity**: 80/100 (B) per 7-dimension DevSquad evaluation
 
 **Changelog**:
+- **v0.8.0**: Graphify — 3 new MCP graph tools (query_graph, shortest_path, get_memory_impact), edge confidence labels (EXTRACTED/INFERRED/AMBIGUOUS) on memory_relations, schema migration v100.
 - **v0.7.3**: Security hardening — removed HMAC-CTR stream cipher fallback (cryptography is now a hard dependency), Fernet-only encryption, migration script for pre-v0.7.3 databases. Input validator defense-in-depth, batched LIKE queries, WAL throttle for recall access updates.
 - **v0.7.2**: Native Async I/O — async_sqlite adapter (aiosqlite), async recall/store APIs, Memify enhancement. P0 security fixes (fail-closed access control, MCP dispatcher injection), CI/CD hardening (bandit blocking, pip-audit, Docker non-root, pre-release test gate).
 - **v0.7.1**: Multi-Mode Retrieval — vector + FTS + semantic fusion with RRF, Memify content enrichment API.

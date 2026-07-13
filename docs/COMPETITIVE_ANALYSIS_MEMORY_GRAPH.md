@@ -3,7 +3,7 @@
 > **分析日期**: 2026-07-01
 > **分析对象**: [cognee](https://github.com/topoteretes/cognee) (12k+ stars, 270k pipeline runs/mo) + [codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp) (1k+ stars, 66 languages)
 > **分析目的**: 评估"记忆从扁平存储 → 关系图谱 + 压缩效率"演进方向对 CarryMem 的借鉴意义
-> **CarryMem 当前版本**: v0.7.3
+> **CarryMem 当前版本**: v0.8.0
 
 ---
 

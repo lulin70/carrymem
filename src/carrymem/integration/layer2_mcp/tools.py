@@ -758,6 +758,95 @@ HEALTH_CHECK_TOOLS: List[Dict[str, Any]] = [
     },
 ]
 
+GRAPH_TOOLS: List[Dict[str, Any]] = [
+    {
+        "name": "query_graph",
+        "description": (
+            "Multi-hop graph traversal from an entity. Performs BFS "
+            "traversal of the knowledge graph starting from the given "
+            "entity, collecting all connected entities and memories "
+            "within max_hops hops. Requires storage adapter with graph "
+            "capability."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "entity_text": {
+                    "type": "string",
+                    "description": "The starting entity text to traverse from",
+                },
+                "max_hops": {
+                    "type": "integer",
+                    "description": "Maximum traversal depth (default 2, max 5)",
+                    "default": 2,
+                    "minimum": 1,
+                    "maximum": 5,
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum memories to return (default 20, max 100)",
+                    "default": 20,
+                    "minimum": 1,
+                    "maximum": 100,
+                },
+            },
+            "required": ["entity_text"],
+        },
+    },
+    {
+        "name": "shortest_path",
+        "description": (
+            "Find the shortest path between two entities in the knowledge "
+            "graph using bidirectional BFS. Returns the path as a list of "
+            "entity texts from source to destination. Useful for "
+            "understanding how concepts are connected. Requires storage "
+            "adapter with graph capability."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "src_entity": {
+                    "type": "string",
+                    "description": "The source entity text",
+                },
+                "dst_entity": {
+                    "type": "string",
+                    "description": "The destination entity text",
+                },
+                "max_hops": {
+                    "type": "integer",
+                    "description": "Maximum path length to search (default 4, max 10)",
+                    "default": 4,
+                    "minimum": 1,
+                    "maximum": 10,
+                },
+            },
+            "required": ["src_entity", "dst_entity"],
+        },
+    },
+    {
+        "name": "get_memory_impact",
+        "description": (
+            "Compute the graph impact of a memory. Returns the number of "
+            "entities linked to the memory, the number of relations it "
+            "evidences, whether it spans multiple namespaces, and an "
+            "impact_score (entity_count*0.4 + relation_count*0.4 + "
+            "cross_namespace*0.2). Requires storage adapter with graph "
+            "capability."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "memory_id": {
+                    "type": "string",
+                    "description": "The memory's storage_key (memory_id) to evaluate",
+                },
+            },
+            "required": ["memory_id"],
+        },
+    },
+]
+
 TOOLS = (
     CORE_TOOLS
     + OPTIONAL_TOOLS
@@ -767,6 +856,7 @@ TOOLS = (
     + CONSOLIDATION_TOOLS
     + RULE_TOOLS
     + HEALTH_CHECK_TOOLS
+    + GRAPH_TOOLS
 )
 TOOL_NAMES = {tool["name"] for tool in TOOLS}
 CORE_TOOL_NAMES = {tool["name"] for tool in CORE_TOOLS}
@@ -777,6 +867,7 @@ PROMPT_TOOL_NAMES = {tool["name"] for tool in PROMPT_TOOLS}
 CONSOLIDATION_TOOL_NAMES = {tool["name"] for tool in CONSOLIDATION_TOOLS}
 RULE_TOOL_NAMES = {tool["name"] for tool in RULE_TOOLS}
 HEALTH_CHECK_TOOL_NAMES = {tool["name"] for tool in HEALTH_CHECK_TOOLS}
+GRAPH_TOOL_NAMES = {tool["name"] for tool in GRAPH_TOOLS}
 
 CLASSIFICATION_SCHEMA = {
     "schema_version": "1.0.0",

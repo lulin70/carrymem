@@ -245,6 +245,62 @@ class RecallMixin:
             return {"entities": [], "memories": []}
         return self._adapter.recall_graph(entity_text, max_hops, self._namespace, limit)
 
+    def recall_shortest_path(
+        self,
+        src_entity: str,
+        dst_entity: str,
+        max_hops: int = 4,
+    ) -> Dict[str, Any]:
+        """Find the shortest path between two entities (v0.8.0).
+
+        Uses bidirectional BFS to find the shortest path in the knowledge
+        graph between two entities. Useful for understanding how concepts
+        are connected.
+
+        Args:
+            src_entity: The source entity text.
+            dst_entity: The destination entity text.
+            max_hops: Maximum path length to search (default 4, hard cap 10).
+
+        Returns:
+            Dict with "path" (list of entity texts from src to dst),
+            "length" (number of edges, 0 if src==dst, -1 if no path),
+            and "found" (bool).
+        """
+        if not self._adapter:
+            raise StorageNotConfiguredError()
+        if not self._adapter.capabilities.get("graph", False):
+            return {"path": [], "length": -1, "found": False}
+        return self._adapter.shortest_path(src_entity, dst_entity, max_hops, self._namespace)
+
+    def recall_memory_impact(
+        self,
+        memory_id: str,
+    ) -> Dict[str, Any]:
+        """Compute the graph impact of a memory (v0.8.0).
+
+        Calculates how influential a memory is in the knowledge graph.
+        impact_score = entity_count * 0.4 + relation_count * 0.4 + cross_namespace * 0.2
+
+        Args:
+            memory_id: The memory's storage_key.
+
+        Returns:
+            Dict with "memory_id", "entity_count", "relation_count",
+            "cross_namespace" (bool), and "impact_score" (float).
+        """
+        if not self._adapter:
+            raise StorageNotConfiguredError()
+        if not self._adapter.capabilities.get("graph", False):
+            return {
+                "memory_id": memory_id,
+                "entity_count": 0,
+                "relation_count": 0,
+                "cross_namespace": False,
+                "impact_score": 0.0,
+            }
+        return self._adapter.get_memory_impact(memory_id, self._namespace)
+
     def add_graph_relation(
         self,
         src_entity: str,
@@ -252,6 +308,7 @@ class RecallMixin:
         relation_type: str,
         source_memory_key: Optional[str] = None,
         weight: float = 1.0,
+        confidence: str = "EXTRACTED",
     ) -> bool:
         """Add a relation between two entities in the knowledge graph (v0.7.0).
 
@@ -261,6 +318,8 @@ class RecallMixin:
             relation_type: Relation type (e.g. "prefers", "works_on").
             source_memory_key: Optional memory key that evidences this relation.
             weight: Relation strength (default 1.0).
+            confidence: Edge confidence label (v0.8.0). One of
+                "EXTRACTED" (default), "INFERRED", "AMBIGUOUS".
 
         Returns:
             True if relation was added successfully.
@@ -276,6 +335,7 @@ class RecallMixin:
             source_memory_key,
             weight,
             self._namespace,
+            confidence,
         )
 
     # ── Session Dual-Layer Memory (v0.7.0) ──────────────────────

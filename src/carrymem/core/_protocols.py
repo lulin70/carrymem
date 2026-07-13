@@ -258,8 +258,22 @@ class RecallOps(Protocol):
         relation_type: str,
         source_memory_key: Optional[str] = None,
         weight: float = 1.0,
+        confidence: str = "EXTRACTED",
     ) -> bool:
         """Add a relation between two entities in the knowledge graph."""
+        ...
+
+    def recall_shortest_path(
+        self,
+        src_entity: str,
+        dst_entity: str,
+        max_hops: int = 4,
+    ) -> Dict[str, Any]:
+        """Find shortest path between two entities via bidirectional BFS."""
+        ...
+
+    def recall_memory_impact(self, memory_id: str) -> Dict[str, Any]:
+        """Compute impact score for a memory based on entities and relations."""
         ...
 
     # ── Session Dual-Layer Memory (v0.7.0) ──────────────────────

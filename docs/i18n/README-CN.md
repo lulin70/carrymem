@@ -649,7 +649,7 @@ cm.import_memories(input_path="backup.json")
 
 ## 项目状态
 
-**当前版本**：v0.7.3
+**当前版本**：v0.8.0
 **测试**：4198 passing
 **覆盖率**：80%+
 

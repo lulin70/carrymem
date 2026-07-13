@@ -742,6 +742,48 @@ class SQLiteAdapter(StorageAdapter):
         ns = namespace or self.namespace
         return dict(self._get_knowledge_graph().recall_graph(entity_text, max_hops, ns, limit))
 
+    def shortest_path(
+        self,
+        src_entity: str,
+        dst_entity: str,
+        max_hops: int = 4,
+        namespace: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Find the shortest path between two entities via bidirectional BFS (v0.8.0).
+
+        Args:
+            src_entity: The source entity text.
+            dst_entity: The destination entity text.
+            max_hops: Maximum path length to search (default 4, hard cap 10).
+            namespace: Optional namespace filter (defaults to adapter's).
+
+        Returns:
+            Dict with "path" (list of entity texts), "length" (edge count),
+            and "found" (bool).
+        """
+        ns = namespace or self.namespace
+        return dict(self._get_knowledge_graph().shortest_path(src_entity, dst_entity, max_hops, ns))
+
+    def get_memory_impact(
+        self,
+        memory_key: str,
+        namespace: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Compute the graph impact of a memory (v0.8.0).
+
+        impact_score = entity_count * 0.4 + relation_count * 0.4 + cross_namespace * 0.2
+
+        Args:
+            memory_key: The memory's storage_key.
+            namespace: Optional namespace filter (defaults to adapter's).
+
+        Returns:
+            Dict with "memory_id", "entity_count", "relation_count",
+            "cross_namespace", and "impact_score".
+        """
+        ns = namespace or self.namespace
+        return dict(self._get_knowledge_graph().get_memory_impact(memory_key, ns))
+
     def add_graph_relation(
         self,
         src_entity_text: str,
@@ -750,6 +792,7 @@ class SQLiteAdapter(StorageAdapter):
         source_memory_key: Optional[str] = None,
         weight: float = 1.0,
         namespace: Optional[str] = None,
+        confidence: str = "EXTRACTED",
     ) -> bool:
         """Add a relation between two entities in the knowledge graph (v0.7.0).
 
@@ -760,6 +803,8 @@ class SQLiteAdapter(StorageAdapter):
             source_memory_key: Optional evidence memory key.
             weight: Relation strength (default 1.0).
             namespace: Optional namespace (defaults to adapter's).
+            confidence: Edge confidence label (v0.8.0). One of
+                "EXTRACTED" (default), "INFERRED", "AMBIGUOUS".
 
         Returns:
             True if relation was added.
@@ -773,6 +818,7 @@ class SQLiteAdapter(StorageAdapter):
                 source_memory_key,
                 weight,
                 ns,
+                confidence,
             )
         )
 

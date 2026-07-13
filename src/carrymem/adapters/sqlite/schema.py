@@ -127,6 +127,18 @@ _V090_INDEX_SQL = [
     "CREATE INDEX IF NOT EXISTS idx_memories_chain_version ON memories(version_chain_id, version_number)",
 ]
 
+# v0.8.0 release: add confidence column to memory_relations for edge
+# confidence labels (EXTRACTED / INFERRED / AMBIGUOUS). Uses migrate_v100
+# because migrate_v080/v090 were already taken by superseded_at and
+# memory_nature columns respectively.
+_V100_GRAPH_CONFIDENCE_SQL = [
+    "ALTER TABLE memory_relations ADD COLUMN confidence TEXT NOT NULL DEFAULT 'EXTRACTED'",
+]
+
+_V100_GRAPH_CONFIDENCE_INDEX_SQL = [
+    "CREATE INDEX IF NOT EXISTS idx_relations_confidence ON memory_relations(confidence)",
+]
+
 _V051_ENTITY_ALIASES_SQL = """
 CREATE TABLE IF NOT EXISTS entity_aliases (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -267,6 +279,7 @@ class SchemaManager:
             self.migrate_v070()
         self.migrate_v080()
         self.migrate_v090()
+        self.migrate_v100()
         self.migrate_v051()
         self.migrate_v052()
 
@@ -463,6 +476,30 @@ class SchemaManager:
             conn.execute(
                 "UPDATE memories SET memory_nature = 'event' " "WHERE type IN ('session_summary', 'task_pattern')"
             )
+            conn.commit()
+
+    def migrate_v100(self):
+        """Add confidence column to memory_relations for edge labels (v0.8.0).
+
+        Adds a TEXT column ``confidence`` with DEFAULT 'EXTRACTED' to the
+        ``memory_relations`` table. Valid values: EXTRACTED (deterministic
+        extraction), INFERRED (LLM inference), AMBIGUOUS (needs confirmation).
+        Idempotent — checks column existence before altering.
+        """
+        conn = self._conn_mgr.get_connection()
+        try:
+            conn.execute("SELECT confidence FROM memory_relations LIMIT 1")
+        except _OpError:
+            for sql in _V100_GRAPH_CONFIDENCE_SQL:
+                try:
+                    conn.execute(sql)
+                except _OpError:
+                    pass
+            for sql in _V100_GRAPH_CONFIDENCE_INDEX_SQL:
+                try:
+                    conn.execute(sql)
+                except _OpError:
+                    pass
             conn.commit()
 
     def migrate_v051(self):

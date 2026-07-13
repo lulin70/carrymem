@@ -30,7 +30,7 @@ v0.3.0 ─── 設計基線 (記憶基礎 + 規則設計文件)
 - 第二位數字：GA里程碑（API穩定性保證）
 - 不跳v1.0.0——透過實際生產使用贏得
 
-> **註**：上方列出的 v0.3.0–v0.4.1 版本代表專案的開發歷史。当前版本为 **v0.7.3**，包含自動備份、加密 .carry 檔案、並行安全、E2E 測試、PrefEval **83.0%**(canonical)、狀態/事件版本鏈、安全加固、偏好注入最佳化、context.py 模組化、整合排程等改進，以及 P0/P1/P2 成熟度修復（RecallCache 細粒度失效、PBKDF2 600k、多階段 Dockerfile、release.yml 版本一致性閘門）。
+> **註**：上方列出的 v0.3.0–v0.4.1 版本代表專案的開發歷史。当前版本为 **v0.8.0**，包含知識圖譜 MCP 工具（query_graph、shortest_path、get_memory_impact）、邊置信度標籤（EXTRACTED/INFERRED/AMBIGUOUS）、自動備份、加密 .carry 檔案、並行安全、E2E 測試、PrefEval **83.0%**(canonical)、狀態/事件版本鏈、安全加固、偏好注入最佳化、context.py 模組化、整合排程等改進，以及 P0/P1/P2 成熟度修復（RecallCache 細粒度失效、PBKDF2 600k、多階段 Dockerfile、release.yml 版本一致性閘門）。
 
 ---
 

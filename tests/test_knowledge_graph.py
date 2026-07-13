@@ -95,6 +95,7 @@ def _init_graph_schema(conn: sqlite3.Connection) -> None:
             weight REAL NOT NULL DEFAULT 1.0,
             namespace TEXT NOT NULL DEFAULT 'default',
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            confidence TEXT NOT NULL DEFAULT 'EXTRACTED',
             FOREIGN KEY (src_entity_id) REFERENCES memory_entities(id),
             FOREIGN KEY (dst_entity_id) REFERENCES memory_entities(id)
         );
@@ -107,6 +108,7 @@ def _init_graph_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_relations_dst ON memory_relations(dst_entity_id);
         CREATE INDEX IF NOT EXISTS idx_relations_type ON memory_relations(relation_type);
         CREATE INDEX IF NOT EXISTS idx_relations_namespace ON memory_relations(namespace);
+        CREATE INDEX IF NOT EXISTS idx_relations_confidence ON memory_relations(confidence);
     """)
     conn.commit()
 
