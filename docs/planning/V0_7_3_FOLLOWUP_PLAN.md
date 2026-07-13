@@ -1,9 +1,19 @@
 # CarryMem v0.7.3 跟进方案
 
+> **状态**: ✅ 已完成 (2026-07-13, commit 2c09c8c, pushed to new-main)
 > **版本**: v0.7.3 (PATCH 递增 — 修复/优化/重构，无新功能，遵循 SemVer)
 > **基线**: v0.7.2 (commit 7b55c87, 2026-07-12)
 > **来源**: [ASSESSMENT_D7_MATURITY_20260712.md](file:///Users/lin/trae_projects/carrymem/ASSESSMENT_D7_MATURITY_20260712.md) 第十节保留项
 > **审核**: DevSquad V4.0.0 五角色并行审核 (architect/security/tester/coder/devops)
+
+## 完成情况
+
+| 波次 | 编号 | 内容 | Commit | 状态 |
+|------|------|------|--------|------|
+| Wave 1 | P1-2 + P1-5 | input_validator 防御增强 + 语义回退 N+1 LIKE 批量化 | a54ac38 | ✅ |
+| Wave 2 | P1-4 | WAL throttle for recall update_access | bce1326 | ✅ |
+| Wave 3 | P1-1 | HMAC-CTR stream cipher 移除 + 迁移脚本 | bf705aa | ✅ |
+| 版本发布 | — | v0.7.3 版本号统一更新 + 文档同步 + 推送 | 2c09c8c | ✅ |
 
 ---
 
