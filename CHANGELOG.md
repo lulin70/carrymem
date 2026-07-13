@@ -10,6 +10,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > historical records from the pre-reset development cycle and should not be confused with
 > the current v0.2.x series.
 
+## [0.7.3] - 2026-07-13 (Security Hardening — Fernet-Only Encryption)
+
+### Changed — Breaking: cryptography is now a hard dependency
+- **`MemoryEncryption`** (`src/carrymem/security/encryption.py`): Removed HMAC-CTR
+  stream cipher fallback entirely. The `cryptography` package (Fernet/AES-128-CBC + HMAC)
+  is now required at runtime. `MemoryEncryption.__init__` raises `EncryptionError` if
+  `cryptography` is not installed (previously fell back to weak stream cipher with
+  `SecurityWarning`).
+- **`setup.py`**: Moved `cryptography>=46.0.6` from `extras_require["encryption"]` to
+  `install_requires`. The `[encryption]` extra is removed. `[full]` extra no longer
+  lists `cryptography` (it's already in `install_requires`).
+- **`MemoryEncryption.encrypt()`/`decrypt()`**: Simplified to Fernet-only. Removed
+  `_encrypt_stream`, `_decrypt_stream`, `_generate_keystream`, `_decrypt_with_key`,
+  `_warn_fallback` methods.
+- **`MemoryEncryption.rotate_key()`**: The `_re_encrypt` closure now rejects legacy
+  stream cipher ciphertexts (detected via `gAAAAA` prefix check) with `EncryptionError`,
+  directing users to run `scripts/migrate_encryption.py` first.
+- **`MemoryEncryption.backend`**: Always returns `"fernet"` (was `"fernet"` or `"hmac-ctr"`).
+- **`MemoryEncryption.security_level`**: Always returns `"strong"` (was `"strong"` or `"weak"`).
+
+### Added — Migration script
+- **`scripts/migrate_encryption.py`**: One-time migration script for pre-v0.7.3 databases
+  that contain stream cipher ciphertexts. Features:
+  - `VACUUM INTO` backup before any modifications
+  - Single-transaction migration (rollback on failure)
+  - `--dry-run` mode (exit code 2 if stream cipher ciphertexts found)
+  - No plaintext logging (SHA-256 hashes only for correlation)
+  - Scans `memories.content`, `memories.raw_text`, `memories.original_message`,
+    `memory_versions.content`
+- **`tests/helpers/legacy_cipher.py`**: Preserves stream cipher code (`encrypt_stream`,
+  `decrypt_stream`, `generate_keystream`, `is_stream_cipher_ciphertext`) for use by
+  the migration script only. Not imported by production code.
+
+### Fixed — P1 follow-up items from D7 maturity assessment
+- **P1-2**: `InputValidator` defense-in-depth — additional pattern validation and
+  boundary checks for safer input handling.
+- **P1-4**: WAL throttle for `recall_update_access` — `_should_update_access()` method
+  with configurable interval (default 60s, `CARRYMEM_ACCESS_UPDATE_INTERVAL` env var).
+  Prevents WAL bloat from writing access metadata on every recall. Type guard handles
+  string → datetime parsing with fail-open on error.
+- **P1-5**: Batched LIKE queries — semantic fallback recall no longer issues N+1 LIKE
+  queries; terms are batched into a single query with OR clauses.
+
+### Migration Guide
+If you have a pre-v0.7.3 database that was created without `cryptography` installed:
+1. Install `cryptography`: `pip install cryptography`
+2. Run migration: `python scripts/migrate_encryption.py --db ~/.carrymem/memories.db`
+3. Verify with `--dry-run` first if unsure: `python scripts/migrate_encryption.py --db ~/.carrymem/memories.db --dry-run`
+
+If your database was always created with `cryptography` installed (Fernet-only), no
+migration is needed.
+
 ## [0.7.2] - 2026-07-11 (Memify Dynamic Refinement + Native Async I/O)
 
 ### Added — Memify Engine (compresses v0.9.0 roadmap into PATCH)

@@ -7,12 +7,12 @@
 ## 项目概述
 
 - **CarryMem** 是一个可移植的 AI 记忆层：让 AI 自动记住用户的偏好、决策与纠正，跨模型 / 工具 / 设备复用，无需每次重复自我介绍。
-- **当前版本**：`0.7.2`（来源：`src/carrymem/__version__.py`）
+- **当前版本**：`0.7.3`（来源：`src/carrymem/__version__.py`）
 - **核心技术栈**：
   - Python 3.12+（`setup.py` 中 `python_requires=">=3.12"`）
   - SQLite + FTS5（默认存储与全文检索）
   - MCP（Model Context Protocol）服务器集成
-  - 核心零依赖（`install_requires` 仅 `PyYAML>=5.0`），语言检测 / 向量检索 / 加密 / LLM / TUI 均为可选 extras
+  - 核心依赖：`PyYAML>=5.0` + `cryptography>=46.0.6`（v0.7.3 起 cryptography 为硬依赖），语言检测 / 向量检索 / LLM / TUI 均为可选 extras
 - **仓库**：https://github.com/lulin70/carrymem
 - **CI 默认分支**：`new-main`（非 `main`，提交 PR 时注意基分支）
 

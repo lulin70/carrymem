@@ -36,7 +36,8 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
   │
   ├── v0.7.0  Knowledge Graph     (SQLite-native + Session dual-layer)     ✅
   ├── v0.7.1  Multi-Mode Retrieval (time/semantic/hybrid/multi_mode APIs)  ✅
-  └── v0.7.2  Memify + Async I/O  (Dynamic refinement + AsyncSQLiteAdapter)✅
+  ├── v0.7.2  Memify + Async I/O  (Dynamic refinement + AsyncSQLiteAdapter)✅
+  └── v0.7.3  Security Hardening  (Fernet-only + WAL throttle + defense)  ✅
 ```
 
 **Versioning Rules**:
@@ -44,7 +45,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 - Second digit changes for GA milestones (API stability guarantee)
 - No "v1.0.0 jump" — earn it through proven production usage
 
-> **Note**: The v0.3.0–v0.7.2 versions listed above represent the project's development history. **Current version is v0.7.2**, including: v0.5.x (Entity Normalizer, Summary Layer, store_entry/store_batch core APIs), v0.6.x (deprecated API removal, architecture cleanup decoupling core from SQLiteAdapter, CVE-2026-34073 security fix, recency decay weighting), v0.7.0 (SQLite-native Knowledge Graph + Session dual-layer O(1) recall), v0.7.1 (multi-mode retrieval: recall_by_time/recall_semantic/recall_hybrid/recall_multi_mode), v0.7.2 (MemifyEngine three-phase dynamic refinement + AsyncSQLiteAdapter native async I/O). **4330 tests passing, 80%+ coverage, mypy 0 errors.** Next milestone: v0.8.0 (semantic embeddings integration + cloud MCP server).
+> **Note**: The v0.3.0–v0.7.3 versions listed above represent the project's development history. **Current version is v0.7.3**, including: v0.5.x (Entity Normalizer, Summary Layer, store_entry/store_batch core APIs), v0.6.x (deprecated API removal, architecture cleanup decoupling core from SQLiteAdapter, CVE-2026-34073 security fix, recency decay weighting), v0.7.0 (SQLite-native Knowledge Graph + Session dual-layer O(1) recall), v0.7.1 (multi-mode retrieval: recall_by_time/recall_semantic/recall_hybrid/recall_multi_mode), v0.7.2 (MemifyEngine three-phase dynamic refinement + AsyncSQLiteAdapter native async I/O), v0.7.3 (HMAC-CTR fallback removed, cryptography hard dependency, WAL throttle, input validator defense-in-depth, batched LIKE queries). **4400+ tests passing, 80%+ coverage, mypy 0 errors.** Next milestone: v0.8.0 (semantic embeddings integration + cloud MCP server).
 
 ---
 
@@ -536,7 +537,7 @@ See CHANGELOG.md for detailed history.
 
 ---
 
-### Future Roadmap (Post-v0.7.2)
+### Future Roadmap (Post-v0.7.3)
 - [ ] Semantic embeddings integration (sentence-transformers for vector search)
 - [ ] Cloud MCP Server (remote memory storage with encryption)
 - [ ] Smithery marketplace publication (requires .mcpb bundle or HTTP transport)

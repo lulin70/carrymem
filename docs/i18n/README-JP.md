@@ -197,10 +197,9 @@ pip install carrymem
 
 | 機能 | パッケージ | インストール |
 |------|-----------|-------------|
-| コア | PyYAML≥5.0 | `pip install carrymem` に含む |
+| コア（暗号化含む） | PyYAML≥5.0, cryptography≥46.0.6 | `pip install carrymem` に含む |
 | 多言語 | pycld2, langdetect | `pip install carrymem[language]` |
 | セマンティック検索 | sqlite-vec, sentence-transformers | `pip install carrymem[semantic]` |
-| 暗号化 | cryptography≥41.0 | `pip install carrymem[encryption]` |
 | 全機能 | 上記すべて | `pip install carrymem[full]` |
 | 開発 | pytest, black, flake8... | `pip install -e ".[dev]"` |
 
@@ -638,7 +637,7 @@ AI にはメモリが必要だと知っている。プロンプトファイル�
 
 ## プロジェクトステータス
 
-**現在のバージョン**: v0.7.2
+**現在のバージョン**: v0.7.3
 **テスト**: 4198 passing
 **カバレッジ**: 80%+
 

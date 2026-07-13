@@ -209,10 +209,9 @@ pip install carrymem
 
 | 기능 | 패키지 | 설치 |
 |------|--------|------|
-| Core | PyYAML≥5.0 | `pip install carrymem` (포함) |
+| Core (암호화 포함) | PyYAML≥5.0, cryptography≥46.0.6 | `pip install carrymem` (포함) |
 | 다국어 | pycld2, langdetect | `pip install carrymem[language]` |
 | 의미론적 검색 | sqlite-vec, sentence-transformers | `pip install carrymem[semantic]` |
-| 암호화 | cryptography≥41.0 | `pip install carrymem[encryption]` |
 | Full (모든 기능) | 위 모두 | `pip install carrymem[full]` |
 | 개발 | pytest, black, flake8... | `pip install -e ".[dev]"` |
 
@@ -766,7 +765,7 @@ AI에 기억이 필요하다는 건 이미 알고 있습니다. 프롬프트 파
 
 ## 프로젝트 상태
 
-**현재 버전**: v0.7.2
+**현재 버전**: v0.7.3
 **테스트**: 4198 passing
 **커버리지**: 80%+
 

@@ -222,10 +222,9 @@ pip install carrymem
 
 | Feature | Package | Install |
 |---------|---------|---------|
-| Core | PyYAML≥5.0 | `pip install carrymem` (included) |
+| Core (incl. encryption) | PyYAML≥5.0, cryptography≥46.0.6 | `pip install carrymem` (included) |
 | Multi-language | pycld2, langdetect | `pip install carrymem[language]` |
 | Semantic Search | sqlite-vec, sentence-transformers | `pip install carrymem[semantic]` |
-| Encryption | cryptography≥41.0 | `pip install carrymem[encryption]` |
 | Full (all features) | all above | `pip install carrymem[full]` |
 | Development | pytest, black, flake8... | `pip install -e ".[dev]"` |
 
@@ -970,14 +969,15 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 
 ## Project Status
 
-**Current Version**: v0.7.2
-**Tests**: 4322 passing, 0 failed, 18 skipped
+**Current Version**: v0.7.3
+**Tests**: 4400+ passing, 0 failed, 21 skipped (performance tests excluded)
 **Coverage**: 80%+
 **mypy**: 0 errors (150+ source files, CI blocking gate)
 **flake8**: 0 errors (black + isort formatted)
 **Maturity**: 80/100 (B) per 7-dimension DevSquad evaluation
 
 **Changelog**:
+- **v0.7.3**: Security hardening — removed HMAC-CTR stream cipher fallback (cryptography is now a hard dependency), Fernet-only encryption, migration script for pre-v0.7.3 databases. Input validator defense-in-depth, batched LIKE queries, WAL throttle for recall access updates.
 - **v0.7.2**: Native Async I/O — async_sqlite adapter (aiosqlite), async recall/store APIs, Memify enhancement. P0 security fixes (fail-closed access control, MCP dispatcher injection), CI/CD hardening (bandit blocking, pip-audit, Docker non-root, pre-release test gate).
 - **v0.7.1**: Multi-Mode Retrieval — vector + FTS + semantic fusion with RRF, Memify content enrichment API.
 - **v0.7.0**: Knowledge Graph + Session Dual-Layer Memory — entity graph storage, session-scoped memory isolation, dual-layer recall.

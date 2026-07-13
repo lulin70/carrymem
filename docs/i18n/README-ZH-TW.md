@@ -112,10 +112,9 @@ cd carrymem && pip install -e ".[dev]"
 
 | 功能 | 相依套件 | 安裝指令 |
 |------|----------|----------|
-| 核心功能 | PyYAML≥5.0 | 自動包含 |
+| 核心功能（含加密） | PyYAML≥5.0, cryptography≥46.0.6 | 自動包含 |
 | 多語言偵測 | pycld2, langdetect | `pip install carrymem[language]` |
 | 語意搜尋 | sqlite-vec, sentence-transformers | `pip install carrymem[semantic]` |
-| 加密儲存 | cryptography≥41.0 | `pip install carrymem[encryption]` |
 
 > **核心功能零 LLM 相依性** — 分類使用內建規則引擎，無需呼叫任何大型模型。
 
@@ -650,7 +649,7 @@ cm.import_memories(input_path="backup.json")
 
 ## 專案狀態
 
-**目前版本**：v0.7.2
+**目前版本**：v0.7.3
 **測試**：4198 passing
 **覆蓋率**：80%+
 
