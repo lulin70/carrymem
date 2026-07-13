@@ -367,8 +367,12 @@ class TestPathValidation:
         assert isinstance(result, Path)
 
     def test_path_outside_allowed_in_strict(self, validator):
+        # /opt/nonexistent_test_path is not a symlink on Linux or macOS,
+        # does not match path traversal patterns, and is outside home/temp dirs.
+        # /usr/bin/python was previously used but is a symlink on Linux CI,
+        # triggering the symlink check before the location check.
         with pytest.raises(ValidationError, match="outside allowed"):
-            validator.validate_path("/usr/bin/python")
+            validator.validate_path("/opt/nonexistent_test_path")
 
 
 class TestConvenienceFunctions:
