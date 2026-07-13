@@ -10,9 +10,9 @@
 
 | 波次 | 编号 | 内容 | Commit | 状态 |
 |------|------|------|--------|------|
-| Wave 1 | P0-1 | MCP 图查询工具 (query_graph/shortest_path/get_memory_impact) | (pending) | ✅ |
-| Wave 2 | P0-2 | 边置信度标签 (memory_relations.confidence) | (pending) | ✅ |
-| 版本发布 | — | v0.8.0 版本号统一更新 + 文档同步 + 推送 | (pending) | 🔄 |
+| Wave 1 | P0-1 | MCP 图查询工具 (query_graph/shortest_path/get_memory_impact) | b55a93a | ✅ |
+| Wave 2 | P0-2 | 边置信度标签 (memory_relations.confidence) | b55a93a | ✅ |
+| 版本发布 | — | v0.8.0 版本号统一更新 + 文档同步 + 推送 | b55a93a | ✅ |
 
 ---
 
