@@ -30,9 +30,9 @@ StoredMemory              # Stored memory data class
 # Stable methods on CarryMem
 CarryMem.classify_and_remember(message, context=None) -> Dict
 CarryMem.recall_memories(query=None, filters=None, limit=20) -> List[Dict]
-CarryMem.forget_memory(storage_key) -> bool
+CarryMem.forget_memory(memory_id, user_id=None) -> bool
 CarryMem.declare(message, context=None) -> Dict
-CarryMem.declare_preference(message, context=None) -> Dict  # Alias for declare()
+CarryMem.declare_preference(message, context=None, user_id=None) -> DeclareResult  # Alias for declare()
 CarryMem.get_stats() -> Dict
 CarryMem.get_memory_profile() -> Dict
 CarryMem.whoami() -> Dict
@@ -57,7 +57,7 @@ CarryMem.get_effectiveness_report() -> Dict
 CarryMem.validate_source_memories(rule_id) -> Dict
 
 # Stable constructors
-CarryMem(storage="sqlite", db_path=None, namespace="default", knowledge_adapter=None)
+CarryMem(storage="sqlite", db_path=None, knowledge_adapter=None, namespace="default", config=None, encryption_key=None, auto_backup_interval=20, engine=None)
 
 # Stable exceptions
 StorageNotConfiguredError
@@ -95,7 +95,6 @@ The following MCP tool names and their input schemas are **Stable**:
 classify_message       {message: str, context?: str}
 get_classification_schema  {format?: "json"|"markdown"}
 batch_classify         {messages: [{message: str, context?: str}]}
-mce_status             {}
 classify_and_remember  {message: str, context?: str}
 recall_memories        {query?: str, filters?: object, limit?: int}
 forget_memory          {memory_id: str}
@@ -133,7 +132,7 @@ MergeStrategy / MergeDecision / MergeConflict / MergeResult
 RuleScope / VALID_RULE_SCOPES / SCOPE_PRIORITY
 
 # Experimental - Advanced features
-CarryMem.update_memory(storage_key, content) -> Dict
+CarryMem.update_memory(storage_key, new_content, reason=None, user_id=None) -> Dict
 CarryMem.rollback_memory(storage_key, version) -> Dict
 CarryMem.get_memory_history(storage_key) -> List
 CarryMem.merge_memories() -> Dict
@@ -202,11 +201,13 @@ Early development used various version numbering schemes. The current v0.4.0 is 
 
 ## 7. Conditional Imports
 
-Optional dependencies that may not be available (e.g., `cryptography`, `pycld2`) are handled via conditional imports. When an optional dependency is missing:
+Optional dependencies that may not be available (e.g., `pycld2`) are handled via conditional imports. When an optional dependency is missing:
 
 - The corresponding feature is **disabled** (not crash)
 - A clear error message is shown when the feature is attempted
 - `None` sentinel values in `__init__.py` are being phased out in favor of lazy imports with clear error messages
+
+**Note**: Since v0.7.3, `cryptography` is a hard dependency (moved from `extras_require["crypto"]` to `install_requires`) and is no longer optional. The Fernet encryption backend (AES-128-CBC + HMAC) is always available; the previous HMAC-CTR stream cipher fallback has been removed.
 
 ## 8. Return Value Contracts
 

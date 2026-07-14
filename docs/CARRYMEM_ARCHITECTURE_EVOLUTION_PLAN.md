@@ -15,7 +15,7 @@ CarryMem 的核心定位是 **AI 身份层**（Memory + Rules + Knowledge），�
 |------|------|------|
 | **零 LLM 规则引擎** | 88% 分类覆盖，pattern-based 不依赖 LLM | 不引入 LLM 作为核心依赖 |
 | **零依赖核心** | 核心仅 PyYAML，可选 extras 按需安装 | 核心不增加必选依赖 |
-| **MCP 28 工具** | 最丰富的 MCP 记忆工具集 | 不减少工具数量 |
+| **MCP 31 工具** | 最丰富的 MCP 记忆工具集 | 不减少工具数量 |
 | **便携式** | 单文件 SQLite，跨模型/工具/设备 | 保持单文件部署能力 |
 | **三语支持** | EN/CN/JP 全链路 | 不减少语言支持 |
 
@@ -250,4 +250,4 @@ def recall_graph(self, entity: str, max_hops: int = 2) -> List[StoredMemory]:
 
 4. **Memify 是长期差异化** — Cognee 的 `memify()` 将记忆从"静态存储"提升为"动态结构"。CarryMem 的 `consolidate_memories` 框架可扩展，v0.6.2 的 recency 衰减是第一步。
 
-5. **产品初心不可妥协** — 零依赖核心、零 LLM 规则引擎、MCP 28 工具是 CarryMem 的差异化。所有演进都应保持这些优势，不引入重依赖。
+5. **产品初心不可妥协** — 零依赖核心、零 LLM 规则引擎、MCP 31 工具是 CarryMem 的差异化。所有演进都应保持这些优势，不引入重依赖。

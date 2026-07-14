@@ -603,6 +603,165 @@ class TestMCPToolsE2E(unittest.TestCase):
             )
 
 
+class TestGraphToolsE2E(unittest.TestCase):
+    """Verify: Graph query tools (v0.8.0) work through the full MCP handler chain.
+
+    Tests query_graph, shortest_path, and get_memory_impact via
+    Handlers.handle_tool(), using a real SQLite database (no mocks).
+    """
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.server = _make_server(self.tmpdir)
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
+        # Direct CarryMem access for graph setup (relations have no MCP tool)
+        self.cm = self.server.handlers._carrymem
+
+    def tearDown(self):
+        try:
+            self.loop.run_until_complete(self.server.cleanup())
+        finally:
+            self.loop.close()
+            asyncio.set_event_loop(None)
+
+    def test_query_graph_tool_e2e(self):
+        """Verify: query_graph returns entities and memories via handle_tool."""
+        # Setup: create a small graph (PostgreSQL → SQL → Database)
+        self.cm.add_graph_relation("PostgreSQL", "SQL", "is_a")
+        self.cm.add_graph_relation("SQL", "Database", "is_a")
+
+        result = self.loop.run_until_complete(
+            _call_tool(self.server, "query_graph", {"entity_text": "PostgreSQL", "max_hops": 2})
+        )
+        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        data = result.get("data", result)
+        self.assertIn("entities", data, "query_graph must return 'entities'")
+        self.assertIn("memories", data, "query_graph must return 'memories'")
+        self.assertIsInstance(data["entities"], list)
+        self.assertIsInstance(data["memories"], list)
+        # The starting entity and its neighbors should be present
+        entity_texts = {e["entity_text"] for e in data["entities"]}
+        self.assertIn("PostgreSQL", entity_texts)
+        self.assertIn("SQL", entity_texts)
+
+    def test_shortest_path_tool_e2e(self):
+        """Verify: shortest_path returns path, length, found via handle_tool."""
+        # Setup: A → B → C chain
+        self.cm.add_graph_relation("Python", "Programming", "is_a")
+        self.cm.add_graph_relation("Programming", "Computer_Science", "part_of")
+
+        result = self.loop.run_until_complete(
+            _call_tool(
+                self.server,
+                "shortest_path",
+                {"src_entity": "Python", "dst_entity": "Computer_Science", "max_hops": 4},
+            )
+        )
+        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        data = result.get("data", result)
+        self.assertIn("path", data)
+        self.assertIn("length", data)
+        self.assertIn("found", data)
+        self.assertTrue(data["found"], "Path should be found in connected graph")
+        self.assertEqual(data["length"], 2, "Two-hop path expected")
+        self.assertEqual(data["path"][0], "Python")
+        self.assertEqual(data["path"][-1], "Computer_Science")
+
+    def test_get_memory_impact_tool_e2e(self):
+        """Verify: get_memory_impact returns entity_count, relation_count, impact_score."""
+        # Step 1: Store a memory to get a storage_key
+        store_result = self.loop.run_until_complete(
+            _call_tool(self.server, "declare_preference", {"message": "I prefer PostgreSQL for data science"})
+        )
+        self.assertTrue(store_result.get("success"))
+        store_data = store_result.get("data", store_result)
+        storage_keys = store_data.get("storage_keys", [])
+        self.assertGreater(len(storage_keys), 0, "Should return at least one storage_key")
+        memory_id = storage_keys[0]
+
+        # Step 2: Ensure entities are linked to this memory
+        self.cm._adapter.store_graph_entities(memory_id, "PostgreSQL is a SQL database")
+
+        # Step 3: Add a relation evidenced by this memory
+        self.cm.add_graph_relation("PostgreSQL", "SQL", "is_a", source_memory_key=memory_id)
+
+        # Step 4: Query impact through MCP handler
+        result = self.loop.run_until_complete(
+            _call_tool(self.server, "get_memory_impact", {"memory_id": memory_id})
+        )
+        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        data = result.get("data", result)
+        self.assertIn("entity_count", data)
+        self.assertIn("relation_count", data)
+        self.assertIn("impact_score", data)
+        self.assertIsInstance(data["entity_count"], int)
+        self.assertIsInstance(data["relation_count"], int)
+        self.assertIsInstance(data["impact_score"], (int, float))
+        # With linked entities and a relation, counts should be non-zero
+        self.assertGreater(data["entity_count"], 0, "Should have at least one linked entity")
+
+    def test_graph_tools_full_user_flow(self):
+        """Verify: Full user flow — create memory → extract entities → add relation → query → path → impact."""
+        # Step 1: Create a memory (auto-extracts entities)
+        store_result = self.loop.run_until_complete(
+            _call_tool(self.server, "classify_and_remember", {"message": "I prefer PostgreSQL for database development"})
+        )
+        self.assertTrue(store_result.get("success"), f"Store failed: {store_result}")
+        store_data = store_result.get("data", store_result)
+        storage_keys = store_data.get("storage_keys", [])
+        self.assertGreater(len(storage_keys), 0, "Should store at least one memory")
+        memory_id = storage_keys[0]
+
+        # Step 2: Ensure entities are extracted and linked to the memory
+        self.cm._adapter.store_graph_entities(memory_id, "PostgreSQL is a SQL database system")
+
+        # Step 3: Add a relation between entities
+        added = self.cm.add_graph_relation(
+            "PostgreSQL", "SQL", "is_a", source_memory_key=memory_id
+        )
+        self.assertTrue(added, "add_graph_relation should succeed")
+
+        # Step 4: query_graph — find connected entities and memories
+        query_result = self.loop.run_until_complete(
+            _call_tool(self.server, "query_graph", {"entity_text": "PostgreSQL", "max_hops": 2})
+        )
+        self.assertTrue(query_result.get("success"))
+        query_data = query_result.get("data", query_result)
+        self.assertIn("entities", query_data)
+        self.assertIn("memories", query_data)
+        entity_texts = {e["entity_text"] for e in query_data["entities"]}
+        self.assertIn("PostgreSQL", entity_texts)
+        self.assertIn("SQL", entity_texts)
+
+        # Step 5: shortest_path — find path between entities
+        path_result = self.loop.run_until_complete(
+            _call_tool(
+                self.server,
+                "shortest_path",
+                {"src_entity": "PostgreSQL", "dst_entity": "SQL", "max_hops": 4},
+            )
+        )
+        self.assertTrue(path_result.get("success"))
+        path_data = path_result.get("data", path_result)
+        self.assertTrue(path_data["found"], "Path between PostgreSQL and SQL should be found")
+        self.assertEqual(path_data["length"], 1, "Direct relation = 1 hop")
+        self.assertEqual(path_data["path"][0], "PostgreSQL")
+        self.assertEqual(path_data["path"][-1], "SQL")
+
+        # Step 6: get_memory_impact — evaluate the memory's graph impact
+        impact_result = self.loop.run_until_complete(
+            _call_tool(self.server, "get_memory_impact", {"memory_id": memory_id})
+        )
+        self.assertTrue(impact_result.get("success"))
+        impact_data = impact_result.get("data", impact_result)
+        self.assertIn("entity_count", impact_data)
+        self.assertIn("relation_count", impact_data)
+        self.assertIn("impact_score", impact_data)
+        self.assertGreater(impact_data["entity_count"], 0, "Memory should have linked entities")
+        self.assertGreater(impact_data["impact_score"], 0.0, "Impact score should be positive")
+
+
 class TestMCPToolsCoverage(unittest.TestCase):
     """Verify: All declared TOOL_NAMES are reachable through the handler map."""
 

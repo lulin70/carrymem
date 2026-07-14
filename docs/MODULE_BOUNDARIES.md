@@ -1,7 +1,7 @@
 # CarryMem 模块边界可视化文档
 
 > 生成日期: 2026-06-11
-> 项目版本: v0.5.3
+> 项目版本: v0.8.0
 > 分析范围: `src/carrymem/` 全部子包和模块
 
 ---
@@ -31,6 +31,7 @@ src/carrymem/
 │   ├── __init__.py          # 适配器统一导出
 │   ├── base.py              # StorageAdapter ABC + MemoryEntry
 │   ├── sqlite_adapter.py    # SQLiteAdapter 主入口
+│   ├── async_sqlite.py      # 异步 SQLite 适配器 (v0.7.2)
 │   ├── json_adapter.py      # JSONAdapter
 │   ├── obsidian_adapter.py  # ObsidianAdapter
 │   ├── loader.py            # 动态加载器
@@ -44,7 +45,14 @@ src/carrymem/
 │   ├── pattern_analyzer.py  # 第二层：模式分析
 │   ├── semantic_classifier.py # 第三层：语义分类
 │   ├── semantic_aggregator.py # LLM 聚合
-│   └── session_summarizer.py  # 会话摘要
+│   ├── session_summarizer.py  # 会话摘要
+│   ├── knowledge_graph.py     # SQLite 原生图谱 (v0.7.0)
+│   ├── memify.py              # Memify 精炼 (v0.7.2)
+│   ├── memory_pattern_detectors.py # 实体提取 (v0.7.0)
+│   ├── noise_detector.py      # 噪声检测 (v0.7.x)
+│   ├── feedback_detector.py   # 反馈检测 (v0.7.x)
+│   ├── summary_layer.py       # 摘要层 (v0.7.x)
+│   └── entity_normalizer.py   # 实体规范化 (v0.5.1)
 │
 ├── rules/                   # ★ 规则引擎（独立子系统）
 │   ├── __init__.py          # RuleEngine 门面类
@@ -77,6 +85,9 @@ src/carrymem/
 │   ├── validators.py        # 参数校验器集合
 │   ├── language.py          # 语言检测
 │   └── confirmation.py      # 确认检测
+│
+├── i18n/                    # ★ 国际化 (v0.7.x)
+│   └── __init__.py          # 多语言资源
 │
 ├── cli/                     # CLI 命令行界面
 │   ├── __init__.py          # 命令路由主入口

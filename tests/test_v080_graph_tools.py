@@ -112,6 +112,41 @@ def _make_graph() -> KnowledgeGraph:
     return KnowledgeGraph(conn_mgr=conn_mgr, entity_normalizer=None, input_validator=None)
 
 
+def _init_graph_schema_without_confidence(conn: sqlite3.Connection) -> None:
+    """Create v0.6.2 graph schema WITHOUT confidence column (pre-v0.8.0 state).
+
+    Used by TestMigrateV100 to verify migrate_v100 adds the column correctly.
+    """
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS memory_entities (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            memory_key TEXT,
+            entity_type TEXT NOT NULL,
+            entity_text TEXT NOT NULL,
+            confidence REAL NOT NULL DEFAULT 0.5,
+            namespace TEXT NOT NULL DEFAULT 'default',
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (memory_key) REFERENCES memories(storage_key) ON DELETE SET NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS memory_relations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            src_entity_id INTEGER NOT NULL,
+            dst_entity_id INTEGER NOT NULL,
+            relation_type TEXT NOT NULL,
+            source_memory_key TEXT,
+            weight REAL NOT NULL DEFAULT 1.0,
+            namespace TEXT NOT NULL DEFAULT 'default',
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (src_entity_id) REFERENCES memory_entities(id),
+            FOREIGN KEY (dst_entity_id) REFERENCES memory_entities(id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_entities_text ON memory_entities(entity_text);
+    """)
+    conn.commit()
+
+
 # ── shortest_path tests ───────────────────────────────────────────────────
 
 
@@ -472,3 +507,182 @@ class TestCarryMemFacadeIntegration:
 
         with pytest.raises(ValueError, match="Invalid confidence label"):
             cm.add_graph_relation("A", "B", "rel", confidence="INVALID")
+
+
+# ── recall_graph tests (P0-5) ─────────────────────────────────────────────
+
+
+class TestQueryGraph:
+    """Tests for KnowledgeGraph.recall_graph (v0.8.0)."""
+
+    def test_query_graph_basic(self):
+        """Verify: recall_graph returns connected entities and memories.
+
+        Scenario: 2 memories linked via entity relations
+        Expected: entities list contains connected entities, memories list
+        contains memories linked via source_memory_key
+        """
+        graph = _make_graph()
+        conn = graph._conn_mgr.get_connection()
+        _insert_memory(conn, "mem_1", "Python is a programming language")
+        _insert_memory(conn, "mem_2", "Programming enables AI development")
+
+        # Add relations with source_memory_key to link memories into the graph
+        graph.add_relation("Python", "Programming", "is_a", source_memory_key="mem_1")
+        graph.add_relation("Programming", "AI", "enables", source_memory_key="mem_2")
+
+        result = graph.recall_graph("Python", max_hops=2)
+
+        assert "entities" in result
+        assert "memories" in result
+        entity_texts = {e["entity_text"] for e in result["entities"]}
+        assert "Python" in entity_texts
+        assert "Programming" in entity_texts
+        assert "AI" in entity_texts
+        # Memories linked via source_memory_key should be returned
+        memory_keys = {m["storage_key"] for m in result["memories"]}
+        assert "mem_1" in memory_keys
+        assert "mem_2" in memory_keys
+
+    def test_query_graph_max_hops_limit(self):
+        """Verify: max_hops=1 only returns direct neighbors, not 2-hop entities.
+
+        Scenario: A → B → C chain
+        Expected: with max_hops=1, C is NOT returned (2 hops away)
+        """
+        graph = _make_graph()
+        graph.add_relation("A", "B", "rel")
+        graph.add_relation("B", "C", "rel")
+
+        result = graph.recall_graph("A", max_hops=1)
+
+        entity_texts = {e["entity_text"] for e in result["entities"]}
+        assert "A" in entity_texts
+        assert "B" in entity_texts
+        # C is 2 hops away, should NOT be included with max_hops=1
+        assert "C" not in entity_texts
+
+    def test_query_graph_empty_input(self):
+        """Verify: empty entity string returns empty result."""
+        graph = _make_graph()
+        graph.add_relation("A", "B", "rel")
+
+        result = graph.recall_graph("")
+
+        assert result["entities"] == []
+        assert result["memories"] == []
+
+    def test_query_graph_clamps_max_hops(self):
+        """Verify: max_hops > 5 does not raise an error.
+
+        The BFS uses a visited set so large max_hops terminates gracefully
+        once the frontier is exhausted. Just verify no exception and valid
+        structure is returned.
+        """
+        graph = _make_graph()
+        graph.add_relation("A", "B", "rel")
+        graph.add_relation("B", "C", "rel")
+
+        # Should not raise even with very large max_hops
+        result = graph.recall_graph("A", max_hops=100)
+
+        assert "entities" in result
+        assert "memories" in result
+        entity_texts = {e["entity_text"] for e in result["entities"]}
+        assert "A" in entity_texts
+        assert "B" in entity_texts
+        assert "C" in entity_texts
+
+
+# ── migrate_v100 schema tests (P0-6) ──────────────────────────────────────
+
+
+class TestMigrateV100:
+    """Tests for SchemaManager.migrate_v100 (v0.8.0 edge confidence column)."""
+
+    @staticmethod
+    def _make_pre_v100_conn_mgr():
+        """Create a conn_mgr with v0.6.2 graph schema (no confidence column)."""
+        conn_mgr = FakeConnMgr()
+        _init_graph_schema_without_confidence(conn_mgr.get_connection())
+        return conn_mgr
+
+    def test_migration_v100_adds_confidence_column(self):
+        """Verify: migrate_v100 adds confidence column to memory_relations."""
+        from carrymem.adapters.sqlite.schema import SchemaManager
+
+        conn_mgr = self._make_pre_v100_conn_mgr()
+        manager = SchemaManager(conn_mgr)
+        manager.migrate_v100()
+
+        conn = conn_mgr.get_connection()
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(memory_relations)")}
+        assert "confidence" in columns
+
+    def test_migration_v100_default_extracted(self):
+        """Verify: existing edges get confidence='EXTRACTED' after migration.
+
+        Scenario: a relation exists BEFORE migration (no confidence column)
+        Expected: after migrate_v100, the row's confidence defaults to 'EXTRACTED'
+        """
+        from carrymem.adapters.sqlite.schema import SchemaManager
+
+        conn_mgr = self._make_pre_v100_conn_mgr()
+        conn = conn_mgr.get_connection()
+        # Insert two entities and a relation BEFORE migration (no confidence col)
+        conn.execute(
+            "INSERT INTO memory_entities (memory_key, entity_type, entity_text, confidence, namespace) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (None, "concept", "Python", 0.5, "default"),
+        )
+        conn.execute(
+            "INSERT INTO memory_entities (memory_key, entity_type, entity_text, confidence, namespace) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (None, "concept", "Programming", 0.5, "default"),
+        )
+        conn.execute(
+            "INSERT INTO memory_relations (src_entity_id, dst_entity_id, relation_type, namespace) "
+            "VALUES (?, ?, ?, ?)",
+            (1, 2, "is_a", "default"),
+        )
+        conn.commit()
+
+        manager = SchemaManager(conn_mgr)
+        manager.migrate_v100()
+
+        row = conn.execute(
+            "SELECT confidence FROM memory_relations WHERE relation_type = 'is_a'"
+        ).fetchone()
+        assert row["confidence"] == "EXTRACTED"
+
+    def test_migration_v100_idempotent(self):
+        """Verify: running migrate_v100 twice does not raise."""
+        from carrymem.adapters.sqlite.schema import SchemaManager
+
+        conn_mgr = self._make_pre_v100_conn_mgr()
+        manager = SchemaManager(conn_mgr)
+        manager.migrate_v100()
+        # Second run should be idempotent (no error)
+        manager.migrate_v100()
+
+        conn = conn_mgr.get_connection()
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(memory_relations)")}
+        assert "confidence" in columns
+
+    def test_migration_v100_index_created(self):
+        """Verify: migrate_v100 creates idx_relations_confidence index."""
+        from carrymem.adapters.sqlite.schema import SchemaManager
+
+        conn_mgr = self._make_pre_v100_conn_mgr()
+        manager = SchemaManager(conn_mgr)
+        manager.migrate_v100()
+
+        conn = conn_mgr.get_connection()
+        indexes = {
+            row[1]
+            for row in conn.execute(
+                "SELECT type, name FROM sqlite_master "
+                "WHERE type='index' AND tbl_name='memory_relations'"
+            )
+        }
+        assert "idx_relations_confidence" in indexes

@@ -361,7 +361,7 @@ CarryMem 개념을 DDD 개념에 매핑하여 엔터프라이즈 아키텍트 �
 - [x] Conditional preference support — `condition` field for if-then rules
 - [x] Implicit preference inference — `_detect_implicit_preferences()` from memory patterns
 
-**MCP Tools** (28 tools):
+**MCP Tools** (31 tools):
 - Core (3): classify_message, get_classification_schema, batch_classify
 - Storage (3): classify_and_remember, recall_memories, forget_memory
 - Knowledge (3): index_knowledge, recall_from_knowledge, recall_all
@@ -405,7 +405,7 @@ CarryMem 개념을 DDD 개념에 매핑하여 엔터프라이즈 아키텍트 �
 > **상태**: 부분 완료 — Consolidation Engine과 PrefEval은 pre-reset 주기에서 달성됨. 나머지 항목은 v0.6.0+로 연기.
 - [x] Consolidation Engine (P0: dedup+decay, P1: pattern→rules, P2: semantic merge)
 - [x] PrefEval 96.0% preference adherence (50 items, ICLR 2025 Oral)
-- [x] 28 MCP tools (added consolidate_memories)
+- [x] 31 MCP tools (added consolidate_memories + graph tools)
 
 > **PrefEval 수치 참고**: 샘플 크기와 seed에 따라 결과가 다릅니다. 정식 결과는 **83.0%** (200 items, 3-condition comparison: CarryMem 83.0% > reminder 80.0% > zero-shot 71.5%)이며, README에 문서화되어 있습니다. 그 외 수치(85.0%, 87.9%, 96.0%)는 다른 평가 설정을 반영하며 직접 비교해서는 안 됩니다.
 - [ ] Consolidation scheduled trigger (auto dedup+decay)

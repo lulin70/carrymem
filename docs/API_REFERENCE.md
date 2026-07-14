@@ -1,7 +1,7 @@
 # CarryMem API 参考手册（中文版）
 
-**版本**: v0.7.2
-**最后更新**: 2026-06-11
+**版本**: v0.8.0
+**最后更新**: 2026-07-14
 **源码位置**: `src/carrymem/`
 
 ---
@@ -65,7 +65,7 @@ CarryMem 采用 **Mixin 组合模式**，由以下 8 个 Mixin 类组成：
 
 ### 构造函数
 
-#### `__init__(storage, db_path, knowledge_adapter, namespace, config, encryption_key, auto_backup_interval)`
+#### `__init__(storage, db_path, knowledge_adapter, namespace, config, engine, encryption_key, auto_backup_interval)`
 
 初始化 CarryMem 实例。
 
@@ -78,6 +78,7 @@ CarryMem 采用 **Mixin 组合模式**，由以下 8 个 Mixin 类组成：
 | `knowledge_adapter` | `StorageAdapter \| None` | `None` | 知识库适配器（如 ObsidianAdapter） |
 | `namespace` | `str` | `"default"` | 命名空间，用于隔离不同用户的记忆 |
 | `config` | `Dict[str, Any] \| None` | `None` | 额外配置选项 |
+| `engine` | `MemoryClassificationEngine \| None` | `None` | 自定义分类引擎实例（默认自动创建） |
 | `encryption_key` | `str \| None` | `None` | 加密密钥（SQLite 专用） |
 | `auto_backup_interval` | `int` | `20` | 自动备份间隔（写入次数） |
 
@@ -423,6 +424,32 @@ print(result["total_count"]) # 总数
 
 ---
 
+#### `recall_shortest_path(src_entity, dst_entity, max_hops=4)` → `Dict[str, Any]`
+
+查找两个实体之间的最短路径。（v0.8.0 新增）
+
+**参数:**
+- `src_entity` (`str`): 源实体文本
+- `dst_entity` (`str`): 目标实体文本
+- `max_hops` (`int`): 最大跳数，默认 4，范围 1-10
+
+**返回:** `{"path": [entity1, entity2, ...], "length": N, "found": bool}`
+
+---
+
+#### `recall_memory_impact(memory_id)` → `Dict[str, Any]`
+
+计算某记忆的图影响力。（v0.8.0 新增）
+
+**参数:**
+- `memory_id` (`str`): 记忆 ID
+
+**返回:** `{"memory_id": str, "entity_count": N, "relation_count": N, "cross_namespace": bool, "impact_score": float}`
+
+**impact_score 公式**: `entity_count * 0.4 + relation_count * 0.4 + cross_namespace * 0.2`
+
+---
+
 ### 统计与画像方法
 
 #### `get_stats()` → `MemoryStats`
@@ -517,7 +544,7 @@ print(result["total_count"]) # 总数
 | `input_path` | `str \| None` | `None` | 输入文件路径 |
 | `data` | `Dict \| None` | `None` | 直接传入数据字典 |
 | `namespace` | `str \| None` | `None` | 目标命名空间 |
-| `merge_strategy` | `str` | `"skip"` | 合并策略：`"skip"`, `"overwrite"`, `"merge"` |
+| `merge_strategy` | `str` | `"skip_existing"` | 合并策略：`"skip_existing"`, `"overwrite"`, `"merge"` |
 
 **返回:** `ImportMemoriesResult`
 
@@ -1462,4 +1489,4 @@ CarryMemError (base)
 ---
 
 *文档维护: CarryMem 开发团队*
-*最后更新: 2026-06-11*
+*最后更新: 2026-07-14*

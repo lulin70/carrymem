@@ -26,6 +26,34 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev,async]"
 
+      - name: Install lint & security tools
+        run: |
+          pip install flake8 black isort mypy bandit pip-audit
+
+      - name: Lint — flake8
+        run: |
+          flake8 src/ tests/ --max-line-length=120 --extend-ignore=E203,W503
+
+      - name: Lint — black --check
+        run: |
+          black --check src/ tests/
+
+      - name: Lint — isort --check
+        run: |
+          isort --check-only src/ tests/
+
+      - name: Type check — mypy
+        run: |
+          mypy src/carrymem/ --ignore-missing-imports
+
+      - name: Security — bandit
+        run: |
+          bandit -r src/carrymem/ -ll
+
+      - name: Security — pip-audit
+        run: |
+          pip-audit
+
       - name: Run tests (gate — must pass before publish)
         run: |
           python -m pytest tests/ \
@@ -43,10 +71,10 @@ jobs:
           cov = coverage.Coverage()
           cov.load()
           total = cov.report()
-          if total < 75.0:
-              print(f'FAIL: Coverage {total:.2f}% < 75% threshold')
+          if total < 80.0:
+              print(f'FAIL: Coverage {total:.2f}% < 80% threshold')
               exit(1)
-          print(f'OK: Coverage {total:.2f}% >= 75% threshold')
+          print(f'OK: Coverage {total:.2f}% >= 80% threshold')
           "
 
   release:

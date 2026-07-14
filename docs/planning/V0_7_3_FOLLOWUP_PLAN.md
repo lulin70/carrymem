@@ -303,16 +303,16 @@ P1-4 (WAL throttle) ──→ P1-1 (HMAC-CTR 移除)
 ## 八、版本一致性检查清单
 
 v0.7.3 发布时需同步更新以下位置的版本号:
-- [ ] `src/carrymem/__version__.py`
-- [ ] `pyproject.toml`
-- [ ] `setup.py`
-- [ ] `VERSION` 文件 (如存在)
-- [ ] `Dockerfile` ARG VERSION
-- [ ] `README.md` 版本引用
-- [ ] `CHANGELOG.md` 新增 v0.7.3 条目
-- [ ] `server.json` / `smithery.yaml` 版本号
-- [ ] `skill-manifest.yaml` (如存在)
-- [ ] i18n 文档 (26 个文件)
+- [x] `src/carrymem/__version__.py`
+- [x] `pyproject.toml`
+- [x] `setup.py`
+- [x] `VERSION` 文件 (如存在)
+- [x] `Dockerfile` ARG VERSION
+- [x] `README.md` 版本引用
+- [x] `CHANGELOG.md` 新增 v0.7.3 条目
+- [x] `server.json` / `smithery.yaml` 版本号
+- [x] `skill-manifest.yaml` (如存在)
+- [x] i18n 文档 (26 个文件)
 
 **验证命令**: `grep -r "0.7.2" . --include="*.py" --include="*.toml" --include="*.md" --include="*.json" --include="*.yaml" | grep -v ".git/" | grep -v "node_modules/"`
 

@@ -4,16 +4,20 @@
 
 1. [Getting Started](#getting-started)
 2. [Memory System](#memory-system)
-3. [Rule Engine](#rule-engine)
-4. [Rule Scopes](#rule-scopes)
-5. [Skill Format](#skill-format)
-6. [Merge Protocol](#merge-protocol)
-7. [Memory Consolidation](#memory-consolidation)
-8. [Auto-Backup](#auto-backup)
-9. [Pack/Unpack with Encryption](#packunpack-with-encryption)
-10. [USB Carry Scenario](#usb-carry-scenario)
-11. [VS Code Extension](#vs-code-extension)
-12. [CLI Reference](#cli-reference)
+3. [知识图谱](#知识图谱)
+4. [多模式检索](#多模式检索)
+5. [Memify 动态精炼](#memify-动态精炼)
+6. [图查询 MCP 工具](#图查询-mcp-工具)
+7. [Rule Engine](#rule-engine)
+8. [Rule Scopes](#rule-scopes)
+9. [Skill Format](#skill-format)
+10. [Merge Protocol](#merge-protocol)
+11. [Memory Consolidation](#memory-consolidation)
+12. [Auto-Backup](#auto-backup)
+13. [Pack/Unpack with Encryption](#packunpack-with-encryption)
+14. [USB Carry Scenario](#usb-carry-scenario)
+15. [VS Code Extension](#vs-code-extension)
+16. [CLI Reference](#cli-reference)
 
 ---
 
@@ -44,6 +48,67 @@ CarryMem auto-classifies your inputs into 7 memory types:
 | `relationship` | "Sarah is my manager" |
 | `task_pattern` | "I always write tests first" |
 | `sentiment_marker` | "This build is too slow" |
+
+---
+
+## 知识图谱
+
+CarryMem v0.7.0 引入了 SQLite 原生知识图谱，支持实体抽取和关系建模。
+
+### 核心方法
+- `recall_graph(entity_text, max_hops=2, limit=20)` — 多跳图遍历
+- `recall_by_entity(entity_text, entity_type=None, limit=20)` — 按实体查找记忆
+- `recall_by_relation(entity_text, relation_type=None, direction="both", limit=20)` — 按关系查找
+- `add_graph_relation(src_entity, dst_entity, relation_type, confidence="EXTRACTED")` — 添加关系
+
+### 使用示例
+```python
+from carrymem import CarryMem
+cm = CarryMem()
+cm.classify_and_remember("Python is a programming language used for AI development")
+# 自动抽取实体: Python, programming language, AI
+result = cm.recall_graph("Python", max_hops=2)
+print(result)  # 返回关联实体和记忆
+```
+
+---
+
+## 多模式检索
+
+v0.7.1 引入了 6 种检索模式：
+
+- `recall_by_time(time_range, limit=20)` — 按时间范围检索
+- `recall_semantic(query, limit=20)` — 语义检索
+- `recall_hybrid(query, time_range=None, limit=20)` — 混合检索
+- `recall_multi_mode(query, modes=None, limit=20)` — 多模式组合检索
+
+---
+
+## Memify 动态精炼
+
+v0.7.2 引入 MemifyEngine，基于使用信号动态调整记忆重要性：
+
+- `consolidate_memories()` — 合并相似记忆
+- `derive_facts()` — 推导新事实
+- `reinforce_edges()` — 强化关系边
+- `auto_decay()` — 自动衰减旧记忆
+
+---
+
+## 图查询 MCP 工具
+
+v0.8.0 新增 3 个 MCP 图查询工具：
+
+- `query_graph(entity_text, max_hops=2, limit=20)` — 多跳图遍历
+- `shortest_path(src_entity, dst_entity, max_hops=4)` — 最短路径查找
+- `get_memory_impact(memory_id)` — 记忆图影响力评估
+
+### 边置信度标签
+
+关系边支持 3 种置信度标签：
+- `EXTRACTED` — 确定性抽取（EntityNormalizer pattern matching）
+- `INFERRED` — LLM 语义推断（未来扩展）
+- `AMBIGUOUS` — 歧义，需用户确认（未来扩展）
 
 ---
 

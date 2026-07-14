@@ -1,5 +1,7 @@
 # ADR-003: 双后端加密策略
 
+> ⚠️ **Status: SUPERSEDED** — This ADR has been superseded by ADR-011 (Fernet-Only Encryption) as of v0.7.3 (2026-07-13). The HMAC-CTR stream cipher fallback has been removed. `cryptography` is now a hard dependency. See [ADR-011](ADR-011-fernet-only-encryption.md) for details.
+
 ## 状态: 已采纳
 ## 日期: 2026-06-11
 ## 决策者: CarryMem 核心团队

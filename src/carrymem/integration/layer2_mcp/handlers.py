@@ -942,6 +942,9 @@ handler_map = {
     "classify_message": (handle_classify_message, "engine"),
     "get_classification_schema": (handle_get_classification_schema, "engine"),
     "batch_classify": (handle_batch_classify, "engine"),
+    # mce_status is an internal diagnostic tool, available via tools/call
+    # but NOT listed in TOOLS (tools.py), so MCP clients won't discover it
+    # via tools/list. Kept for backward compatibility and debugging.
     "mce_status": (handle_mce_status, "engine"),
     "classify_and_remember": (handle_classify_and_remember, "carrymem"),
     "recall_memories": (handle_recall_memories, "carrymem"),

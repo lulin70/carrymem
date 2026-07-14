@@ -499,3 +499,244 @@ class TestConcurrentReadThroughput:
             total_ops == num_threads * ops_per_thread
         ), f"Expected {num_threads * ops_per_thread} ops, got {total_ops}"
         assert qps > CONCURRENT_QPS_MIN, f"Concurrent read QPS {qps:.0f} below minimum {CONCURRENT_QPS_MIN} QPS"
+
+
+# ---------------------------------------------------------------------------
+# Benchmark 7: Graph Query Performance (v0.8.0)
+# ---------------------------------------------------------------------------
+
+# Graph performance thresholds (dev / CI).  Graph queries are pure SQLite BFS
+# traversals — no LLM/embedding involvement — so thresholds are tight on dev
+# machines and scaled by CI_FACTOR for shared runners.
+GRAPH_QUERY_P95_MS = 50 * CI_FACTOR  # query_graph on 100-relation graph, max_hops=2
+SHORTEST_PATH_P95_MS = 100 * CI_FACTOR  # shortest_path on 1000-entity graph, max_hops=4
+MEMORY_IMPACT_P95_MS = 20 * CI_FACTOR  # get_memory_impact single-memory query
+SCHEMA_MIGRATION_S = 1.0 * CI_FACTOR  # migrate_v100 on 1000-relation DB
+
+# Number of iterations for P95 measurement.  P95 = sorted(latencies)[18]
+# (the 19th value, 1-based, out of 20 sorted samples).
+_GRAPH_BENCH_ITERATIONS = 20
+
+
+class TestGraphPerformanceBenchmark:
+    """Benchmark: graph query tools must meet P95 latency targets (v0.8.0).
+
+    All graph queries are pure SQLite operations (BFS / bidirectional BFS /
+    COUNT) with no LLM or embedding overhead.  Thresholds reflect this:
+    they are much tighter than classify_and_remember.
+    """
+
+    def test_query_graph_p95_under_50ms(self, tmp_path):
+        """query_graph on 100-relation graph, P95 < 50ms (max_hops=2)."""
+        cm = CarryMem(db_path=str(tmp_path / "graph_query_bench.db"))
+        try:
+            # Build a 100-relation graph: chain + cross-links for realistic topology
+            for i in range(100):
+                cm.add_graph_relation(f"Entity_{i}", f"Entity_{i + 1}", "relates_to")
+            # Add some cross-links (every 10th node connects to a distant node)
+            for i in range(0, 100, 10):
+                cm.add_graph_relation(f"Entity_{i}", f"Entity_{i + 50}", "connects")
+
+            latencies = []
+            for i in range(_GRAPH_BENCH_ITERATIONS):
+                entity = f"Entity_{i % 50}"  # vary starting entity
+                start = time.perf_counter()
+                result = cm.recall_graph(entity, max_hops=2, limit=20)
+                elapsed_ms = (time.perf_counter() - start) * 1000
+                latencies.append(elapsed_ms)
+                assert "entities" in result, f"query_graph returned invalid structure: {result}"
+
+            p95 = sorted(latencies)[18]
+            avg = statistics.mean(latencies)
+            max_ms = max(latencies)
+
+            print(
+                f"\n[query_graph_100rel] iterations={_GRAPH_BENCH_ITERATIONS}, "
+                f"avg={avg:.2f}ms, p95={p95:.2f}ms, max={max_ms:.2f}ms"
+            )
+
+            assert p95 < GRAPH_QUERY_P95_MS, (
+                f"query_graph P95 {p95:.2f}ms exceeds {GRAPH_QUERY_P95_MS}ms threshold"
+            )
+        finally:
+            cm.close()
+
+    def test_shortest_path_p95_under_100ms(self, tmp_path):
+        """shortest_path on 1000-entity graph, P95 < 100ms (max_hops=4)."""
+        cm = CarryMem(db_path=str(tmp_path / "shortest_path_bench.db"))
+        try:
+            # Build a 1000-entity chain: E_0 → E_1 → ... → E_999
+            for i in range(1000):
+                cm.add_graph_relation(f"E_{i}", f"E_{i + 1}", "next")
+
+            latencies = []
+            for i in range(_GRAPH_BENCH_ITERATIONS):
+                # Vary src/dst to exercise different path lengths (1-4 hops)
+                src_idx = i * 40
+                dst_idx = src_idx + (i % 4) + 1
+                src = f"E_{src_idx}"
+                dst = f"E_{dst_idx}"
+                start = time.perf_counter()
+                result = cm.recall_shortest_path(src, dst, max_hops=4)
+                elapsed_ms = (time.perf_counter() - start) * 1000
+                latencies.append(elapsed_ms)
+                assert "found" in result, f"shortest_path returned invalid structure: {result}"
+
+            p95 = sorted(latencies)[18]
+            avg = statistics.mean(latencies)
+            max_ms = max(latencies)
+
+            print(
+                f"\n[shortest_path_1000ent] iterations={_GRAPH_BENCH_ITERATIONS}, "
+                f"avg={avg:.2f}ms, p95={p95:.2f}ms, max={max_ms:.2f}ms"
+            )
+
+            assert p95 < SHORTEST_PATH_P95_MS, (
+                f"shortest_path P95 {p95:.2f}ms exceeds {SHORTEST_PATH_P95_MS}ms threshold"
+            )
+        finally:
+            cm.close()
+
+    def test_get_memory_impact_p95_under_20ms(self, tmp_path):
+        """get_memory_impact single-memory query, P95 < 20ms."""
+        cm = CarryMem(db_path=str(tmp_path / "memory_impact_bench.db"))
+        try:
+            # Store a memory and link entities + a relation to it
+            result = cm.classify_and_remember("I prefer PostgreSQL for database development")
+            storage_keys = result.get("storage_keys", [])
+            assert storage_keys, f"Memory not stored: {result}"
+            memory_id = storage_keys[0]
+
+            # Ensure entities are linked to the memory
+            cm._adapter.store_graph_entities(memory_id, "PostgreSQL is a SQL database system")
+            cm.add_graph_relation("PostgreSQL", "SQL", "is_a", source_memory_key=memory_id)
+
+            latencies = []
+            for _i in range(_GRAPH_BENCH_ITERATIONS):
+                start = time.perf_counter()
+                result = cm.recall_memory_impact(memory_id)
+                elapsed_ms = (time.perf_counter() - start) * 1000
+                latencies.append(elapsed_ms)
+                assert "impact_score" in result, f"get_memory_impact returned invalid structure: {result}"
+
+            p95 = sorted(latencies)[18]
+            avg = statistics.mean(latencies)
+            max_ms = max(latencies)
+
+            print(
+                f"\n[memory_impact_single] iterations={_GRAPH_BENCH_ITERATIONS}, "
+                f"avg={avg:.2f}ms, p95={p95:.2f}ms, max={max_ms:.2f}ms"
+            )
+
+            assert p95 < MEMORY_IMPACT_P95_MS, (
+                f"get_memory_impact P95 {p95:.2f}ms exceeds {MEMORY_IMPACT_P95_MS}ms threshold"
+            )
+        finally:
+            cm.close()
+
+    def test_schema_migration_under_1s(self, tmp_path):
+        """migrate_v100 on 1000-relation DB must complete < 1s.
+
+        Creates a pre-v0.8.0 schema (no confidence column) with 1000 relations,
+        then times the migrate_v100() migration that adds the column + index.
+        """
+        import sqlite3
+
+        from carrymem.adapters.sqlite.schema import SchemaManager
+
+        db_path = str(tmp_path / "migration_bench.db")
+
+        # Create a minimal conn_mgr wrapper (like test_v080_graph_tools.py FakeConnMgr)
+        class _BenchConnMgr:
+            def __init__(self, path):
+                self._conn = sqlite3.connect(path)
+                self._conn.row_factory = sqlite3.Row
+                self._conn.execute("PRAGMA journal_mode=WAL")
+                self.db_path = path
+                self.namespace = "default"
+
+            def get_connection(self):
+                return self._conn
+
+            def close(self):
+                self._conn.close()
+
+        conn_mgr = _BenchConnMgr(db_path)
+        conn = conn_mgr.get_connection()
+
+        # Create pre-v0.8.0 graph schema (WITHOUT confidence column)
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS memory_entities (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                memory_key TEXT,
+                entity_type TEXT NOT NULL,
+                entity_text TEXT NOT NULL,
+                confidence REAL NOT NULL DEFAULT 0.5,
+                namespace TEXT NOT NULL DEFAULT 'default',
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                FOREIGN KEY (memory_key) REFERENCES memories(storage_key) ON DELETE SET NULL
+            );
+            CREATE TABLE IF NOT EXISTS memory_relations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                src_entity_id INTEGER NOT NULL,
+                dst_entity_id INTEGER NOT NULL,
+                relation_type TEXT NOT NULL,
+                source_memory_key TEXT,
+                weight REAL NOT NULL DEFAULT 1.0,
+                namespace TEXT NOT NULL DEFAULT 'default',
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                FOREIGN KEY (src_entity_id) REFERENCES memory_entities(id),
+                FOREIGN KEY (dst_entity_id) REFERENCES memory_entities(id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_entities_text ON memory_entities(entity_text);
+        """)
+
+        # Insert 1000 entities and 1000 relations
+        now = "2026-01-01T00:00:00Z"
+        for i in range(1000):
+            conn.execute(
+                "INSERT INTO memory_entities (memory_key, entity_type, entity_text, confidence, namespace, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (None, "concept", f"BenchEntity_{i}", 0.5, "default", now),
+            )
+        conn.commit()
+
+        for i in range(1000):
+            src_id = i + 1  # 1-based autoincrement IDs
+            dst_id = ((i + 1) % 1000) + 1
+            conn.execute(
+                "INSERT INTO memory_relations "
+                "(src_entity_id, dst_entity_id, relation_type, namespace, created_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (src_id, dst_id, "relates_to", "default", now),
+            )
+        conn.commit()
+
+        # Verify pre-migration state: no confidence column
+        columns_before = {row[1] for row in conn.execute("PRAGMA table_info(memory_relations)")}
+        assert "confidence" not in columns_before, "Pre-migration schema should NOT have confidence column"
+
+        # Time the migration
+        manager = SchemaManager(conn_mgr)
+        start = time.perf_counter()
+        manager.migrate_v100()
+        elapsed_s = time.perf_counter() - start
+
+        # Verify post-migration state
+        columns_after = {row[1] for row in conn.execute("PRAGMA table_info(memory_relations)")}
+        assert "confidence" in columns_after, "Post-migration schema should have confidence column"
+
+        # Verify existing rows got default 'EXTRACTED'
+        sample = conn.execute("SELECT confidence FROM memory_relations LIMIT 1").fetchone()
+        assert sample["confidence"] == "EXTRACTED", f"Default confidence should be EXTRACTED, got {sample['confidence']}"
+
+        print(
+            f"\n[schema_migration_1000rel] relations=1000, "
+            f"migration_time={elapsed_s:.3f}s"
+        )
+
+        conn_mgr.close()
+
+        assert elapsed_s < SCHEMA_MIGRATION_S, (
+            f"Schema migration took {elapsed_s:.3f}s, exceeds {SCHEMA_MIGRATION_S}s threshold"
+        )

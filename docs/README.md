@@ -1,7 +1,7 @@
 # CarryMem Documentation Hub
 
-**Version**: v0.7.2  
-**Last Updated**: 2026-05-03
+**Version**: v0.8.0  
+**Last Updated**: 2026-07-14
 
 ---
 
@@ -218,5 +218,5 @@ docs/
 
 ---
 
-**Last Updated**: 2026-05-03  
+**Last Updated**: 2026-07-14  
 **Maintainer**: CarryMem Team

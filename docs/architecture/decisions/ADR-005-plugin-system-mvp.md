@@ -1,5 +1,7 @@
 # ADR-005: 插件系统 MVP
 
+> ⚠️ **Status: Accepted but Experimental** — PluginManager is fully implemented but NOT integrated into the main CarryMem class. The plugin system is experimental and API surface may change. See `src/carrymem/plugins/__init__.py` module docstring for details.
+
 ## 状态: 已采纳
 ## 日期: 2026-06-11
 ## 决策者: CarryMem 核心团队

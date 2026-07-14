@@ -3,7 +3,7 @@
 **Version**: v0.8.0
 **Date**: 2026-05-03  
 **Audience**: End Users (Developers, Power Users, Teams)  
-**Prerequisites**: Python 3.9+, pip
+**Prerequisites**: Python 3.12+, pip
 
 ---
 
@@ -74,7 +74,7 @@ $ carrymem doctor
 
   CarryMem Doctor - Diagnostics
   =============================================
-  [OK] Python 3.11+ (>= 3.9)
+  [OK] Python 3.12+ (>= 3.12)
   [OK] CarryMem v0.8.0
   [OK] Config directory: /Users/you/.carrymem
   [OK] Database: /Users/you/.carrymem/memories.db (0.14 MB)

@@ -2,7 +2,7 @@
 
 **Last Updated**: 2026-07-11
 **Product Positioning**: AI Identity Layer — Memory + Rules + Knowledge
-**Version Scheme**: v0.5.x (Stable APIs) → v0.6.x (Architecture Cleanup) → v0.7.x (Knowledge Graph + Multi-Mode Retrieval + Memify)
+**Version Scheme**: v0.5.x (Stable APIs) → v0.6.x (Architecture Cleanup) → v0.7.x (Knowledge Graph + Multi-Mode Retrieval + Memify) → v0.8.0 (Graphify — MCP Graph Tools + Edge Confidence)
 
 ---
 
@@ -377,10 +377,11 @@ See CHANGELOG.md for detailed history.
 - [x] Conditional preference support — `condition` field for if-then rules
 - [x] Implicit preference inference — `_detect_implicit_preferences()` from memory patterns
 
-**MCP Tools** (28 tools):
+**MCP Tools** (31 tools):
 - Core (3): classify_message, get_classification_schema, batch_classify
 - Storage (3): classify_and_remember, recall_memories, forget_memory
 - Knowledge (3): index_knowledge, recall_from_knowledge, recall_all
+- Graph (3): query_graph, shortest_path, get_memory_impact
 - Profile (2): declare_preference, get_memory_profile
 - Prompt (2): get_system_prompt, summarize_and_store
 - Consolidation (3): consolidate_memories, schedule_consolidation, stop_consolidation
@@ -535,6 +536,36 @@ See CHANGELOG.md for detailed history.
 - [x] `_require_sync()` helper: satisfies mypy `Optional[CarryMem]` union-attr checks
 
 **Tests**: 58 new tests (`test_memify.py` 32 + `test_async_sqlite.py` 26)
+
+---
+
+### ✅ v0.7.3 — Security Hardening (DONE)
+**Theme**: Fernet-only encryption + WAL throttle + input validation hardening
+**Date**: 2026-07-13
+
+**P0**:
+- [x] Fernet-Only 加密（撤销 ADR-003 双后端方案，cryptography 升为硬依赖）
+- [x] WAL throttle 优化
+- [x] Input validation 硬化 (InputValidator + path traversal 防护)
+
+**P1**:
+- [x] 加密迁移脚本 (scripts/migrate_encryption.py)
+- [x] Security CI gate (bandit + pip-audit)
+
+---
+
+### ✅ v0.8.0 — Graphify (DONE)
+**Theme**: MCP graph query tools + edge confidence labels
+**Date**: 2026-07-13
+
+**P0**:
+- [x] MCP 图查询工具 (query_graph/shortest_path/get_memory_impact) — 工具数 28→31
+- [x] 边置信度标签 (memory_relations.confidence: EXTRACTED/INFERRED/AMBIGUOUS)
+- [x] Schema 迁移 (migrate_v100: ALTER TABLE ADD COLUMN confidence)
+
+**P1**:
+- [ ] Worked examples (推迟到 v0.8.1+)
+- [ ] 实体抽取增量缓存 (推迟到 v0.8.1+)
 
 ---
 
@@ -808,7 +839,9 @@ carrymem unpack team-identity.carry
 | v0.6.2 | 4211 | 80%+ | +CVE-2026-34073 fix + recency decay |
 | v0.7.0 | 4285 | 80%+ | +Knowledge Graph + Session dual-layer (74 tests) |
 | v0.7.1 | 4325 | 80%+ | +Multi-mode retrieval (40 tests) |
-| **v0.7.2 (current)** | **4330 tests** | **80%+** | **+MemifyEngine (32 tests) + AsyncSQLiteAdapter (26 tests)** |
+| v0.7.2 | 4330 tests | 80%+ | +MemifyEngine (32 tests) + AsyncSQLiteAdapter (26 tests) |
+| v0.7.3 | 4331+ tests | 80%+ | +Fernet-only encryption + WAL throttle + InputValidator |
+| **v0.8.0 (current)** | **4334+ tests** | **80.88%** | **+MCP graph tools (3) + edge confidence labels** |
 
 ---
 
@@ -886,5 +919,5 @@ carrymem unpack team-identity.carry
 
 ---
 
-**Next Milestone**: v0.8.0 (semantic embeddings integration + cloud MCP server + Smithery marketplace)
-**Status**: ✅ **v0.7.2 complete (4330 tests, 80%+ coverage, Memory + Rules + Knowledge + Enterprise + Knowledge Graph + Multi-Mode Retrieval + Memify + Async I/O)**
+**Next Milestone**: v0.9.0 (semantic embeddings integration + cloud MCP server + Smithery marketplace)
+**Status**: ✅ **v0.8.0 complete (4334+ tests, 80.88% coverage, Memory + Rules + Knowledge + Enterprise + Knowledge Graph + Multi-Mode Retrieval + Memify + Async I/O + Security Hardening + Graphify)**

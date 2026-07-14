@@ -1,6 +1,6 @@
 # CarryMem Core 架构文档 — Mixin 耦合治理 (P0-1)
 
-> **版本**: v0.7.2 | **日期**: 2026-06-15 | **状态**: ✅ 已完成
+> **版本**: v0.8.0 | **日期**: 2026-07-14 | **状态**: ✅ 已完成
 
 ## 1. 概述
 
@@ -120,21 +120,21 @@ src/carrymem/core/
 >>> [c.__name__ for c in CarryMem.__mro__]
 [
     'CarryMem',           # 0: Facade 自身
-    'PromptDelegateMixin',# 1
-    'MaintenanceMixin',   # 2
-    'ProfileExportMixin', # 3
-    'RecallMixin',        # 4
-    'ClassificationMixin',# 5
-    'MemoryCRUDMixin',    # 6
-    'BackupMixin',        # 7
-    'LifecycleMixin',     # 8 ← 最后解析，确保 __init__ 正确绑定
+    'LifecycleMixin',    # 1 ← 首先解析，确保 __init__ 首先被调用
+    'BackupMixin',        # 2
+    'MemoryCRUDMixin',   # 3
+    'ClassificationMixin',# 4
+    'RecallMixin',        # 5
+    'ProfileExportMixin', # 6
+    'MaintenanceMixin',   # 7
+    'PromptDelegateMixin',# 8
     'object',             # 9
 ]
 ```
 
 ### 5.2 关键设计决策
 
-- **LifecycleMixin 在 MRO 最末尾**（继承列表最前面）：确保 `__init__` 首先被调用，所有共享状态在其他 Mixin 方法执行前就绪。
+- **LifecycleMixin 在 MRO 最前面**（继承列表第一位）：确保 `__init__` 首先被调用，所有共享状态在其他 Mixin 方法执行前就绪。
 - **MemoryCRUDMixin 在 ClassificationMixin 之后**：因为 `classify_and_remember()` 内部调用 ClassificationMixin 的私有方法。
 - **PromptDelegateMixin 在 MRO 最前面**：不与其他 Mixin 有方法名冲突。
 

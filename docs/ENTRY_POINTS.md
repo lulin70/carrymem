@@ -1,6 +1,6 @@
 # CarryMem 入口点功能对照表
 
-> 版本: v0.4.0 | 更新日期: 2026-06-15
+> 版本: v0.8.0 | 更新日期: 2026-07-14
 > 目标: 确保 CLI/TUI/MCP 三入口功能对等、文案一致
 
 ## 一、入口概述
@@ -262,13 +262,15 @@ carrymem stats           # 查看统计
 | `classify_message` | Core | engine | ✅ |
 | `get_classification_schema` | Core | engine | ✅ |
 | `batch_classify` | Core | engine | ✅ |
-| `mce_status` | Core | engine | ✅ |
 | `classify_and_remember` | Storage | carrymem | ✅ |
 | `recall_memories` | Storage | carrymem | ✅ |
 | `forget_memory` | Storage | carrymem | ✅ |
 | `index_knowledge` | Knowledge | carrymem | ✅ |
 | `recall_from_knowledge` | Knowledge | carrymem | ✅ |
 | `recall_all` | Knowledge | carrymem | ✅ |
+| `query_graph` | Graph | carrymem | ✅ |
+| `shortest_path` | Graph | carrymem | ✅ |
+| `get_memory_impact` | Graph | carrymem | ✅ |
 | `declare_preference` | Profile | carrymem | ✅ |
 | `get_memory_profile` | Profile | carrymem | ✅ |
 | `get_system_prompt` | Prompt | carrymem | ✅ |
@@ -289,7 +291,7 @@ carrymem stats           # 查看统计
 | `onboard` | Guide | carrymem | ✅ |
 | `health_check` | Health | carrymem | ✅ |
 
-**总计**: 28 个 MCP 工具
+**总计**: 31 个 MCP 工具
 
 ## 附录 B: CLI 命令别名表
 
@@ -309,4 +311,4 @@ carrymem stats           # 查看统计
 ---
 
 *文档维护者: CarryMem Team*
-*下次审查日期: 2026-07-11*
+*下次审查日期: 2026-07-14*

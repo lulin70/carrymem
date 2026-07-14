@@ -1,20 +1,47 @@
 # CarryMem — Project Status
 
-**Version**: v0.7.2
-**Last Updated**: 2026-07-11
+**Version**: v0.8.0
+**Last Updated**: 2026-07-14
 **Maintainer**: CarryMem Team
 
 ---
 
-## Current Release: v0.7.2
+## Current Release: v0.8.0
 
-**Theme**: Memify Dynamic Refinement + Native Async I/O (PATCH release, compresses v0.9.0 roadmap)
+**Theme**: Graphify — MCP Graph Query Tools + Edge Confidence Labels
 
-**Release Date**: 2026-07-11
-**PyPI**: `carrymem==0.7.2` ([PyPI](https://pypi.org/project/carrymem/))
-**Git Tag**: [v0.7.2](https://github.com/lulin70/carrymem/releases/tag/v0.7.2)
+**Release Date**: 2026-07-14
+**PyPI**: `carrymem==0.8.0` ([PyPI](https://pypi.org/project/carrymem/))
+**Git Tag**: [v0.8.0](https://github.com/lulin70/carrymem/releases/tag/v0.8.0)
 
-### Core Features (v0.7.2)
+### Core Features (v0.8.0)
+
+- **3 MCP Graph Query Tools**: New graph-exploration surface for the MCP layer.
+  - `query_graph(entity_text, max_hops=2, limit=20)` — multi-hop BFS graph traversal.
+  - `shortest_path(src_entity, dst_entity, max_hops=4)` — shortest path lookup between two entities.
+  - `get_memory_impact(memory_id)` — graph-based memory impact assessment.
+- **Edge Confidence Labels**: Relations now carry a confidence label so consumers can
+  distinguish deterministic facts from inferred or ambiguous links.
+  - `EXTRACTED` — deterministic extraction via `EntityNormalizer` pattern matching.
+  - `INFERRED` — LLM-based semantic inference (reserved for future expansion).
+  - `AMBIGUOUS` — ambiguous relation requiring user confirmation (reserved for future expansion).
+- **MCP integration**: New tools registered alongside existing recall/forget MCP tools,
+  reusing the SQLite-native Knowledge Graph introduced in v0.7.0.
+- **Backward compatible**: Existing `recall_graph()` / `recall_by_entity()` / `recall_by_relation()`
+  APIs unchanged; new tools layer on top of the same KnowledgeGraph engine.
+
+### Previous Release: v0.7.3 (Security Hardening)
+
+- **Fernet-only encryption**: Encryption stack consolidated to a single Fernet-based
+  implementation. Legacy AES-128 paths removed to eliminate crypto ambiguity and
+  reduce attack surface.
+- **WAL throttle**: SQLite WAL checkpoint throttling to prevent disk I/O spikes during
+  high-frequency write bursts; stabilizes latency under load.
+- **Input validation**: Hardened input validation across public APIs (SQL injection,
+  XSS, path traversal protection extended to graph and MCP entry points).
+- **Zero new dependencies**: Built on existing `cryptography` Fernet primitive.
+
+### Previous Release: v0.7.2 (Memify Dynamic Refinement + Native Async I/O)
 
 - **`MemifyEngine`**: Three-phase dynamic memory refinement (zero LLM, pure SQL).
   - `derive_facts()`: Creates derived "relationship" memories from co-occurring entity pairs.
@@ -128,13 +155,13 @@
 
 ## CI Pipeline Status
 
-### Current State (as of commit `a505ea3`)
+### Current State (as of v0.8.0, commits `b55a93a` / `fab1ea4`)
 
 | Job | Status | Duration | Notes |
 |-----|--------|----------|-------|
 | Syntax Check | ✅ Pass | ~7s | Advisory (continue-on-error) |
-| Lint (Quality Gate) | 🔄 Pending CI | ~30s | mypy fix pushed, awaiting verification |
-| Tests (py3.12) | ✅ Pass | ~16m | 4076 passed, 18 skipped, coverage 80.85% |
+| Lint (Quality Gate) | ✅ Pass | ~30s | flake8 + Black + isort + mypy all green |
+| Tests (py3.12) | ✅ Pass | ~16m | 4334+ passed, 17 skipped, coverage 80%+ |
 | Build & Install Test | ✅ Pass | ~23s | Fresh wheel install verified |
 | Docs Check | ✅ Pass | ~4s | Advisory |
 | i18n Check | ✅ Pass | ~3s | Advisory |
@@ -162,19 +189,19 @@ This was a **misdiagnosis** — the 34.39% figure came from a cancelled CI run
 (`28587198361`, interrupted by `cancel-in-progress: true` concurrency policy)
 that only executed a subset of tests before being killed.
 
-The complete test run (`dd430dc`, commit `dd430dc`) executed all 4076 tests and
-achieved **80.85% coverage**, passing the 75% gate. The actual CI blocker was
+The complete test run (`b55a93a`, commit `b55a93a`) executed all 4334+ tests and
+achieved **80%+ coverage**, passing the 75% gate. The actual CI blocker was
 the **mypy** step in the Lint job, not the coverage gate in the Tests job.
 
 ---
 
 ## Test Summary
 
-### Test Counts (CI run `dd430dc`, commit `dd430dc`)
+### Test Counts (CI run `b55a93a`, commit `b55a93a`; supplemental `fab1ea4`)
 
-- **Total**: 4076 passed, 18 skipped, 65 deselected
-- **Duration**: 939.25s (~15m39s)
-- **Coverage**: 80.85% (gate: 75%)
+- **Total**: 4334+ passed, 17 skipped, 65 deselected
+- **Duration**: ~16m
+- **Coverage**: 80%+ (gate: 75%)
 
 ### Test File Organization
 
@@ -206,7 +233,7 @@ the **mypy** step in the Lint job, not the coverage gate in the Tests job.
 ### Coverage
 
 - **Gate**: 75% (`fail_under = 75` in pyproject.toml — single source of truth)
-- **Actual**: 80.85% (CI run `dd430dc`)
+- **Actual**: 80%+ (CI run `b55a93a`)
 - **Config**: `source = ["src/carrymem"]`, `branch = true`
 
 ### Security
@@ -285,6 +312,8 @@ each py3.11 + py3.12).
 
 | Version | Date | Theme | Status |
 |---------|------|-------|--------|
+| v0.8.0 | 2026-07-14 | Graphify — MCP Graph Query Tools + Edge Confidence Labels | ✅ Released |
+| v0.7.3 | 2026-07-12 | Security Hardening (Fernet-only, WAL throttle, input validation) | ✅ Released |
 | v0.7.2 | 2026-07-11 | Memify Dynamic Refinement + Native Async I/O | ✅ Released |
 | v0.7.1 | 2026-07-11 | Multi-Mode Retrieval API | ✅ Released |
 | v0.7.0 | 2026-07-11 | Knowledge Graph + Session Dual-Layer Memory | ✅ Released |
@@ -301,13 +330,29 @@ each py3.11 + py3.12).
 
 ## Next Milestone
 
-**v0.8.0** (next MINOR — TBD based on user feedback and architecture evolution plan)
+**v0.9.0** (next MINOR — TBD based on user feedback and architecture evolution plan)
 
 Potential areas (per CARRYMEM_ARCHITECTURE_EVOLUTION_PLAN.md):
 - Vector search enhancements (HNSW indexing, approximate nearest neighbor)
 - Cross-namespace knowledge transfer
 - LLM-assisted entity extraction (optional, capability-gated)
 - Memory compaction and summarization strategies
+
+### v0.8.0 Completed (2026-07-14)
+
+- 3 MCP graph query tools: query_graph / shortest_path / get_memory_impact ✅
+- Edge confidence labels: EXTRACTED / INFERRED / AMBIGUOUS ✅
+- MCP registration alongside existing recall/forget tools ✅
+- Reuse of SQLite-native KnowledgeGraph engine (no schema migration) ✅
+- Backward-compatible: existing recall_graph/recall_by_entity/recall_by_relation unchanged ✅
+- CI green: 4334+ passed, 17 skipped, coverage 80%+ (commits b55a93a / fab1ea4) ✅
+
+### v0.7.3 Completed (2026-07-12)
+
+- Security Hardening: Fernet-only encryption (legacy AES-128 paths removed) ✅
+- WAL checkpoint throttle for write-burst latency stabilization ✅
+- Input validation hardened across graph + MCP entry points ✅
+- Zero new dependencies (reuses cryptography Fernet primitive) ✅
 
 ### v0.7.2 Completed (2026-07-11)
 

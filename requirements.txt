@@ -5,10 +5,11 @@
 
 # Core (also in setup.py install_requires)
 PyYAML>=5.0
+cryptography>=46.0.6
 
 # Optional dependencies (install via extras):
 #   pip install carrymem[language]   → pycld2, langdetect
-#   pip install carrymem[encryption] → cryptography
+#   pip install carrymem[async]      → aiosqlite
 #   pip install carrymem[semantic]   → sqlite-vec, pysqlite3, sentence-transformers
 #   pip install carrymem[llm]        → openai, zhipuai
 #   pip install carrymem[tui]        → textual

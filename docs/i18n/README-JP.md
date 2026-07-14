@@ -396,7 +396,7 @@ carrymem setup-mcp --tool claude-code
 carrymem setup-mcp --tool all
 ```
 
-28のMCPツール：Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11)
+31のMCPツール：Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11)
 
 **クライアント互換性：**
 

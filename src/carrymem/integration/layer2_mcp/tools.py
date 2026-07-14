@@ -481,12 +481,12 @@ RULE_TOOLS: List[Dict[str, Any]] = [
                 },
                 "rule_type": {
                     "type": "string",
-                    "enum": ["always", "avoid", "forbid", "prefer", "recommend"],
+                    "enum": ["always", "avoid", "forbid", "prefer", "format"],
                     "default": "always",
                     "description": (
                         "Rule type: always (mandatory), avoid (discouraged), "
                         "forbid (prohibited), prefer (recommended), "
-                        "recommend (suggested)"
+                        "format (output formatting directive)"
                     ),
                 },
                 "override": {

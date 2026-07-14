@@ -25,13 +25,16 @@ from carrymem.integration.layer2_mcp.handlers import (
     handle_declare_preference,
     handle_forget_memory,
     handle_get_classification_schema,
+    handle_get_memory_impact,
     handle_get_memory_profile,
     handle_get_system_prompt,
     handle_index_knowledge,
     handle_mce_status,
+    handle_query_graph,
     handle_recall_all,
     handle_recall_from_knowledge,
     handle_recall_memories,
+    handle_shortest_path,
     handle_summarize_and_store,
     handler_map,
 )
@@ -739,3 +742,40 @@ class TestHandleConsolidateMemories:
         mock_cm.consolidate.side_effect = RuntimeError("test error")
         result = handle_consolidate_memories(mock_cm, {"dry_run": True})
         assert "error" in result
+
+
+class TestGraphToolHandlers:
+    """Tests for graph tool handlers (v0.8.0).
+
+    Covers handle_query_graph, handle_shortest_path, handle_get_memory_impact
+    and their registration in handler_map.
+    """
+
+    def test_handle_query_graph(self, cm):
+        """Verify: handle_query_graph returns entities and memories fields."""
+        result = handle_query_graph(cm, {"entity_text": "Python"})
+
+        assert "entities" in result
+        assert "memories" in result
+
+    def test_handle_shortest_path(self, cm):
+        """Verify: handle_shortest_path returns path, length, found fields."""
+        result = handle_shortest_path(cm, {"src_entity": "A", "dst_entity": "B"})
+
+        assert "path" in result
+        assert "length" in result
+        assert "found" in result
+
+    def test_handle_get_memory_impact(self, cm):
+        """Verify: handle_get_memory_impact returns impact fields."""
+        result = handle_get_memory_impact(cm, {"memory_id": "some_key"})
+
+        assert "entity_count" in result
+        assert "relation_count" in result
+        assert "impact_score" in result
+
+    def test_handler_map_includes_graph_tools(self):
+        """Verify: handler_map includes query_graph, shortest_path, get_memory_impact."""
+        assert "query_graph" in handler_map
+        assert "shortest_path" in handler_map
+        assert "get_memory_impact" in handler_map

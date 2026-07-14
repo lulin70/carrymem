@@ -29,7 +29,7 @@ CarryMem fixes this. It's a lightweight, zero-dependency memory system that stor
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-4322-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-4334-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="Coverage">
   <img src="https://img.shields.io/badge/mypy-0%20errors-brightgreen" alt="mypy">
   <img src="https://img.shields.io/badge/security-bandit%2Bpip--audit-blue" alt="Security">
@@ -177,8 +177,8 @@ These are what make CarryMem different from every other memory solution:
 - Single .db file — carry your identity anywhere
 - Works with Cursor, Claude Code, ChatGPT, any MCP client
 
-### 4. Industrial-Grade Engineering — 4322 Tests / mypy 0 / flake8 0
-- **4322 tests passing** with 80%+ coverage (tested: 7 memory types × 4 tiers × lifecycle)
+### 4. Industrial-Grade Engineering — 4334+ Tests / mypy 0 / flake8 0
+- **4334+ tests passing** with 80%+ coverage (tested: 7 memory types × 4 tiers × lifecycle)
 - **mypy 0 errors** across 143 source files — fully type-safe (CI blocking gate)
 - **flake8 0 errors** — clean codebase, no lint violations (black + isort formatted)
 - **24 sensitive-pattern redaction** — auto-detects API keys, passwords, tokens before storage
@@ -640,7 +640,7 @@ carrymem setup-mcp --tool claude-code
 carrymem setup-mcp --tool all
 ```
 
-28 MCP tools available: Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11) · Health (1)
+31 MCP tools available: Core (3) · Storage (3) · Knowledge (3) · Graph (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11) · Health (1)
 
 **Client Compatibility:**
 
@@ -970,7 +970,7 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 ## Project Status
 
 **Current Version**: v0.8.0
-**Tests**: 4400+ passing, 0 failed, 21 skipped (performance tests excluded)
+**Tests**: 4334+ tests passing, 0 failed, 21 skipped (performance tests excluded)
 **Coverage**: 80%+
 **mypy**: 0 errors (150+ source files, CI blocking gate)
 **flake8**: 0 errors (black + isort formatted)

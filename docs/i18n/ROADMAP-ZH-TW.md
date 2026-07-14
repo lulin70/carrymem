@@ -239,7 +239,7 @@ CarryMem概念對應到DDD概念，實現與企業架構師的對話：
 ### v0.5.0 — 智慧增強
 - [x] 記憶整合引擎（P0: 去重+衰減，P1: 模式→規則，P2: 語意合併）
 - [x] PrefEval 96.0% 偏好遵守率（50 樣本，ICLR 2025 Oral）
-- [x] 28 個 MCP 工具（新增 consolidate_memories）
+- [x] 31 個 MCP 工具（新增 consolidate_memories + graph tools）
 - 向量語意匹配 (可選嵌入模型)
 - 規則推薦引擎
 - 跨使用者規則共享 (匿名化)

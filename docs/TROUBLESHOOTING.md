@@ -53,7 +53,7 @@ Run `carrymem doctor` for a full health check. Use `--fix` to auto-repair where 
 
 | Doctor Check | ok | warn | fail | Related Issue |
 |---|---|---|---|---|
-| `python_version` | ≥ 3.9 | — | < 3.9 | [#4](#4-pip-install-fails) |
+| `python_version` | ≥ 3.12 | — | < 3.12 | [#4](#4-pip-install-fails) |
 | `carrymem_import` | importable | — | ImportError | [#2](#2-import-error) |
 | `config_dir` | exists | missing | — | [#1](#1-cli-command-not-found) |
 | `database_file` | exists | missing | — | [#6](#6-recall-returns-no-results) |
@@ -122,7 +122,7 @@ python3 -m carrymem.cli version
 ```bash
 python3 -c "import os, sys; print(os.path.join(os.path.dirname(sys.executable), '..', 'bin'))"
 # Then add the output path to ~/.zshrc:
-export PATH="$HOME/Library/Python/3.9/bin:$PATH"
+export PATH="$HOME/Library/Python/3.12/bin:$PATH"
 source ~/.zshrc
 carrymem version
 ```
@@ -315,9 +315,9 @@ pip install --user carrymem
 
 **Deep Fix** — Python version too old:
 ```bash
-# CarryMem requires Python >= 3.9
+# CarryMem requires Python >= 3.12
 python3 --version
-# If < 3.9, install a newer Python via pyenv or your OS package manager
+# If < 3.12, install a newer Python via pyenv or your OS package manager
 ```
 
 **Verification**:
