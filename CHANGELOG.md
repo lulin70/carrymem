@@ -55,6 +55,44 @@ v0.8.0 is backward compatible. The schema migration runs automatically on first
 startup. Existing `memory_relations` rows get `confidence='EXTRACTED'` by default.
 No manual migration script required.
 
+### Assessment 2026-07-17 — 7-Dimension Project Review (B+ 77/100)
+
+#### P0 Fixes
+- **VSCode Extension UI E2E Framework**: Two-tier test architecture — Tier 1
+  (14 integration tests, CI-runnable via mocha, mock execFile) + Tier 2 (5 UI
+  E2E user journeys via `@vscode/test-electron`). CI job `vscode-ext` added.
+- **Performance Smoke Tests**: 4 CI-runnable tests (`test_performance_smoke.py`,
+  not marked slow) with loose thresholds (10x CI_FACTOR) to catch catastrophic
+  regressions. Full benchmark suite (18 tests, marked slow) remains nightly.
+- **MCP Access Control E2E + Bug Fix**: 5 new E2E tests covering write denied/
+  succeed, forget denied, read open mode, confidence label flow. **Bug fix**:
+  `SecurityError` (CM-403 access denied) now propagates as `access_denied` via
+  `_SAFE_ERROR_TYPES` + `mcp_tool_handler` re-raise (was incorrectly reported
+  as `internal_error`).
+
+#### P1 Fixes
+- **Documentation**: 10 consistency fixes across 15 files (version numbers, test
+  counts, i18n tool counts, milestones, PromptDelegateMixin MRO).
+- **CI/CD**: `benchmark.yml` advisory comments, `ci.yml` lint blocking annotation,
+  `dependabot.yml` added (pip + github-actions, weekly), `ci.yml` YAML syntax
+  fix (colon in name field quoted), `vscode-ext` job added.
+- **Directory**: `ASSESSMENT_D7_MATURITY_20260712.md` → `docs/archive/`,
+  `V0_7_3_FOLLOWUP_PLAN.md` + `V0_8_0_PLAN.md` → `docs/archive/`,
+  `generate_docs.py` → `scripts/`, 13 `test_e2e_*.py` → `tests/e2e/`,
+  `.gitignore`补全 (`venv/`, `.carrymem/`, `.tox/`, `*.sqlite-shm` etc.).
+- **Architecture**: `doctor` command Python 3.12 check (was 3.9, setup.py
+  requires 3.12), `health_check` uses `adapter.count()` O(1) SQL (was
+  `recall_memories(limit=1000)` O(n) load), MCP `InputValidator(strict_mode=True)`
+  (was False, disabling XSS checking at external boundary).
+- **Testing**: Weak assertion `>0.0` → `>0.1` (`test_context_and_scoring.py:163`),
+  e2e test directory unified (`tests/e2e/`).
+
+#### Verification
+- **4405 passed**, 17 skipped, 70 deselected (slow), 0 failed (203s)
+- **VSCode Extension**: 14/14 Tier 1 tests passing
+- **Performance Smoke**: 4/4 tests passing (CI-runnable)
+- **CI YAML**: 5/5 files valid
+
 ---
 
 ## [0.7.3] - 2026-07-13 (Security Hardening — Fernet-Only Encryption)
