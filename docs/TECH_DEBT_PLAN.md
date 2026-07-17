@@ -2,8 +2,13 @@
 
 > **文档性质**: 活文档 (Living Document) — 每完成一项立即更新状态
 > **创建时间**: 2026-07-17
-> **最后更新**: 2026-07-17 (v2 — 7 角色审核后修正)
+> **最后更新**: 2026-07-17 (v4 — 增加 ROADMAP_P0_P3.md 交叉引用 + Batch 2 状态同步)
 > **基于**: 7 维度项目整理评估 (2026-07-17, B+ 77/100) + DevSquad 7 角色并行审核
+> **配套文档**: [ROADMAP_P0_P3.md](ROADMAP_P0_P3.md) — 执行路线图 (Wave 推进表 + 7-Role 投票矩阵 + 11 阶段生命周期映射)
+>
+> **文档分工**:
+> - 本文档 (TECH_DEBT_PLAN.md) = 技术债**目录** (50 项明细 + 验证标准 + 风险矩阵)
+> - ROADMAP_P0_P3.md = 技术债**执行路线** (Wave 推进表 + 共识投票矩阵 + 活文档同步清单)
 
 ---
 
@@ -875,6 +880,7 @@ TD-035 (AccessPolicy 集成) — 安全债，独立推进
 | 2026-07-17 | 创建文档，基于 7 维度扫描结果录入 31 项技术债 | DevSquad |
 | 2026-07-17 | v2: 7 角色并行审核后修正。修正 7 个阻塞项（TD-002/003/011/012/019 描述错误 + 批次顺序 + TD-014 Dockerfile 联动）；新增 19 项遗漏技术债（TD-032~TD-054）；新增 8.1 共识决策机制；新增第 11 节风险与回滚预案；调整时间预估 P0 60min/P1 28h；新增第 1 节用户价值映射 | DevSquad 7 角色并行 |
 | 2026-07-17 | v3: P0 批次完成。TD-001 (pip 升级 13 处) + TD-002 (rule_engine logger.warning + 2 单元测试) + TD-003a (删除 2 项死代码) + TD-004 (benchmark.yml 3.11→3.12) + TD-032 (SQL 注入扫描完成，4 处 f-string SQL 全部安全)。全测试套件 4371 passed, 0 failed | DevSquad P0 批次 |
+| 2026-07-17 | v4: P1 Batch 2 partial 完成 (commit 6f965bf 推送)。6 项 ✅: TD-009 (4 模块 0%→92.62%/100%/81.48%) + TD-011 (CI 装 textual) + TD-012 (nightly vector-tests job) + TD-033 (release e2e-gate) + TD-034 (VSCode Tier 2 E2E gate) + TD-036 (fixture 复用 conftest.py)。TD-010 🟡 进行中。新增配套文档 ROADMAP_P0_P3.md (执行路线图 + 7-Role 投票矩阵 + 11 阶段生命周期映射) | DevSquad P1 Batch 2 |
 
 ---
 
