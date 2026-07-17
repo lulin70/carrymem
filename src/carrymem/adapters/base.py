@@ -1319,6 +1319,191 @@ class VersioningProvider(Protocol):
         ...
 
 
+# ── ISP Functional Grouping Protocols (TD-006) ─────────────────────
+# These coarse-grained Protocols group related public methods by functional
+# area, enabling Interface Segregation. Clients depend only on the capability
+# they need (e.g., ``GraphClient``) rather than the full ``StorageAdapter``.
+# ``VersioningProvider`` (TD-007) serves as the 4th ISP group (versioning).
+
+@runtime_checkable
+class StorageClient(Protocol):
+    """ISP Protocol: basic storage CRUD operations.
+
+    Groups the core write/delete/count operations that every storage
+    backend must support (matching ``StorageAdapter`` ABC abstract methods).
+    This Protocol enables structural ``isinstance`` checks without
+    inheritance. For key-based lookup and versioning, see
+    :class:`KeyLookupProvider` and :class:`VersioningProvider`.
+    """
+
+    def store(self, entry: dict) -> str:
+        """Store a memory entry (dict form) and return its ID."""
+        ...
+
+    def store_entry(self, entry: "MemoryEntry") -> "StoredMemory":
+        """Store a MemoryEntry and return StoredMemory with metadata."""
+        ...
+
+    def delete(self, entry_id: str) -> bool:
+        """Delete a memory by ID. Returns True if deleted."""
+        ...
+
+    def count(self, filter_: Optional[dict] = None) -> int:
+        """Count stored memories, optionally filtered."""
+        ...
+
+
+@runtime_checkable
+class RecallClient(Protocol):
+    """ISP Protocol: advanced recall/search operations beyond basic recall().
+
+    Groups multi-mode retrieval, timeline, aggregation, and semantic/hybrid
+    search methods. Only SQLiteAdapter (and future full-featured backends)
+    implement this; JSON/Obsidian adapters do not.
+    """
+
+    def recall_aggregated(
+        self,
+        memory_type: Optional[str] = None,
+        limit_per_type: int = 50,
+    ) -> Dict[str, List["StoredMemory"]]:
+        """Recall memories grouped by type."""
+        ...
+
+    def recall_timeline(self, topic: str, limit: int = 20) -> List["StoredMemory"]:
+        """Recall memories for a topic as a timeline."""
+        ...
+
+    def recall_by_time(
+        self,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+        limit: int = 100,
+    ) -> List["StoredMemory"]:
+        """Recall memories within a time range."""
+        ...
+
+    def recall_semantic(
+        self,
+        query: str,
+        limit: int = 10,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> List["StoredMemory"]:
+        """Pure vector similarity search."""
+        ...
+
+    def recall_hybrid(
+        self,
+        query: str,
+        limit: int = 20,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> List["StoredMemory"]:
+        """Explicit hybrid (keyword + vector) search."""
+        ...
+
+    def recall_multi_mode(
+        self,
+        query: str,
+        modes: Optional[List[str]] = None,
+        limit: int = 20,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Unified multi-mode retrieval interface."""
+        ...
+
+
+@runtime_checkable
+class GraphClient(Protocol):
+    """ISP Protocol: knowledge graph operations.
+
+    Groups entity extraction, graph traversal, relation management,
+    and impact analysis. Requires ``capabilities["graph"] == True``.
+    """
+
+    def store_graph_entities(
+        self,
+        storage_key: str,
+        text: str,
+        namespace: str,
+    ) -> int:
+        """Extract entities from text and store them. Returns entity count."""
+        ...
+
+    def recall_by_entity(
+        self,
+        entity_text: str,
+        entity_type: Optional[str],
+        namespace: str,
+        limit: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """Find memories mentioning a specific entity."""
+        ...
+
+    def recall_by_relation(
+        self,
+        entity_text: str,
+        relation_type: Optional[str],
+        direction: str,
+        namespace: str,
+        limit: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """Find memories connected to an entity via relations."""
+        ...
+
+    def recall_graph(
+        self,
+        entity_text: str,
+        max_hops: int,
+        namespace: str,
+        limit: int = 20,
+    ) -> Dict[str, Any]:
+        """Multi-hop graph traversal from an entity."""
+        ...
+
+    def shortest_path(
+        self,
+        src_entity: str,
+        dst_entity: str,
+        max_hops: int,
+        namespace: str,
+    ) -> Dict[str, Any]:
+        """Find shortest path between two entities."""
+        ...
+
+    def get_memory_impact(self, memory_id: str, namespace: str) -> Dict[str, Any]:
+        """Compute the graph impact of a memory."""
+        ...
+
+    def add_graph_relation(
+        self,
+        src_entity: str,
+        dst_entity: str,
+        relation_type: str,
+        source_memory_key: Optional[str],
+        weight: float,
+        namespace: str,
+        confidence: str,
+    ) -> bool:
+        """Add a relation between two entities. Returns True on success."""
+        ...
+
+    def list_graph_entities(
+        self,
+        namespace: str,
+        limit: int = 100,
+    ) -> List[Dict[str, Any]]:
+        """List all entities in the graph."""
+        ...
+
+    def list_graph_relations(
+        self,
+        namespace: str,
+        limit: int = 100,
+    ) -> List[Dict[str, Any]]:
+        """List all relations in the graph."""
+        ...
+
+
 __all__ = [
     # Data classes
     "MemoryEntry",
@@ -1329,10 +1514,14 @@ __all__ = [
     "AsyncStorageAdapter",
     # Test contract
     "TestStorageAdapterContract",
-    # Optional capability Protocols (TD-007)
+    # Optional capability Protocols (TD-007: fine-grained)
     "RawConnectionProvider",
     "EncryptionProvider",
     "EmbeddingModelProvider",
     "KeyLookupProvider",
     "VersioningProvider",
+    # ISP functional grouping Protocols (TD-006: coarse-grained)
+    "StorageClient",
+    "RecallClient",
+    "GraphClient",
 ]

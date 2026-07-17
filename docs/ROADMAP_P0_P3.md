@@ -2,7 +2,7 @@
 
 > **文档性质**: 活文档 (Living Document) — 每完成一个 Wave 立即更新状态
 > **创建时间**: 2026-07-17
-> **最后更新**: 2026-07-17 (TD-007+TD-037 ✅ 完成，Batch 3 Wave 2 收尾；833 tests 全通过，mypy 仅剩 2 pre-existing 错误)
+> **最后更新**: 2026-07-17 (TD-006 ✅ 完成，Batch 3 Wave 3 收尾；3 ISP Protocol + 19 API 稳定性测试，852 tests 全通过)
 > **基于**: TECH_DEBT_PLAN.md (技术债目录) + DevSquad V4.1.0 7-Role 共识机制 + 11 阶段生命周期
 > **用户规则映射**:
 >   - 推进 P0-P1 按项目生命周期，文档先行，充分验证，推送 Git
@@ -31,16 +31,17 @@
 | 优先级 | 总数 | 完成 | 进行中 | 待开始 | 完成率 |
 |--------|------|------|--------|--------|--------|
 | **P0 立即修复** | 5 | 5 | 0 | 0 | **100%** ✅ |
-| **P1 高优先级** | 20 | 8 | 0 | 12 | **40%** 🟡 |
+| **P1 高优先级** | 20 | 9 | 0 | 11 | **45%** 🟡 |
 | **P2 中优先级** | 18 | 0 | 0 | 18 | **0%** ⬜ |
 | **P3 低优先级** | 11 | 0 | 0 | 11 | **0%** ⬜ |
-| **总计** | 54 | 13 | 0 | 41 | **24.1%** |
+| **总计** | 54 | 14 | 0 | 40 | **25.9%** |
 
 **Git 历史里程碑**:
 - `d6bdd81` — P0 batch 完成 (5 项: TD-001/002/003a/004/032)
 - `6f965bf` — P1 Batch 2 partial 完成 (6 项: TD-009/011/012/033/034/036)
 - `02c666c` — TD-010 SQLiteAdapter 覆盖率 33%→82% (110 tests, Batch 2 收尾)
 - `(本批)` — TD-007+TD-037 Batch 3 Wave 2 完成 (跨层私有访问 + Mixin 隐式协议)
+- `(本批)` — TD-006 Batch 3 Wave 3 完成 (SQLiteAdapter ISP: 3 Protocol + 19 API 稳定性测试)
 
 **计数说明**: TECH_DEBT_PLAN.md §1 统计表声称 P1=22/P2=13/P3=10，实际盘点为 P1=20/P2=18/P3=11 (TD-013/024/025/026 在文档中标注为 P2 但统计表归入 P1)。本路线图以实际盘点为准。
 
@@ -81,16 +82,16 @@
 - 验证命令: `pytest --cov=carrymem.adapters.sqlite --cov-report=term-missing tests/test_sqlite_adapter.py` 覆盖率 ≥80%
 - 错误维度覆盖 ≥15%，边界维度覆盖 ≥10%
 
-### 3.3 P1 Batch 3 — 架构重构 (进行中 🟡, Wave 2 完成 ✅)
+### 3.3 P1 Batch 3 — 架构重构 (进行中 🟡, Wave 2-3 完成 ✅)
 
 **前置条件**: TD-010 完成 (SQLiteAdapter 覆盖率 ≥80% 作为重构安全网) ✅
 **回滚点**: `git tag pre-p1-architecture` (Batch 2 完成后)
 
 | Wave | TD 项 | 角色 | 11 阶段 | 依赖 | 状态 |
 |------|-------|------|---------|------|------|
-| W2 | TD-007 (跨层私有访问) | Architect | P2→P3→P8 | 无 (TD-006 前置) | ✅ 本批 commit |
-| W2 | TD-037 (Mixin 隐式协议) | Architect | P2→P3→P8 | TD-007 | ✅ 本批 commit |
-| W3 | TD-006 (SQLiteAdapter ISP) | Architect | P2→P3→P4→P8→P9 | TD-007, TD-010 | ⬜ 待启动 |
+| W2 | TD-007 (跨层私有访问) | Architect | P2→P3→P8 | 无 (TD-006 前置) | ✅ 已提交 |
+| W2 | TD-037 (Mixin 隐式协议) | Architect | P2→P3→P8 | TD-007 | ✅ 已提交 |
+| W3 | TD-006 (SQLiteAdapter ISP) | Architect | P2→P3→P4→P8→P9 | TD-007, TD-010 | ✅ 本批 commit |
 | W4 | TD-005 (cmd_doctor F=62 拆分) | Architect+Coder | P2→P3→P8→P9 | TD-010 | ⬜ 待启动 |
 | W5 | TD-008a (7 个 E 级函数，非 recall_engine) | Coder | P8→P9 | TD-010 | ⬜ 待启动 |
 | W5 | TD-008b (2 个 E 级函数，recall_engine) | Coder | P8→P9 | TD-006 | ⬜ 待启动 |
@@ -113,6 +114,20 @@
 - 在 6 个 Mixin 文件中添加 `TYPE_CHECKING` 跨 Mixin 声明: `_classification.py`, `_prompt_delegate.py`, `_recall.py`, `_memory_crud.py`, `_lifecycle.py`, `_profile_export.py`
 - 移除 ~27 个 `type: ignore[attr-defined]` 注释 (core/ 目录下 0 残留)
 - 同步清理 8 个多余 `type: ignore` 注释 (no-any-return/unreachable，因 TYPE_CHECKING 声明使类型明确后不再需要)
+
+**Wave 3 关闭验证 (TD-006)**:
+
+| 验证项 | 命令 | 结果 |
+|--------|------|------|
+| API 向后兼容 | `pytest tests/test_api_stability.py` | ✅ 19 passed (5.72s) |
+| 全测试通过 | `pytest tests/core/ tests/test_carrymem.py tests/test_layers.py tests/test_base_adapter.py tests/test_core_protocols.py tests/test_memify.py tests/test_sqlite_adapter.py tests/test_cli_comprehensive.py tests/test_cli_deep.py tests/test_api_stability.py` | ✅ 852 passed (45.73s) |
+| ISP 隔离验证 | SQLiteAdapter 满足 7 Protocol; JSONAdapter/ObsidianAdapter 仅满足 StorageClient | ✅ 隔离正确 |
+
+**TD-006 实现摘要**:
+- 在 `adapters/base.py` 新增 3 个 `@runtime_checkable` ISP Protocol: `StorageClient` (4 方法), `RecallClient` (6 方法), `GraphClient` (9 方法)
+- `VersioningProvider` (TD-007) 作为第 4 个 ISP 功能组 (版本管理)
+- 创建 `tests/test_api_stability.py` (19 tests, 4 类): SQLiteAdapter 满足所有 Protocol; JSON/Obsidian 仅满足 StorageClient; Protocol 方法集稳定性快照
+- ISP 设计原则: `StorageClient` 仅含 ABC 抽象方法 (store/store_entry/delete/count); 可选能力通过 `KeyLookupProvider`/`VersioningProvider` 等细粒度 Protocol 声明
 
 **Wave 2 详细方案 (TD-007 → TD-037)**:
 
