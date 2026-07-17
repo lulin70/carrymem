@@ -5,12 +5,13 @@
     "outDir": "out",
     "lib": ["ES2020"],
     "sourceMap": true,
-    "rootDir": "src",
+    "rootDir": ".",
     "strict": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noUnusedParameters": false,
     "noUnusedLocals": false
   },
+  "include": ["src/**/*.ts", "test/**/*.ts"],
   "exclude": ["node_modules", ".vscode-test"]
 }

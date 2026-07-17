@@ -74,7 +74,7 @@
 | **HTTP Server** | `serve` | ❌ | N/A (自身) | **仅 CLI** |
 | **初始化** | `init` | ❌ | ❌ | **仅 CLI** |
 | **教程** | `tutorial` | ❌ | `onboard` | CLI/MCP 均有，形式不同 |
-| **版本信息** | `version` / `-v` | ❌ | `mce_status` | **仅 CLI/MCP** |
+| **版本信息** | `version` / `-v` | ❌ | `mce_status` | **仅 CLI/MCP**（内部诊断工具，不在 tools/list 中发布，仅可 tools/call） |
 | **帮助** | `help` / `-h` | ✅ (? 键) | ❌ | TUI 有快捷键帮助 |
 
 ### 2.6 知识库 (Knowledge Base)

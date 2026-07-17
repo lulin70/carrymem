@@ -160,7 +160,9 @@ class TestContextSelection(unittest.TestCase):
 
     def test_context_relevance_match(self):
         rel = context_relevance("I prefer dark mode in VS Code", "dark mode")
-        self.assertGreater(rel, 0.0)
+        # Jaccard similarity: {"dark","mode"} ∩ {"i","prefer","dark","mode","in","vs","code"}
+        # = 2/7 ≈ 0.286. Use 0.1 as threshold (catches "no match" bugs, not just >0).
+        self.assertGreater(rel, 0.1, f"Expected relevance > 0.1 for 'dark mode' match, got {rel}")
 
     def test_context_relevance_no_match(self):
         rel = context_relevance("I like Python programming", "cooking recipes")

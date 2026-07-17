@@ -368,10 +368,10 @@ def cmd_doctor(args):
 
     py_ver = sys.version_info
     py_str = f"{py_ver.major}.{py_ver.minor}.{py_ver.micro}"
-    if py_ver >= (3, 9):
-        _record("python_version", "ok", f"Python {py_str} (>= 3.9)")
+    if py_ver >= (3, 12):
+        _record("python_version", "ok", f"Python {py_str} (>= 3.12)")
     else:
-        _record("python_version", "fail", f"Python {py_str} (need >= 3.9)")
+        _record("python_version", "fail", f"Python {py_str} (need >= 3.12)")
 
     try:
         from carrymem import CarryMem

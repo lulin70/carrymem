@@ -1,8 +1,55 @@
 # CarryMem — Project Status
 
 **Version**: v0.8.0
-**Last Updated**: 2026-07-14
+**Last Updated**: 2026-07-17
 **Maintainer**: CarryMem Team
+
+---
+
+## v0.8.0 Project Assessment (2026-07-17)
+
+**7-Dimension Maturity Score**: B+ (77/100)
+
+### Assessment Summary
+
+| Dimension | Score | Status |
+|-----------|-------|--------|
+| Architecture | B+ | PromptDelegateMixin MRO corrected, doctor Python 3.12 aligned |
+| Modularity | A- | ✅ No ghost features, all 31 tools have handlers |
+| Security | B+ | MCP XSS strict_mode enabled, SecurityError propagation fixed |
+| Performance | B | Smoke tests added to CI (4 tests, not marked slow) |
+| Maintainability | B+ | Documentation consistency verified across 15 files |
+| Testability | B | 4405 tests pass, VSCode extension tests added (14 Tier 1 + 5 Tier 2) |
+| Observability | B | health_check uses O(1) count() instead of O(n) recall |
+
+### P0 Fixes Completed
+
+1. **VSCode Extension UI E2E Framework** — Two-tier test framework:
+   - Tier 1: 14 integration tests (CI-runnable, mock execFile, all passing)
+   - Tier 2: 5 VSCode UI E2E user journeys (@vscode/test-electron, activation/commands/tree/config/contract)
+   - CI job `vscode-ext` added to ci.yml
+2. **Performance Test CI Deselect** — Created `tests/test_performance_smoke.py` (4 tests, not marked slow):
+   - Classify/recall/forget/batch smoke tests with loose thresholds (10x CI_FACTOR)
+   - Runs in CI via `-m "not slow"`, catches catastrophic regressions only
+3. **MCP Access Control E2E** — 5 new E2E tests + bug fix:
+   - `TestMCPAccessControlE2E` (4 tests): write denied/succeed, forget denied, read open mode
+   - `TestMCPConfidenceLabelE2E` (1 test): confidence label flows through MCP
+   - **Bug fix**: `SecurityError` now propagates as `access_denied` (was `internal_error`)
+
+### P1 Fixes Completed
+
+- **Documentation**: 10 consistency fixes (version numbers, test counts, i18n tool counts, milestones)
+- **CI/CD**: benchmark.yml advisory comments, ci.yml lint blocking, dependabot.yml, ci.yml YAML syntax fix
+- **Directory**: ASSESSMENT/planning docs archived, 13 e2e tests moved to tests/e2e/, .gitignore补全
+- **Architecture**: doctor Python 3.12, health_check O(1) count(), MCP XSS strict_mode=True
+- **Testing**: Weak assertion `>0.0` → `>0.1` (test_context_and_scoring.py), e2e directory unified
+
+### Test Results
+
+- **Total**: 4405 passed, 17 skipped, 70 deselected (slow), 0 failed
+- **Coverage**: 80.88% (meets ≥80% gate)
+- **VSCode Extension**: 14/14 Tier 1 tests passing
+- **Performance Smoke**: 4/4 tests passing (CI-runnable)
 
 ---
 
@@ -410,6 +457,10 @@ Phase 3.5 (architecture cleanup) complete (commit `f4580dd`, 2026-07-10):
   (disk I/O error vs readonly matching, not a regression)
 - CI Actions: `actions/setup-python@v5`, `actions/upload-artifact@v4`
   still trigger Node.js 20 deprecation warnings (upgrade to v6+ when available)
+- VSCode Extension Tier 2 E2E tests require `@vscode/test-electron` (downloads ~150MB VSCode);
+  currently run locally/nightly, not in PR-level CI
+- Performance smoke tests use loose thresholds (10x CI_FACTOR); full benchmark suite
+  (18 tests, marked slow) runs nightly/locally only
 
 ### Long-term Direction
 

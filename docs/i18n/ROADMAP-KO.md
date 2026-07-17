@@ -740,5 +740,5 @@ carrymem unpack team-identity.carry
 
 ---
 
-**Next Milestone**: v0.8.0 (next minor — planning TBD)
-**Status**: ✅ **v0.4.0 complete (4198 tests, 80%+ coverage, Memory + Rules + Knowledge + Enterprise)**
+**Next Milestone**: v0.9.0 (next minor — planning TBD)
+**Status**: ✅ **v0.8.0 complete (4334+ tests, 80%+ coverage, Memory + Rules + Knowledge + Enterprise)**

@@ -136,7 +136,7 @@ src/carrymem/core/
 
 - **LifecycleMixin 在 MRO 最前面**（继承列表第一位）：确保 `__init__` 首先被调用，所有共享状态在其他 Mixin 方法执行前就绪。
 - **MemoryCRUDMixin 在 ClassificationMixin 之后**：因为 `classify_and_remember()` 内部调用 ClassificationMixin 的私有方法。
-- **PromptDelegateMixin 在 MRO 最前面**：不与其他 Mixin 有方法名冲突。
+- **PromptDelegateMixin 在 MRO 最后面**：不与其他 Mixin 有方法名冲突。
 
 ## 6. Protocol 接口体系 (`_protocols.py`)
 

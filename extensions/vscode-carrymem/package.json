@@ -141,13 +141,20 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
+    "compile": "tsc -p ./ && cp test/runUnitTests.js out/test/ && cp test/runVscodeTests.js out/test/",
     "watch": "tsc -watch -p ./",
-    "lint": "eslint src --ext ts"
+    "lint": "eslint src --ext ts",
+    "test:unit": "node ./out/test/runUnitTests.js",
+    "test:e2e": "node ./out/test/runVscodeTests.js",
+    "test": "npm run test:unit && npm run test:e2e"
   },
   "devDependencies": {
     "@types/node": "^18.0.0",
     "@types/vscode": "^1.85.0",
+    "@vscode/test-electron": "^2.4.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@types/mocha": "^10.0.6",
+    "mocha": "^10.2.0",
     "typescript": "^5.3.0"
   }
 }

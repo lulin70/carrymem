@@ -140,11 +140,12 @@ jobs:
           path: dist/
 
   # ═══════════════════════════════════════
-  # ADVISORY: Code Quality (non-blocking)
+  # BLOCKING: Code Quality Gate (flake8+black+isort+mypy)
   # ═══════════════════════════════════════
   lint:
     name: Lint (Quality Gate)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     continue-on-error: false
     steps:
       - uses: actions/checkout@v5
@@ -171,7 +172,7 @@ jobs:
       - name: mypy
         run: mypy src/
 
-      - name: radon cc check (advisory — target: blocking for complexity >=21)
+      - name: "radon cc check (advisory — target: blocking for complexity >=21)"
         continue-on-error: true
         run: |
           # Per project constraint: blocking for complexity >=21 (D+ level)
@@ -314,3 +315,38 @@ jobs:
             --timeout=120 \
             -m "not slow" \
             -q 2>&1 | tee /tmp/optional_test_output.txt
+
+  # ═══════════════════════════════════════
+  # VSCode Extension Tests (Tier 1 — unit/integration, no VSCode required)
+  #   Runs CarryMemClient integration tests via mocha in plain Node.
+  #   Tier 2 (VSCode UI E2E via @vscode/test-electron) runs locally/nightly.
+  # ═══════════════════════════════════════
+  vscode-ext:
+    name: VSCode Extension Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install extension dependencies
+        working-directory: extensions/vscode-carrymem
+        run: npm install --no-audit --no-fund
+
+      - name: Compile TypeScript
+        working-directory: extensions/vscode-carrymem
+        run: npx tsc -p ./
+
+      - name: Copy runner scripts to out/
+        working-directory: extensions/vscode-carrymem
+        run: |
+          cp test/runUnitTests.js out/test/
+          cp test/runVscodeTests.js out/test/
+
+      - name: Run Tier 1 integration tests
+        working-directory: extensions/vscode-carrymem
+        run: node ./out/test/runUnitTests.js

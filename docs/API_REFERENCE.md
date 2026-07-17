@@ -119,7 +119,7 @@ with CarryMem() as cm:
 
 ```python
 >>> cm.version
-'0.4.0'
+'0.8.0'
 ```
 
 #### `namespace` → `str`

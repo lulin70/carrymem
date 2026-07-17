@@ -1,6 +1,6 @@
 # Performance Regression Benchmark CI
 #
-# Runs performance benchmarks as a BLOCKING hard gate.
+# Runs performance benchmarks as an ADVISORY gate (warnings only).
 # Triggers on:
 #   - Push to new-main (always runs)
 #   - Pull request to new-main (always runs)
@@ -8,7 +8,7 @@
 #   - Schedule: weekly on Monday 00:00 UTC (baseline tracking)
 #
 # Failure behavior:
-#   - Benchmark failures BLOCK merges (hard gate)
+#   - Benchmark failures emit warnings (advisory, non-blocking)
 #   - CARRYMEM_CI=true activates CI_FACTOR=50 scaling for CI VMs
 #   - Failed benchmarks generate GitHub Issue annotations
 #   - Results uploaded as artifacts for trend analysis
@@ -128,7 +128,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-summary-py${{ matrix.python-version }}
-          path: ${{ github.workspace }}/.github/workflows/  # Placeholder for summary
+          path: ${{ github.workspace }}/benchmark_results/  # Created by benchmark run
           if-no-files-found: ignore
 
   # ═══════════════════════════════════════

@@ -179,7 +179,7 @@ These are what make CarryMem different from every other memory solution:
 
 ### 4. Industrial-Grade Engineering — 4334+ Tests / mypy 0 / flake8 0
 - **4334+ tests passing** with 80%+ coverage (tested: 7 memory types × 4 tiers × lifecycle)
-- **mypy 0 errors** across 143 source files — fully type-safe (CI blocking gate)
+- **mypy 0 errors** across 150+ source files — fully type-safe (CI blocking gate)
 - **flake8 0 errors** — clean codebase, no lint violations (black + isort formatted)
 - **24 sensitive-pattern redaction** — auto-detects API keys, passwords, tokens before storage
 - **PatternAnalyzer God Class split** (1547→171 LOC facade + 3 modules) — maintainable architecture
@@ -970,7 +970,7 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 ## Project Status
 
 **Current Version**: v0.8.0
-**Tests**: 4334+ tests passing, 0 failed, 21 skipped (performance tests excluded)
+**Tests**: 4334+ tests passing, 0 failed, 17 skipped (performance tests excluded)
 **Coverage**: 80%+
 **mypy**: 0 errors (150+ source files, CI blocking gate)
 **flake8**: 0 errors (black + isort formatted)

@@ -503,7 +503,7 @@ carrymem setup-mcp --tool claude-code
 carrymem setup-mcp --tool all
 ```
 
-31개 MCP 도구 제공: Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11)
+31개 MCP 도구 제공: Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11) · Graph (3) · Health (1)
 
 **클라이언트 호환성:**
 

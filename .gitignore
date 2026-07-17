@@ -23,6 +23,7 @@ backup/
 # Virtual environments
 .venv/
 env/
+venv/
 
 # IDE config
 .vscode/
@@ -40,6 +41,7 @@ htmlcov/
 .coverage
 coverage.xml
 test_results*.log
+.tox/
 
 # OS files
 .DS_Store
@@ -48,6 +50,7 @@ Thumbs.db
 # Data directories (user data)
 data/
 src/data/
+.carrymem/
 # Exception: semantic data files are package data, not user data
 !src/carrymem/semantic/data/
 !src/carrymem/semantic/data/*.yaml
@@ -79,6 +82,10 @@ config/encryption_keys.json
 *.db
 *.sqlite
 *.sqlite3
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite3-shm
+*.sqlite3-wal
 
 # Swap and temp files
 *.swp

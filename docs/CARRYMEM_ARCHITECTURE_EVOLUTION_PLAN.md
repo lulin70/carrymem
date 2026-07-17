@@ -14,13 +14,13 @@ CarryMem 的核心定位是 **AI 身份层**（Memory + Rules + Knowledge），�
 | 优势 | 说明 | 底线 |
 |------|------|------|
 | **零 LLM 规则引擎** | 88% 分类覆盖，pattern-based 不依赖 LLM | 不引入 LLM 作为核心依赖 |
-| **零依赖核心** | 核心仅 PyYAML，可选 extras 按需安装 | 核心不增加必选依赖 |
+| **零依赖核心** | 核心仅 PyYAML + cryptography，可选 extras 按需安装 | 核心不增加必选依赖 |
 | **MCP 31 工具** | 最丰富的 MCP 记忆工具集 | 不减少工具数量 |
 | **便携式** | 单文件 SQLite，跨模型/工具/设备 | 保持单文件部署能力 |
 | **三语支持** | EN/CN/JP 全链路 | 不减少语言支持 |
 
 **演进原则**:
-1. **渐进式增强** — 新功能作为可选层添加，不破坏核心零依赖
+1. **渐进式增强** — 新功能作为可选层添加，不破坏核心最小依赖（PyYAML + cryptography）
 2. **SQLite 原生** — 优先用 SQLite 能力，不引入 Neo4j/Redis 等外部服务
 3. **零 LLM 优先** — 规则/分类/实体提取保持 pattern-based，LLM 仅作为可选增强
 4. **API 稳定** — 现有 API 不 breaking change，新功能通过新方法或参数暴露
@@ -229,7 +229,7 @@ def recall_graph(self, entity: str, max_hops: int = 2) -> List[StoredMemory]:
 
 | # | 检查项 | 通过标准 |
 |---|--------|----------|
-| 1 | 核心零依赖 | 新功能不增加 `install_requires` 依赖 |
+| 1 | 核心仅 PyYAML + cryptography | 新功能不增加 `install_requires` 依赖 |
 | 2 | 零 LLM 优先 | 核心功能不依赖 LLM（LLM 仅作为可选增强） |
 | 3 | API 稳定 | 不 breaking change 现有 API |
 | 4 | SQLite 原生 | 不引入外部服务（Neo4j/Redis 等） |

@@ -19,6 +19,7 @@ from functools import wraps
 from typing import Any, Dict, List, Optional
 
 from carrymem.__version__ import __version__ as _version
+from carrymem.errors import SecurityError
 
 from .tools import (
     CLASSIFICATION_SCHEMA,
@@ -31,7 +32,7 @@ _validator: Optional[InputValidator] = None
 try:
     from carrymem.security.input_validator import InputValidator
 
-    _validator = InputValidator(strict_mode=False)
+    _validator = InputValidator(strict_mode=True)
 except ImportError:
     import logging
 
@@ -42,6 +43,7 @@ _SAFE_ERROR_TYPES = {
     "KnowledgeNotConfiguredError": "knowledge_not_configured",
     "ValueError": "invalid_input",
     "ValidationError": "invalid_input",
+    "SecurityError": "access_denied",
 }
 
 _MAX_LIMIT = 1000
@@ -78,6 +80,10 @@ def mcp_tool_handler(func):
     Handlers receive (target_object, arguments) and return a dict.
     On exception: wraps as {"success": False, "error": ...}.
     On success: returns the handler's result unchanged (preserves original format).
+
+    Note: ``SecurityError`` (access denied) is re-raised so the outer
+    ``handle_tool`` wrapper can report it at the top level — this ensures
+    clients can distinguish authorization failures from successful operations.
     """
 
     @wraps(func)
@@ -85,6 +91,9 @@ def mcp_tool_handler(func):
         """Invoke the wrapped handler, converting exceptions into an error dict."""
         try:
             return func(target, arguments)  # type: ignore[no-any-return]
+        except SecurityError:
+            # Re-raise so handle_tool reports {"success": False, "error": "access_denied"}
+            raise
         except Exception as e:
             return {"success": False, "error": _safe_error(e)}
 
@@ -872,9 +881,13 @@ def handle_health_check(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as e:
         result["audit"] = {"status": "error", "error": str(e)}
 
-    # Memory count
+    # Memory count — use adapter.count() (O(1) SQL) instead of recall_memories (O(n) load)
     try:
-        result["memory_count"] = len(carrymem.recall_memories(limit=1000))
+        adapter = getattr(carrymem, "_adapter", None)
+        if adapter is not None and hasattr(adapter, "count"):
+            result["memory_count"] = adapter.count()
+        else:
+            result["memory_count"] = len(carrymem.recall_memories(limit=1000))
     except Exception:
         result["memory_count"] = "unavailable"
 

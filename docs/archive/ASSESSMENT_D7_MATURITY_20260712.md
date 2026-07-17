@@ -3,7 +3,7 @@
 > **评估方法**: DevSquad V4.0.0 Multi-Role Orchestrator — 4 个并行 subagent + 全量测试
 > **评估原则**: 严格、准确、诚实，杜绝自评虚报；所有数据均附实际命令输出
 > **触发**: 用户主动要求 "Use Skill: devsquad 对 CarryMem 项目做整体评估，执行项目整理评估命令"
-> **对比基线**: [ASSESSMENT_D7_MATURITY_20260629.md](file:///Users/lin/trae_projects/carrymem/ASSESSMENT_D7_MATURITY_20260629.md) 2026-06-29 评估 76/100 (B-) @ v0.4.0
+> **对比基线**: [ASSESSMENT_D7_MATURITY_20260629.md](file:///Users/lin/trae_projects/carrymem/docs/archive/ASSESSMENT_D7_MATURITY_20260629.md) 2026-06-29 评估 76/100 (B-) @ v0.4.0
 > **当前 commit**: de622da (v0.7.2, branch `new-main`)
 
 ---

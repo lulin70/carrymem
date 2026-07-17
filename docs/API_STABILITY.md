@@ -2,7 +2,7 @@
 
 **Version**: 1.1
 **Effective**: v0.4.0+
-**Last Updated**: 2026-06-18
+**Last Updated**: 2026-07-17
 
 ## 1. API Classification
 
