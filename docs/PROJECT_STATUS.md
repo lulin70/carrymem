@@ -44,10 +44,25 @@
 - **Architecture**: doctor Python 3.12, health_check O(1) count(), MCP XSS strict_mode=True
 - **Testing**: Weak assertion `>0.0` → `>0.1` (test_context_and_scoring.py), e2e directory unified
 
+### Tech Debt Plan 2026-07-17 — P0 Batch Complete
+
+**Plan**: `docs/TECH_DEBT_PLAN.md` (living document, 50 items: P0:5, P1:22, P2:13, P3:10)
+**Consensus**: 7-role DevSquad parallel review completed, all 7 blockers resolved in v2
+
+**P0 Items Completed (5/5)**:
+1. **TD-001**: pip upgraded to `>=26.1.2` across 13 locations (CVE remediation)
+2. **TD-002**: `rule_engine` lazy init failure now logs warning (was silent `pass`); 2 unit tests added
+3. **TD-003a**: 2 dead-code symbols removed (`clear_working_memory`, `_has_word_overlap`)
+4. **TD-004**: benchmark.yml matrix `['3.11','3.12']` → `['3.12']` (setup.py requires ≥3.12)
+5. **TD-032**: SQL injection audit complete — 4 f-string SQL sites all safe (whitelist/constant/parameterized)
+
+**Next**: P1 batch (22 items) — test-first → architecture refactor → DevOps+code quality
+
 ### Test Results
 
-- **Total**: 4405 passed, 17 skipped, 70 deselected (slow), 0 failed
-- **Coverage**: 80.88% (meets ≥80% gate)
+- **Total**: 4371 passed, 7 skipped, 71 deselected, 0 failed (P0 batch, `--no-cov`)
+- **Previous baseline**: 4405 passed, 17 skipped, 70 deselected (pre-P0)
+- **Coverage**: 80.88% (meets ≥80% gate, pre-P0 baseline)
 - **VSCode Extension**: 14/14 Tier 1 tests passing
 - **Performance Smoke**: 4/4 tests passing (CI-runnable)
 

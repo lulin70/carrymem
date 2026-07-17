@@ -93,6 +93,32 @@ No manual migration script required.
 - **Performance Smoke**: 4/4 tests passing (CI-runnable)
 - **CI YAML**: 5/5 files valid
 
+### Tech Debt Plan 2026-07-17 — P0 Batch (5 items completed)
+
+Based on 7-dimension assessment + DevSquad 7-role parallel review (50 items: P0:5, P1:22, P2:13, P3:10).
+See `docs/TECH_DEBT_PLAN.md` (living document) for full plan, consensus record, and risk rollback plan.
+
+- **TD-001 (pip CVE)**: Upgraded pip to `>=26.1.2` across 13 locations
+  (ci.yml×4, release.yml×2, benchmark.yml×2, nightly.yml×1, Dockerfile×2, install.sh×1).
+- **TD-002 (rule_engine silent error swallowing)**: `core/_lifecycle.py:172` —
+  Added `logger.warning(...)` with `exc_info=True`. Behavior preserved (does not
+  block startup), but FTS vtable init failures are now observable. Added 2 unit
+  tests (`TestRuleEngineInitFailure`) verifying warning emission + startup continuity.
+- **TD-003a (dead code removal)**: Removed `engine.py:135 clear_working_memory()`
+  and `rules/matcher.py:368 _has_word_overlap()` (zero callers, no reflection access).
+  Remaining 8 dead-code symbols are public API → moved to TD-003b (P1, deprecation path).
+- **TD-004 (benchmark.yml Python 3.11)**: Removed `'3.11'` from matrix (setup.py
+  requires `>=3.12`). Both benchmark + profile jobs updated.
+- **TD-032 (SQL injection audit)**: Audited 4 f-string SQL sites. All safe:
+  `backup.py:100,142` (class constant TABLE_NAME), `rules/storage.py:601`
+  (col_name from `allowed_fields` whitelist), `obsidian_adapter.py:256`
+  (hardcoded WHERE + parameterized).
+
+#### P0 Verification
+- **4371 passed**, 7 skipped, 71 deselected, 0 failed (400s, `--no-cov`)
+- **TD-002 new tests**: 2/2 passing (`TestRuleEngineInitFailure`)
+- **TD-032 scan**: `grep -rn 'execute(f"' src/carrymem/` → 4 sites, all audited safe
+
 ---
 
 ## [0.7.3] - 2026-07-13 (Security Hardening — Fernet-Only Encryption)

@@ -89,6 +89,43 @@ class TestLifecycleInit(unittest.TestCase):
             cm.close()
 
 
+class TestRuleEngineInitFailure(unittest.TestCase):
+    """Tests for TD-002: rule_engine lazy init failure must log warning, not silently pass."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def test_rule_engine_init_failure_logs_warning(self):
+        """When rule_engine lazy init fails, a warning is logged (TD-002)."""
+        from unittest.mock import patch
+
+        db_path = os.path.join(self.tmpdir, "rule_fail.db")
+        with patch("carrymem.rules.RuleEngine", side_effect=RuntimeError("simulated FTS vtable failure")):
+            with self.assertLogs("carrymem.core._lifecycle", level="WARNING") as log_ctx:
+                cm = CarryMem(storage="sqlite", db_path=db_path, auto_backup_interval=0)
+                try:
+                    # Warning must be emitted during __init__
+                    self.assertTrue(
+                        any("Rule engine lazy init failed" in msg for msg in log_ctx.output),
+                        f"Expected warning not found in logs: {log_ctx.output}",
+                    )
+                finally:
+                    cm.close()
+
+    def test_rule_engine_init_failure_does_not_block_startup(self):
+        """rule_engine init failure must not propagate (behavior preserved)."""
+        from unittest.mock import patch
+
+        db_path = os.path.join(self.tmpdir, "rule_fail2.db")
+        with patch("carrymem.rules.RuleEngine", side_effect=RuntimeError("simulated failure")):
+            # Should not raise — failure is caught and logged
+            cm = CarryMem(storage="sqlite", db_path=db_path, auto_backup_interval=0)
+            cm.close()
+
+
 class TestLifecycleClose(unittest.TestCase):
     """Tests for CarryMem.close() (LifecycleMixin)."""
 

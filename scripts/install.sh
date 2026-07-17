@@ -21,7 +21,7 @@ fi
 
 echo ""
 echo "📦 Upgrading pip..."
-python3 -m pip install --upgrade pip 2>/dev/null || pip3 install --upgrade pip 2>/dev/null || true
+python3 -m pip install --upgrade "pip>=26.1.2" 2>/dev/null || pip3 install --upgrade "pip>=26.1.2" 2>/dev/null || true
 
 echo ""
 echo "📦 Installing CarryMem..."

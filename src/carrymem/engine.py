@@ -132,10 +132,6 @@ class MemoryClassificationEngine:
             }
         )
 
-    def clear_working_memory(self):
-        """Reset the in-process working memory buffer."""
-        self.working_memory.clear()
-
     def to_memory_entry(self, message: str, context: Optional[str] = None) -> Dict[str, Any]:
         """Convert process_message result to MemoryEntry Schema v1.0.
 

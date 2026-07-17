@@ -3,7 +3,7 @@ FROM python:3.12-slim AS builder
 
 WORKDIR /build
 
-RUN pip install --no-cache-dir --upgrade pip build
+RUN pip install --no-cache-dir --upgrade "pip>=26.1.2" build
 
 # Copy only files needed for building the wheel
 COPY setup.py pyproject.toml MANIFEST.in ./
@@ -30,7 +30,7 @@ WORKDIR /app
 
 # Install the wheel built in the builder stage (includes [full] extras)
 COPY --from=builder /build/dist/*.whl /tmp/
-RUN pip install --no-cache-dir --upgrade pip && \
+RUN pip install --no-cache-dir --upgrade "pip>=26.1.2" && \
     whl=$(ls /tmp/carrymem-*.whl | head -1) && \
     pip install --no-cache-dir "${whl}[full]" && \
     rm -f /tmp/*.whl

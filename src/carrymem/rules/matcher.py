@@ -365,13 +365,6 @@ class RuleMatcher:
         else:
             return [w.lower() for w in text.split() if w.strip()]
 
-    def _has_word_overlap(self, text1: str, text2: str, min_overlap: int = 2) -> bool:
-        words1 = set(self._tokenize(text1))
-        words2 = set(self._tokenize(text2))
-
-        overlap = words1 & words2
-        return len(overlap) >= min_overlap
-
     def _deduplicate(self, results: List[MatchResult]) -> List[MatchResult]:
         """
         Remove duplicate rules, keeping the one with highest score.
