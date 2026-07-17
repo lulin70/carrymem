@@ -352,6 +352,48 @@ class SQLiteAdapter(StorageAdapter):
     def _get_connection(self):
         return self._conn_mgr.get_connection()
 
+    # ── Public capability accessors (TD-007: replace private access) ──
+    # These public methods/properties expose internal state to external
+    # layers (CLI/Core/Layers) via Protocol contracts (RawConnectionProvider,
+    # EncryptionProvider, EmbeddingModelProvider, KeyLookupProvider,
+    # VersioningProvider) defined in adapters/base.py.
+    # Callers should use isinstance(adapter, Protocol) before accessing.
+
+    def get_raw_connection(self):
+        """Public accessor for the raw SQLite connection.
+
+        Replaces ``_get_connection()`` for cross-layer access.
+        Satisfies the :class:`RawConnectionProvider` Protocol.
+        """
+        return self._conn_mgr.get_connection()
+
+    @property
+    def security(self):
+        """Public accessor for the SecurityOps instance.
+
+        Replaces ``_security`` private access for cross-layer code.
+        Satisfies the :class:`EncryptionProvider` Protocol.
+        """
+        return self._security
+
+    @property
+    def embedding_model(self):
+        """Public accessor for the embedding model instance (or None).
+
+        Replaces ``_embedding_model`` private access.
+        Satisfies the :class:`EmbeddingModelProvider` Protocol.
+        """
+        return self._embedding_model
+
+    @property
+    def embedding_model_name(self) -> Optional[str]:
+        """Public accessor for the embedding model name string (or None).
+
+        Replaces ``_embedding_model_name`` private access.
+        Satisfies the :class:`EmbeddingModelProvider` Protocol.
+        """
+        return self._embedding_model_name
+
     def initialize(self, config: dict) -> None:
         """Initialize (re-initialize) the SQLite adapter with new config.
 

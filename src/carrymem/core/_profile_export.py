@@ -6,7 +6,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from carrymem.__version__ import __version__ as _version
 from carrymem.adapters.base import MemoryEntry
@@ -45,6 +45,21 @@ class ProfileExportMixin:
     # Shared instance state provided by LifecycleMixin.__init__.
     _adapter: Optional[StorageAdapter]
     _namespace: str
+
+    # ── Cross-Mixin dependencies (TD-037: explicit Protocol contract) ──
+    if TYPE_CHECKING:
+        # From RecallMixin
+        def recall_memories(
+            self,
+            query: Optional[str] = None,
+            filters: Optional[Dict[str, Any]] = None,
+            limit: int = 20,
+            namespaces: Optional[List[str]] = None,
+            update_access: bool = True,
+        ) -> List[Dict[str, Any]]: ...
+
+        # From BackupMixin
+        def _auto_backup(self) -> None: ...
 
     def get_stats(self) -> MemoryStats:
         """Return aggregate statistics for the active storage adapter."""
@@ -85,13 +100,13 @@ class ProfileExportMixin:
         by_type = stats.get("by_type", {}) if isinstance(stats, dict) else {}
         profile_stats = profile.get("stats", {}) if isinstance(profile, dict) else {}
 
-        preferences = self.recall_memories(  # type: ignore[attr-defined]
+        preferences = self.recall_memories(
             query="", filters={"type": "user_preference"}, limit=WHOAMI_PREFERENCE_COUNT
         )
-        decisions = self.recall_memories(  # type: ignore[attr-defined]
+        decisions = self.recall_memories(
             query="", filters={"type": "decision"}, limit=WHOAMI_DECISION_COUNT
         )
-        corrections = self.recall_memories(  # type: ignore[attr-defined]
+        corrections = self.recall_memories(
             query="", filters={"type": "correction"}, limit=WHOAMI_CORRECTION_COUNT
         )
 
@@ -323,7 +338,7 @@ class ProfileExportMixin:
                 logger.warning("Failed to import memory entry: %s", e)
                 errors += 1
 
-        self._auto_backup()  # type: ignore[attr-defined]
+        self._auto_backup()
 
         return {
             "imported": imported,

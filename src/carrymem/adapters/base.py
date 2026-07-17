@@ -1213,6 +1213,112 @@ class TestStorageAdapterContract:
         assert stats["adapter"] == self.adapter.name
 
 
+# ---------------------------------------------------------------------------
+# Optional capability Protocols (ISP — Interface Segregation Principle)
+#
+# These Protocols declare optional capabilities that NOT all adapters
+# implement. Callers use ``isinstance(adapter, Protocol)`` to safely
+# access capability-specific methods without ``type: ignore`` or
+# ``hasattr`` checks.
+#
+# Design (TD-007 fix, 2026-07-17):
+#   - Each Protocol maps to one capability surface
+#   - SQLiteAdapter satisfies all of them via duck typing
+#   - JSON/Obsidian adapters only satisfy the ones they implement
+#   - runtime_checkable enables ``isinstance()`` at runtime
+# ---------------------------------------------------------------------------
+
+
+@runtime_checkable
+class RawConnectionProvider(Protocol):
+    """Protocol for adapters exposing a raw SQLite connection.
+
+    Used by maintenance, recall-boost, and memify layers for direct SQL
+    queries that bypass the normal CRUD/Recall API (e.g., bulk updates,
+    analytics, graph traversal).
+    """
+
+    def get_raw_connection(self):
+        """Return the underlying sqlite3.Connection (or compatible)."""
+        ...
+
+
+@runtime_checkable
+class EncryptionProvider(Protocol):
+    """Protocol for adapters with at-rest encryption support.
+
+    Exposes the security instance so callers can check ``is_active``
+    and use ``decrypt_field`` for raw rows fetched via direct SQL.
+    """
+
+    @property
+    def security(self):
+        """Return the SecurityOps instance (has ``is_active`` + decrypt)."""
+        ...
+
+    def decrypt_field(self, ciphertext: str) -> str:
+        """Decrypt a single field value."""
+        ...
+
+
+@runtime_checkable
+class EmbeddingModelProvider(Protocol):
+    """Protocol for adapters with an embedding model for vector search.
+
+    Exposes the model and its name so callers can rebuild vectors or
+    display model info to users.
+    """
+
+    @property
+    def embedding_model(self):
+        """Return the embedding model instance (or None if disabled)."""
+        ...
+
+    @property
+    def embedding_model_name(self) -> Optional[str]:
+        """Return the embedding model name string (or None)."""
+        ...
+
+
+@runtime_checkable
+class KeyLookupProvider(Protocol):
+    """Protocol for adapters supporting direct key-based memory lookup.
+
+    Used by CLI ``_find_memory`` to avoid a full recall() when the
+    storage_key is already known.
+    """
+
+    def get_by_key(self, storage_key: str):
+        """Return a StoredMemory by key, or None if not found."""
+        ...
+
+
+@runtime_checkable
+class VersioningProvider(Protocol):
+    """Protocol for adapters supporting memory versioning.
+
+    Used by MemoryCRUDMixin for update/rollback/history operations.
+    Adapters without versioning will return ``None`` or raise.
+    """
+
+    def update_memory(
+        self,
+        storage_key: str,
+        new_content: str,
+        reason: Optional[str] = None,
+    ):
+        """Update memory content, recording the change reason."""
+        ...
+
+    def rollback_memory(self, storage_key: str, version: int):
+        """Roll back memory to a specific version."""
+        ...
+
+    def get_memory_history(self, storage_key: str):
+        """Return version history for a memory."""
+        ...
+
+
 __all__ = [
     # Data classes
     "MemoryEntry",
@@ -1223,4 +1329,10 @@ __all__ = [
     "AsyncStorageAdapter",
     # Test contract
     "TestStorageAdapterContract",
+    # Optional capability Protocols (TD-007)
+    "RawConnectionProvider",
+    "EncryptionProvider",
+    "EmbeddingModelProvider",
+    "KeyLookupProvider",
+    "VersioningProvider",
 ]

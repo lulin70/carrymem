@@ -26,6 +26,7 @@ from carrymem.types import (
 
 if TYPE_CHECKING:
     from carrymem.adapters.base import StorageAdapter
+    from carrymem.rules import RuleEngine
     from carrymem.rules.candidate_generator import RuleCandidateGenerator
 
 logger = logging.getLogger(__name__)
@@ -41,6 +42,30 @@ class ClassificationMixin:
     _entity_normalizer: Optional[Any]
     _input_validator: Optional[Any]
     _namespace: str  # provided by LifecycleMixin.__init__ (trusted adapter source, C18)
+
+    # ── Cross-Mixin dependencies (TD-037: explicit Protocol contract) ──
+    if TYPE_CHECKING:
+        # From RecallMixin
+        def recall_memories(
+            self,
+            query: Optional[str] = None,
+            filters: Optional[Dict[str, Any]] = None,
+            limit: int = 20,
+            namespaces: Optional[List[str]] = None,
+            update_access: bool = True,
+        ) -> List[Dict[str, Any]]: ...
+        # From MemoryCRUDMixin
+        def classify_message(
+            self,
+            message: str,
+            context: Optional[Dict[str, Any]] = None,
+            language: Optional[str] = None,
+        ) -> ClassificationResult: ...
+        # From BackupMixin
+        def _auto_backup(self) -> None: ...
+        # From LifecycleMixin (property)
+        @property
+        def rule_engine(self) -> RuleEngine: ...
 
     def _validate_and_resolve(
         self,
@@ -103,7 +128,7 @@ class ClassificationMixin:
                     context_str = context.get("ai_reply", "") or context.get("previous_message", "")
                 recent_mems = []
                 try:
-                    recent_mems = self.recall_memories(  # type: ignore[attr-defined]
+                    recent_mems = self.recall_memories(
                         query="", limit=COREFERENCE_RECALL_LIMIT, update_access=False
                     )
                 except (KeyError, ValueError, RuntimeError) as e:
@@ -145,7 +170,7 @@ class ClassificationMixin:
         Returns:
             entries list (may be empty for noise) or ClassificationResult dict.
         """
-        classify_result = self.classify_message(  # type: ignore[attr-defined]
+        classify_result = self.classify_message(
             resolved_message, context=context, language=language
         )
 
@@ -164,7 +189,7 @@ class ClassificationMixin:
                     }
                 ]
 
-        return classify_result  # type: ignore[no-any-return]
+        return classify_result
 
     def _store_entries(
         self,
@@ -194,8 +219,8 @@ class ClassificationMixin:
                 entry.raw_text = message
             if session_id and isinstance(entry.metadata, dict):
                 entry.metadata["session_id"] = session_id
-            elif session_id and not entry.metadata:  # type: ignore[unreachable]
-                entry.metadata = {"session_id": session_id}  # type: ignore[unreachable]
+            elif session_id and not entry.metadata:
+                entry.metadata = {"session_id": session_id}
             if entity_meta:
                 if not entry.metadata:
                     entry.metadata = {}
@@ -228,7 +253,7 @@ class ClassificationMixin:
         except (ImportError, KeyError, ValueError, TypeError, RuntimeError) as e:
             logger.debug("Auto rule suggestion skipped: %s", e)
 
-        self._auto_backup()  # type: ignore[attr-defined]
+        self._auto_backup()
 
         return {
             "should_remember": True,
@@ -255,7 +280,7 @@ class ClassificationMixin:
 
         try:
             keywords = content.lower().split()
-            related = self.recall_memories(limit=CORRECTION_RECALL_LIMIT)  # type: ignore[attr-defined]
+            related = self.recall_memories(limit=CORRECTION_RECALL_LIMIT)
             for mem in related:
                 mem_content = mem.get("content", "").lower()
                 mem_type = mem.get("type", "")
@@ -280,7 +305,7 @@ class ClassificationMixin:
             logger.warning("Correction handling failed: %s", e)
 
         try:
-            engine = self.rule_engine  # type: ignore[attr-defined]
+            engine = self.rule_engine
             rules = engine.list_rules(status="active", limit=ACTIVE_RULES_LIST_LIMIT)
             for rule in rules:
                 rule_content = (rule.trigger + " " + rule.action).lower()

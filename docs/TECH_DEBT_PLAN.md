@@ -2,7 +2,7 @@
 
 > **文档性质**: 活文档 (Living Document) — 每完成一项立即更新状态
 > **创建时间**: 2026-07-17
-> **最后更新**: 2026-07-17 (v6 — TD-010 ✅ 完成，Batch 2 收尾；110 tests，sqlite/__init__.py 覆盖率 33.62%→82.45%)
+> **最后更新**: 2026-07-17 (v7 — TD-007+TD-037 ✅ 完成，Batch 3 Wave 2 收尾；833 tests 全通过，mypy 仅剩 2 pre-existing 错误)
 > **基于**: 7 维度项目整理评估 (2026-07-17, B+ 77/100) + DevSquad 7 角色并行审核
 > **配套文档**: [ROADMAP_P0_P3.md](ROADMAP_P0_P3.md) — 执行路线图 (Wave 推进表 + 7-Role 投票矩阵 + 11 阶段生命周期映射)
 >
@@ -291,7 +291,7 @@
 | **负责角色** | Architect |
 | **验证标准** | 命令 `grep -rn "type: ignore\[attr-defined\]" src/carrymem/ | grep -v test` 返回 0 行；能力声明覆盖率达 100% |
 | **依赖** | 无 (是 TD-006 的前置) |
-| **状态** | ⬜ 待开始 |
+| **状态** | ✅ 已完成 (5 个 runtime_checkable Protocol + 4 个公共访问器；7 个调用方更新；833 tests 全通过) |
 | **生命周期** | P2 架构设计 → P3 技术设计 → P8 实现 |
 
 #### TD-008: 9 个 E 级函数 (CC 31-39) — 拆为两批
@@ -318,7 +318,7 @@
 | **负责角色** | Architect |
 | **验证标准** | Mixin 间无 `type: ignore[attr-defined]`；Protocol 契约文档化 |
 | **依赖** | TD-007 |
-| **状态** | ⬜ 待开始 |
+| **状态** | ✅ 已完成 (6 个 Mixin 文件添加 TYPE_CHECKING 跨 Mixin 声明；移除 ~27 个 type: ignore[attr-defined]；core/ 目录 0 残留) |
 | **生命周期** | P2 架构设计 → P3 技术设计 → P8 实现 |
 
 ### 3.3 安全债 (2 项)
@@ -883,6 +883,7 @@ TD-035 (AccessPolicy 集成) — 安全债，独立推进
 | 2026-07-17 | v4: P1 Batch 2 partial 完成 (commit 6f965bf 推送)。6 项 ✅: TD-009 (4 模块 0%→92.62%/100%/81.48%) + TD-011 (CI 装 textual) + TD-012 (nightly vector-tests job) + TD-033 (release e2e-gate) + TD-034 (VSCode Tier 2 E2E gate) + TD-036 (fixture 复用 conftest.py)。TD-010 🟡 进行中。新增配套文档 ROADMAP_P0_P3.md (执行路线图 + 7-Role 投票矩阵 + 11 阶段生命周期映射) | DevSquad P1 Batch 2 |
 | 2026-07-17 | v5: 用户确认 4 项执行决策 (AskUserQuestion)。决策: (1) TD-010 独立提交; (2) Batch 3→4 串行推进; (3) P2 Group D 与 B4 并行; (4) 版本号 v0.8.1/v0.8.2/v0.9.0 渐进。ROADMAP §12 由"待决策"改为"决策记录"，全员共识达成，进入执行阶段 | PM (用户) |
 | 2026-07-17 | v6: TD-010 ✅ 完成 (Batch 2 收尾)。新建 `tests/test_sqlite_adapter.py` (110 tests/12 类，21.74s 全通过)；`sqlite/__init__.py` 覆盖率 33.62%→**82.45%**；错误维度 ~19% (≥15%)；边界维度 ~16% (≥10%)。TD-006/005/008 重构安全网已就位，进入 Batch 3 架构重构阶段 | Tester (DevSquad) |
+| 2026-07-17 | v7: TD-007+TD-037 ✅ 完成 (Batch 3 Wave 2 收尾)。TD-007: 在 `adapters/base.py` 新增 5 个 `@runtime_checkable` Protocol (`RawConnectionProvider`/`EncryptionProvider`/`EmbeddingModelProvider`/`KeyLookupProvider`/`VersioningProvider`)，在 `SQLiteAdapter` 新增 4 个公共访问器 (`get_raw_connection()`/`security`/`embedding_model`/`embedding_model_name`)，更新 7 个调用方文件。TD-037: 在 6 个 Mixin 文件 (`_classification`/`_prompt_delegate`/`_recall`/`_memory_crud`/`_lifecycle`/`_profile_export`) 添加 `TYPE_CHECKING` 跨 Mixin 声明，移除 ~27 个 `type: ignore[attr-defined]` (core/ 目录 0 残留)，同步清理 8 个多余 type: ignore (no-any-return/unreachable)。验证: 833 tests 全通过 (45.26s)，mypy 仅剩 2 pre-existing 错误 (`_recall.py:157,172` StorageAdapter 可选方法，与 TD-007/TD-037 无关) | Architect (DevSquad) |
 
 ---
 

@@ -16,6 +16,7 @@ from carrymem.core._lifecycle import StorageNotConfiguredError
 
 if TYPE_CHECKING:
     from carrymem.adapters.base import StorageAdapter
+    from carrymem.prompt_builder import PromptBuilder
     from carrymem.scoring import RecallBudget
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,21 @@ class PromptDelegateMixin:
     # Shared instance state provided by LifecycleMixin.__init__.
     _adapter: Optional[StorageAdapter]
     _config: Optional[Dict[str, Any]]
+
+    # ── Cross-Mixin dependencies (TD-037: explicit Protocol contract) ──
+    if TYPE_CHECKING:
+        # From LifecycleMixin (property)
+        @property
+        def prompt_builder(self) -> PromptBuilder: ...
+        # From RecallMixin
+        def recall_memories(
+            self,
+            query: Optional[str] = None,
+            filters: Optional[Dict[str, Any]] = None,
+            limit: int = 20,
+            namespaces: Optional[List[str]] = None,
+            update_access: bool = True,
+        ) -> List[Dict[str, Any]]: ...
 
     def build_context(
         self,
@@ -44,7 +60,7 @@ class PromptDelegateMixin:
             progressive: v0.5.2 — enable progressive disclosure for token-efficient
                 prompt rendering. See PromptBuilder.build_context().
         """
-        return self.prompt_builder.build_context(  # type: ignore[attr-defined,no-any-return]
+        return self.prompt_builder.build_context(
             context=context,
             max_memories=max_memories,
             max_knowledge=max_knowledge,
@@ -70,7 +86,7 @@ class PromptDelegateMixin:
             progressive: v0.5.2 — enable progressive disclosure for token-efficient
                 prompt rendering.
         """
-        return self.prompt_builder.build_system_prompt(  # type: ignore[attr-defined,no-any-return]
+        return self.prompt_builder.build_system_prompt(
             context=context,
             max_memories=max_memories,
             max_knowledge=max_knowledge,
@@ -91,7 +107,7 @@ class PromptDelegateMixin:
         include_question: bool = True,
     ) -> str:
         """Build a QA prompt enriched with relevant memories for a question."""
-        return self.prompt_builder.build_qa_prompt(  # type: ignore[attr-defined,no-any-return]
+        return self.prompt_builder.build_qa_prompt(
             question=question,
             max_memories=max_memories,
             max_knowledge=max_knowledge,
@@ -125,7 +141,7 @@ class PromptDelegateMixin:
             self._llm_client = LLMClient(config=self._config or {})
         summarizer = SessionSummarizer(llm_client=self._llm_client)
 
-        session_memories = self.recall_memories(  # type: ignore[attr-defined]
+        session_memories = self.recall_memories(
             query="",
             limit=SESSION_SUMMARIZER_LIMIT,
             filters={"session_id": session_id, "include_superseded": True},
@@ -171,8 +187,8 @@ class PromptDelegateMixin:
 
             self._llm_client = LLMClient(config=self._config or {})
         embedding_fn = None
-        if hasattr(self._adapter, "_embedding_model") and self._adapter._embedding_model:
-            embedding_fn = lambda text: self._adapter._embedding_model.encode(text).tolist()
+        if hasattr(self._adapter, "embedding_model") and self._adapter.embedding_model:
+            embedding_fn = lambda text: self._adapter.embedding_model.encode(text).tolist()
 
         if not embedding_fn:
             logger.warning("aggregate_memories requires vector search to be enabled (no embedding model found)")
@@ -183,7 +199,7 @@ class PromptDelegateMixin:
         filters: Dict[str, Any] = {"include_superseded": False}
         if memory_type:
             filters["type"] = memory_type
-        memories = self.recall_memories(  # type: ignore[attr-defined]
+        memories = self.recall_memories(
             query="", limit=AGGREGATE_MEMORIES_LIMIT, filters=filters
         )
 

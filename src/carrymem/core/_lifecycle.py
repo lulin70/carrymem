@@ -7,7 +7,7 @@ import os
 import sqlite3
 from threading import Timer
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, Union
 
 from carrymem.adapters.base import StorageAdapter
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
@@ -74,6 +74,23 @@ class LifecycleMixin:
 
     # Class-level attribute used by MaintenanceMixin
     _consolidation_timer: Optional[Timer] = None
+
+    # ── Cross-Mixin dependencies (TD-037: explicit Protocol contract) ──
+    # Declared here for type-checking only; resolved at runtime via Mixin
+    # composition in the final CarryMem class.
+    if TYPE_CHECKING:
+        # From RecallMixin
+        def recall_memories(
+            self,
+            query: Optional[str] = None,
+            filters: Optional[Dict[str, Any]] = None,
+            limit: int = 20,
+            namespaces: Optional[List[str]] = None,
+            update_access: bool = True,
+        ) -> List[Dict[str, Any]]: ...
+
+        # From BackupMixin
+        def _do_initial_backup(self) -> None: ...
 
     def __init__(
         self,
@@ -154,7 +171,7 @@ class LifecycleMixin:
         self._prompt_builder: Optional[PromptBuilder] = None
         self._candidate_generator = RuleCandidateGenerator(
             rule_engine_getter=lambda: self.rule_engine,
-            recall_memories=self.recall_memories,  # type: ignore[attr-defined]
+            recall_memories=self.recall_memories,
         )
 
         # Eagerly initialize the rule engine schema before any concurrent
@@ -197,7 +214,7 @@ class LifecycleMixin:
             db_file = getattr(self._adapter, "db_path", None)
             if db_file and db_file != ":memory:" and os.path.exists(db_file):
                 try:
-                    self._do_initial_backup()  # type: ignore[attr-defined]
+                    self._do_initial_backup()
                 except (OSError, ValueError, RuntimeError) as e:
                     logger.debug("Initial backup skipped: %s", e)
 

@@ -171,8 +171,8 @@ def _truncate(text: str, max_len: int = 60) -> str:
 
 
 def _find_memory(cm: CarryMem, key: str) -> Optional[Dict[str, Any]]:
-    if cm._adapter and hasattr(cm._adapter, "_get_by_key"):
-        stored = cm._adapter._get_by_key(key)
+    if cm._adapter and hasattr(cm._adapter, "get_by_key"):
+        stored = cm._adapter.get_by_key(key)
         if stored:
             return stored.to_dict()  # type: ignore[no-any-return]
     memories = cm.recall_memories(query="", limit=200)

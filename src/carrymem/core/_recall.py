@@ -6,6 +6,7 @@ import logging
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+from carrymem.adapters.base import RawConnectionProvider
 from carrymem.adapters.obsidian_adapter import ObsidianAdapter
 from carrymem.constants import DEFAULT_RECALL_LIMIT, RULE_MATCH_LIMIT_CAP
 from carrymem.core._lifecycle import KnowledgeNotConfiguredError, StorageNotConfiguredError
@@ -14,6 +15,7 @@ from carrymem.utils.validators import validate_limit, validate_query
 
 if TYPE_CHECKING:
     from carrymem.adapters.base import StorageAdapter
+    from carrymem.rules import RuleEngine
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,12 @@ class RecallMixin:
     _knowledge_adapter: Optional[StorageAdapter]
     _namespace: str
     _session_id: Optional[str]
+
+    # ── Cross-Mixin dependencies (TD-037: explicit Protocol contract) ──
+    if TYPE_CHECKING:
+        # From LifecycleMixin (property)
+        @property
+        def rule_engine(self) -> RuleEngine: ...
 
     def index_knowledge(self) -> Dict[str, Any]:
         """Index the configured knowledge base and return summary stats."""
@@ -67,7 +75,7 @@ class RecallMixin:
 
         if include_rules:
             try:
-                rule_engine = self.rule_engine  # type: ignore[attr-defined]
+                rule_engine = self.rule_engine
                 matches = rule_engine.match(query, limit=min(limit, RULE_MATCH_LIMIT_CAP), increment_count=False)
                 rule_results = [
                     {
@@ -417,8 +425,10 @@ class RecallMixin:
         """
         if not self._adapter or not memory_key:
             return False
+        if not isinstance(self._adapter, RawConnectionProvider):
+            return False
         try:
-            conn = self._adapter._get_connection()  # type: ignore[attr-defined]
+            conn = self._adapter.get_raw_connection()
             cursor = conn.execute(
                 "UPDATE memories SET "
                 "access_count = access_count + 1, "

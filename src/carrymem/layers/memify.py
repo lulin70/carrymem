@@ -116,7 +116,7 @@ class MemifyEngine:
         if not pairs:
             return 0
 
-        conn = self._adapter._get_connection()
+        conn = self._adapter.get_raw_connection()  # Public API (TD-007)
         reinforced = 0
 
         for e1, e2, count in pairs:
@@ -191,7 +191,7 @@ class MemifyEngine:
             Number of memories decayed.
         """
         cutoff = (datetime.now(timezone.utc) - timedelta(days=stale_days)).isoformat()
-        conn = self._adapter._get_connection()
+        conn = self._adapter.get_raw_connection()  # Public API (TD-007)
 
         stale_keys = conn.execute(
             """SELECT storage_key FROM memories
@@ -244,7 +244,7 @@ class MemifyEngine:
         Returns:
             List of (entity1, entity2, count) tuples sorted by count descending.
         """
-        conn = self._adapter._get_connection()
+        conn = self._adapter.get_raw_connection()  # Public API (TD-007)
         try:
             rows = conn.execute(
                 """SELECT e1.entity_text AS e1, e2.entity_text AS e2, COUNT(*) AS co

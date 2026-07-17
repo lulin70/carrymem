@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from threading import Timer
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+from carrymem.adapters.base import EncryptionProvider, RawConnectionProvider
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.constants import (
     BATCH_RECALL_LIMIT,
@@ -105,7 +106,7 @@ class MaintenanceMixin:
         if not isinstance(self._adapter, SQLiteAdapter):
             return []
 
-        conn = self._adapter._get_connection()  # Internal access for raw SQL query (maintenance operation)
+        conn = self._adapter.get_raw_connection()  # Public API (TD-007)
         now_iso = datetime.now(timezone.utc).isoformat()
         rows = conn.execute(
             "SELECT storage_key, content, type, expires_at FROM memories "
@@ -116,7 +117,7 @@ class MaintenanceMixin:
         result = []
         for row in rows:
             content = row["content"]
-            if self._adapter._security and self._adapter._security.is_active:  # type: ignore[attr-defined]
+            if self._adapter.security and self._adapter.security.is_active:  # Public API (TD-007)
                 content = self._adapter.decrypt_field(content)  # Use public API for decryption
             result.append(
                 {

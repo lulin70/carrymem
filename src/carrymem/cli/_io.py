@@ -563,8 +563,8 @@ def cmd_unpack(args):
 
         # Check embedding model availability
         embedding_model = None
-        if cm._adapter and hasattr(cm._adapter, "_embedding_model_name"):
-            embedding_model = cm._adapter._embedding_model_name
+        if cm._adapter and hasattr(cm._adapter, "embedding_model_name"):
+            embedding_model = cm._adapter.embedding_model_name
         if embedding_model:
             _model_info = _dim(f"\u2139 Embedding model: {embedding_model} (vectors will be rebuilt on next recall)")
             print(f"  {_model_info}")
