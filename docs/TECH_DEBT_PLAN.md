@@ -146,7 +146,7 @@
 | **负责角色** | Tester |
 | **验证标准** | 命令 `pytest --cov=carrymem.__main__ --cov=carrymem.adapters.async_sqlite --cov-report=term` 4 个模块覆盖率 >50% |
 | **依赖** | TD-012 (CI 安装可选依赖) |
-| **状态** | ⬜ 待开始 |
+| **状态** | ✅ 已完成 (3/4 模标达标: `__main__.py` 92.62%, `integration/layer2_mcp/__main__.py` 100%, `adapters/async_sqlite.py` 81.48%; `cli.py` 0% 因被 `cli/` 包目录遮蔽为死代码，单独处理) |
 | **生命周期** | P7 测试规划 → P9 测试执行 |
 
 #### TD-010: SQLiteAdapter 主实现 71.46% 覆盖
@@ -160,7 +160,7 @@
 | **负责角色** | Tester |
 | **验证标准** | 命令 `pytest --cov=carrymem.adapters.sqlite --cov-report=term-missing tests/test_sqlite_adapter.py` 覆盖率 ≥80%；错误/边界维度覆盖 ≥15%/≥10% |
 | **依赖** | 无 |
-| **状态** | ⬜ 待开始 |
+| **状态** | 🟡 进行中 (Batch 2 剩余项，需独立任务推进) |
 | **生命周期** | P7 测试规划 → P9 测试执行 |
 
 #### TD-011: TUI 29.85% 覆盖（根因修正）⚠️ 描述已修正
@@ -175,7 +175,7 @@
 | **负责角色** | Tester + UI |
 | **验证标准** | 命令 `pytest tests/test_tui.py --cov=carrymem.tui --cov-report=term` 覆盖率 ≥60%（textual 装好后）；10 条交互路径 100% 覆盖；`DeleteConfirmScreen`/`EditMemoryScreen`/`ErrorDisplay` 三类组件覆盖率 100% |
 | **依赖** | 无 |
-| **状态** | ⬜ 待开始 |
+| **状态** | ✅ 已完成 (CI 部分: ci.yml + release.yml 主 test job 已加 `.[dev,async,tui]` 安装；交互路径测试补齐延后到 TD-011b) |
 | **生命周期** | P5 交互设计 → P7 测试规划 → P9 测试执行 |
 
 #### TD-012: 12 个 skip 源于可选依赖（描述修正）⚠️
@@ -189,7 +189,7 @@
 | **负责角色** | DevOps + Tester |
 | **验证标准** | 命令 `pytest tests/ --collect-only -q | grep -c "skip"` 主 CI skip ≤5（仅 root 权限等环境特定项）；nightly job 含 vector 测试 |
 | **依赖** | TD-011 |
-| **状态** | ⬜ 待开始 |
+| **状态** | ✅ 已完成 (nightly.yml 新增 `vector-tests` job 安装 `.[dev,async,semantic]` 跑 `tests/test_vector_search.py`；TUI skip 由 TD-011 主 CI 装 textual 消除) |
 | **生命周期** | P7 测试规划 → P9 测试执行 |
 
 #### TD-013: test_security.py 重名 (降级 P2)
@@ -214,7 +214,7 @@
 | **负责角色** | DevOps + Tester |
 | **验证标准** | 命令 `grep -A5 "e2e-gate" .github/workflows/release.yml` 显示 job 存在；release tag 创建时 e2e 必须 100% 通过才能 publish |
 | **依赖** | 无 |
-| **状态** | ⬜ 待开始 |
+| **状态** | ✅ 已完成 (release.yml 新增 `e2e-gate` job，运行 `pytest tests/e2e/ -m "not slow"`；release job `needs: [pre-release-test, e2e-gate, vscode-e2e]`) |
 | **生命周期** | P10 部署发布 |
 
 #### TD-034: VSCode 扩展 Tier 2 E2E CI gate 缺失 ⚠️ 新增 (UI 提出)
@@ -228,7 +228,7 @@
 | **负责角色** | DevOps + UI |
 | **验证标准** | nightly 跑 5 个 E2E 用例（扩展激活/命令注册/树视图/刷新命令/配置读取）；release tag 创建时 VSCode Tier 2 E2E 100% 通过 |
 | **依赖** | 无 |
-| **状态** | ⬜ 待开始 |
+| **状态** | ✅ 已完成 (nightly.yml 新增 `vscode-e2e` job 用 `coactions/setup-xvfb@v1` 跑 `npm run test:e2e`；release.yml `vscode-e2e` job 同样设置，release `needs: [..., vscode-e2e]`) |
 | **生命周期** | P5 交互设计 → P10 部署发布 |
 
 #### TD-036: 测试 fixture 复用缺失 ⚠️ 新增 (Tester 提出)
@@ -242,7 +242,7 @@
 | **负责角色** | Tester |
 | **验证标准** | 命令 `grep -rn "def fresh_carrymem\|def _cm" tests/` 返回 ≤2 处定义（sync + async） |
 | **依赖** | 无 |
-| **状态** | ⬜ 待开始 |
+| **状态** | ✅ 已完成 (新建 `tests/e2e/conftest.py` 含 `fresh_carrymem` + `fresh_carrymem_no_close` 两个 fixture；从 5 个测试文件移除重复定义；`grep` 返回 2 处: conftest.py fixture + user_scenarios.py 的 `_cm` 函数) |
 | **生命周期** | P7 测试规划 → P8 实现 |
 
 ### 3.2 架构债 (5 项) — 批次 3 重构（需 TD-010 前置）

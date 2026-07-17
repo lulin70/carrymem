@@ -23,16 +23,6 @@ import pytest
 from carrymem import CarryMem
 
 
-@pytest.fixture
-def fresh_carrymem():
-    tmp = tempfile.mkdtemp()
-    db_path = os.path.join(tmp, "carrymem.db")
-    cm = CarryMem(db_path=db_path)
-    yield cm
-    cm.close()
-    shutil.rmtree(tmp, ignore_errors=True)
-
-
 # ── 1. Knowledge Graph E2E (v0.7.0) ──────────────────────────────────────
 
 

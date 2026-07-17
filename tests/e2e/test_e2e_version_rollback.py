@@ -4,24 +4,9 @@ E2E Tests: Version Rollback User Journey
 Validates: Edit -> Edit -> View History -> Rollback to v1 -> Verify Data Integrity
 """
 
-import os
-import shutil
-import tempfile
-
 import pytest
 
 from carrymem import CarryMem
-
-
-@pytest.fixture
-def fresh_carrymem():
-    """Create a fresh CarryMem instance with isolated SQLite database."""
-    tmp = tempfile.mkdtemp()
-    db_path = os.path.join(tmp, "test_version_rollback.db")
-    cm = CarryMem(storage="sqlite", db_path=db_path)
-    yield cm
-    cm.close()
-    shutil.rmtree(tmp, ignore_errors=True)
 
 
 class TestE2EVersionRollbackJourney:

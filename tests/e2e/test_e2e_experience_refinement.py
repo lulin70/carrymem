@@ -6,10 +6,6 @@ Validates:
   - Vague Rule -> Refine Interaction -> Specific Rule
 """
 
-import os
-import shutil
-import tempfile
-
 import pytest
 
 from carrymem import CarryMem
@@ -25,17 +21,6 @@ from carrymem.rules.rule_refiner import (
     RuleRefiner,
 )
 from carrymem.rules.storage import RuleStorage
-
-
-@pytest.fixture
-def fresh_carrymem():
-    """Create a fresh CarryMem instance with isolated SQLite database."""
-    tmp = tempfile.mkdtemp()
-    db_path = os.path.join(tmp, "test_exp_refine.db")
-    cm = CarryMem(db_path=db_path)
-    yield cm
-    cm.close()
-    shutil.rmtree(tmp, ignore_errors=True)
 
 
 @pytest.fixture

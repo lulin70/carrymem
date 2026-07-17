@@ -20,15 +20,6 @@ import pytest
 from carrymem import CarryMem
 
 
-@pytest.fixture
-def fresh_carrymem():
-    tmp = tempfile.mkdtemp()
-    db_path = os.path.join(tmp, "carrymem.db")
-    cm = CarryMem(db_path=db_path)
-    yield cm
-    shutil.rmtree(tmp, ignore_errors=True)
-
-
 class TestFirstTimeUserExperience:
     def test_complete_new_user_journey(self, fresh_carrymem):
         cm = fresh_carrymem

@@ -13,21 +13,10 @@ Covers the complete user lifecycle:
 
 import json
 import os
-import shutil
-import tempfile
 
 import pytest
 
 from carrymem import CarryMem
-
-
-@pytest.fixture
-def fresh_carrymem(tmp_path):
-    """Create a fresh CarryMem instance with isolated database in tmp_path."""
-    db_path = str(tmp_path / "lifecycle_test.db")
-    cm = CarryMem(db_path=db_path)
-    yield cm
-    cm.close()
 
 
 class TestE2EFreshInstallation:
