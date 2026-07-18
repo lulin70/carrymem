@@ -19,4 +19,4 @@ pysqlite3>=0.6.0
 sentence-transformers>=2.2.2
 sqlite-vec>=0.1.0
 textual>=0.40
-zhipuai>=2.0
+zhipuai>=2.1.5.20250825
