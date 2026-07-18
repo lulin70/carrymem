@@ -161,6 +161,140 @@ def cmd_import(args):
     return 0
 
 
+def _prompt_encrypt_password():
+    """Prompt user for encryption password with confirmation.
+
+    Returns (password, 0) on success or (None, error_code) on failure.
+    """
+    try:
+        password = getpass.getpass("  Enter encryption password: ")
+        confirm_password = getpass.getpass("  Confirm encryption password: ")
+        if password != confirm_password:
+            print(f"  {_red('Error:')} Passwords do not match")
+            return None, 1
+        if len(password) < 4:
+            print(f"  {_red('Error:')} Password must be at least 4 characters")
+            return None, 1
+        return password, 0
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return None, 1
+
+
+def _collect_memories_for_pack(cm, include_key: bool):
+    """Collect memories for packing.
+
+    Returns (memories_data, encrypted_count, type_counts).
+    """
+    stats = cm.get_stats()
+    total_count = stats.get("total_count", 0) if isinstance(stats, dict) else 0
+    export_limit = max(total_count, 1)
+
+    all_memories = cm._adapter.recall("", limit=export_limit) if cm._adapter else []
+    memories_data = []
+    encrypted_count = 0
+    type_counts: Dict[str, int] = {}
+
+    for m in all_memories:
+        d = m.to_dict()
+        # Skip encrypted entries unless --key is provided
+        if d.get("is_encrypted", False) or (d.get("metadata", {}).get("is_encrypted", False)):
+            encrypted_count += 1
+            if not include_key:
+                continue
+        # Remove vector embedding (too large, can be rebuilt)
+        d.pop("vector_embedding", None)
+        memories_data.append(d)
+        mtype = d.get("type", "unknown")
+        type_counts[mtype] = type_counts.get(mtype, 0) + 1
+
+    return memories_data, encrypted_count, type_counts
+
+
+def _collect_rules_for_pack(db_path: str):
+    """Collect rules for packing. Returns list of rule dicts (empty on error)."""
+    try:
+        engine = _get_rule_engine(db_path)
+        rules = engine.list_rules(status="active", limit=10000)
+        rules_data = [r.to_dict() for r in rules]
+        print(f"  {_green('\u2713')} {len(rules_data)} rules")
+        return rules_data
+    except (ImportError, sqlite3.OperationalError, KeyError, ValueError) as e:
+        print(f"  {_yellow('\u26a0')} Rules export skipped: {e}")
+        return []
+
+
+def _collect_config_for_pack():
+    """Collect config for packing. Returns config dict or None."""
+    try:
+        config_file = _DEFAULT_CONFIG_DIR / "config.json"
+        if config_file.exists():
+            with open(config_file, "r", encoding="utf-8") as f:
+                config_data = json.load(f)
+            print(f"  {_green('\u2713')} Config (namespace, consolidation settings)")
+            return config_data
+        print(f"  {_dim('\u25cb')} No config file found")
+        return None
+    except (FileNotFoundError, json.JSONDecodeError, PermissionError, OSError) as e:
+        print(f"  {_yellow('\u26a0')} Config export skipped: {e}")
+        return None
+
+
+def _build_pack_container(pack_data: dict, encrypt_password):
+    """Build the outer .carry container with checksum and optional encryption.
+
+    Returns (container, 0) on success or (None, error_code) on failure.
+    """
+    json_bytes = json.dumps(pack_data, ensure_ascii=False).encode("utf-8")
+    payload_checksum = hashlib.sha256(json_bytes).hexdigest()
+
+    container = {
+        "version": "1.1",
+        "checksum": payload_checksum,
+        "encrypted": encrypt_password is not None,
+        "payload": None,
+    }
+
+    if encrypt_password:
+        try:
+            from carrymem.security.encryption import MemoryEncryption
+
+            enc = MemoryEncryption(key=encrypt_password)
+            container["payload"] = enc.encrypt(json_bytes.decode("utf-8"))
+            container["encryption_backend"] = enc.backend
+            print(f"  {_green('\u2713')} Encrypted ({enc.backend})")
+        except (ValueError, TypeError, ImportError) as e:
+            print(f"  {_red('Encryption failed:')} {e}")
+            return None, 1
+    else:
+        compressed = gzip.compress(json_bytes)
+        container["payload"] = base64.b64encode(compressed).decode("ascii")
+
+    return container, 0
+
+
+def _write_carry_file(output_path: str, container: dict) -> int:
+    """Write the container as gzip-compressed JSON to output_path. Returns 0/1."""
+    try:
+        safe_path = _validate_cli_path(output_path)
+        container_bytes = json.dumps(container, ensure_ascii=False).encode("utf-8")
+        with gzip.open(safe_path, "wb") as f:
+            f.write(container_bytes)
+        return 0
+    except (OSError, ValueError) as e:
+        print(f"\n  {_red('Write error:')} {e}")
+        return 1
+
+
+def _format_file_size(file_size: int) -> str:
+    """Format file size as human-readable string."""
+    if file_size >= 1024 * 1024:
+        return f"{file_size / (1024 * 1024):.1f} MB"
+    if file_size >= 1024:
+        return f"{file_size / 1024:.1f} KB"
+    return f"{file_size} bytes"
+
+
 def cmd_pack(args):
     """Pack CarryMem identity (memories, rules, config) into a portable .carry file."""
     import os
@@ -184,18 +318,9 @@ def cmd_pack(args):
     # Prompt for encryption password if --encrypt is specified
     encrypt_password = None
     if parsed.encrypt:
-        try:
-            encrypt_password = getpass.getpass("  Enter encryption password: ")
-            confirm_password = getpass.getpass("  Confirm encryption password: ")
-            if encrypt_password != confirm_password:
-                print(f"  {_red('Error:')} Passwords do not match")
-                return 1
-            if len(encrypt_password) < 4:
-                print(f"  {_red('Error:')} Password must be at least 4 characters")
-                return 1
-        except (EOFError, KeyboardInterrupt):
-            print()
-            return 1
+        encrypt_password, err = _prompt_encrypt_password()
+        if err:
+            return err
 
     print(f"\n  {_bold('Packing CarryMem identity...')}\n")
 
@@ -203,60 +328,17 @@ def cmd_pack(args):
 
     try:
         # Collect memories
-        stats = cm.get_stats()
-        total_count = stats.get("total_count", 0) if isinstance(stats, dict) else 0
-        export_limit = max(total_count, 1)
+        memories_data, encrypted_count, type_counts = _collect_memories_for_pack(cm, bool(parsed.key))
 
-        all_memories = cm._adapter.recall("", limit=export_limit) if cm._adapter else []
-        memories_data = []
-        encrypted_count = 0
-        type_counts: Dict[str, int] = {}
-
-        for m in all_memories:
-            d = m.to_dict()
-            # Skip encrypted entries unless --key is provided
-            if d.get("is_encrypted", False) or (d.get("metadata", {}).get("is_encrypted", False)):
-                encrypted_count += 1
-                if not parsed.key:
-                    continue
-            # Remove vector embedding (too large, can be rebuilt)
-            d.pop("vector_embedding", None)
-            memories_data.append(d)
-            mtype = d.get("type", "unknown")
-            type_counts[mtype] = type_counts.get(mtype, 0) + 1
-
-        # Build type breakdown string
-        type_parts = []
-        for mtype, count in sorted(type_counts.items(), key=lambda x: -x[1]):
-            type_parts.append(f"{count} {mtype}")
+        type_parts = [f"{count} {mtype}" for mtype, count in sorted(type_counts.items(), key=lambda x: -x[1])]
         type_breakdown = ", ".join(type_parts) if type_parts else "none"
-
         print(f"  {_green('\u2713')} {len(memories_data)} memories ({type_breakdown})")
 
         # Collect rules
-        rules_data = []
-        if include_rules:
-            try:
-                engine = _get_rule_engine(parsed.db)
-                rules = engine.list_rules(status="active", limit=10000)
-                rules_data = [r.to_dict() for r in rules]
-                print(f"  {_green('\u2713')} {len(rules_data)} rules")
-            except (ImportError, sqlite3.OperationalError, KeyError, ValueError) as e:
-                print(f"  {_yellow('\u26a0')} Rules export skipped: {e}")
+        rules_data = _collect_rules_for_pack(parsed.db) if include_rules else []
 
         # Collect config
-        config_data = None
-        if include_config:
-            try:
-                config_file = _DEFAULT_CONFIG_DIR / "config.json"
-                if config_file.exists():
-                    with open(config_file, "r", encoding="utf-8") as f:
-                        config_data = json.load(f)
-                    print(f"  {_green('\u2713')} Config (namespace, consolidation settings)")
-                else:
-                    print(f"  {_dim('\u25cb')} No config file found")
-            except (FileNotFoundError, json.JSONDecodeError, PermissionError, OSError) as e:
-                print(f"  {_yellow('\u26a0')} Config export skipped: {e}")
+        config_data = _collect_config_for_pack() if include_config else None
 
         # Encrypted entries info
         if encrypted_count > 0:
@@ -293,59 +375,21 @@ def cmd_pack(args):
         default_filename = f"carrymem_identity_{date_str}.carry"
         output_path = parsed.output or default_filename
 
-        # Serialize to JSON bytes
-        json_bytes = json.dumps(pack_data, ensure_ascii=False).encode("utf-8")
-
-        # Compute SHA-256 checksum of the JSON payload (before compression/encryption)
-        payload_checksum = hashlib.sha256(json_bytes).hexdigest()
-
-        # Build the outer container with checksum
-        container = {
-            "version": "1.1",
-            "checksum": payload_checksum,
-            "encrypted": encrypt_password is not None,
-            "payload": None,  # will be filled below
-        }
-
-        if encrypt_password:
-            # Encrypt the JSON payload
-            try:
-                from carrymem.security.encryption import MemoryEncryption
-
-                enc = MemoryEncryption(key=encrypt_password)
-                container["payload"] = enc.encrypt(json_bytes.decode("utf-8"))
-                container["encryption_backend"] = enc.backend
-                print(f"  {_green('\u2713')} Encrypted ({enc.backend})")
-            except (ValueError, TypeError, ImportError) as e:
-                print(f"  {_red('Encryption failed:')} {e}")
-                cm.close()
-                return 1
-        else:
-            # Store as base64 of gzip-compressed JSON
-            compressed = gzip.compress(json_bytes)
-            container["payload"] = base64.b64encode(compressed).decode("ascii")
-
-        # Write the container as gzip-compressed JSON
-        try:
-            safe_path = _validate_cli_path(output_path)
-            container_bytes = json.dumps(container, ensure_ascii=False).encode("utf-8")
-            with gzip.open(safe_path, "wb") as f:
-                f.write(container_bytes)
-        except (OSError, ValueError) as e:
-            print(f"\n  {_red('Write error:')} {e}")
+        # Build container (checksum + optional encryption)
+        container, err = _build_pack_container(pack_data, encrypt_password)
+        if err:
             cm.close()
-            return 1
+            return err
+
+        # Write the .carry file
+        err = _write_carry_file(output_path, container)
+        if err:
+            cm.close()
+            return err
 
         # Show file size
         file_size = os.path.getsize(output_path)
-        if file_size >= 1024 * 1024:
-            size_str = f"{file_size / (1024 * 1024):.1f} MB"
-        elif file_size >= 1024:
-            size_str = f"{file_size / 1024:.1f} KB"
-        else:
-            size_str = f"{file_size} bytes"
-
-        print(f"  \u2192 Saved to {output_path} ({size_str})")
+        print(f"  \u2192 Saved to {output_path} ({_format_file_size(file_size)})")
 
     except (OSError, IOError, ValueError, TypeError) as e:
         print(f"\n  {_red('Pack failed:')} {e}")
@@ -354,6 +398,150 @@ def cmd_pack(args):
 
     cm.close()
     return 0
+
+
+def _read_carry_file(file_path: str):
+    """Read a .carry file and return raw_data, or (None, error_code) on failure."""
+    try:
+        safe_path = _validate_cli_path(file_path)
+        with gzip.open(safe_path, "rb") as f:
+            json_bytes = f.read()
+        raw_data = json.loads(json_bytes.decode("utf-8"))
+        return raw_data, 0
+    except FileNotFoundError:
+        print(f"  {_red('File not found:')} {file_path}")
+        return None, 1
+    except gzip.BadGzipFile:
+        # Try reading as plain JSON (for backwards compatibility)
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                raw_data = json.load(f)
+            return raw_data, 0
+        except (json.JSONDecodeError, ValueError) as e:
+            print(f"  {_red('Invalid .carry file:')} {e}")
+            return None, 1
+    except json.JSONDecodeError as e:
+        print(f"  {_red('Invalid .carry file:')} {e}")
+        return None, 1
+    except (OSError, ValueError) as e:
+        print(f"  {_red('Read error:')} {e}")
+        return None, 1
+
+
+def _decode_container_payload(container):
+    """Decode v1.1 container payload (decrypt or decompress).
+
+    Returns (payload_json_str, 0) on success or (None, error_code) on failure.
+    """
+    is_encrypted = container.get("encrypted", False)
+    payload_str = container.get("payload", "")
+
+    if is_encrypted:
+        try:
+            password = getpass.getpass("  Enter decryption password: ")
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return None, 1
+
+        try:
+            from carrymem.security.encryption import EncryptionError, MemoryEncryption
+
+            dec = MemoryEncryption(key=password)
+            payload_json_str = dec.decrypt(payload_str)
+        except (ValueError, TypeError, EncryptionError) as e:
+            print(f"  {_red('Decryption failed:')} {e}")
+            print(f"  {_dim('Check your password and try again.')}")
+            return None, 1
+    else:
+        try:
+            compressed = base64.b64decode(payload_str)
+            payload_json_str = gzip.decompress(compressed).decode("utf-8")
+        except (binascii.Error, ValueError, OSError) as e:
+            print(f"  {_red('Payload decompression failed:')} {e}")
+            return None, 1
+
+    return payload_json_str, 0
+
+
+def _restore_memories_from_pack(cm, pack_data, namespace: str, merge_mode: bool) -> None:
+    """Restore memories from pack_data into the given namespace."""
+    data = pack_data.get("data", {})
+    memories_data = data.get("memories", [])
+    if not memories_data:
+        print(f"  {_dim('\u25cb')} No memories to restore")
+        return
+
+    merge_strategy = "skip_existing" if merge_mode else "overwrite"
+    source_namespace = (pack_data.get("data", {}).get("config") or {}).get("namespace", "unknown")
+    import_result = cm.import_memories(
+        data={
+            "memories": memories_data,
+            "source": {"namespace": source_namespace},
+        },
+        namespace=namespace,
+        merge_strategy=merge_strategy,
+    )
+    imported = import_result.get("imported", 0)
+    skipped = import_result.get("skipped", 0)
+    errors = import_result.get("errors", 0)
+    print(f"  {_green('\u2713')} {imported} memories restored ({skipped} conflicts)")
+    if errors > 0:
+        print(f"  {_yellow('\u26a0')} {errors} errors during memory import")
+
+
+def _restore_rules_from_pack(db_path: str, rules_data, carrymem_ver: str, merge_mode: bool) -> None:
+    """Restore rules from pack_data into the rule engine."""
+    if not rules_data:
+        print(f"  {_dim('\u25cb')} No rules to restore")
+        return
+
+    try:
+        engine = _get_rule_engine(db_path)
+        import_mode = "skip" if merge_mode else "overwrite"
+        rules_import_data = {
+            "format": "carrymem-rules-v1",
+            "version": carrymem_ver,
+            "rules": rules_data,
+        }
+        stats = engine.import_rules(rules_import_data, mode=import_mode)
+        print(f"  {_green('\u2713')} {stats['imported']} rules restored")
+        skipped_count = stats.get("skipped", 0)
+        overwritten_count = stats.get("overwritten", 0)
+        errors_list = stats.get("errors")
+        if skipped_count > 0:
+            print(f"    {_dim(f'{skipped_count} rules skipped (already exist)')}")
+        if overwritten_count > 0:
+            print(f"    {_dim(f'{overwritten_count} rules overwritten')}")
+        if errors_list:
+            print(f"    {_yellow(f'{len(errors_list)} errors during rules import')}")
+    except (ImportError, sqlite3.OperationalError, KeyError, ValueError) as e:
+        print(f"  {_yellow('\u26a0')} Rules import skipped: {e}")
+
+
+def _restore_config_from_pack(config_data, merge_mode: bool) -> None:
+    """Restore config from pack_data, optionally merging with existing config."""
+    if not config_data:
+        print(f"  {_dim('\u25cb')} No config to restore")
+        return
+
+    try:
+        config_file = _DEFAULT_CONFIG_DIR / "config.json"
+        _DEFAULT_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        if config_file.exists() and merge_mode:
+            with open(config_file, "r", encoding="utf-8") as f:
+                existing_config = json.load(f)
+            # Deep merge: new values don't overwrite existing
+            for key, value in config_data.items():
+                if key not in existing_config:
+                    existing_config[key] = value
+            with open(config_file, "w", encoding="utf-8") as f:
+                json.dump(existing_config, f, indent=2, ensure_ascii=False)
+        else:
+            with open(config_file, "w", encoding="utf-8") as f:
+                json.dump(config_data, f, indent=2, ensure_ascii=False)
+        print(f"  {_green('\u2713')} Config restored")
+    except (OSError, json.JSONDecodeError, PermissionError, ValueError) as e:
+        print(f"  {_yellow('\u26a0')} Config restore skipped: {e}")
 
 
 def cmd_unpack(args):
@@ -379,28 +567,9 @@ def cmd_unpack(args):
     print(f"\n  {_bold('Unpacking CarryMem identity...')}\n")
 
     # Read and decompress .carry file
-    try:
-        safe_path = _validate_cli_path(parsed.file)
-        with gzip.open(safe_path, "rb") as f:
-            json_bytes = f.read()
-        raw_data = json.loads(json_bytes.decode("utf-8"))
-    except FileNotFoundError:
-        print(f"  {_red('File not found:')} {parsed.file}")
-        return 1
-    except gzip.BadGzipFile:
-        # Try reading as plain JSON (for backwards compatibility)
-        try:
-            with open(parsed.file, "r", encoding="utf-8") as f:
-                raw_data = json.load(f)
-        except (json.JSONDecodeError, ValueError) as e:
-            print(f"  {_red('Invalid .carry file:')} {e}")
-            return 1
-    except json.JSONDecodeError as e:
-        print(f"  {_red('Invalid .carry file:')} {e}")
-        return 1
-    except (OSError, ValueError) as e:
-        print(f"  {_red('Read error:')} {e}")
-        return 1
+    raw_data, err = _read_carry_file(parsed.file)
+    if err:
+        return err
 
     # Detect format: v1.1 container vs v1.0 legacy
     is_container_format = "payload" in raw_data and "checksum" in raw_data
@@ -408,35 +577,11 @@ def cmd_unpack(args):
     if is_container_format:
         # v1.1 format: container with checksum and optional encryption
         container = raw_data
-        is_encrypted = container.get("encrypted", False)
         expected_checksum = container.get("checksum", "")
-        payload_str = container.get("payload", "")
 
-        if is_encrypted:
-            # Prompt for decryption password
-            try:
-                password = getpass.getpass("  Enter decryption password: ")
-            except (EOFError, KeyboardInterrupt):
-                print()
-                return 1
-
-            try:
-                from carrymem.security.encryption import EncryptionError, MemoryEncryption
-
-                dec = MemoryEncryption(key=password)
-                payload_json_str = dec.decrypt(payload_str)
-            except (ValueError, TypeError, EncryptionError) as e:
-                print(f"  {_red('Decryption failed:')} {e}")
-                print(f"  {_dim('Check your password and try again.')}")
-                return 1
-        else:
-            # Decode base64 → decompress gzip → JSON
-            try:
-                compressed = base64.b64decode(payload_str)
-                payload_json_str = gzip.decompress(compressed).decode("utf-8")
-            except (binascii.Error, ValueError, OSError) as e:
-                print(f"  {_red('Payload decompression failed:')} {e}")
-                return 1
+        payload_json_str, err = _decode_container_payload(container)
+        if err:
+            return err
 
         # Verify checksum
         payload_bytes = payload_json_str.encode("utf-8")
@@ -465,7 +610,7 @@ def cmd_unpack(args):
     source_machine = pack_data.get("source_machine", "unknown")
     packed_at = pack_data.get("packed_at", "unknown")
     carrymem_ver = pack_data.get("carrymem_version", "unknown")
-    # Format packed_at for display
+    packed_display = "unknown"
     try:
         if packed_at != "unknown":
             dt = datetime.fromisoformat(packed_at)
@@ -482,84 +627,10 @@ def cmd_unpack(args):
 
     try:
         data = pack_data.get("data", {})
-        conflicts = 0
 
-        # Restore memories
-        memories_data = data.get("memories", [])
-        if memories_data:
-            merge_strategy = "skip_existing" if merge_mode else "overwrite"
-            import_result = cm.import_memories(
-                data={
-                    "memories": memories_data,
-                    "source": {
-                        "namespace": (pack_data.get("data", {}).get("config") or {}).get("namespace", "unknown")
-                    },
-                },
-                namespace=parsed.namespace,
-                merge_strategy=merge_strategy,
-            )
-            imported = import_result.get("imported", 0)
-            skipped = import_result.get("skipped", 0)
-            errors = import_result.get("errors", 0)
-            conflicts = skipped
-            print(f"  {_green('\u2713')} {imported} memories restored ({conflicts} conflicts)")
-            if errors > 0:
-                print(f"  {_yellow('\u26a0')} {errors} errors during memory import")
-        else:
-            print(f"  {_dim('\u25cb')} No memories to restore")
-
-        # Restore rules
-        rules_data = data.get("rules", [])
-        if rules_data:
-            try:
-                engine = _get_rule_engine(parsed.db)
-                import_mode = "skip" if merge_mode else "overwrite"
-                rules_import_data = {
-                    "format": "carrymem-rules-v1",
-                    "version": carrymem_ver,
-                    "rules": rules_data,
-                }
-                stats = engine.import_rules(rules_import_data, mode=import_mode)
-                print(f"  {_green('\u2713')} {stats['imported']} rules restored")
-                skipped_count = stats.get("skipped", 0)
-                overwritten_count = stats.get("overwritten", 0)
-                errors_list = stats.get("errors")
-                if skipped_count > 0:
-                    print(f"    {_dim(f'{skipped_count} rules skipped (already exist)')}")
-                if overwritten_count > 0:
-                    print(f"    {_dim(f'{overwritten_count} rules overwritten')}")
-                if errors_list:
-                    print(f"    {_yellow(f'{len(errors_list)} errors during rules import')}")
-            except (ImportError, sqlite3.OperationalError, KeyError, ValueError) as e:
-                print(f"  {_yellow('\u26a0')} Rules import skipped: {e}")
-        else:
-            print(f"  {_dim('\u25cb')} No rules to restore")
-
-        # Restore config
-        config_data = data.get("config")
-        if config_data:
-            try:
-                config_file = _DEFAULT_CONFIG_DIR / "config.json"
-                _DEFAULT_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-                if config_file.exists() and merge_mode:
-                    # Merge: keep existing config, add new keys
-                    with open(config_file, "r", encoding="utf-8") as f:
-                        existing_config = json.load(f)
-                    # Deep merge: new values don't overwrite existing
-                    for key, value in config_data.items():
-                        if key not in existing_config:
-                            existing_config[key] = value
-                    with open(config_file, "w", encoding="utf-8") as f:
-                        json.dump(existing_config, f, indent=2, ensure_ascii=False)
-                else:
-                    # Replace or no existing config
-                    with open(config_file, "w", encoding="utf-8") as f:
-                        json.dump(config_data, f, indent=2, ensure_ascii=False)
-                print(f"  {_green('\u2713')} Config restored")
-            except (OSError, json.JSONDecodeError, PermissionError, ValueError) as e:
-                print(f"  {_yellow('\u26a0')} Config restore skipped: {e}")
-        else:
-            print(f"  {_dim('\u25cb')} No config to restore")
+        _restore_memories_from_pack(cm, pack_data, parsed.namespace, merge_mode)
+        _restore_rules_from_pack(parsed.db, data.get("rules", []), carrymem_ver, merge_mode)
+        _restore_config_from_pack(data.get("config"), merge_mode)
 
         # Check embedding model availability
         embedding_model = None

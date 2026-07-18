@@ -113,16 +113,40 @@ class RecallEngine:
         namespaces: Optional[List[str]] = None,
         update_access: bool = True,
     ):
-        from .query_builder import _ALLOWED_FILTER_KEYS, _VALID_MEMORY_TYPES, QueryBuilder
-
+        """Run multi-phase recall (FTS → Vector → Expansion → Semantic) with access update."""
         filters = filters or {}
+        self._validate_recall_params(filters, limit, namespaces, query)
+        self._apply_time_constraints(query, filters)
+
+        where_clause, params = self._build_where_clause(filters, namespaces)
+
+        if query and query.strip():
+            # Phase 1: FTS search + context reconstruction
+            rows = self._recall_fts_phase(query, where_clause, params, limit)
+            # Phase 2: Vector search + RRF fusion
+            rows = self._recall_vector_phase(query, where_clause, params, limit, rows)
+            # Phase 3: Query expansion + semantic recall
+            rows, is_final = self._recall_expansion_phase(query, where_clause, params, limit, rows)
+
+            if is_final:
+                # Semantic expansion succeeded — update access and return
+                return self.recall_update_access(rows, update_access, filters, limit, is_stored=True)
+        else:
+            rows = self._execute_no_query_recall(where_clause, params, limit)
+
+        # Phase 4: Batch access count update (normal path)
+        return self.recall_update_access(rows, update_access, filters, limit, is_stored=False)
+
+    def _validate_recall_params(self, filters, limit, namespaces, query):
+        """Validate recall parameters. Raises ValueError on invalid input."""
+        from .query_builder import _ALLOWED_FILTER_KEYS, _VALID_MEMORY_TYPES
 
         for key in filters:
             if key not in _ALLOWED_FILTER_KEYS:
-                raise ValueError(f"Invalid filter key: '{key}'. " f"Allowed keys: {_ALLOWED_FILTER_KEYS}")
+                raise ValueError(f"Invalid filter key: '{key}'. Allowed keys: {_ALLOWED_FILTER_KEYS}")
 
         if filters.get("type") and filters["type"] not in _VALID_MEMORY_TYPES:
-            raise ValueError(f"Invalid memory type: '{filters['type']}'. " f"Valid types: {_VALID_MEMORY_TYPES}")
+            raise ValueError(f"Invalid memory type: '{filters['type']}'. Valid types: {_VALID_MEMORY_TYPES}")
 
         if limit < 0 or limit > 100000:
             raise ValueError(f"Limit must be between 0 and 100000, got {limit}")
@@ -130,21 +154,30 @@ class RecallEngine:
         if namespaces:
             for ns in namespaces:
                 if not ns or not isinstance(ns, str) or len(ns) > 128:
-                    raise ValueError(f"Invalid namespace: '{ns}'. " "Must be non-empty string, max 128 chars.")
+                    raise ValueError(f"Invalid namespace: '{ns}'. Must be non-empty string, max 128 chars.")
 
         if query and len(query) > 10000:
             raise ValueError(f"Query too long: {len(query)} chars (max 10000)")
 
-        time_constraints = QueryBuilder.parse_time_expressions(query or "")
-        if time_constraints:
-            if time_constraints.get("created_after") and not filters.get("created_after"):
-                filters["created_after"] = time_constraints["created_after"]
-            if time_constraints.get("created_before") and not filters.get("created_before"):
-                filters["created_before"] = time_constraints["created_before"]
-            if time_constraints.get("order_oldest"):
-                filters["_order_oldest"] = True
+    @staticmethod
+    def _apply_time_constraints(query, filters):
+        """Parse time expressions from query and apply to filters (in-place)."""
+        from .query_builder import QueryBuilder
 
-        ns = namespaces or [self._adapter.namespace]  # type: ignore[assignment]
+        time_constraints = QueryBuilder.parse_time_expressions(query or "")
+        if not time_constraints:
+            return
+
+        if time_constraints.get("created_after") and not filters.get("created_after"):
+            filters["created_after"] = time_constraints["created_after"]
+        if time_constraints.get("created_before") and not filters.get("created_before"):
+            filters["created_before"] = time_constraints["created_before"]
+        if time_constraints.get("order_oldest"):
+            filters["_order_oldest"] = True
+
+    def _build_where_clause(self, filters, namespaces):
+        """Build WHERE clause and params from filters and namespaces."""
+        ns = namespaces or [self._adapter.namespace]
         placeholders = ",".join(["?"] * len(ns))
         conditions = [f"namespace IN ({placeholders})"]
         params = list(ns)
@@ -182,34 +215,19 @@ class RecallEngine:
             conditions.append("metadata LIKE ? ESCAPE '\\'")
             params.append(f'%session_id": "{safe_sid}%')
 
-        where_clause = "WHERE " + " AND ".join(conditions)
+        return "WHERE " + " AND ".join(conditions), params
 
-        if query and query.strip():
-            # Phase 1: FTS search + context reconstruction
-            rows = self._recall_fts_phase(query, where_clause, params, limit)
-
-            # Phase 2: Vector search + RRF fusion
-            rows = self._recall_vector_phase(query, where_clause, params, limit, rows)
-
-            # Phase 3: Query expansion + semantic recall
-            rows, is_final = self._recall_expansion_phase(query, where_clause, params, limit, rows)
-
-            if is_final:
-                # Semantic expansion succeeded — update access and return
-                return self.recall_update_access(rows, update_access, filters, limit, is_stored=True)
-        else:
-            conn = self._adapter._conn_mgr.get_connection()
-            sql = f"""
-                SELECT * FROM memories
-                {where_clause}
-                ORDER BY importance_score DESC, confidence DESC
-                LIMIT ?
-            """
-            params.append(limit)  # type: ignore[arg-type]
-            rows = conn.execute(sql, params).fetchall()
-
-        # Phase 4: Batch access count update (normal path)
-        return self.recall_update_access(rows, update_access, filters, limit, is_stored=False)
+    def _execute_no_query_recall(self, where_clause, params, limit):
+        """Execute recall when no query is provided (importance-based ordering)."""
+        conn = self._adapter._conn_mgr.get_connection()
+        sql = f"""
+            SELECT * FROM memories
+            {where_clause}
+            ORDER BY importance_score DESC, confidence DESC
+            LIMIT ?
+        """
+        params.append(limit)
+        return conn.execute(sql, params).fetchall()
 
     def _recall_fts_phase(self, query, where_clause, params, limit):
         """FTS search + context reconstruction."""
@@ -258,58 +276,79 @@ class RecallEngine:
 
         expanded_queries = QueryBuilder.expand_query(query)
         if expanded_queries:
-            seen_ids = set()
-            for r in rows:
-                rid = r[0] if r else None
-                if rid:
-                    seen_ids.add(rid)
-
-            for eq in expanded_queries:
-                eq_rows = self._fts_search(eq, where_clause, params, limit)
-                for r in eq_rows:
-                    rid = r[0] if r else None
-                    if rid and rid not in seen_ids:
-                        rows.append(r)
-                        seen_ids.add(rid)
-                if len(rows) >= limit:
-                    break
-
+            seen_ids = self._collect_seen_ids(rows)
+            rows = self._expand_with_fts(expanded_queries, where_clause, params, limit, rows, seen_ids)
             if len(rows) < limit:
-                for eq in expanded_queries:
-                    eq_rows = self._like_search(eq, where_clause, params, limit)
-                    for r in eq_rows:
-                        rid = r[0] if r else None
-                        if rid and rid not in seen_ids:
-                            rows.append(r)
-                            seen_ids.add(rid)
-                    if len(rows) >= limit:
-                        break
+                rows = self._expand_with_like(expanded_queries, where_clause, params, limit, rows, seen_ids)
 
         # Semantic expansion if results insufficient
         if self._adapter._enable_semantic and len(rows) < limit and self._adapter._expander and self._adapter._merger:
-            original_results = [self._adapter._serializer.row_to_stored(r) for r in rows if r]
-            expanded_rows = self._semantic_recall(query, where_clause, params, limit)
-            expanded_results = [self._adapter._serializer.row_to_stored(r) for r in expanded_rows if r]
-
-            if expanded_results:
-                merged = self._adapter._merger.merge(
-                    original_results=original_results,
-                    expanded_results=expanded_results,
-                    query=query,
-                    limit=limit,
-                    source="synonym",
-                )
-                final_results = []
-                for item in merged:
-                    if isinstance(item, StoredMemory):
-                        final_results.append(item)
-                    elif isinstance(item, dict):
-                        stored = self._adapter._serializer.dict_to_stored(item)
-                        if stored:
-                            final_results.append(stored)
+            final_results = self._try_semantic_expansion(query, where_clause, params, limit, rows)
+            if final_results is not None:
                 return final_results, True
 
         return rows, False
+
+    @staticmethod
+    def _collect_seen_ids(rows) -> set:
+        """Collect existing row IDs to avoid duplicates during expansion."""
+        seen_ids = set()
+        for r in rows:
+            rid = r[0] if r else None
+            if rid:
+                seen_ids.add(rid)
+        return seen_ids
+
+    def _expand_with_fts(self, expanded_queries, where_clause, params, limit, rows, seen_ids):
+        """Expand results using FTS search on expanded queries (mutates rows and seen_ids)."""
+        for eq in expanded_queries:
+            eq_rows = self._fts_search(eq, where_clause, params, limit)
+            for r in eq_rows:
+                rid = r[0] if r else None
+                if rid and rid not in seen_ids:
+                    rows.append(r)
+                    seen_ids.add(rid)
+            if len(rows) >= limit:
+                break
+        return rows
+
+    def _expand_with_like(self, expanded_queries, where_clause, params, limit, rows, seen_ids):
+        """Expand results using LIKE search on expanded queries (mutates rows and seen_ids)."""
+        for eq in expanded_queries:
+            eq_rows = self._like_search(eq, where_clause, params, limit)
+            for r in eq_rows:
+                rid = r[0] if r else None
+                if rid and rid not in seen_ids:
+                    rows.append(r)
+                    seen_ids.add(rid)
+            if len(rows) >= limit:
+                break
+        return rows
+
+    def _try_semantic_expansion(self, query, where_clause, params, limit, rows):
+        """Try semantic expansion. Returns list[StoredMemory] on success, None if no expansion."""
+        expanded_rows = self._semantic_recall(query, where_clause, params, limit)
+        expanded_results = [self._adapter._serializer.row_to_stored(r) for r in expanded_rows if r]
+        if not expanded_results:
+            return None
+
+        original_results = [self._adapter._serializer.row_to_stored(r) for r in rows if r]
+        merged = self._adapter._merger.merge(
+            original_results=original_results,
+            expanded_results=expanded_results,
+            query=query,
+            limit=limit,
+            source="synonym",
+        )
+        final_results = []
+        for item in merged:
+            if isinstance(item, StoredMemory):
+                final_results.append(item)
+            elif isinstance(item, dict):
+                stored = self._adapter._serializer.dict_to_stored(item)
+                if stored:
+                    final_results.append(stored)
+        return final_results
 
     @staticmethod
     def increment_access(stored, batch_updates, now_iso, adapter=None):
@@ -461,7 +500,9 @@ class RecallEngine:
                 AND v.embedding MATCH ?
                 AND k = ?
                 ORDER BY v.distance
-            """.format(where_clause=where_clause)
+            """.format(
+                where_clause=where_clause
+            )
             vec_params = params + [
                 struct.pack(f"{self._adapter._embedding_dim}f", *query_embedding.tolist()),
                 limit,

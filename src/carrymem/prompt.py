@@ -230,86 +230,99 @@ def build_prompt(
     return "\n".join(parts)
 
 
-def build_qa_prompt(
-    memories: List[Dict[str, Any]],
-    knowledge: List[Dict[str, Any]],
+def _format_preference_line(m: Dict[str, Any]) -> str:
+    """Format a single preference memory as a bullet line."""
+    content = m.get("content", "")
+    if m.get("auto_rule", "") == "avoid":
+        return f"- Avoid: {content}"
+    return f"- Preference: {content}"
+
+
+def _build_preferences_section(pref_memories: List[Dict[str, Any]]) -> List[str]:
+    """Build the '### User Preferences' section lines."""
+    lines = ["### User Preferences"]
+    for m in pref_memories:
+        lines.append(_format_preference_line(m))
+    return lines
+
+
+def _apply_qa_preference_header(
+    parts: List[str],
+    t: Dict[str, Any],
+    pref_memories: List[Dict[str, Any]],
+) -> None:
+    """Apply preference header, guidelines, and section to ``parts`` in-place."""
+    pref_header = t.get("preference_qa_header", "")
+    if pref_header:
+        parts[0] = pref_header
+    pref_guidelines = t.get("preference_qa_guidelines", [])
+    if pref_guidelines:
+        parts.extend(pref_guidelines)
+    parts.extend(_build_preferences_section(pref_memories))
+
+
+def _build_qa_short_path(
+    t: Dict[str, Any],
+    pref_memories: List[Dict[str, Any]],
+    rules: str,
     question: str,
-    language: str = "en",
-    include_question: bool = True,
-    rules: str = "",
+    include_question: bool,
 ) -> str:
-    """Build a QA prompt with relevant memories for answering a question."""
-    t = PROMPT_TEMPLATES.get(language, PROMPT_TEMPLATES["en"])
+    """Build the short QA prompt when only preference memories exist."""
+    parts = [t.get("preference_qa_header", "") or t["header"]]
+    pref_guidelines = t.get("preference_qa_guidelines", [])
+    if pref_guidelines:
+        parts.extend(pref_guidelines)
+    parts.extend(_build_preferences_section(pref_memories))
+    if rules:
+        parts.append("")
+        parts.append(rules)
+    if include_question:
+        parts.append("")
+        parts.append(f"Question: {question}")
+        parts.append("Answer:")
+    return "\n".join(parts)
 
-    active = [m for m in memories if not m.get("superseded_at")]
-    outdated = [m for m in memories if m.get("superseded_at")]
-    pref_memories = [m for m in active if m.get("type") == "user_preference"]
-    non_pref_active = [m for m in active if m.get("type") != "user_preference"]
 
-    if pref_memories and not non_pref_active and not knowledge and not outdated:
-        parts = [t.get("preference_qa_header", "") or t["header"]]
-        pref_guidelines = t.get("preference_qa_guidelines", [])
-        if pref_guidelines:
-            parts.extend(pref_guidelines)
-        parts.append("### User Preferences")
-        for m in pref_memories:
-            content = m.get("content", "")
-            auto_rule = m.get("auto_rule", "")
-            if auto_rule == "avoid":
-                parts.append(f"- Avoid: {content}")
-            else:
-                parts.append(f"- Preference: {content}")
-        if rules:
-            parts.append("")
-            parts.append(rules)
-        if include_question:
-            parts.append("")
-            parts.append(f"Question: {question}")
-            parts.append("Answer:")
-        return "\n".join(parts)
+def _build_outdated_corrections_section(
+    outdated: List[Dict[str, Any]],
+    language: str,
+) -> List[str]:
+    """Build the '### Updated preferences' section from outdated corrections."""
+    corrections = [m for m in outdated if m.get("type") in ("correction", "decision")]
+    if not corrections:
+        return []
+    lines = ["### Updated preferences"]
+    for m in corrections[:2]:
+        lines.append(format_memory_entry(m, language))
+    return lines
 
-    has_preference = bool(pref_memories)
 
+def _build_qa_standard_path(
+    t: Dict[str, Any],
+    pref_memories: List[Dict[str, Any]],
+    non_pref_active: List[Dict[str, Any]],
+    outdated: List[Dict[str, Any]],
+    knowledge: List[Dict[str, Any]],
+    rules: str,
+    question: str,
+    include_question: bool,
+    language: str,
+) -> str:
+    """Build the standard QA prompt with full context (non-short-path)."""
     parts = [t.get("preference_qa_header", "") or t["header"]]
 
-    if has_preference:
-        pref_header = t.get("preference_qa_header", "")
-        if pref_header:
-            parts[0] = pref_header
-        pref_guidelines = t.get("preference_qa_guidelines", [])
-        if pref_guidelines:
-            parts.extend(pref_guidelines)
+    if pref_memories:
+        _apply_qa_preference_header(parts, t, pref_memories)
 
-        if pref_memories:
-            parts.append("### User Preferences")
-            for m in pref_memories:
-                content = m.get("content", "")
-                auto_rule = m.get("auto_rule", "")
-                if auto_rule == "avoid":
-                    parts.append(f"- Avoid: {content}")
-                else:
-                    parts.append(f"- Preference: {content}")
-
-        if non_pref_active:
-            parts.append("")
-            parts.append("### Additional context")
-            for m in non_pref_active:
-                parts.append(format_memory_entry(m, language))
-    else:
-        if non_pref_active:
-            parts.append("")
-            parts.append("### Additional context")
-            for m in non_pref_active:
-                parts.append(format_memory_entry(m, language))
+    if non_pref_active:
+        parts.append("")
+        parts.append("### Additional context")
+        for m in non_pref_active:
+            parts.append(format_memory_entry(m, language))
 
     parts.append("")
-
-    if outdated:
-        corrections = [m for m in outdated if m.get("type") in ("correction", "decision")]
-        if corrections:
-            parts.append("### Updated preferences")
-            for m in corrections[:2]:
-                parts.append(format_memory_entry(m, language))
+    parts.extend(_build_outdated_corrections_section(outdated, language))
 
     if knowledge:
         parts.append("")
@@ -328,3 +341,36 @@ def build_qa_prompt(
         parts.append("Answer:")
 
     return "\n".join(parts)
+
+
+def build_qa_prompt(
+    memories: List[Dict[str, Any]],
+    knowledge: List[Dict[str, Any]],
+    question: str,
+    language: str = "en",
+    include_question: bool = True,
+    rules: str = "",
+) -> str:
+    """Build a QA prompt with relevant memories for answering a question."""
+    t = PROMPT_TEMPLATES.get(language, PROMPT_TEMPLATES["en"])
+
+    active = [m for m in memories if not m.get("superseded_at")]
+    outdated = [m for m in memories if m.get("superseded_at")]
+    pref_memories = [m for m in active if m.get("type") == "user_preference"]
+    non_pref_active = [m for m in active if m.get("type") != "user_preference"]
+
+    # Short path: only preferences, no other context
+    if pref_memories and not non_pref_active and not knowledge and not outdated:
+        return _build_qa_short_path(t, pref_memories, rules, question, include_question)
+
+    return _build_qa_standard_path(
+        t,
+        pref_memories,
+        non_pref_active,
+        outdated,
+        knowledge,
+        rules,
+        question,
+        include_question,
+        language,
+    )

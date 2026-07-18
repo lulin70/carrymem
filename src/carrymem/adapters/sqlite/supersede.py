@@ -48,15 +48,33 @@ class SupersedeManager:
         "now live",
         "now work",
     ]
+    _PREFERENCE_KEYWORDS = {
+        "prefer",
+        "偏好",
+        "喜欢",
+        "选用",
+        "recommend",
+        "avoid",
+        "不用",
+        "别用",
+        "不要用",
+        "dislike",
+        "hate",
+        "never",
+        "always",
+        "switched",
+        "changed",
+        "replaced",
+        "instead",
+    }
+    _ASSISTANT_PREFIXES = ("[assistant said]", "[ai said]", "[bot said]")
 
     def __init__(self, adapter):
         self._adapter = adapter
 
     def auto_supersede(self, conn, new_storage_key: str, entry: MemoryEntry, namespace: str):
         """Mark older conflicting memories as superseded by the new entry."""
-        if entry.type not in self._SUPERSEDE_TYPES:
-            return
-        if entry.type == "correction":
+        if entry.type not in self._SUPERSEDE_TYPES or entry.type == "correction":
             return
 
         try:
@@ -75,105 +93,119 @@ class SupersedeManager:
 
         entry_words = set(entry.content.lower().split())
         entry_lower = entry.content.lower()
-        has_update_marker = any(
-            f" {m} " in f" {entry_lower} " or entry_lower.startswith(f"{m} ") for m in self._UPDATE_MARKERS
-        )
-
-        _PREFERENCE_KEYWORDS = {
-            "prefer",
-            "偏好",
-            "喜欢",
-            "选用",
-            "recommend",
-            "avoid",
-            "不用",
-            "别用",
-            "不要用",
-            "dislike",
-            "hate",
-            "never",
-            "always",
-            "switched",
-            "changed",
-            "replaced",
-            "instead",
-        }
-        entry_has_pref_kw = any(kw in entry_lower for kw in _PREFERENCE_KEYWORDS)
+        has_update_marker = self._has_update_marker(entry_lower)
+        entry_has_pref_kw = self._has_preference_keyword(entry_lower)
 
         for row in rows:
             old_content = row["content"] or ""
-            if old_content.startswith("Correction:") or old_content.startswith("Decision:"):
-                continue
-            if old_content.lower().startswith(("[assistant said]", "[ai said]", "[bot said]")):
+            if self._is_skip_content(old_content):
                 continue
 
-            old_words = set(old_content.lower().split())
-            if not old_words:
-                continue
-            jaccard = len(entry_words & old_words) / max(len(entry_words | old_words), 1)
-
-            should_supersede = False
-            if self.is_contradictory(entry.content, old_content):
-                should_supersede = True
-            elif has_update_marker and jaccard >= 0.40:
-                should_supersede = True
-            elif entry.type == "user_preference" and entry_has_pref_kw:
-                old_lower = old_content.lower()
-                old_has_pref_kw = any(kw in old_lower for kw in _PREFERENCE_KEYWORDS)
-                if old_has_pref_kw:
-                    should_supersede = True
-
-            if not should_supersede:
-                if jaccard < 0.25:
-                    continue
+            jaccard = self._compute_jaccard(entry_words, old_content)
+            if jaccard is None:
                 continue
 
-            if entry.content.startswith("Correction:") or entry.content.startswith("Decision:"):
-                continue
-            if entry.content.lower().startswith(("[assistant said]", "[ai said]", "[bot said]")):
+            if not self._should_supersede(entry, old_content, has_update_marker, entry_has_pref_kw, jaccard):
                 continue
 
-            now_iso = datetime.now(timezone.utc).isoformat()
-            try:
-                # Get old memory's version chain info
-                old_chain_id = None
-                old_version = 1
-                try:
-                    chain_row = conn.execute(
-                        "SELECT version_chain_id, version_number FROM memories WHERE id = ?",
-                        (row["id"],),
-                    ).fetchone()
-                    if chain_row:
-                        old_chain_id = chain_row["version_chain_id"]
-                        old_version = chain_row["version_number"] or 1
-                except sqlite3.OperationalError:
-                    pass
+            if self._is_skip_content(entry.content):
+                continue
 
-                # Determine chain_id: reuse old if exists, otherwise use new storage_key
-                chain_id = old_chain_id or new_storage_key
-                new_version = old_version + 1
+            if self._apply_supersede_db_update(conn, row, new_storage_key, entry, jaccard, has_update_marker):
+                break
 
-                # Mark old memory as superseded and link to chain
-                conn.execute(
-                    "UPDATE memories SET superseded_at = ?, supersedes = ?, " "version_chain_id = ? WHERE id = ?",
-                    (now_iso, new_storage_key, chain_id, row["id"]),
-                )
+    @staticmethod
+    def _has_update_marker(content_lower: str) -> bool:
+        """Check if content contains an update marker word."""
+        return any(
+            f" {m} " in f" {content_lower} " or content_lower.startswith(f"{m} ")
+            for m in SupersedeManager._UPDATE_MARKERS
+        )
 
-                # Update new memory's version chain info
-                conn.execute(
-                    "UPDATE memories SET version_chain_id = ?, version_number = ? " "WHERE storage_key = ?",
-                    (chain_id, new_version, new_storage_key),
-                )
-            except sqlite3.Error as e:
-                logger.debug("Auto-supersede update failed: %s", e)
-            logger.debug(
-                "Auto-superseded memory %s with new %s " "(jaccard=%.2f, update_marker=%s)",
-                row["id"][:16],
-                entry.type,
-                jaccard,
-                has_update_marker,
+    @staticmethod
+    def _has_preference_keyword(content_lower: str) -> bool:
+        """Check if content contains a preference keyword."""
+        return any(kw in content_lower for kw in SupersedeManager._PREFERENCE_KEYWORDS)
+
+    @staticmethod
+    def _is_skip_content(content: str) -> bool:
+        """Check if content should be skipped (corrections, decisions, assistant replies)."""
+        if content.startswith("Correction:") or content.startswith("Decision:"):
+            return True
+        return content.lower().startswith(SupersedeManager._ASSISTANT_PREFIXES)
+
+    @staticmethod
+    def _compute_jaccard(entry_words: set, old_content: str):
+        """Compute Jaccard similarity. Returns None if old_content has no words."""
+        old_words = set(old_content.lower().split())
+        if not old_words:
+            return None
+        return len(entry_words & old_words) / max(len(entry_words | old_words), 1)
+
+    @staticmethod
+    def _should_supersede(
+        entry: MemoryEntry,
+        old_content: str,
+        has_update_marker: bool,
+        entry_has_pref_kw: bool,
+        jaccard: float,
+    ) -> bool:
+        """Decide whether old_content should be superseded by entry.content."""
+        if SupersedeManager.is_contradictory(entry.content, old_content):
+            return True
+        if has_update_marker and jaccard >= 0.40:
+            return True
+        if entry.type == "user_preference" and entry_has_pref_kw:
+            if SupersedeManager._has_preference_keyword(old_content.lower()):
+                return True
+        return False
+
+    @staticmethod
+    def _fetch_version_chain(conn, memory_id: str):
+        """Fetch (version_chain_id, version_number) for a memory. Returns (None, 1) on error."""
+        try:
+            chain_row = conn.execute(
+                "SELECT version_chain_id, version_number FROM memories WHERE id = ?",
+                (memory_id,),
+            ).fetchone()
+            if chain_row:
+                return chain_row["version_chain_id"], chain_row["version_number"] or 1
+        except sqlite3.OperationalError:
+            pass
+        return None, 1
+
+    @staticmethod
+    def _apply_supersede_db_update(
+        conn, row, new_storage_key: str, entry: MemoryEntry, jaccard: float, has_update_marker: bool
+    ) -> bool:
+        """Apply the supersede DB update. Returns True if update applied successfully."""
+        now_iso = datetime.now(timezone.utc).isoformat()
+        try:
+            old_chain_id, old_version = SupersedeManager._fetch_version_chain(conn, row["id"])
+            chain_id = old_chain_id or new_storage_key
+            new_version = old_version + 1
+
+            # Mark old memory as superseded and link to chain
+            conn.execute(
+                "UPDATE memories SET superseded_at = ?, supersedes = ?, version_chain_id = ? WHERE id = ?",
+                (now_iso, new_storage_key, chain_id, row["id"]),
             )
-            break
+            # Update new memory's version chain info
+            conn.execute(
+                "UPDATE memories SET version_chain_id = ?, version_number = ? WHERE storage_key = ?",
+                (chain_id, new_version, new_storage_key),
+            )
+        except sqlite3.Error as e:
+            logger.debug("Auto-supersede update failed: %s", e)
+            return False
+        logger.debug(
+            "Auto-superseded memory %s with new %s (jaccard=%.2f, update_marker=%s)",
+            row["id"][:16],
+            entry.type,
+            jaccard,
+            has_update_marker,
+        )
+        return True
 
     @staticmethod
     def is_contradictory(new_content: str, old_content: str) -> bool:

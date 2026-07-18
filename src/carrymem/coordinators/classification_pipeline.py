@@ -76,6 +76,117 @@ class ClassificationPipeline:
         logger.debug("No classification matches found")
         return []
 
+    def _is_low_info_assistant_msg(
+        self,
+        message: str,
+        context: Optional[Dict[str, Any]],
+    ) -> bool:
+        """Check if message is a low-information assistant reply.
+
+        Combines role/prefix detection with low-info content check.
+        Returns True only if the message is from an assistant AND has low info.
+        """
+        is_assistant_msg = False
+        if context and isinstance(context, dict):
+            role = context.get("role", "")
+            if role == "assistant":
+                is_assistant_msg = True
+        if message and isinstance(message, str):
+            msg_stripped_lower = message.strip().lower()
+            if any(msg_stripped_lower.startswith(prefix) for prefix in self.ASSISTANT_PREFIXES):
+                is_assistant_msg = True
+        return bool(is_assistant_msg and self._is_low_info_assistant_reply(message))
+
+    def _apply_default_classification(
+        self,
+        message: str,
+        language: str,
+        soft_mode: bool,
+    ) -> List[Dict[str, Any]]:
+        """Apply default classification with fail-closed logic.
+
+        P0-D: Fail-closed default - unclassifiable content is NOT stored.
+        In soft mode, low-confidence defaults are boosted to threshold and kept.
+        """
+        default_match = self._get_default_classification(message, language)
+
+        if not default_match:
+            if soft_mode:
+                return [
+                    {
+                        "memory_type": "fact_declaration",
+                        "tier": 2,
+                        "content": message,
+                        "confidence": 0.3,
+                        "source": "default:soft_catchall",
+                        "description": "Soft-mode catchall: store everything",
+                    }
+                ]
+            return []
+
+        # Check 1: confidence below MIN_DEFAULT_CONFIDENCE (logs every 100)
+        if default_match.get("confidence", 0) < self.MIN_DEFAULT_CONFIDENCE:
+            self._filter_counts["fail_closed"] += 1
+            if self._filter_counts["fail_closed"] % 100 == 1:
+                logger.info(
+                    f"Fail-closed filter: "
+                    f"{self._filter_counts['fail_closed']} low-confidence defaults filtered total"
+                )
+            if soft_mode:
+                default_match["confidence"] = self.MIN_DEFAULT_CONFIDENCE
+                default_match["source"] = "default:soft_fallback"
+            else:
+                return []
+
+        # Check 2: sentiment_marker below MIN_SENTIMENT_DEFAULT_CONFIDENCE
+        # Note: NOT elif — in soft mode, check 1 may boost confidence to MIN_DEFAULT_CONFIDENCE
+        # which is still below MIN_SENTIMENT_DEFAULT_CONFIDENCE, so this check runs again.
+        if (
+            default_match.get("memory_type") == "sentiment_marker"
+            and default_match.get("confidence", 0) < self.MIN_SENTIMENT_DEFAULT_CONFIDENCE
+        ):
+            self._filter_counts["fail_closed"] += 1
+            if soft_mode:
+                default_match["confidence"] = self.MIN_SENTIMENT_DEFAULT_CONFIDENCE
+                default_match["source"] = "default:soft_fallback"
+            else:
+                return []
+
+        return [default_match]
+
+    def _apply_confirmation_context(
+        self,
+        matches: List[Dict[str, Any]],
+        message: str,
+        context: Optional[Dict[str, Any]],
+    ) -> None:
+        """Augment decision/correction matches with confirmation context (in-place).
+
+        When the user message is a confirmation and an ai_reply is available,
+        attach a summary of the ai_reply to the match content.
+        """
+        if not (matches and context and isinstance(context, dict)):
+            return
+
+        ai_reply = context.get("ai_reply", "")
+        if not (ai_reply and is_confirmation(message)):
+            return
+
+        for match in matches:
+            match_type = match.get("memory_type") or match.get("type", "")
+            if match_type not in ("decision", "correction"):
+                continue
+            if match.get("context_source"):
+                continue
+            ai_summary = summarize_context(ai_reply)
+            original_content = match.get("content", "")
+            if original_content and len(original_content) > 5:
+                match["content"] = f"{original_content}: {ai_summary}"
+            else:
+                match["content"] = f"Confirmed: {ai_summary}"
+            match["context_source"] = "ai_reply"
+            match["original_user_message"] = message
+
     def classify_with_defaults(
         self,
         message: str,
@@ -101,9 +212,9 @@ class ClassificationPipeline:
         """
         # Phase A Fix #1: Pipeline-level noise filtering (P0-3d)
         # This prevents _get_default_classification from matching noise messages
-        ai_reply = None
+        ai_reply = ""
         if context and isinstance(context, dict):
-            ai_reply = context.get("ai_reply", "")
+            ai_reply = context.get("ai_reply", "") or ""
 
         is_confirmation_with_context = bool(ai_reply and is_confirmation(message))
 
@@ -114,87 +225,23 @@ class ClassificationPipeline:
             return []
 
         # P0-C: Filter low-information assistant replies
-        # Check both explicit role context and "[Assistant said]" prefix convention
-        is_assistant_msg = False
-        if context and isinstance(context, dict):
-            role = context.get("role", "")
-            if role == "assistant":
-                is_assistant_msg = True
-        if message and isinstance(message, str):
-            msg_stripped_lower = message.strip().lower()
-            if any(msg_stripped_lower.startswith(prefix) for prefix in self.ASSISTANT_PREFIXES):
-                is_assistant_msg = True
-        if is_assistant_msg:
-            if self._is_low_info_assistant_reply(message):
-                self._filter_counts["low_info_assistant"] += 1
-                if self._filter_counts["low_info_assistant"] % 100 == 1:
-                    logger.info(
-                        f"Low-info assistant filter: "
-                        f"{self._filter_counts['low_info_assistant']} messages filtered total"
-                    )
-                return []
+        if self._is_low_info_assistant_msg(message, context):
+            self._filter_counts["low_info_assistant"] += 1
+            if self._filter_counts["low_info_assistant"] % 100 == 1:
+                logger.info(
+                    f"Low-info assistant filter: "
+                    f"{self._filter_counts['low_info_assistant']} messages filtered total"
+                )
+            return []
 
         matches = self.classify(message, context, execution_context)
 
         # P0-D: Fail-closed default - if no classification matches, do NOT store
-        # Previously: unclassifiable content defaulted to fact_declaration(0.5)
-        # Now: return empty list (fail-closed behavior)
         if not matches:
-            default_match = self._get_default_classification(message, language)
-            if default_match:
-                if default_match.get("confidence", 0) < self.MIN_DEFAULT_CONFIDENCE:
-                    self._filter_counts["fail_closed"] += 1
-                    if self._filter_counts["fail_closed"] % 100 == 1:
-                        logger.info(
-                            f"Fail-closed filter: "
-                            f"{self._filter_counts['fail_closed']} low-confidence defaults filtered total"
-                        )
-                    if self.pattern_analyzer.noise_filter_mode == "soft":
-                        default_match["confidence"] = self.MIN_DEFAULT_CONFIDENCE
-                        default_match["source"] = "default:soft_fallback"
-                        matches = [default_match]
-                    else:
-                        return []
-                if (
-                    default_match.get("memory_type") == "sentiment_marker"
-                    and default_match.get("confidence", 0) < self.MIN_SENTIMENT_DEFAULT_CONFIDENCE
-                ):
-                    self._filter_counts["fail_closed"] += 1
-                    if self.pattern_analyzer.noise_filter_mode == "soft":
-                        default_match["confidence"] = self.MIN_SENTIMENT_DEFAULT_CONFIDENCE
-                        default_match["source"] = "default:soft_fallback"
-                        matches = [default_match]
-                    else:
-                        return []
-                if not matches:
-                    matches = [default_match]
-            elif self.pattern_analyzer.noise_filter_mode == "soft":
-                matches = [
-                    {
-                        "memory_type": "fact_declaration",
-                        "tier": 2,
-                        "content": message,
-                        "confidence": 0.3,
-                        "source": "default:soft_catchall",
-                        "description": "Soft-mode catchall: store everything",
-                    }
-                ]
+            soft_mode = self.pattern_analyzer.noise_filter_mode == "soft"
+            matches = self._apply_default_classification(message, language, soft_mode)
 
-        if matches and context and isinstance(context, dict):
-            ai_reply = context.get("ai_reply", "")
-            if ai_reply and is_confirmation(message):
-                for match in matches:
-                    match_type = match.get("memory_type") or match.get("type", "")
-                    if match_type in ("decision", "correction"):
-                        if not match.get("context_source"):
-                            ai_summary = summarize_context(ai_reply)
-                            original_content = match.get("content", "")
-                            if original_content and len(original_content) > 5:
-                                match["content"] = f"{original_content}: {ai_summary}"
-                            else:
-                                match["content"] = f"Confirmed: {ai_summary}"
-                            match["context_source"] = "ai_reply"
-                            match["original_user_message"] = message
+        self._apply_confirmation_context(matches, message, context)
 
         return matches
 

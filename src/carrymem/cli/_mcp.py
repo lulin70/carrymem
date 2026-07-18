@@ -271,136 +271,50 @@ def _setup_mcp_project(parsed):
     return 0
 
 
-def _setup_mcp_global(parsed):
-    """Configure MCP at global level — all AI tools share one CarryMem database."""
-    print(f"\n  {_bold('Configuring CarryMem for all AI tools (global)...')}\n")
+def _apply_claude_tool_config(tool_name, mcp_config, force, configured, failed):
+    """Apply MCP config using Claude Code's global config merger (merges into ~/.claude.json)."""
+    success, _updated, msg = _merge_claude_global_config(mcp_config, force=force)
+    claude_file = Path.home() / ".claude.json"
+    tool_key = tool_name.lower().replace(" ", "-")
+    if success:
+        print(f"  {_green(f'{tool_name}:')} {msg} ({claude_file})")
+        configured.append(tool_key)
+    else:
+        print(f"  {_red(f'{tool_name}:')} {msg}")
+        failed.append(tool_key)
 
-    db_path = str(_DEFAULT_DB)
-    mcp_config = {
-        "mcpServers": {
-            "carrymem": _build_mcp_server_config(db_path=None),
-        }
-    }
 
-    configured = []
-    failed = []
+def _apply_json_tool_config(tool_name, file_path, mcp_config, force, configured, failed):
+    """Apply MCP config to a tool that uses a JSON mcp.json file (via _merge_json_file)."""
+    success, _updated, msg = _merge_json_file(file_path, mcp_config, force=force)
+    tool_key = tool_name.lower().replace(" ", "-")
+    if success:
+        print(f"  {_green(f'{tool_name}:')} {msg} ({file_path})")
+        configured.append(tool_key)
+    else:
+        print(f"  {_red(f'{tool_name}:')} {msg}")
+        failed.append(tool_key)
 
-    # --- Claude Code: ~/.claude.json ---
-    if parsed.tool in ("claude-code", "all"):
-        success, updated, msg = _merge_claude_global_config(mcp_config, force=parsed.force)
-        if success:
-            claude_file = Path.home() / ".claude.json"
-            print(f"  {_green('Claude Code:')} {msg} ({claude_file})")
-            configured.append("claude-code")
-        else:
-            print(f"  {_red('Claude Code:')} {msg}")
-            failed.append("claude-code")
 
-    # --- Cursor: ~/.cursor/mcp.json ---
-    if parsed.tool in ("cursor", "all"):
-        cursor_file = Path.home() / ".cursor" / "mcp.json"
-        success, updated, msg = _merge_json_file(cursor_file, mcp_config, force=parsed.force)
-        if success:
-            print(f"  {_green('Cursor:')} {msg} ({cursor_file})")
-            configured.append("cursor")
-        else:
-            print(f"  {_red('Cursor:')} {msg}")
-            failed.append("cursor")
+def _apply_claude_fallback_tool_config(tool_name, primary_file, mcp_config, force, configured, failed):
+    """Apply MCP config to a tool that falls back to ~/.claude.json if its own dir is missing."""
+    claude_file = Path.home() / ".claude.json"
+    file_to_use = claude_file if not primary_file.parent.exists() else primary_file
+    if file_to_use.name == ".claude.json":
+        success, _updated, msg = _merge_claude_global_config(mcp_config, force=force)
+    else:
+        success, _updated, msg = _merge_json_file(file_to_use, mcp_config, force=force)
+    tool_key = tool_name.lower().replace(" ", "-")
+    if success:
+        print(f"  {_green(f'{tool_name}:')} {msg} ({file_to_use})")
+        configured.append(tool_key)
+    else:
+        print(f"  {_red(f'{tool_name}:')} {msg}")
+        failed.append(tool_key)
 
-    # --- TRAE: ~/.trae/mcp.json ---
-    if parsed.tool in ("trae", "all"):
-        trae_file = Path.home() / ".trae" / "mcp.json"
-        success, updated, msg = _merge_json_file(trae_file, mcp_config, force=parsed.force)
-        if success:
-            print(f"  {_green('TRAE:')} {msg} ({trae_file})")
-            configured.append("trae")
-        else:
-            print(f"  {_red('TRAE:')} {msg}")
-            failed.append("trae")
 
-        # Also configure TRAE-CN if the directory exists
-        trae_cn_dir = Path.home() / ".trae-cn"
-        if trae_cn_dir.exists():
-            trae_cn_file = trae_cn_dir / "mcp.json"
-            success, updated, msg = _merge_json_file(trae_cn_file, mcp_config, force=parsed.force)
-            if success:
-                print(f"  {_green('TRAE-CN:')} {msg} ({trae_cn_file})")
-                configured.append("trae-cn")
-            else:
-                print(f"  {_red('TRAE-CN:')} {msg}")
-                failed.append("trae-cn")
-
-    # --- Windsurf: ~/.windsurf/mcp.json ---
-    if parsed.tool in ("windsurf", "all"):
-        windsurf_file = Path.home() / ".windsurf" / "mcp.json"
-        success, updated, msg = _merge_json_file(windsurf_file, mcp_config, force=parsed.force)
-        if success:
-            print(f"  {_green('Windsurf:')} {msg} ({windsurf_file})")
-            configured.append("windsurf")
-        else:
-            print(f"  {_red('Windsurf:')} {msg}")
-            failed.append("windsurf")
-
-    # --- Cline: ~/.cline/mcp.json ---
-    if parsed.tool in ("cline", "all"):
-        cline_file = Path.home() / ".cline" / "mcp.json"
-        success, updated, msg = _merge_json_file(cline_file, mcp_config, force=parsed.force)
-        if success:
-            print(f"  {_green('Cline:')} {msg} ({cline_file})")
-            configured.append("cline")
-        else:
-            print(f"  {_red('Cline:')} {msg}")
-            failed.append("cline")
-
-    # --- OpenClaw: same config as Claude Code ---
-    if parsed.tool in ("openclaw", "all"):
-        openclaw_file = Path.home() / ".openclaw" / "mcp.json"
-        if not openclaw_file.parent.exists():
-            openclaw_file = Path.home() / ".claude.json"
-        if openclaw_file.name == ".claude.json":
-            success, updated, msg = _merge_claude_global_config(mcp_config, force=parsed.force)
-        else:
-            success, updated, msg = _merge_json_file(openclaw_file, mcp_config, force=parsed.force)
-        if success:
-            print(f"  {_green('OpenClaw:')} {msg} ({openclaw_file})")
-            configured.append("openclaw")
-        else:
-            print(f"  {_red('OpenClaw:')} {msg}")
-            failed.append("openclaw")
-
-    # --- Kimi Code CLI: same config as Claude Code ---
-    if parsed.tool in ("kimi-code", "all"):
-        kimi_file = Path.home() / ".kimi" / "mcp.json"
-        if not kimi_file.parent.exists():
-            kimi_file = Path.home() / ".claude.json"
-        if kimi_file.name == ".claude.json":
-            success, updated, msg = _merge_claude_global_config(mcp_config, force=parsed.force)
-        else:
-            success, updated, msg = _merge_json_file(kimi_file, mcp_config, force=parsed.force)
-        if success:
-            print(f"  {_green('Kimi Code:')} {msg} ({kimi_file})")
-            configured.append("kimi-code")
-        else:
-            print(f"  {_red('Kimi Code:')} {msg}")
-            failed.append("kimi-code")
-
-    # --- CodeX: ~/.codex/mcp.json ---
-    if parsed.tool in ("codex", "all"):
-        codex_file = Path.home() / ".codex" / "mcp.json"
-        if not codex_file.parent.exists():
-            codex_file = Path.home() / ".claude.json"
-        if codex_file.name == ".claude.json":
-            success, updated, msg = _merge_claude_global_config(mcp_config, force=parsed.force)
-        else:
-            success, updated, msg = _merge_json_file(codex_file, mcp_config, force=parsed.force)
-        if success:
-            print(f"  {_green('CodeX:')} {msg} ({codex_file})")
-            configured.append("codex")
-        else:
-            print(f"  {_red('CodeX:')} {msg}")
-            failed.append("codex")
-
-    # --- Summary ---
+def _print_global_setup_summary(configured, failed, db_path):
+    """Print configuration summary (database path, command, configured/failed lists)."""
     print()
     print(f"  {_green('Database:')} {db_path} (shared)")
 
@@ -420,22 +334,89 @@ def _setup_mcp_global(parsed):
 
     print(f"\n  {_bold('Restart all AI tools to activate CarryMem.')}")
 
-    if configured:
-        print(f"\n  {_dim('Verifying MCP server...')}")
-        try:
-            cmd_info = _resolve_mcp_command()
-            result = subprocess.run(
-                [cmd_info["command"]] + cmd_info["args"] + ["--help"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            if result.returncode == 0 or "carrymem" in (result.stdout + result.stderr).lower():
-                print(f"  {_green('MCP server:')} ready")
-            else:
-                print(f"  {_yellow('MCP server:')} could not verify (non-critical)")
-        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+
+def _verify_mcp_server():
+    """Verify that MCP server can be started (non-critical check)."""
+    print(f"\n  {_dim('Verifying MCP server...')}")
+    try:
+        cmd_info = _resolve_mcp_command()
+        result = subprocess.run(
+            [cmd_info["command"]] + cmd_info["args"] + ["--help"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0 or "carrymem" in (result.stdout + result.stderr).lower():
+            print(f"  {_green('MCP server:')} ready")
+        else:
             print(f"  {_yellow('MCP server:')} could not verify (non-critical)")
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        print(f"  {_yellow('MCP server:')} could not verify (non-critical)")
+
+
+def _setup_mcp_global(parsed):
+    """Configure MCP at global level — all AI tools share one CarryMem database."""
+    print(f"\n  {_bold('Configuring CarryMem for all AI tools (global)...')}\n")
+
+    db_path = str(_DEFAULT_DB)
+    mcp_config = {
+        "mcpServers": {
+            "carrymem": _build_mcp_server_config(db_path=None),
+        }
+    }
+
+    configured: list[str] = []
+    failed: list[str] = []
+
+    # --- Claude Code: ~/.claude.json (uses _merge_claude_global_config) ---
+    if parsed.tool in ("claude-code", "all"):
+        _apply_claude_tool_config("Claude Code", mcp_config, parsed.force, configured, failed)
+
+    # --- Cursor: ~/.cursor/mcp.json ---
+    if parsed.tool in ("cursor", "all"):
+        _apply_json_tool_config(
+            "Cursor", Path.home() / ".cursor" / "mcp.json", mcp_config, parsed.force, configured, failed
+        )
+
+    # --- TRAE: ~/.trae/mcp.json (+ TRAE-CN if dir exists) ---
+    if parsed.tool in ("trae", "all"):
+        _apply_json_tool_config(
+            "TRAE", Path.home() / ".trae" / "mcp.json", mcp_config, parsed.force, configured, failed
+        )
+        trae_cn_dir = Path.home() / ".trae-cn"
+        if trae_cn_dir.exists():
+            _apply_json_tool_config("TRAE-CN", trae_cn_dir / "mcp.json", mcp_config, parsed.force, configured, failed)
+
+    # --- Windsurf: ~/.windsurf/mcp.json ---
+    if parsed.tool in ("windsurf", "all"):
+        _apply_json_tool_config(
+            "Windsurf", Path.home() / ".windsurf" / "mcp.json", mcp_config, parsed.force, configured, failed
+        )
+
+    # --- Cline: ~/.cline/mcp.json ---
+    if parsed.tool in ("cline", "all"):
+        _apply_json_tool_config(
+            "Cline", Path.home() / ".cline" / "mcp.json", mcp_config, parsed.force, configured, failed
+        )
+
+    # --- Tools with .claude.json fallback: OpenClaw, Kimi Code, CodeX ---
+    if parsed.tool in ("openclaw", "all"):
+        _apply_claude_fallback_tool_config(
+            "OpenClaw", Path.home() / ".openclaw" / "mcp.json", mcp_config, parsed.force, configured, failed
+        )
+    if parsed.tool in ("kimi-code", "all"):
+        _apply_claude_fallback_tool_config(
+            "Kimi Code", Path.home() / ".kimi" / "mcp.json", mcp_config, parsed.force, configured, failed
+        )
+    if parsed.tool in ("codex", "all"):
+        _apply_claude_fallback_tool_config(
+            "CodeX", Path.home() / ".codex" / "mcp.json", mcp_config, parsed.force, configured, failed
+        )
+
+    # --- Summary + verification ---
+    _print_global_setup_summary(configured, failed, db_path)
+    if configured:
+        _verify_mcp_server()
 
     return 0 if not failed else 1
 
@@ -580,7 +561,8 @@ def cmd_tutorial(args):
         print("  Usage: carrymem tutorial")
         print("  Show a 5-minute quick-start guide for CarryMem.")
         return 0
-    print(f"""
+    print(
+        f"""
   {_bold('Welcome to CarryMem!')} {_dim('Learn the basics in 5 minutes.')}
 
   {_bold('[1/5] Store your first memory')}
@@ -609,5 +591,6 @@ def cmd_tutorial(args):
     carrymem          See what your AI knows about you
     carrymem doctor          Run diagnostics
     carrymem help            Full command reference
-""")
+"""
+    )
     return 0

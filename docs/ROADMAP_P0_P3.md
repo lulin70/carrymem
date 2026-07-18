@@ -94,8 +94,8 @@
 | W2 | TD-037 (Mixin 隐式协议) | Architect | P2→P3→P8 | TD-007 | ✅ 已提交 |
 | W3 | TD-006 (SQLiteAdapter ISP) | Architect | P2→P3→P4→P8→P9 | TD-007, TD-010 | ✅ 本批 commit |
 | W4 | TD-005 (cmd_doctor F=62 拆分) | Architect+Coder | P2→P3→P8→P9 | TD-010 | ✅ 本批 commit |
-| W5 | TD-008a (7 个 E 级函数，非 recall_engine) | Coder | P8→P9 | TD-010 | ⬜ 待启动 |
-| W5 | TD-008b (2 个 E 级函数，recall_engine) | Coder | P8→P9 | TD-006 | ⬜ 待启动 |
+| W5 | TD-008a (7 个 E 级函数，非 recall_engine) | Coder | P8→P9 | TD-010 | ✅ 已完成 |
+| W5 | TD-008b (2 个 E 级函数，recall_engine) | Coder | P8→P9 | TD-006 | ✅ 已完成 |
 
 **Wave 2 关闭验证 (TD-007 + TD-037)**:
 
@@ -149,6 +149,41 @@
 - 创建 `tests/test_cli_doctor.py` (34 characterization tests, 7 类): JSON 输出结构 / 检查名顺序稳定性 / 各检查状态语义 / `--fix` 副作用 / 返回码 / 人类可读输出 / 幂等性
 - 行为保持: `--fix` 仍然创建缺失的 config_dir 和 database；JSON 输出结构不变；返回码逻辑不变 (0=无 fail, 1=有 fail)
 - 设计原则: 每个检查函数职责单一 (SRP)，复杂度 ≤B 级；`_DOCTOR_CHECKS` 列表显式声明顺序作为 characterization 契约
+
+**Wave 5 关闭验证 (TD-008a + TD-008b)**:
+
+| 验证项 | 命令 | 结果 |
+|--------|------|------|
+| E 级函数清零 | `radon cc src/ -n E -s` | ✅ 输出为空 (0 个 E/F 级函数) |
+| select_memories 复杂度 | `radon cc src/carrymem/selection.py -n C -s` | ✅ E(39) → C(11) |
+| build_qa_prompt 复杂度 | `radon cc src/carrymem/prompt.py -n C -s` | ✅ E(39) → C(13) |
+| classify_with_defaults 复杂度 | `radon cc src/carrymem/coordinators/classification_pipeline.py -n C -s` | ✅ E(38) → C(11) |
+| cmd_unpack 复杂度 | `radon cc src/carrymem/cli/_io.py -n C -s` | ✅ E(36) → C(13) |
+| cmd_pack 复杂度 | 同上 | ✅ E(31) → C(16) |
+| _setup_mcp_global 复杂度 | `radon cc src/carrymem/cli/_mcp.py -n C -s` | ✅ E(33) → C(12) |
+| auto_supersede 复杂度 | `radon cc src/carrymem/adapters/sqlite/supersede.py -n C -s` | ✅ E(31) → C(12) |
+| _recall_impl 复杂度 | `radon cc src/carrymem/adapters/sqlite/recall_engine.py -n B -s` | ✅ E(34) → A 级 (≤5) |
+| _recall_expansion_phase 复杂度 | 同上 | ✅ E(31) → B(8) |
+| 全测试通过 | `pytest tests/ --no-cov --timeout=120 -m "not slow" -q` | ✅ (见 commit 验证) |
+| 代码风格 | `black --check src/ && isort --check-only src/ && flake8 src/` | ✅ 全部干净 |
+
+**TD-008 实现摘要**:
+- **TD-008a (7 个 E 级函数)**: 使用 Extract Function 模式，每个函数提取 3-7 个辅助函数/方法
+  - `select_memories`: 5 个模块级辅助函数 + 3 个模块级常量 (类型优先级/置信度下限/类型加权)
+  - `build_qa_prompt`: 6 个辅助函数 (偏好区段/标准路径/短路径/纠正区段/Header 应用)
+  - `classify_with_defaults`: 3 个类方法 (低信息助手检测/默认分类 fail-closed/确认上下文增强)
+  - `cmd_unpack`: 5 个辅助函数 (读取文件/解码容器/恢复记忆/恢复规则/恢复配置)
+  - `cmd_pack`: 7 个辅助函数 (密码提示/收集记忆/收集规则/收集配置/构建容器/写入文件/格式化大小)
+  - `_setup_mcp_global`: 5 个辅助函数 (Claude 配置/JSON 配置/Claude 回退配置/摘要打印/MCP 服务器验证)
+  - `auto_supersede`: 6 个 @staticmethod (更新标记检测/偏好关键词检测/跳过内容检测/Jaccard 计算/ supersede 判定/版本链获取/DB 更新)
+- **TD-008b (2 个 E 级函数)**: 
+  - `_recall_impl`: 4 个辅助方法 (参数验证/时间约束应用/WHERE 子句构建/无查询检索)
+  - `_recall_expansion_phase`: 4 个辅助方法 (seen_ids 收集/FTS 扩展/LIKE 扩展/语义扩展尝试)
+- **关键设计决策**:
+  - `classify_with_defaults` 的 fail-closed 双检查保持非 elif 顺序 (soft 模式下检查 1 可能提升置信度但仍低于检查 2 阈值)
+  - `_try_semantic_expansion` 返回 None 表示无扩展 (回退到原始 rows), 返回 list 表示扩展成功
+  - `auto_supersede` 的 `_compute_jaccard` 返回 None 表示无词 (跳过), 返回 float 表示有词
+- **行为保持**: 所有重构通过 characterization 测试验证, 无功能变更
 
 **Wave 2 详细方案 (TD-007 → TD-037)**:
 
