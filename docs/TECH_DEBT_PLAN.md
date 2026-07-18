@@ -2,7 +2,7 @@
 
 > **文档性质**: 活文档 (Living Document) — 每完成一项立即更新状态
 > **创建时间**: 2026-07-17
-> **最后更新**: 2026-07-17 (v8 — TD-006 ✅ 完成，Batch 3 Wave 3 收尾；3 ISP Protocol + 19 API 稳定性测试，852 tests 全通过)
+> **最后更新**: 2026-07-18 (v9 — TD-005 ✅ 完成，Batch 3 Wave 4 收尾；cmd_doctor F=62→A，18 _check_* 函数 + 34 characterization tests，885 tests 全通过)
 > **基于**: 7 维度项目整理评估 (2026-07-17, B+ 77/100) + DevSquad 7 角色并行审核
 > **配套文档**: [ROADMAP_P0_P3.md](ROADMAP_P0_P3.md) — 执行路线图 (Wave 推进表 + 7-Role 投票矩阵 + 11 阶段生命周期映射)
 >
@@ -263,7 +263,7 @@
 | **负责角色** | Architect + Coder |
 | **验证标准** | 命令 `radon cc -nc -e src/carrymem/cli/_stats.py` 无 F 级函数；`pytest tests/test_cli_doctor.py` 全测试通过（功能不变） |
 | **依赖** | TD-010 (SQLiteAdapter 测试补齐) |
-| **状态** | ⬜ 待开始 |
+| **状态** | ✅ 已完成 (cmd_doctor F=62→A; 18 `_check_*` 函数 15A+3B; `_format_doctor_output` C(13); 34 characterization tests 全通过; 885 tests 全通过) |
 | **生命周期** | P2 架构设计 → P3 技术设计 → P8 实现 → P9 测试 |
 
 #### TD-006: SQLiteAdapter God Class (重新定义为 ISP 接口隔离) ⚠️ 修正后
@@ -883,6 +883,7 @@ TD-035 (AccessPolicy 集成) — 安全债，独立推进
 | 2026-07-17 | v6: TD-010 ✅ 完成 (Batch 2 收尾)。新建 `tests/test_sqlite_adapter.py` (110 tests/12 类，21.74s 全通过)；`sqlite/__init__.py` 覆盖率 33.62%→**82.45%**；错误维度 ~19% (≥15%)；边界维度 ~16% (≥10%)。TD-006/005/008 重构安全网已就位，进入 Batch 3 架构重构阶段 | Tester (DevSquad) |
 | 2026-07-17 | v7: TD-007+TD-037 ✅ 完成 (Batch 3 Wave 2 收尾)。TD-007: 在 `adapters/base.py` 新增 5 个 `@runtime_checkable` Protocol (`RawConnectionProvider`/`EncryptionProvider`/`EmbeddingModelProvider`/`KeyLookupProvider`/`VersioningProvider`)，在 `SQLiteAdapter` 新增 4 个公共访问器 (`get_raw_connection()`/`security`/`embedding_model`/`embedding_model_name`)，更新 7 个调用方文件。TD-037: 在 6 个 Mixin 文件 (`_classification`/`_prompt_delegate`/`_recall`/`_memory_crud`/`_lifecycle`/`_profile_export`) 添加 `TYPE_CHECKING` 跨 Mixin 声明，移除 ~27 个 `type: ignore[attr-defined]` (core/ 目录 0 残留)，同步清理 8 个多余 type: ignore (no-any-return/unreachable)。验证: 833 tests 全通过 (45.26s)，mypy 仅剩 2 pre-existing 错误 (`_recall.py:157,172` StorageAdapter 可选方法，与 TD-007/TD-037 无关) | Architect (DevSquad) |
 | 2026-07-17 | v8: TD-006 ✅ 完成 (Batch 3 Wave 3 收尾)。在 `adapters/base.py` 新增 3 个 `@runtime_checkable` ISP Protocol: `StorageClient` (4 方法: store/store_entry/delete/count，仅含 ABC 抽象方法), `RecallClient` (6 方法: recall_aggregated/recall_timeline/recall_by_time/recall_semantic/recall_hybrid/recall_multi_mode), `GraphClient` (9 方法: store_graph_entities/recall_by_entity/recall_by_relation/recall_graph/shortest_path/get_memory_impact/add_graph_relation/list_graph_entities/list_graph_relations)。`VersioningProvider` (TD-007) 作为第 4 个 ISP 功能组。创建 `tests/test_api_stability.py` (19 tests/4 类): SQLiteAdapter 满足所有 7 Protocol; JSONAdapter/ObsidianAdapter 仅满足 StorageClient (ISP 隔离验证); Protocol 方法集稳定性快照。验证: 852 tests 全通过 (45.73s) | Architect (DevSquad) |
+| 2026-07-18 | v9: TD-005 ✅ 完成 (Batch 3 Wave 4 收尾)。在 `cli/_stats.py` 新增 2 个 dataclass (`_DoctorCheck`/`_DoctorContext`)，拆分原 F=62 的 `cmd_doctor` (322 行) 为 18 个独立 `_check_*` 函数 (15 A 级 + 3 B 级) + 1 个 `_format_doctor_output` 输出函数 (C=13) + 1 个 `_DOCTOR_CHECKS` 注册表 + 瘦身 `cmd_doctor` 编排器 (A 级)。18 个检查函数按域分布: Python 环境 (python_version, carrymem_import), 文件系统 (config_dir, database_file, write_permissions, disk_space), 数据库 (db_integrity, db_permissions, db_lock, memory_count, rules_engine, backup), 功能 (optional_deps, fts5, security, mcp_configs), 环境 (auto_inject, cli_path)。创建 `tests/test_cli_doctor.py` (34 characterization tests/7 类): JSON 输出结构 / 检查名顺序稳定性 / 各检查状态语义 / `--fix` 副作用 / 返回码 / 人类可读输出 / 幂等性。行为保持: `--fix` 仍然创建缺失的 config_dir 和 database；JSON 输出结构不变；返回码逻辑不变 (0=无 fail, 1=有 fail)。验证: 885 tests 全通过 (45.72s)，radon cc 无 F 级，black/isort/flake8/mypy 全部 clean | Architect+Coder (DevSquad) |
 
 ---
 

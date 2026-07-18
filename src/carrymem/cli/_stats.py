@@ -5,7 +5,9 @@ import os
 import shutil
 import sqlite3
 import sys
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
 
 from carrymem.cli._base import *
 
@@ -342,134 +344,140 @@ def cmd_check(args):
     return 0
 
 
-def cmd_doctor(args):
-    """Run diagnostics on the CarryMem installation and database."""
-    parser = _make_parser("doctor")
-    parser.add_argument("--db", help=_t("cli.arg.db"))
-    parser.add_argument("--fix", action="store_true", help=_t("cli.arg.fix"))
-    parser.add_argument("--json", action="store_true", help=_t("cli.arg.json"))
+# ── Doctor diagnostics (TD-005: split F=62 cmd_doctor into per-check fns) ─
 
-    parsed = parser.parse_args(args)
-    db_path = parsed.db or str(_DEFAULT_DB)
 
-    checks_passed = 0
-    checks_total = 0
-    issues = []
-    check_results = []
+@dataclass
+class _DoctorCheck:
+    """Single doctor diagnostic check result."""
 
-    def _record(name, status, message, detail=None):
-        nonlocal checks_passed, checks_total
-        checks_total += 1
-        if status == "ok":
-            checks_passed += 1
-        elif status == "fail":
-            issues.append(message)
-        check_results.append({"name": name, "status": status, "message": message, "detail": detail})
+    name: str
+    status: str  # ok | fail | warn | info | skip
+    message: str
+    detail: Optional[Dict[str, Any]] = None
 
+
+@dataclass
+class _DoctorContext:
+    """Shared state for doctor check functions."""
+
+    db_path: str
+    fix: bool
+    db: Path
+
+
+def _check_python_version(ctx: _DoctorContext) -> _DoctorCheck:
     py_ver = sys.version_info
     py_str = f"{py_ver.major}.{py_ver.minor}.{py_ver.micro}"
     if py_ver >= (3, 12):
-        _record("python_version", "ok", f"Python {py_str} (>= 3.12)")
-    else:
-        _record("python_version", "fail", f"Python {py_str} (need >= 3.12)")
+        return _DoctorCheck("python_version", "ok", f"Python {py_str} (>= 3.12)")
+    return _DoctorCheck("python_version", "fail", f"Python {py_str} (need >= 3.12)")
 
+
+def _check_carrymem_import(ctx: _DoctorContext) -> _DoctorCheck:
     try:
-        from carrymem import CarryMem
+        from carrymem import CarryMem  # noqa: F401
 
-        _record("carrymem_import", "ok", f"CarryMem v{__version__}")
+        return _DoctorCheck("carrymem_import", "ok", f"CarryMem v{__version__}")
     except ImportError as e:
-        _record("carrymem_import", "fail", f"CarryMem import: {e}")
+        return _DoctorCheck("carrymem_import", "fail", f"CarryMem import: {e}")
 
+
+def _check_config_dir(ctx: _DoctorContext) -> _DoctorCheck:
     if _DEFAULT_CONFIG_DIR.exists():
-        _record("config_dir", "ok", f"Config directory: {_DEFAULT_CONFIG_DIR}")
-    else:
-        _record("config_dir", "warn", f"Config directory missing: {_DEFAULT_CONFIG_DIR}")
-        if parsed.fix:
-            _DEFAULT_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        return _DoctorCheck("config_dir", "ok", f"Config directory: {_DEFAULT_CONFIG_DIR}")
+    if ctx.fix:
+        _DEFAULT_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    return _DoctorCheck("config_dir", "warn", f"Config directory missing: {_DEFAULT_CONFIG_DIR}")
 
-    db = Path(db_path)
-    if db.exists():
-        size_mb = db.stat().st_size / (1024 * 1024)
-        _record(
+
+def _check_database_file(ctx: _DoctorContext) -> _DoctorCheck:
+    if ctx.db.exists():
+        size_mb = ctx.db.stat().st_size / (1024 * 1024)
+        return _DoctorCheck(
             "database_file",
             "ok",
-            f"Database: {db} ({size_mb:.2f} MB)",
+            f"Database: {ctx.db} ({size_mb:.2f} MB)",
             {"size_mb": round(size_mb, 2)},
         )
-    else:
-        _record("database_file", "warn", f"Database not found: {db}")
-        if parsed.fix:
-            try:
-                cm = CarryMem(db_path=db_path)
-                cm.close()
-            except (sqlite3.OperationalError, OSError) as e:
-                _cli_logger.debug("Doctor: failed to create database: %s", e)
-
-    if db.exists():
+    if ctx.fix:
         try:
-            conn = sqlite3.connect(str(db))
-            result = conn.execute("PRAGMA integrity_check").fetchone()
-            conn.close()
-            if result[0] == "ok":
-                _record("db_integrity", "ok", "Database integrity: OK")
-            else:
-                _record("db_integrity", "fail", f"Database integrity: {result[0]}")
-        except sqlite3.Error as e:
-            _record("db_integrity", "fail", f"Database check error: {e}")
-    else:
-        _record("db_integrity", "skip", "Database integrity (no database)")
+            cm = CarryMem(db_path=ctx.db_path)
+            cm.close()
+        except (sqlite3.OperationalError, OSError) as e:
+            _cli_logger.debug("Doctor: failed to create database: %s", e)
+    return _DoctorCheck("database_file", "warn", f"Database not found: {ctx.db}")
 
-    if db.exists():
-        if os.access(str(db), os.W_OK):
-            _record("db_permissions", "ok", "Database file writable")
-        else:
-            _record("db_permissions", "fail", "Database file not writable")
-    else:
-        _record("db_permissions", "skip", "Database permissions (no database)")
 
+def _check_db_integrity(ctx: _DoctorContext) -> _DoctorCheck:
+    if not ctx.db.exists():
+        return _DoctorCheck("db_integrity", "skip", "Database integrity (no database)")
     try:
-        disk_usage = shutil.disk_usage(str(db.parent) if db.exists() else str(Path.home()))
+        conn = sqlite3.connect(str(ctx.db))
+        result = conn.execute("PRAGMA integrity_check").fetchone()
+        conn.close()
+        if result[0] == "ok":
+            return _DoctorCheck("db_integrity", "ok", "Database integrity: OK")
+        return _DoctorCheck("db_integrity", "fail", f"Database integrity: {result[0]}")
+    except sqlite3.Error as e:
+        return _DoctorCheck("db_integrity", "fail", f"Database check error: {e}")
+
+
+def _check_db_permissions(ctx: _DoctorContext) -> _DoctorCheck:
+    if not ctx.db.exists():
+        return _DoctorCheck("db_permissions", "skip", "Database permissions (no database)")
+    if os.access(str(ctx.db), os.W_OK):
+        return _DoctorCheck("db_permissions", "ok", "Database file writable")
+    return _DoctorCheck("db_permissions", "fail", "Database file not writable")
+
+
+def _check_disk_space(ctx: _DoctorContext) -> _DoctorCheck:
+    try:
+        disk_usage = shutil.disk_usage(str(ctx.db.parent) if ctx.db.exists() else str(Path.home()))
         free_gb = disk_usage.free / (1024**3)
         if free_gb < 0.1:
-            _record("disk_space", "fail", f"Disk space critically low: {free_gb:.2f} GB free")
-        elif free_gb < 1.0:
-            _record("disk_space", "warn", f"Disk space low: {free_gb:.2f} GB free")
-        else:
-            _record(
-                "disk_space",
-                "ok",
-                f"Disk space: {free_gb:.2f} GB free",
-                {"free_gb": round(free_gb, 2)},
-            )
+            return _DoctorCheck("disk_space", "fail", f"Disk space critically low: {free_gb:.2f} GB free")
+        if free_gb < 1.0:
+            return _DoctorCheck("disk_space", "warn", f"Disk space low: {free_gb:.2f} GB free")
+        return _DoctorCheck(
+            "disk_space",
+            "ok",
+            f"Disk space: {free_gb:.2f} GB free",
+            {"free_gb": round(free_gb, 2)},
+        )
     except OSError as e:
-        _record("disk_space", "skip", f"Disk space check unavailable: {e}")
+        return _DoctorCheck("disk_space", "skip", f"Disk space check unavailable: {e}")
 
-    if db.exists():
-        try:
-            test_conn = sqlite3.connect(str(db), timeout=1)
-            test_conn.execute("BEGIN IMMEDIATE")
-            test_conn.execute("ROLLBACK")
-            test_conn.close()
-            _record("db_lock", "ok", "Database not locked")
-        except sqlite3.OperationalError as e:
-            if "locked" in str(e).lower():
-                _record("db_lock", "warn", "Database may be locked by another process")
-            else:
-                _record("db_lock", "ok", "Database accessible")
-        except (OSError, ValueError, TypeError) as e:
-            _record("db_lock", "skip", f"Database lock check: {e}")
-    else:
-        _record("db_lock", "skip", "Database lock (no database)")
 
+def _check_db_lock(ctx: _DoctorContext) -> _DoctorCheck:
+    if not ctx.db.exists():
+        return _DoctorCheck("db_lock", "skip", "Database lock (no database)")
+    try:
+        test_conn = sqlite3.connect(str(ctx.db), timeout=1)
+        test_conn.execute("BEGIN IMMEDIATE")
+        test_conn.execute("ROLLBACK")
+        test_conn.close()
+        return _DoctorCheck("db_lock", "ok", "Database not locked")
+    except sqlite3.OperationalError as e:
+        if "locked" in str(e).lower():
+            return _DoctorCheck("db_lock", "warn", "Database may be locked by another process")
+        return _DoctorCheck("db_lock", "ok", "Database accessible")
+    except (OSError, ValueError, TypeError) as e:
+        return _DoctorCheck("db_lock", "skip", f"Database lock check: {e}")
+
+
+def _check_write_permissions(ctx: _DoctorContext) -> _DoctorCheck:
     try:
         test_file = _DEFAULT_CONFIG_DIR / ".doctor_test"
         test_file.touch()
         test_file.unlink()
-        _record("write_permissions", "ok", "Write permissions OK")
+        return _DoctorCheck("write_permissions", "ok", "Write permissions OK")
     except OSError as e:
-        _record("write_permissions", "fail", f"Write permissions: {e}")
+        return _DoctorCheck("write_permissions", "fail", f"Write permissions: {e}")
 
-    optional_deps = []
+
+def _check_optional_deps(ctx: _DoctorContext) -> _DoctorCheck:
+    optional_deps: List[str] = []
     try:
         import pycld2  # noqa: F401
 
@@ -494,36 +502,41 @@ def cmd_doctor(args):
         optional_deps.append("textual")
     except ImportError:
         pass
-    _record(
+    return _DoctorCheck(
         "optional_deps",
         "ok" if optional_deps else "info",
         f"Optional deps: {', '.join(optional_deps)}" if optional_deps else "No optional deps",
     )
 
+
+def _check_fts5(ctx: _DoctorContext) -> _DoctorCheck:
     try:
         test_conn = sqlite3.connect(":memory:")
         test_conn.execute("CREATE VIRTUAL TABLE t USING fts5(c)")
         test_conn.close()
-        _record("fts5", "ok", "SQLite FTS5 support")
+        return _DoctorCheck("fts5", "ok", "SQLite FTS5 support")
     except sqlite3.OperationalError as e:
         _cli_logger.debug("FTS5 check failed: %s", e)
-        _record("fts5", "fail", "SQLite FTS5 not available")
+        return _DoctorCheck("fts5", "fail", "SQLite FTS5 not available")
 
+
+def _check_security(ctx: _DoctorContext) -> _DoctorCheck:
     try:
         from carrymem.security import InputValidator
 
         validator = InputValidator()
         test_result = validator.validate_content("test content")
         if test_result:
-            _record("security", "ok", "Security module (InputValidator)")
-        else:
-            _record("security", "warn", "Security module: validation returned empty")
+            return _DoctorCheck("security", "ok", "Security module (InputValidator)")
+        return _DoctorCheck("security", "warn", "Security module: validation returned empty")
     except ImportError:
-        _record("security", "info", "Security module not available")
+        return _DoctorCheck("security", "info", "Security module not available")
     except (ValueError, TypeError, RuntimeError) as e:
-        _record("security", "warn", f"Security module: {e}")
+        return _DoctorCheck("security", "warn", f"Security module: {e}")
 
-    mcp_configs = []
+
+def _check_mcp_configs(ctx: _DoctorContext) -> _DoctorCheck:
+    mcp_configs: List[str] = []
     cwd = Path.cwd()
     claude_mcp = cwd / ".claude" / "mcp.json"
     cursor_mcp = cwd / ".cursor" / "mcp.json"
@@ -531,97 +544,130 @@ def cmd_doctor(args):
         mcp_configs.append(f"claude-code ({claude_mcp})")
     if cursor_mcp.exists():
         mcp_configs.append(f"cursor ({cursor_mcp})")
-    _record(
+    return _DoctorCheck(
         "mcp_configs",
         "ok" if mcp_configs else "info",
         (f"MCP configs: {', '.join(mcp_configs)}" if mcp_configs else "No MCP configs in current directory"),
     )
 
-    if db.exists():
-        try:
-            cm = CarryMem(db_path=db_path)
-            stats = cm.get_stats()
-            total = stats.get("total_count", 0)
-            _record("memory_count", "ok", f"Memory count: {total}", {"total_count": total})
-            cm.close()
-        except (sqlite3.OperationalError, KeyError, ValueError):
-            _record("memory_count", "warn", "Cannot read memory count")
-    else:
-        _record("memory_count", "skip", "Memory count (no database)")
 
-    if db.exists():
-        try:
-            from carrymem.rules import RuleEngine
+def _check_memory_count(ctx: _DoctorContext) -> _DoctorCheck:
+    if not ctx.db.exists():
+        return _DoctorCheck("memory_count", "skip", "Memory count (no database)")
+    try:
+        cm = CarryMem(db_path=ctx.db_path)
+        stats = cm.get_stats()
+        total = stats.get("total_count", 0)
+        cm.close()
+        return _DoctorCheck("memory_count", "ok", f"Memory count: {total}", {"total_count": total})
+    except (sqlite3.OperationalError, KeyError, ValueError):
+        return _DoctorCheck("memory_count", "warn", "Cannot read memory count")
 
-            re = RuleEngine(db_path=db_path)
-            rules = re.list_rules(status="active")
-            expired = sum(1 for r in rules if r.is_expired())
-            msg = f"Active rules: {len(rules)}"
-            if expired:
-                msg += f" ({expired} expired)"
-            _record(
-                "rules_engine",
-                "ok" if not expired else "warn",
-                msg,
-                {"active": len(rules), "expired": expired},
-            )
-        except (ImportError, sqlite3.OperationalError, KeyError, ValueError) as e:
-            _record("rules_engine", "warn", f"Rules engine: {e}")
-    else:
-        _record("rules_engine", "skip", "Rules engine (no database)")
 
+def _check_rules_engine(ctx: _DoctorContext) -> _DoctorCheck:
+    if not ctx.db.exists():
+        return _DoctorCheck("rules_engine", "skip", "Rules engine (no database)")
+    try:
+        from carrymem.rules import RuleEngine
+
+        re = RuleEngine(db_path=ctx.db_path)
+        rules = re.list_rules(status="active")
+        expired = sum(1 for r in rules if r.is_expired())
+        msg = f"Active rules: {len(rules)}"
+        if expired:
+            msg += f" ({expired} expired)"
+        return _DoctorCheck(
+            "rules_engine",
+            "ok" if not expired else "warn",
+            msg,
+            {"active": len(rules), "expired": expired},
+        )
+    except (ImportError, sqlite3.OperationalError, KeyError, ValueError) as e:
+        return _DoctorCheck("rules_engine", "warn", f"Rules engine: {e}")
+
+
+def _check_auto_inject(ctx: _DoctorContext) -> _DoctorCheck:
     auto_inject = os.environ.get("CARRYMEM_AUTO_INJECT", "").lower() in ("true", "1", "yes")
-    _record(
+    return _DoctorCheck(
         "auto_inject",
         "ok" if auto_inject else "info",
         f"Auto-inject: {'enabled' if auto_inject else 'disabled (set CARRYMEM_AUTO_INJECT=true)'}",
     )
 
-    carrymem_on_path = shutil.which("carrymem") is not None
-    if carrymem_on_path:
-        _record("cli_path", "ok", "CLI command 'carrymem' is on PATH")
+
+def _check_cli_path(ctx: _DoctorContext) -> _DoctorCheck:
+    if shutil.which("carrymem") is not None:
+        return _DoctorCheck("cli_path", "ok", "CLI command 'carrymem' is on PATH")
+    py_ver_str = f"{sys.version_info.major}.{sys.version_info.minor}"
+    if sys.platform == "darwin":
+        path_hint = f'export PATH="$HOME/Library/Python/{py_ver_str}/bin:$PATH"'
+    elif sys.platform.startswith("linux"):
+        path_hint = 'export PATH="$HOME/.local/bin:$PATH"'
     else:
-        py_ver_str = f"{sys.version_info.major}.{sys.version_info.minor}"
-        if sys.platform == "darwin":
-            path_hint = f'export PATH="$HOME/Library/Python/{py_ver_str}/bin:$PATH"'
-        elif sys.platform.startswith("linux"):
-            path_hint = 'export PATH="$HOME/.local/bin:$PATH"'
-        else:
-            path_hint = "Add Python Scripts directory to your PATH"
-        _record(
-            "cli_path",
-            "warn",
-            f"CLI command 'carrymem' NOT on PATH. Fix: {path_hint}",
-            {"fix": path_hint},
+        path_hint = "Add Python Scripts directory to your PATH"
+    return _DoctorCheck(
+        "cli_path",
+        "warn",
+        f"CLI command 'carrymem' NOT on PATH. Fix: {path_hint}",
+        {"fix": path_hint},
+    )
+
+
+def _check_backup(ctx: _DoctorContext) -> _DoctorCheck:
+    if not ctx.db.exists():
+        return _DoctorCheck("backup", "skip", "Backup status (no database)")
+    try:
+        from carrymem.backup import BackupManager
+
+        manager = BackupManager(str(ctx.db))
+        status = manager.get_status()
+        backup_dir_exists = status["backup_dir_exists"]
+        backup_count = status["backup_count"]
+        latest_backup = status["latest_backup"]
+
+        if not backup_dir_exists:
+            return _DoctorCheck("backup", "warn", "Backup directory does not exist")
+        if backup_count == 0:
+            return _DoctorCheck("backup", "warn", "No backups found — data loss risk")
+        latest_str = _format_time(latest_backup) if latest_backup else "N/A"
+        return _DoctorCheck(
+            "backup",
+            "ok",
+            f"Backups: {backup_count} file(s), latest: {latest_str}",
+            {"count": backup_count, "latest": latest_backup},
         )
+    except (OSError, ValueError) as e:
+        return _DoctorCheck("backup", "warn", f"Backup check: {e}")
 
-    # Backup status check
-    if db.exists():
-        try:
-            from carrymem.backup import BackupManager
 
-            manager = BackupManager(str(db))
-            status = manager.get_status()
-            backup_dir_exists = status["backup_dir_exists"]
-            backup_count = status["backup_count"]
-            latest_backup = status["latest_backup"]
+# Order is a characterization contract — see tests/test_cli_doctor.py
+_DOCTOR_CHECKS: List[Callable[[_DoctorContext], _DoctorCheck]] = [
+    _check_python_version,
+    _check_carrymem_import,
+    _check_config_dir,
+    _check_database_file,
+    _check_db_integrity,
+    _check_db_permissions,
+    _check_disk_space,
+    _check_db_lock,
+    _check_write_permissions,
+    _check_optional_deps,
+    _check_fts5,
+    _check_security,
+    _check_mcp_configs,
+    _check_memory_count,
+    _check_rules_engine,
+    _check_auto_inject,
+    _check_cli_path,
+    _check_backup,
+]
 
-            if not backup_dir_exists:
-                _record("backup", "warn", "Backup directory does not exist")
-            elif backup_count == 0:
-                _record("backup", "warn", "No backups found — data loss risk")
-            else:
-                latest_str = _format_time(latest_backup) if latest_backup else "N/A"
-                _record(
-                    "backup",
-                    "ok",
-                    f"Backups: {backup_count} file(s), latest: {latest_str}",
-                    {"count": backup_count, "latest": latest_backup},
-                )
-        except (OSError, ValueError) as e:
-            _record("backup", "warn", f"Backup check: {e}")
-    else:
-        _record("backup", "skip", "Backup status (no database)")
+
+def _format_doctor_output(check_results: List[_DoctorCheck], parsed) -> int:
+    """Render doctor results in JSON or human-readable form; return exit code."""
+    issues = [c.message for c in check_results if c.status == "fail"]
+    checks_passed = sum(1 for c in check_results if c.status == "ok")
+    checks_total = len(check_results)
 
     if parsed.json:
         print(
@@ -631,7 +677,15 @@ def cmd_doctor(args):
                     "checks_passed": checks_passed,
                     "checks_total": checks_total,
                     "issues": issues,
-                    "checks": check_results,
+                    "checks": [
+                        {
+                            "name": c.name,
+                            "status": c.status,
+                            "message": c.message,
+                            "detail": c.detail,
+                        }
+                        for c in check_results
+                    ],
                 },
                 ensure_ascii=False,
                 indent=2,
@@ -642,15 +696,16 @@ def cmd_doctor(args):
     print(f"\n  {_bold('CarryMem Doctor')} - Diagnostics\n")
     print(f"  {'=' * 45}")
 
+    status_icons = {
+        "ok": _green("[OK]"),
+        "fail": _red("[FAIL]"),
+        "warn": _yellow("[WARN]"),
+        "info": _dim("[INFO]"),
+        "skip": _dim("[SKIP]"),
+    }
     for cr in check_results:
-        status_icon = {
-            "ok": _green("[OK]"),
-            "fail": _red("[FAIL]"),
-            "warn": _yellow("[WARN]"),
-            "info": _dim("[INFO]"),
-            "skip": _dim("[SKIP]"),
-        }.get(cr["status"], _dim("[???]"))
-        print(f"  {status_icon} {cr['message']}")
+        icon = status_icons.get(cr.status, _dim("[???]"))
+        print(f"  {icon} {cr.message}")
 
     print(f"\n  {'=' * 45}")
     if issues:
@@ -664,3 +719,18 @@ def cmd_doctor(args):
 
     print()
     return 0 if not issues else 1
+
+
+def cmd_doctor(args):
+    """Run diagnostics on the CarryMem installation and database."""
+    parser = _make_parser("doctor")
+    parser.add_argument("--db", help=_t("cli.arg.db"))
+    parser.add_argument("--fix", action="store_true", help=_t("cli.arg.fix"))
+    parser.add_argument("--json", action="store_true", help=_t("cli.arg.json"))
+
+    parsed = parser.parse_args(args)
+    db_path = parsed.db or str(_DEFAULT_DB)
+    ctx = _DoctorContext(db_path=db_path, fix=parsed.fix, db=Path(db_path))
+
+    check_results = [check(ctx) for check in _DOCTOR_CHECKS]
+    return _format_doctor_output(check_results, parsed)
