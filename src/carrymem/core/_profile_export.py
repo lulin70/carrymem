@@ -100,15 +100,9 @@ class ProfileExportMixin:
         by_type = stats.get("by_type", {}) if isinstance(stats, dict) else {}
         profile_stats = profile.get("stats", {}) if isinstance(profile, dict) else {}
 
-        preferences = self.recall_memories(
-            query="", filters={"type": "user_preference"}, limit=WHOAMI_PREFERENCE_COUNT
-        )
-        decisions = self.recall_memories(
-            query="", filters={"type": "decision"}, limit=WHOAMI_DECISION_COUNT
-        )
-        corrections = self.recall_memories(
-            query="", filters={"type": "correction"}, limit=WHOAMI_CORRECTION_COUNT
-        )
+        preferences = self.recall_memories(query="", filters={"type": "user_preference"}, limit=WHOAMI_PREFERENCE_COUNT)
+        decisions = self.recall_memories(query="", filters={"type": "decision"}, limit=WHOAMI_DECISION_COUNT)
+        corrections = self.recall_memories(query="", filters={"type": "correction"}, limit=WHOAMI_CORRECTION_COUNT)
 
         pref_list = [m.get("content", "") for m in preferences[:5]]
         decision_list = [m.get("content", "") for m in decisions[:3]]

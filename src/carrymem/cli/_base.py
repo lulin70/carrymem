@@ -36,6 +36,7 @@ __all__ = [
     "_print_memory_card",
     # Factory functions
     "_make_parser",
+    "_add_common_args",
     "_get_rule_engine",
     "_validate_cli_path",
     # Re-exported from carrymem
@@ -206,6 +207,20 @@ def _make_parser(cmd_name: str):
         prog=f"carrymem {cmd_name}",
         description=f"CarryMem {cmd_name} command",
     )
+
+
+def _add_common_args(parser, *, db: bool = True) -> None:
+    """Add common CLI arguments shared across multiple subcommands.
+
+    Centralises the ``--db`` argument pattern that was duplicated across
+    40+ CLI command parsers before TD-018.
+
+    Args:
+        parser: ``argparse.ArgumentParser`` to add arguments to.
+        db: If True (default), add the ``--db`` argument.
+    """
+    if db:
+        parser.add_argument("--db", help=_t("cli.arg.db"))
 
 
 def _get_rule_engine(db_path: Optional[str] = None):

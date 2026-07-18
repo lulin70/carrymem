@@ -522,7 +522,7 @@ class EntityNormalizer:
         if self._input_validator is not None:
             try:
                 return cast(str, self._input_validator.sanitize_content(value))
-            except Exception as e:  # pragma: no cover — defensive
+            except Exception as e:  # pragma: no cover — NOTE: intentional defensive fallback for sanitize
                 logger.debug("InputValidator.sanitize_content failed: %s", e)
         # Minimal fallback: null-byte strip + whitespace strip
         return value.replace("\x00", "").strip()

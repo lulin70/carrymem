@@ -16,6 +16,7 @@ Usage::
 
 from __future__ import annotations
 
+import warnings
 from typing import Dict
 
 
@@ -45,6 +46,14 @@ class I18nManager:
     @classmethod
     def unregister(cls, locale: str) -> None:
         """移除指定语言的翻译表。"""
+        # TODO(v0.9.0): remove
+        warnings.warn(
+            "unregister() is deprecated and will be removed in v0.9.0. "
+            "Translation tables should not be removed at runtime; manage registration "
+            "in application setup code instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         cls._translations.pop(locale, None)
 
     # ── 语言切换 ────────────────────────────────────────────────

@@ -5,7 +5,22 @@ import os
 import sqlite3
 import sys
 
-from carrymem.cli._base import *
+from carrymem.cli._base import (
+    _DEFAULT_CONFIG_DIR,
+    _DEFAULT_DB,
+    CarryMem,
+    __version__,
+    _add_common_args,
+    _bold,
+    _dim,
+    _format_time,
+    _get_carrymem,
+    _green,
+    _make_parser,
+    _red,
+    _t,
+    _yellow,
+)
 
 
 def cmd_backup(args):
@@ -13,7 +28,7 @@ def cmd_backup(args):
     parser = _make_parser("backup")
     parser.add_argument("--list", action="store_true", help=_t("cli.arg.list_backups"))
     parser.add_argument("--restore", help=_t("cli.arg.restore"))
-    parser.add_argument("--db", help=_t("cli.arg.db"))
+    _add_common_args(parser)
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
 
     parsed = parser.parse_args(args)
@@ -102,7 +117,7 @@ def cmd_backup(args):
 def cmd_init(args):
     """Initialize CarryMem config directory and database."""
     parser = _make_parser("init")
-    parser.add_argument("--db", help=_t("cli.arg.db"))
+    _add_common_args(parser)
 
     parsed = parser.parse_args(args)
     db_path = parsed.db or str(_DEFAULT_DB)

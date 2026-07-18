@@ -163,9 +163,7 @@ class MemoryCRUDMixin:
 
         # 2. Classify
         try:
-            classify_result = self._classify_message(
-                resolved_message, context, language, force_type, message
-            )
+            classify_result = self._classify_message(resolved_message, context, language, force_type, message)
         except ClassificationError as e:
             logger.warning("Classification failed: %s", e)
             return {

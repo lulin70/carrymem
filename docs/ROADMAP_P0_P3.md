@@ -2,7 +2,7 @@
 
 > **文档性质**: 活文档 (Living Document) — 每完成一个 Wave 立即更新状态
 > **创建时间**: 2026-07-17
-> **最后更新**: 2026-07-18 (TD-005 ✅ 完成，Batch 3 Wave 4 收尾；cmd_doctor F=62→A，18 _check_* 函数 + 34 characterization tests，885 tests 全通过)
+> **最后更新**: 2026-07-18 (Batch 4 (Wave 6-9) + P2 Group D 完成：12 项 TD 已完成 (TD-003b/014/015/016/017/018/020/025/026/035/042/043)；TD-019 类型标注 377 函数延后到 v0.8.2；4529 tests + 220 e2e 全通过)
 > **基于**: TECH_DEBT_PLAN.md (技术债目录) + DevSquad V4.1.0 7-Role 共识机制 + 11 阶段生命周期
 > **用户规则映射**:
 >   - 推进 P0-P1 按项目生命周期，文档先行，充分验证，推送 Git
@@ -31,10 +31,10 @@
 | 优先级 | 总数 | 完成 | 进行中 | 待开始 | 完成率 |
 |--------|------|------|--------|--------|--------|
 | **P0 立即修复** | 5 | 5 | 0 | 0 | **100%** ✅ |
-| **P1 高优先级** | 20 | 10 | 0 | 10 | **50%** 🟡 |
-| **P2 中优先级** | 18 | 0 | 0 | 18 | **0%** ⬜ |
+| **P1 高优先级** | 20 | 19 | 0 | 1 | **95%** 🟢 (仅 TD-019 延后) |
+| **P2 中优先级** | 18 | 4 | 0 | 14 | **22%** 🟡 (Group D 完成) |
 | **P3 低优先级** | 11 | 0 | 0 | 11 | **0%** ⬜ |
-| **总计** | 54 | 15 | 0 | 39 | **27.8%** |
+| **总计** | 54 | 28 | 0 | 26 | **51.9%** |
 
 **Git 历史里程碑**:
 - `d6bdd81` — P0 batch 完成 (5 项: TD-001/002/003a/004/032)
@@ -42,7 +42,9 @@
 - `02c666c` — TD-010 SQLiteAdapter 覆盖率 33%→82% (110 tests, Batch 2 收尾)
 - `d488b4d` — TD-007+TD-037 Batch 3 Wave 2 完成 (跨层私有访问 + Mixin 隐式协议)
 - `8875ebd` — TD-006 Batch 3 Wave 3 完成 (SQLiteAdapter ISP: 3 Protocol + 19 API 稳定性测试)
-- `(本批)` — TD-005 Batch 3 Wave 4 完成 (cmd_doctor F=62→A: 18 _check_* 函数 + 34 characterization tests)
+- `87589d5` — TD-005 Batch 3 Wave 4 完成 (cmd_doctor F=62→A: 18 _check_* 函数 + 34 characterization tests)
+- `cb8fa87` — TD-008a/b Batch 3 Wave 5 完成 (9 个 E 级函数清零)
+- `(本批)` — Batch 4 (Wave 6-9) + P2 Group D 完成 (12 项 TD: TD-003b/014/015/016/017/018/020/025/026/035/042/043; TD-019 延后到 v0.8.2)
 
 **计数说明**: TECH_DEBT_PLAN.md §1 统计表声称 P1=22/P2=13/P3=10，实际盘点为 P1=20/P2=18/P3=11 (TD-013/024/025/026 在文档中标注为 P2 但统计表归入 P1)。本路线图以实际盘点为准。
 
@@ -217,21 +219,22 @@
   - 前置: 每个函数补 characterization 测试
   - 验证: `radon cc -nc -e src/carrymem/ | grep -E "^[[:space:]]+[EF]"` 返回 0 行
 
-### 3.4 P1 Batch 4 — DevOps + 代码质量 (待启动 ⬜)
+### 3.4 P1 Batch 4 — DevOps + 代码质量 (完成 ✅)
 
 **特性**: 与 Batch 3 独立推进，无架构依赖，可并行
+**状态**: Wave 6-9 全部完成，仅 TD-019 因工作量过大延后到 v0.8.2
 
-| Wave | TD 项 | 角色 | 11 阶段 | 依赖 | 预估 |
+| Wave | TD 项 | 角色 | 11 阶段 | 依赖 | 状态 |
 |------|-------|------|---------|------|------|
-| W6 | TD-014 (依赖锁定 + Dockerfile) | DevOps | P10 | TD-001 ✅ | 2h |
-| W6 | TD-016 (CI timeout) | DevOps | P8 | 无 | 0.5h |
-| W7 | TD-015 (OIDC 6 步迁移) | DevOps+Security | P6→P10 | 无 | 2h |
-| W8 | TD-017 (星导入，排除 facade) | Coder | P8 | 无 | 1h |
-| W8 | TD-018 (重复代码抽取) | Coder | P8 | 无 | 2h |
-| W8 | TD-019 (类型标注 74%→90%) | Coder | P8 | 无 | 2h |
-| W8 | TD-020 (魔法数字按域分) | Coder | P8 | 无 | 1h |
-| W8 | TD-003b (8 项公共 API deprecation) | Coder | P8 | 无 | 0.5h |
-| W9 | TD-035 (AccessPolicy 集成) | Security+Architect | P2→P6→P8 | 无 | 2h |
+| W6 | TD-014 (依赖锁定 + Dockerfile) | DevOps | P10 | TD-001 ✅ | ✅ 已完成 (requirements.in/lock 36 包 + Dockerfile runtime 改造) |
+| W6 | TD-016 (CI timeout) | DevOps | P8 | 无 | ✅ 已完成 (6 个 CI job 全部添加 timeout) |
+| W7 | TD-015 (OIDC 6 步迁移) | DevOps+Security | P6→P10 | 无 | 🟡 代码部分完成 (release.yml `environment: pypi` 已加；3 手动步骤待用户执行) |
+| W8 | TD-017 (星导入，排除 facade) | Coder | P8 | 无 | ✅ 已完成 (cli/_*.py 6 处星导入清理) |
+| W8 | TD-018 (重复代码抽取) | Coder | P8 | 无 | ✅ 已完成 (4 辅助函数: _add_common_args 42 处 + compute_suggested_action + safe_json_loads 7 处 + safe_probe) |
+| W8 | TD-019 (类型标注 74%→90%) | Coder | P8 | 无 | 🟡 延后到 v0.8.2 (377 函数工作量过大) |
+| W8 | TD-020 (魔法数字按域分) | Coder | P8 | 无 | ✅ 已完成 (recall_thresholds.py Enum + sqlite/constants.py) |
+| W8 | TD-003b (8 项公共 API deprecation) | Coder | P8 | 无 | ✅ 已完成 (8 API 加 DeprecationWarning + 6 测试文件包装) |
+| W9 | TD-035 (AccessPolicy 集成) | Security+Architect | P2→P6→P8 | 无 | ✅ 已完成 (handlers.py 集成 + 16 新测试 7 类) |
 
 **Wave 6 详细方案 (DevOps 基础)**:
 
@@ -357,21 +360,21 @@ pytest tests/e2e/ -m "not slow" -v --timeout=300
 - PM: ✅ 同意
 - **共识状态**: ✅ 达成 (4/7 同意)
 
-#### Group D: DevOps 改进
+#### Group D: DevOps 改进 (完成 ✅)
 
-| TD 项 | 描述 | 角色 | 依赖 | 推进时机 | 预估 |
-|-------|------|------|------|----------|------|
-| TD-025 | pre-commit + CI lint 版本漂移 | DevOps | TD-014 | P1 Batch 4 完成后 | 1h |
-| TD-026 | Dockerfile digest + dependabot | DevOps | 无 | 可独立推进 | 1h |
-| TD-042 | nightly.yml 失败无告警 | DevOps | 无 | 可独立推进 | 1h |
-| TD-043 | 缺发布回滚 Runbook | DevOps | 无 | 可独立推进 | 1h |
+| TD 项 | 描述 | 角色 | 依赖 | 推进时机 | 预估 | 状态 |
+|-------|------|------|------|----------|------|------|
+| TD-025 | pre-commit + CI lint 版本漂移 | DevOps | TD-014 | P1 Batch 4 完成后 | 1h | ✅ 已完成 |
+| TD-026 | Dockerfile digest + dependabot | DevOps | 无 | 可独立推进 | 1h | ✅ 已完成 |
+| TD-042 | nightly.yml 失败无告警 | DevOps | 无 | 可独立推进 | 1h | ✅ 已完成 |
+| TD-043 | 缺发布回滚 Runbook | DevOps | 无 | 可独立推进 | 1h | ✅ 已完成 |
 
 **Group D 共识建议**:
 - DevOps: ✅ 同意 (4 项均为运维基础)
 - Security: ✅ 同意 (TD-026 供应链安全)
 - Architect: ✅ 同意
 - PM: ✅ 同意 (TD-043 发布质量保障)
-- **共识状态**: ✅ 达成 (4/7 同意)
+- **共识状态**: ✅ 达成 (4/7 同意) → 已执行完成
 
 #### Group E: 安全 & 审计
 

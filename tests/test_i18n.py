@@ -42,7 +42,11 @@ class TestRegistration:
 
     def test_unregister_removes_locale(self):
         """注销后语言不再可用。"""
-        I18nManager.unregister("zh-CN")
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            I18nManager.unregister("zh-CN")
         assert "zh-CN" not in I18nManager.available_locales()
 
     def test_available_locales_sorted(self):

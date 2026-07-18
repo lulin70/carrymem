@@ -15,6 +15,7 @@ import tempfile
 import threading
 import time
 import unittest
+import warnings
 
 from carrymem.adapters.sqlite.connection import _SLOW_QUERY_THRESHOLD_MS, ConnectionManager
 
@@ -204,7 +205,9 @@ class TestConnectionCleanup(unittest.TestCase):
         conn = self.mgr.get_connection()
         self.assertGreater(len(self.mgr._all_connections), 0, "Should have tracked connections")
 
-        self.mgr.close_all_connections()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            self.mgr.close_all_connections()
         self.assertEqual(
             len(self.mgr._all_connections) > 0, False, "All connections should be cleared after close_all_connections"
         )
@@ -220,7 +223,9 @@ class TestConnectionCleanup(unittest.TestCase):
     def test_release_connection_is_noop(self):
         """release_connection() should not raise errors and allow continued use."""
         conn1 = self.mgr.get_connection()
-        self.mgr.release_connection()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            self.mgr.release_connection()
         conn2 = self.mgr.get_connection()
         self.assertIs(conn1, conn2, "Connection should still be reusable after release")
 

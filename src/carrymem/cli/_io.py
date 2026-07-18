@@ -11,14 +11,30 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import Dict
 
-from carrymem.cli._base import *
+from carrymem.cli._base import (
+    _DEFAULT_CONFIG_DIR,
+    __version__,
+    _add_common_args,
+    _bold,
+    _cli_logger,
+    _cyan,
+    _dim,
+    _get_carrymem,
+    _get_rule_engine,
+    _green,
+    _make_parser,
+    _red,
+    _t,
+    _validate_cli_path,
+    _yellow,
+)
 
 
 def cmd_consolidate(args):
     """Run or schedule memory consolidation (dedup, decay, cleanup)."""
     parser = _make_parser("consolidate")
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
-    parser.add_argument("--db", help=_t("cli.arg.db"))
+    _add_common_args(parser)
     parser.add_argument("--dry-run", action="store_true", help=_t("cli.arg.dry_run"))
     parser.add_argument("--no-p1", action="store_true", help=_t("cli.arg.no_p1"))
     parser.add_argument("--no-p2", action="store_true", help=_t("cli.arg.no_p2"))
@@ -100,10 +116,14 @@ def cmd_export(args):
     parser = _make_parser("export")
     parser.add_argument("output", help=_t("cli.arg.output_path"))
     parser.add_argument(
-        "--format", "-f", choices=["json", "markdown"], default="json", help=_t("cli.arg.export_format")
+        "--format",
+        "-f",
+        choices=["json", "markdown"],
+        default="json",
+        help=_t("cli.arg.export_format"),
     )
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
-    parser.add_argument("--db", help=_t("cli.arg.db"))
+    _add_common_args(parser)
 
     parsed = parser.parse_args(args)
     cm = _get_carrymem(parsed.db, parsed.namespace)
@@ -134,7 +154,7 @@ def cmd_import(args):
         default="skip_existing",
         help=_t("cli.arg.merge_strategy"),
     )
-    parser.add_argument("--db", help=_t("cli.arg.db"))
+    _add_common_args(parser)
 
     parsed = parser.parse_args(args)
     cm = _get_carrymem(parsed.db, parsed.namespace)
@@ -150,7 +170,15 @@ def cmd_import(args):
     errors = result.get("errors", 0)
     total = result.get("total_processed", 0)
 
-    _msg = _green(_t("cli.success.imported", imported=imported, skipped=skipped, errors=errors, total=total))
+    _msg = _green(
+        _t(
+            "cli.success.imported",
+            imported=imported,
+            skipped=skipped,
+            errors=errors,
+            total=total,
+        )
+    )
     print(f"  {_msg}")
 
     if errors > 0:
@@ -301,13 +329,23 @@ def cmd_pack(args):
 
     parser = _make_parser("pack")
     parser.add_argument("--output", "-o", help=_t("cli.arg.output_file"))
-    parser.add_argument("--include-rules", action="store_true", default=True, help=_t("cli.arg.include_rules"))
+    parser.add_argument(
+        "--include-rules",
+        action="store_true",
+        default=True,
+        help=_t("cli.arg.include_rules"),
+    )
     parser.add_argument("--no-rules", action="store_true", help=_t("cli.arg.no_rules"))
-    parser.add_argument("--include-config", action="store_true", default=True, help=_t("cli.arg.include_config"))
+    parser.add_argument(
+        "--include-config",
+        action="store_true",
+        default=True,
+        help=_t("cli.arg.include_config"),
+    )
     parser.add_argument("--no-config", action="store_true", help=_t("cli.arg.no_config"))
     parser.add_argument("--key", help=_t("cli.arg.encryption_key"))
     parser.add_argument("--encrypt", action="store_true", help=_t("cli.arg.encrypt"))
-    parser.add_argument("--db", help=_t("cli.arg.db"))
+    _add_common_args(parser)
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
 
     parsed = parser.parse_args(args)
@@ -556,7 +594,7 @@ def cmd_unpack(args):
         help=_t("cli.arg.merge_mode"),
     )
     parser.add_argument("--replace", action="store_true", help=_t("cli.arg.replace"))
-    parser.add_argument("--db", help=_t("cli.arg.db"))
+    _add_common_args(parser)
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
 
     parsed = parser.parse_args(args)

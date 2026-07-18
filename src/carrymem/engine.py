@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 
 from carrymem.__version__ import __version__ as _version
 from carrymem.coordinators.classification_pipeline import ClassificationPipeline
+from carrymem.core.recall_thresholds import compute_suggested_action
 from carrymem.utils.config import ConfigManager
 from carrymem.utils.helpers import generate_memory_id, get_current_time
 from carrymem.utils.language import language_manager
@@ -31,7 +32,8 @@ class MemoryClassificationEngine:
     def __init__(self, config_path: Optional[str] = None, noise_filter_mode: str = "strict"):
         self.config = ConfigManager(config_path)
         self.classification_pipeline = ClassificationPipeline(
-            self.config, noise_filter_mode=noise_filter_mode  # type: ignore[arg-type]
+            self.config,  # type: ignore[arg-type]  # ConfigManager vs dict[str, Any] — pre-existing
+            noise_filter_mode=noise_filter_mode,
         )
         self.max_work_memory_size = self.config.get("storage.max_work_memory_size", 100)
         self.working_memory = deque(maxlen=self.max_work_memory_size)  # type: ignore[call-overload]
@@ -159,7 +161,7 @@ class MemoryClassificationEngine:
                     "tier": match.get("tier", 2),
                     "source_layer": match.get("source", "unknown"),
                     "reasoning": match.get("reasoning", ""),
-                    "suggested_action": ("store" if confidence > 0.5 else ("defer" if confidence > 0.3 else "ignore")),
+                    "suggested_action": compute_suggested_action(confidence),
                     "metadata": {
                         "original_message": message,
                         "timestamp_utc": dt.now(timezone.utc).isoformat(),

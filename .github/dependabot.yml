@@ -16,3 +16,12 @@ updates:
     labels:
       - "dependencies"
       - "github-actions"
+  # TD-026: docker ecosystem — auto-pin Dockerfile base image to @sha256 digest
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "docker"

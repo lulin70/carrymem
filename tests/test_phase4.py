@@ -1,6 +1,7 @@
 import os
 import sys
 import tempfile
+import warnings
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -398,7 +399,9 @@ class TestCarryMemIntegration:
             "Use PostgreSQL for database",
             session_id="sess-integration-1",
         )
-        result = carrymem.summarize_session(session_id="sess-integration-1", store=False)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            result = carrymem.summarize_session(session_id="sess-integration-1", store=False)
         if result is not None:
             assert result["type"] == "session_summary"
             assert "metadata" in result
@@ -409,14 +412,18 @@ class TestCarryMemIntegration:
             "I like Python",
             session_id="sess-store-1",
         )
-        result = carrymem.summarize_session(session_id="sess-store-1", store=True)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            result = carrymem.summarize_session(session_id="sess-store-1", store=True)
         if result is not None:
             assert "storage_key" in result or "type" in result
 
     def test_aggregate_memories_api(self, carrymem):
         carrymem.classify_and_remember("I prefer dark mode for coding")
         carrymem.classify_and_remember("I like dark mode when editing")
-        result = carrymem.aggregate_memories(store=False)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            result = carrymem.aggregate_memories(store=False)
         assert isinstance(result, list)
 
     def test_session_summary_in_build_context(self, carrymem):

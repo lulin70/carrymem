@@ -19,6 +19,7 @@ from functools import wraps
 from typing import Any, Dict, List, Optional
 
 from carrymem.__version__ import __version__ as _version
+from carrymem.core.recall_thresholds import compute_suggested_action
 from carrymem.errors import SecurityError
 
 from .tools import (
@@ -116,7 +117,7 @@ def _format_memory_entry(match: Dict[str, Any], original_message: str) -> Dict[s
         "tier": tier,
         "source_layer": match.get("source", "unknown"),
         "reasoning": match.get("reasoning", ""),
-        "suggested_action": ("store" if confidence > 0.5 else ("defer" if confidence > 0.3 else "ignore")),
+        "suggested_action": compute_suggested_action(confidence),
         "metadata": {
             "original_message": original_message,
             "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -657,7 +658,11 @@ def handle_suggest_rules(engine, args: Dict[str, Any]) -> Dict[str, Any]:
 
     memories = carrymem.recall_memories(limit=100)
     if not memories:
-        return {"suggestions": [], "total": 0, "message": "No memories found to analyze"}
+        return {
+            "suggestions": [],
+            "total": 0,
+            "message": "No memories found to analyze",
+        }
 
     candidates = engine.suggest_rules(memories, memory_type=memory_type, max_candidates=max_candidates)
     return {
@@ -719,7 +724,10 @@ def handle_update_rule(engine, args: Dict[str, Any]) -> Dict[str, Any]:
             if scope not in VALID_SCOPES:
                 return {"updated": False, "error": f"Invalid scope: {scope}"}
             if existing.scope == "personal" and scope in ("company", "negotiated"):
-                return {"updated": False, "error": "Cannot escalate rule scope from personal"}
+                return {
+                    "updated": False,
+                    "error": "Cannot escalate rule scope from personal",
+                }
             update_kwargs["scope"] = scope
         if "rule_type" in args:
             rule_type = args["rule_type"]
@@ -728,7 +736,10 @@ def handle_update_rule(engine, args: Dict[str, Any]) -> Dict[str, Any]:
             update_kwargs["rule_type"] = rule_type
         if "override" in args:
             if args["override"] and not existing.override:
-                return {"updated": False, "error": "Cannot escalate soft rule to hard rule"}
+                return {
+                    "updated": False,
+                    "error": "Cannot escalate soft rule to hard rule",
+                }
             update_kwargs["override"] = args["override"]
 
         if not update_kwargs:
@@ -922,7 +933,12 @@ def handle_shortest_path(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
     src_entity = arguments.get("src_entity", "")
     dst_entity = arguments.get("dst_entity", "")
     if not src_entity.strip() or not dst_entity.strip():
-        return {"path": [], "length": -1, "found": False, "error": "src_entity and dst_entity are required"}
+        return {
+            "path": [],
+            "length": -1,
+            "found": False,
+            "error": "src_entity and dst_entity are required",
+        }
 
     src_entity = _validate_input(src_entity, "src_entity")
     dst_entity = _validate_input(dst_entity, "dst_entity")
@@ -1035,6 +1051,43 @@ class Handlers:
         self._rule_engine = RuleEngine(db_path=rule_db_path)
 
         self._default_user_id = default_user_id
+
+        # TD-035: AccessPolicy integration into the MCP tool invocation chain.
+        # ────────────────────────────────────────────────────────────────────
+        # The CarryMem facade already enforces write/delete permissions via
+        # ``_check_write_permission`` / ``_check_delete_permission`` in
+        # ``core/_memory_crud.py``, but only when ``self._access_policy`` is
+        # non-None. Without wiring the policy here, MCP ``handle_tool`` calls
+        # would silently bypass access control (single-user mode).
+        #
+        # Two scenarios enable policy enforcement (fail-closed for writes/deletes):
+        #
+        #   1. Explicit ``default_user_id`` provided → owner = default_user_id.
+        #      Every write/delete tool call without a matching user_id will raise
+        #      SecurityError(CM-403). This is the primary multi-user path.
+        #
+        #   2. Multi-namespace mode (``namespace != "default"``) with no explicit
+        #      owner → fall back to namespace name as the owner_id. This guarantees
+        #      that a non-default namespace cannot be mutated anonymously — a
+        #      client must pass ``user_id=<namespace>`` (or the namespace itself)
+        #      to perform writes. This is the minimum multi-tenant safety net.
+        #
+        # In single-user mode (``namespace == "default"`` and no ``default_user_id``),
+        # NO policy is set, preserving the existing behavior where writes without
+        # user_id are allowed (characterization testing principle: do not break
+        # existing single-user callers).
+        from carrymem.security.permissions import AccessPolicy
+
+        if default_user_id is not None:
+            self._carrymem.access_policy = AccessPolicy(owner_id=default_user_id)
+        elif namespace != "default":
+            # Multi-namespace mode without an explicit owner — treat the
+            # namespace itself as the resource owner so anonymous writes are
+            # rejected. Mirror the namespace into _default_user_id so the
+            # existing P0-1 injection logic in handle_tool will supply it
+            # automatically for write/delete tools.
+            self._carrymem.access_policy = AccessPolicy(owner_id=namespace)
+            self._default_user_id = namespace
 
     # Tools that perform write/delete operations and need user_id injection
     # for access-control enforcement (P0-1 fix).

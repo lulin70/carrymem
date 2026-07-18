@@ -54,6 +54,7 @@ class ClassificationMixin:
             namespaces: Optional[List[str]] = None,
             update_access: bool = True,
         ) -> List[Dict[str, Any]]: ...
+
         # From MemoryCRUDMixin
         def classify_message(
             self,
@@ -61,8 +62,10 @@ class ClassificationMixin:
             context: Optional[Dict[str, Any]] = None,
             language: Optional[str] = None,
         ) -> ClassificationResult: ...
+
         # From BackupMixin
         def _auto_backup(self) -> None: ...
+
         # From LifecycleMixin (property)
         @property
         def rule_engine(self) -> RuleEngine: ...
@@ -128,9 +131,7 @@ class ClassificationMixin:
                     context_str = context.get("ai_reply", "") or context.get("previous_message", "")
                 recent_mems = []
                 try:
-                    recent_mems = self.recall_memories(
-                        query="", limit=COREFERENCE_RECALL_LIMIT, update_access=False
-                    )
+                    recent_mems = self.recall_memories(query="", limit=COREFERENCE_RECALL_LIMIT, update_access=False)
                 except (KeyError, ValueError, RuntimeError) as e:
                     logger.debug("Coreference recall skipped (non-critical): %s", e)
                 resolved_message, coreference_resolved = resolve_coreference(
@@ -170,9 +171,7 @@ class ClassificationMixin:
         Returns:
             entries list (may be empty for noise) or ClassificationResult dict.
         """
-        classify_result = self.classify_message(
-            resolved_message, context=context, language=language
-        )
+        classify_result = self.classify_message(resolved_message, context=context, language=language)
 
         if not classify_result["should_remember"] and not force_type:
             return []  # Signal: noise

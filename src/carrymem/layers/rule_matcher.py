@@ -1,4 +1,5 @@
 import re
+import warnings
 from typing import Any, Dict, List, Optional
 
 from carrymem.utils.helpers import extract_content
@@ -96,6 +97,13 @@ class RuleMatcher:
         Args:
             pattern: The pattern of the rule to remove.
         """
+        # TODO(v0.9.0): remove
+        warnings.warn(
+            "remove_rule() is deprecated and will be removed in v0.9.0. "
+            "Rebuild the RuleMatcher with a filtered rule list instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.rules = [rule for rule in self.rules if rule.get("pattern") != pattern]
 
     def get_rules(self) -> List[Dict[str, Any]]:

@@ -29,7 +29,8 @@ jobs:
 
       - name: Install lint & security tools
         run: |
-          pip install flake8 black isort mypy bandit pip-audit
+          # TD-025: pin linter versions to match .pre-commit-config.yaml
+          pip install flake8==7.3.0 black==26.5.1 isort==6.1.0 mypy==2.3.0 bandit==1.7.10 pip-audit==2.7.0
 
       - name: Lint — flake8
         run: |
@@ -150,11 +151,32 @@ jobs:
     needs: [pre-release-test, e2e-gate, vscode-e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # TD-015 step 2: OIDC migration — declare the GitHub deployment environment.
+    # The "pypi" environment must be created in repo Settings → Environments and
+    # optionally configured with required reviewers / wait timers / branch restrictions.
+    # Once OIDC Trusted Publisher is verified (step 4), the PYPI_API_TOKEN secret
+    # can be removed entirely from this environment.
+    environment: pypi
     permissions:
       contents: write
+      # TD-015 step 1 (code-side): id-token: write is required for PyPI OIDC
+      # Trusted Publisher. This permission is already present and must remain
+      # even after deleting PYPI_API_TOKEN (step 5 — post-verification).
       id-token: write
 
     steps:
+      # TD-015 step 6: Branch protection requirement
+      # ─────────────────────────────────────────────────────────────────────
+      # For OIDC Trusted Publisher to be secure, the `new-main` branch MUST be
+      # protected in GitHub Settings → Branches with at least:
+      #   - "Require pull request reviews before merging" (≥1 reviewer)
+      #   - "Require status checks to pass" (pre-release-test, e2e-gate)
+      #   - "Require branches to be up to date before merging"
+      #   - "Restrict who can push to matching branches" (no direct push)
+      # Without these, a malicious PR could modify release.yml / pyproject.toml
+      # and trigger a publish from an unprotected commit. PyPI's Trusted Publisher
+      # relies on GitHub branch protection as part of its trust chain.
+      # See: https://docs.pypi.org/trusted-publishers/security-model/
       - uses: actions/checkout@v5
 
       - name: Set up Python
@@ -191,6 +213,17 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
+          # TD-015 step 3: OIDC migration — KEEP the legacy API token during the
+          # transition window. Once the Trusted Publisher (configured in step 4)
+          # is verified to publish successfully, replace this whole `with:` block
+          # with a bare run of the action (no `password`), letting OIDC take over:
+          #
+          #   - name: Publish to PyPI
+          #     uses: pypa/gh-action-pypi-publish@release/v1
+          #
+          # Then delete the PYPI_API_TOKEN secret from GitHub → Settings →
+          # Secrets and variables → Actions. Do NOT remove the token before OIDC
+          # has been confirmed working end-to-end on a real release.
           password: ${{ secrets.PYPI_API_TOKEN }}
 
       - name: Create GitHub Release

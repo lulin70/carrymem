@@ -1,6 +1,7 @@
 import os
 import sys
 import unittest
+import warnings
 from unittest.mock import MagicMock, PropertyMock, patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -364,14 +365,18 @@ class TestRuleMatcher(unittest.TestCase):
 
     def test_remove_rule(self):
         matcher = RuleMatcher(self.basic_rules)
-        matcher.remove_rule(r"I prefer (.+)")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            matcher.remove_rule(r"I prefer (.+)")
         rules = matcher.get_rules()
         self.assertTrue(all(r.get("pattern") != r"I prefer (.+)" for r in rules))
 
     def test_remove_rule_no_match(self):
         matcher = RuleMatcher(self.basic_rules)
         original_count = len(matcher.get_rules())
-        matcher.remove_rule(r"nonexistent pattern")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            matcher.remove_rule(r"nonexistent pattern")
         self.assertEqual(len(matcher.get_rules()), original_count)
 
     def test_get_rules(self):

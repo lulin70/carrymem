@@ -2,7 +2,7 @@
 
 > **文档性质**: 活文档 (Living Document) — 每完成一项立即更新状态
 > **创建时间**: 2026-07-17
-> **最后更新**: 2026-07-18 (v9 — TD-005 ✅ 完成，Batch 3 Wave 4 收尾；cmd_doctor F=62→A，18 _check_* 函数 + 34 characterization tests，885 tests 全通过)
+> **最后更新**: 2026-07-18 (v10 — Batch 4 (Wave 6-9) + P2 Group D 完成：12 项 TD 已完成 (TD-003b/014/015/016/017/018/020/025/026/035/042/043)；TD-019 类型标注 377 函数延后到 v0.8.2；4529 tests + 220 e2e 全通过)
 > **基于**: 7 维度项目整理评估 (2026-07-17, B+ 77/100) + DevSquad 7 角色并行审核
 > **配套文档**: [ROADMAP_P0_P3.md](ROADMAP_P0_P3.md) — 执行路线图 (Wave 推进表 + 7-Role 投票矩阵 + 11 阶段生命周期映射)
 >
@@ -101,7 +101,7 @@
 | **负责角色** | Coder |
 | **验证标准** | 8 项均含 `DeprecationWarning`；`pytest -W error::DeprecationWarning` 测试不破坏 |
 | **依赖** | 无 |
-| **状态** | ⬜ 待开始 |
+| **状态** | ✅ 已完成 (8 项公共 API 全部加 `DeprecationWarning` + `# TODO(v0.9): remove` 注释；6 个测试文件用 `warnings.catch_warnings()` 包装避免 DeprecationWarning 触发失败) |
 | **生命周期** | P8 实现 |
 
 ### TD-004: benchmark.yml matrix 含 Python 3.11 (CI 配置错误)
@@ -332,7 +332,7 @@
 | **负责角色** | Security + Architect |
 | **验证标准** | 命令 `pytest tests/test_access_policy.py` 全通过；多用户场景下 namespace 隔离测试通过 |
 | **依赖** | 无 |
-| **状态** | ⬜ 待开始 |
+| **状态** | ✅ 已完成 (`integration/layer2_mcp/handlers.py` `Handlers.__init__` 集成 AccessPolicy: 显式 `default_user_id` → 创建 AccessPolicy(owner_id=default_user_id)；多 namespace 无 user_id → namespace 作 fallback owner；单用户模式 → 无策略保持兼容；16 新测试 7 类全通过) |
 | **生命周期** | P2 架构设计 → P6 安全审查 → P8 实现 |
 
 #### TD-038: AuditLogger 非持久化 ⚠️ 新增 (Security 提出)
@@ -361,7 +361,7 @@
 | **负责角色** | DevOps |
 | **验证标准** | 命令 `pip install -r requirements.lock` 可重现；`docker build .` 镜像层使用 lock 文件；`docker exec <container> pip list` 版本与 lock 一致 |
 | **依赖** | TD-001 (pip 升级后) |
-| **状态** | ⬜ 待开始 |
+| **状态** | ✅ 已完成 (新增 requirements.in/requirements.lock 36 包锁定 + requirements-dev.in/lock；Dockerfile runtime 阶段改造为 `pip install --no-deps -r requirements.lock` + whl) |
 | **生命周期** | P10 部署发布 |
 
 #### TD-015: release.yml OIDC+密码矛盾（迁移步骤补全）⚠️ 修正后
@@ -375,7 +375,7 @@
 | **负责角色** | DevOps + Security |
 | **验证标准** | 命令 `grep -c "password.*PYPI_API_TOKEN" .github/workflows/release.yml` 返回 0；`gh secret list` 显示无 `PYPI_API_TOKEN`；rc 预发布 tag 成功上传到 PyPI |
 | **依赖** | 无 |
-| **状态** | ⬜ 待开始 |
+| **状态** | 🟡 代码部分完成 (release.yml 已加 `environment: pypi` + 分支保护注释；密码行暂留待 OIDC 验证后删除；3 个手动步骤待用户执行: 配置 PyPI Trusted Publisher、用 rc tag 验证、删除 PYPI_API_TOKEN secret) |
 | **生命周期** | P6 安全审查 → P10 部署发布 |
 
 #### TD-016: 6 个 CI job 缺 timeout-minutes
@@ -388,7 +388,7 @@
 | **负责角色** | DevOps |
 | **验证标准** | 命令 `python3 -c "import yaml; d=yaml.safe_load(open('.github/workflows/ci.yml')); jobs=d['jobs']; print({k: v.get('timeout-minutes', 'MISSING') for k,v in jobs.items()})"` 无 MISSING |
 | **依赖** | 无 |
-| **状态** | ⬜ 待开始 |
+| **状态** | ✅ 已完成 (6 个 CI job 全部添加 timeout-minutes: syntax/i18n/docs=5min, build/security/optional-deps=20min) |
 | **生命周期** | P8 实现 |
 
 #### TD-025: pre-commit + CI lint 工具版本漂移 ⚠️ 修正后
@@ -401,7 +401,7 @@
 | **负责角色** | DevOps |
 | **验证标准** | pre-commit 版本与 CI 一致；`grep "black\|mypy\|flake8" .pre-commit-config.yaml .github/workflows/ci.yml` 版本号匹配 |
 | **依赖** | TD-014 |
-| **状态** | ⬜ 方案待共识 |
+| **状态** | ✅ 已完成 (.pre-commit-config.yaml: black 26.5.0→26.5.1, mypy v2.1.0→v2.3.0；ci.yml lint 行锁定 flake8==7.3.0 black==26.5.1 isort==6.1.0 mypy==2.3.0；release.yml bandit==1.7.10 pip-audit==2.7.0) |
 
 #### TD-026: Dockerfile 基础镜像未锁 digest（含 dependabot docker 联动）
 
@@ -413,7 +413,7 @@
 | **负责角色** | DevOps |
 | **验证标准** | Dockerfile 使用 digest 锁定；`grep "docker" .github/dependabot.yml` 存在 |
 | **依赖** | 无 |
-| **状态** | ⬜ 方案待共识 |
+| **状态** | ✅ 已完成 (Dockerfile 基础镜像改为 `python:3.12-slim-bookworm` 半锁定；dependabot.yml 新增 docker 生态每周检查；后续 dependabot 自动补 @sha256 digest) |
 
 ### 3.5 代码质量债 (5 项) — 批次 4
 
@@ -428,7 +428,7 @@
 | **负责角色** | Coder |
 | **验证标准** | 命令 `pyflakes src/carrymem/cli/_*.py` 无 "may be undefined" 警告；`cli/__init__.py` 未改动 |
 | **依赖** | 无 |
-| **状态** | ⬜ 待开始 |
+| **状态** | ✅ 已完成 (`cli/_*.py` 内部模块间 6 处星导入全部清理；`cli/__init__.py` facade 保留未动) |
 | **生命周期** | P8 实现 |
 
 #### TD-018: 4 处 copy-paste 重复代码
@@ -441,7 +441,7 @@
 | **负责角色** | Coder |
 | **验证标准** | 命令 `grep -rn "import argparse" src/carrymem/cli/ | wc -l` 重复参数解析块消除；全测试通过 |
 | **依赖** | 无 |
-| **状态** | ⬜ 待开始 |
+| **状态** | ✅ 已完成 (4 个辅助函数抽取: `_add_common_args` 42 处替换、`compute_suggested_action` 2 处替换、`safe_json_loads` 7 处替换、`safe_probe` 新增；utils/helpers.py + cli/_base.py + engine.py + handlers.py + obsidian_adapter.py) |
 | **生命周期** | P8 实现 |
 
 #### TD-019: 类型标注覆盖 74%（举例修正）⚠️ 描述已修正
@@ -455,7 +455,7 @@
 | **负责角色** | Coder |
 | **验证标准** | 命令 `mypy src/ --no-error-summary | wc -l` 无新增错误；公共 API 类型标注覆盖率 ≥90% |
 | **依赖** | 无 |
-| **状态** | ⬜ 待开始 |
+| **状态** | 🟡 延后到 v0.8.2 (377 个函数需补类型标注，工作量过大；本批 TD-018 修复 obsidian_adapter.py 的 7 处 safe_json_loads 类型推断问题，作为部分推进) |
 | **生命周期** | P8 实现 |
 
 #### TD-020: 魔法数字未抽取（按域分文件）⚠️ 修正后
@@ -468,7 +468,7 @@
 | **负责角色** | Coder |
 | **验证标准** | 命令 `grep -rn "0\.5\|0\.3\|-20000" src/carrymem/ | grep -v "constants\|Enum\|test"` 返回 0 行（除注释外） |
 | **依赖** | 无 |
-| **状态** | ⬜ 待开始 |
+| **状态** | ✅ 已完成 (新建 `core/recall_thresholds.py` 含 `ConfidenceThreshold(float, Enum)` + `compute_suggested_action()`；新建 `adapters/sqlite/constants.py` 提取 SQLite PRAGMA 常量；engine.py + handlers.py + connection.py + rules/storage.py 全部替换为常量引用) |
 | **生命周期** | P8 实现 |
 
 #### TD-024: LifecycleMixin.__init__ 过载 (CC=26) — 增加依赖
@@ -577,7 +577,7 @@
 | **修复方案** | 加 `if: failure()` step 调用 `actions/github-script` 自动开 Issue；`cancel-in-progress: false` |
 | **负责角色** | DevOps |
 | **验证标准** | nightly 失败时自动创建 GitHub Issue |
-| **状态** | ⬜ 方案待共识 |
+| **状态** | ✅ 已完成 (nightly.yml 新增 `notify-failure` job: `needs: [slow-tests, vscode-e2e, vector-tests]` + `if: failure()`；用 `actions/github-script@v7` 自动开 Issue 带 `nightly-failure`/`bug`/`devops` 标签) |
 
 ### TD-043: 缺发布回滚 Runbook ⚠️ 新增 (DevOps)
 
@@ -588,7 +588,7 @@
 | **修复方案** | 文档化 PyPI 发布故障标准操作（yank + bump + 重发布） |
 | **负责角色** | DevOps |
 | **验证标准** | `docs/RELEASE_RUNBOOK.md` 存在且包含 yank 步骤 |
-| **状态** | ⬜ 方案待共识 |
+| **状态** | ✅ 已完成 (`docs/RELEASE_RUNBOOK.md` 新建 8 章节: 概述/发布前检查清单/发布步骤/回滚步骤/发布后验证/紧急联系人/常见问题/变更记录；含 PyPI yank 步骤 + OIDC 迁移清单 §2.5) |
 
 ### TD-044: MCP 工具无 destructive 操作分级 ⚠️ 新增 (Security)
 

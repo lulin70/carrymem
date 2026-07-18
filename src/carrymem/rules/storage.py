@@ -16,6 +16,7 @@ import threading
 from pathlib import Path
 from typing import Any, List, Optional
 
+from carrymem.adapters.sqlite.constants import SQLITE_BUSY_TIMEOUT_MS
 from carrymem.utils.language import has_cjk
 
 _logger = logging.getLogger(__name__)
@@ -57,7 +58,7 @@ class RuleStorage:
             conn = sqlite3.connect(self.db_path, timeout=30.0)
             conn.row_factory = sqlite3.Row
             # Set busy_timeout FIRST so subsequent PRAGMAs respect it
-            conn.execute("PRAGMA busy_timeout=10000")
+            conn.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("PRAGMA foreign_keys=ON")
             self._local.conn = conn
@@ -69,7 +70,7 @@ class RuleStorage:
                 conn = sqlite3.connect(self.db_path, timeout=30.0)
                 conn.row_factory = sqlite3.Row
                 # Set busy_timeout FIRST so subsequent PRAGMAs respect it
-                conn.execute("PRAGMA busy_timeout=10000")
+                conn.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")
                 conn.execute("PRAGMA journal_mode=WAL")
                 conn.execute("PRAGMA foreign_keys=ON")
                 self._local.conn = conn
@@ -89,7 +90,8 @@ class RuleStorage:
         conn = self._get_connection()
         try:
             # Main rules table
-            conn.executescript("""
+            conn.executescript(
+                """
                 CREATE TABLE IF NOT EXISTS rules (
                     id TEXT PRIMARY KEY,
 
@@ -117,7 +119,8 @@ class RuleStorage:
                     -- Extension
                 metadata TEXT DEFAULT '{}'
             );
-            """)
+            """
+            )
 
             try:
                 pragma_cursor = conn.execute("PRAGMA table_info(rules)")
@@ -129,7 +132,8 @@ class RuleStorage:
             except (sqlite3.OperationalError, sqlite3.ProgrammingError) as e:
                 _logger.debug("[RuleStorage] Schema migration (add columns) skipped: %s", e)
 
-            conn.executescript("""
+            conn.executescript(
+                """
                 CREATE INDEX IF NOT EXISTS idx_rules_status ON rules(status);
                 CREATE INDEX IF NOT EXISTS idx_rules_trigger ON rules(trigger);
                 CREATE INDEX IF NOT EXISTS idx_rules_type ON rules(rule_type);
@@ -162,7 +166,8 @@ class RuleStorage:
                     INSERT INTO rules_fts(rowid, id, trigger, action)
                     VALUES (new.rowid, new.id, new.trigger, new.action);
                 END;
-                """)
+                """
+            )
             conn.commit()
             self._migrate_fts_tokenizer()
         except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:

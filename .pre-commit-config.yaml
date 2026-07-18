@@ -1,7 +1,8 @@
 # Pre-commit hooks for CarryMem
 # Install: pre-commit install
 # Run manually: pre-commit run --all-files
-# Tool versions aligned with CI (.github/workflows/ci.yml) and local .venv
+# Tool versions aligned with CI (.github/workflows/ci.yml) and release.yml (TD-025)
+# Pinned versions: black==26.5.1, isort==6.1.0, flake8==7.3.0, mypy==2.3.0
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -19,7 +20,7 @@ repos:
       - id: mixed-line-ending
 
   - repo: https://github.com/psf/black
-    rev: 26.5.0
+    rev: 26.5.1
     hooks:
       - id: black
         language_version: python3.12
@@ -38,7 +39,7 @@ repos:
         additional_dependencies: [flake8-docstrings]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v2.1.0
+    rev: v2.3.0
     hooks:
       - id: mypy
         additional_dependencies: [types-PyYAML]

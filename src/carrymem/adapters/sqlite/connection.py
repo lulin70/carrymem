@@ -5,10 +5,12 @@ import os
 import sqlite3
 import threading
 import time
+import warnings
 from contextlib import contextmanager
 from typing import Dict, Optional
 
 from ...exceptions import DBConnectionError
+from .constants import SQLITE_BUSY_TIMEOUT_MS, SQLITE_CACHE_SIZE_KIB
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +136,12 @@ class ConnectionManager:
                             try:
                                 conn.enable_load_extension(True)
                                 sqlite_vec.load(conn)
-                            except (OSError, AttributeError, ImportError, RuntimeError) as e:
+                            except (
+                                OSError,
+                                AttributeError,
+                                ImportError,
+                                RuntimeError,
+                            ) as e:
                                 logger.debug("sqlite_vec extension loading failed: %s", e)
                         self._prime_fts5_vtable(conn)
                         self._local.conn = conn
@@ -205,9 +212,9 @@ class ConnectionManager:
         """
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA synchronous=NORMAL")
-        conn.execute("PRAGMA cache_size=-20000")
+        conn.execute(f"PRAGMA cache_size=-{SQLITE_CACHE_SIZE_KIB}")
         conn.execute("PRAGMA foreign_keys=ON")
-        conn.execute("PRAGMA busy_timeout=10000")
+        conn.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")
 
     def release_connection(self) -> None:
         """Mark the current thread's connection as releasable.
@@ -216,6 +223,13 @@ class ConnectionManager:
         storage for reuse by subsequent get_connection() calls in the same thread.
         This method exists for API symmetry and future pool management extensions.
         """
+        # TODO(v0.9.0): remove
+        warnings.warn(
+            "release_connection() is deprecated and will be removed in v0.9.0. "
+            "Thread-local connections are inherently reusable; this method is a no-op.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         pass  # Thread-local connections are inherently reusable
 
     def close_all_connections(self) -> None:
@@ -225,6 +239,12 @@ class ConnectionManager:
         testing teardown). It closes all connections that were created through
         this ConnectionManager instance.
         """
+        # TODO(v0.9.0): remove
+        warnings.warn(
+            "close_all_connections() is deprecated and will be removed in v0.9.0. " "Use close() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.close()
 
     @contextmanager
@@ -255,7 +275,10 @@ class ConnectionManager:
 
         if elapsed_ms > _SLOW_QUERY_THRESHOLD_MS:
             logger.warning(
-                "Slow query detected (%.2fms > %dms): " "%s", elapsed_ms, _SLOW_QUERY_THRESHOLD_MS, sql_display
+                "Slow query detected (%.2fms > %dms): %s",
+                elapsed_ms,
+                _SLOW_QUERY_THRESHOLD_MS,
+                sql_display,
             )
 
     def close(self):

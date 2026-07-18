@@ -5,9 +5,11 @@ import re
 import secrets
 import time
 from datetime import timedelta
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional, TypeVar
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 MEMORY_TYPES = {
     "user_preference": "User Preference",
@@ -184,3 +186,59 @@ TIER_TTL = {
     3: timedelta(days=365),
     4: None,
 }
+
+
+def safe_json_loads(text: Optional[str], default: T) -> T:
+    """Parse a JSON string, returning ``default`` if parsing fails.
+
+    Centralises the ``try: json.loads(x) except (JSONDecodeError, TypeError):
+    default`` pattern that was previously duplicated across multiple adapter
+    call sites (e.g. Obsidian tag/wiki_links/frontmatter parsing).
+
+    Args:
+        text: JSON string to parse. ``None`` or empty string returns ``default``.
+        default: Value to return when ``text`` is falsy or parsing fails.
+
+    Returns:
+        The parsed JSON value, or ``default`` on failure.
+
+    Examples:
+        >>> safe_json_loads('["a", "b"]', [])
+        ['a', 'b']
+        >>> safe_json_loads(None, [])
+        []
+        >>> safe_json_loads('not json', {})
+        {}
+    """
+    if not text:
+        return default
+    try:
+        return json.loads(text)  # type: ignore[no-any-return]
+    except (json.JSONDecodeError, TypeError):
+        return default
+
+
+def safe_probe(callable_: Callable[[], T], default: T) -> T:
+    """Invoke ``callable_`` and return its result, or ``default`` on error.
+
+    Centralises the probe pattern used by health checks and other probe-style
+    operations where a failure should not propagate but should be observable
+    via a sentinel value.
+
+    Note:
+        This helper intentionally swallows all ``Exception`` subclasses to
+        keep probe-style operations non-fatal. Do not use it for operations
+        whose failures must be surfaced — use explicit ``try/except`` instead.
+
+    Args:
+        callable_: Zero-argument callable to invoke.
+        default: Value to return when ``callable_`` raises ``Exception``.
+
+    Returns:
+        The return value of ``callable_()``, or ``default`` on failure.
+    """
+    try:
+        return callable_()
+    except Exception as exc:  # noqa: BLE001 — probe semantics intentionally broad
+        logger.debug("safe_probe: callable raised %s; returning default", exc)
+        return default

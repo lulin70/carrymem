@@ -9,7 +9,27 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
-from carrymem.cli._base import *
+from carrymem.cli._base import (
+    _DEFAULT_CONFIG_DIR,
+    _DEFAULT_DB,
+    _TIER_LABELS,
+    _TYPE_ICONS,
+    CarryMem,
+    __version__,
+    _add_common_args,
+    _bold,
+    _cli_logger,
+    _cyan,
+    _dim,
+    _format_time,
+    _get_carrymem,
+    _green,
+    _make_parser,
+    _red,
+    _t,
+    _truncate,
+    _yellow,
+)
 
 
 def _show_value_report(cm, parsed) -> int:
@@ -106,8 +126,14 @@ def cmd_stats(args):
     """Print memory statistics and optional value report."""
     parser = _make_parser("stats")
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
-    parser.add_argument("--db", help=_t("cli.arg.db"))
-    parser.add_argument("--format", "-f", choices=["text", "json"], default="text", help=_t("cli.arg.format"))
+    _add_common_args(parser)
+    parser.add_argument(
+        "--format",
+        "-f",
+        choices=["text", "json"],
+        default="text",
+        help=_t("cli.arg.format"),
+    )
     parser.add_argument("--value", "-v", action="store_true", help=_t("cli.arg.value_report"))
 
     parsed = parser.parse_args(args)
@@ -173,7 +199,7 @@ def cmd_whoami(args):
     """Print the user identity summary derived from stored memories."""
     parser = _make_parser("whoami")
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
-    parser.add_argument("--db", help=_t("cli.arg.db"))
+    _add_common_args(parser)
     parser.add_argument("--json", action="store_true", help=_t("cli.arg.json"))
 
     parsed = parser.parse_args(args)
@@ -242,11 +268,15 @@ def cmd_profile(args):
     """Show or export the user memory profile."""
     parser = _make_parser("profile")
     parser.add_argument(
-        "action", choices=["export", "show"], default="show", nargs="?", help=_t("cli.arg.profile_action")
+        "action",
+        choices=["export", "show"],
+        default="show",
+        nargs="?",
+        help=_t("cli.arg.profile_action"),
     )
     parser.add_argument("--output", "-o", help=_t("cli.arg.output"))
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
-    parser.add_argument("--db", help=_t("cli.arg.db"))
+    _add_common_args(parser)
 
     parsed = parser.parse_args(args)
     cm = _get_carrymem(parsed.db, parsed.namespace)
@@ -270,7 +300,7 @@ def cmd_check(args):
     """Run quality checks for conflicts, low-quality, and expired memories."""
     parser = _make_parser("check")
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
-    parser.add_argument("--db", help=_t("cli.arg.db"))
+    _add_common_args(parser)
     parser.add_argument("--conflicts", action="store_true", help=_t("cli.arg.check_conflicts"))
     parser.add_argument("--quality", action="store_true", help=_t("cli.arg.check_quality"))
     parser.add_argument("--expired", action="store_true", help=_t("cli.arg.check_expired"))
@@ -436,7 +466,11 @@ def _check_disk_space(ctx: _DoctorContext) -> _DoctorCheck:
         disk_usage = shutil.disk_usage(str(ctx.db.parent) if ctx.db.exists() else str(Path.home()))
         free_gb = disk_usage.free / (1024**3)
         if free_gb < 0.1:
-            return _DoctorCheck("disk_space", "fail", f"Disk space critically low: {free_gb:.2f} GB free")
+            return _DoctorCheck(
+                "disk_space",
+                "fail",
+                f"Disk space critically low: {free_gb:.2f} GB free",
+            )
         if free_gb < 1.0:
             return _DoctorCheck("disk_space", "warn", f"Disk space low: {free_gb:.2f} GB free")
         return _DoctorCheck(
@@ -587,7 +621,11 @@ def _check_rules_engine(ctx: _DoctorContext) -> _DoctorCheck:
 
 
 def _check_auto_inject(ctx: _DoctorContext) -> _DoctorCheck:
-    auto_inject = os.environ.get("CARRYMEM_AUTO_INJECT", "").lower() in ("true", "1", "yes")
+    auto_inject = os.environ.get("CARRYMEM_AUTO_INJECT", "").lower() in (
+        "true",
+        "1",
+        "yes",
+    )
     return _DoctorCheck(
         "auto_inject",
         "ok" if auto_inject else "info",
@@ -724,7 +762,7 @@ def _format_doctor_output(check_results: List[_DoctorCheck], parsed) -> int:
 def cmd_doctor(args):
     """Run diagnostics on the CarryMem installation and database."""
     parser = _make_parser("doctor")
-    parser.add_argument("--db", help=_t("cli.arg.db"))
+    _add_common_args(parser)
     parser.add_argument("--fix", action="store_true", help=_t("cli.arg.fix"))
     parser.add_argument("--json", action="store_true", help=_t("cli.arg.json"))
 

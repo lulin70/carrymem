@@ -5,7 +5,18 @@ import subprocess
 import sys
 from pathlib import Path
 
-from carrymem.cli._base import *
+from carrymem.cli._base import (
+    _DEFAULT_DB,
+    _add_common_args,
+    _bold,
+    _cyan,
+    _dim,
+    _green,
+    _make_parser,
+    _red,
+    _t,
+    _yellow,
+)
 
 __all__ = [
     # Public commands
@@ -35,7 +46,10 @@ def _resolve_mcp_command():
 
     if shutil.which("carrymem"):
         return {"command": "carrymem", "args": ["mcp"]}
-    return {"command": sys.executable, "args": ["-m", "carrymem.integration.layer2_mcp"]}
+    return {
+        "command": sys.executable,
+        "args": ["-m", "carrymem.integration.layer2_mcp"],
+    }
 
 
 def _build_mcp_server_config(db_path=None):
@@ -375,42 +389,84 @@ def _setup_mcp_global(parsed):
     # --- Cursor: ~/.cursor/mcp.json ---
     if parsed.tool in ("cursor", "all"):
         _apply_json_tool_config(
-            "Cursor", Path.home() / ".cursor" / "mcp.json", mcp_config, parsed.force, configured, failed
+            "Cursor",
+            Path.home() / ".cursor" / "mcp.json",
+            mcp_config,
+            parsed.force,
+            configured,
+            failed,
         )
 
     # --- TRAE: ~/.trae/mcp.json (+ TRAE-CN if dir exists) ---
     if parsed.tool in ("trae", "all"):
         _apply_json_tool_config(
-            "TRAE", Path.home() / ".trae" / "mcp.json", mcp_config, parsed.force, configured, failed
+            "TRAE",
+            Path.home() / ".trae" / "mcp.json",
+            mcp_config,
+            parsed.force,
+            configured,
+            failed,
         )
         trae_cn_dir = Path.home() / ".trae-cn"
         if trae_cn_dir.exists():
-            _apply_json_tool_config("TRAE-CN", trae_cn_dir / "mcp.json", mcp_config, parsed.force, configured, failed)
+            _apply_json_tool_config(
+                "TRAE-CN",
+                trae_cn_dir / "mcp.json",
+                mcp_config,
+                parsed.force,
+                configured,
+                failed,
+            )
 
     # --- Windsurf: ~/.windsurf/mcp.json ---
     if parsed.tool in ("windsurf", "all"):
         _apply_json_tool_config(
-            "Windsurf", Path.home() / ".windsurf" / "mcp.json", mcp_config, parsed.force, configured, failed
+            "Windsurf",
+            Path.home() / ".windsurf" / "mcp.json",
+            mcp_config,
+            parsed.force,
+            configured,
+            failed,
         )
 
     # --- Cline: ~/.cline/mcp.json ---
     if parsed.tool in ("cline", "all"):
         _apply_json_tool_config(
-            "Cline", Path.home() / ".cline" / "mcp.json", mcp_config, parsed.force, configured, failed
+            "Cline",
+            Path.home() / ".cline" / "mcp.json",
+            mcp_config,
+            parsed.force,
+            configured,
+            failed,
         )
 
     # --- Tools with .claude.json fallback: OpenClaw, Kimi Code, CodeX ---
     if parsed.tool in ("openclaw", "all"):
         _apply_claude_fallback_tool_config(
-            "OpenClaw", Path.home() / ".openclaw" / "mcp.json", mcp_config, parsed.force, configured, failed
+            "OpenClaw",
+            Path.home() / ".openclaw" / "mcp.json",
+            mcp_config,
+            parsed.force,
+            configured,
+            failed,
         )
     if parsed.tool in ("kimi-code", "all"):
         _apply_claude_fallback_tool_config(
-            "Kimi Code", Path.home() / ".kimi" / "mcp.json", mcp_config, parsed.force, configured, failed
+            "Kimi Code",
+            Path.home() / ".kimi" / "mcp.json",
+            mcp_config,
+            parsed.force,
+            configured,
+            failed,
         )
     if parsed.tool in ("codex", "all"):
         _apply_claude_fallback_tool_config(
-            "CodeX", Path.home() / ".codex" / "mcp.json", mcp_config, parsed.force, configured, failed
+            "CodeX",
+            Path.home() / ".codex" / "mcp.json",
+            mcp_config,
+            parsed.force,
+            configured,
+            failed,
         )
 
     # --- Summary + verification ---
@@ -548,7 +604,7 @@ def cmd_tui(args):
 
     parser = _make_parser("tui")
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
-    parser.add_argument("--db", help=_t("cli.arg.db"))
+    _add_common_args(parser)
 
     parsed = parser.parse_args(args)
     run_tui(db_path=parsed.db, namespace=parsed.namespace)  # type: ignore[call-arg]
@@ -563,31 +619,31 @@ def cmd_tutorial(args):
         return 0
     print(
         f"""
-  {_bold('Welcome to CarryMem!')} {_dim('Learn the basics in 5 minutes.')}
+  {_bold("Welcome to CarryMem!")} {_dim("Learn the basics in 5 minutes.")}
 
-  {_bold('[1/5] Store your first memory')}
+  {_bold("[1/5] Store your first memory")}
   >>> carrymem add "I prefer dark mode"
   >>> carrymem remember "I use Python for data analysis"
 
-  {_bold('[2/5] View your memories')}
+  {_bold("[2/5] View your memories")}
   >>> carrymem list
   >>> carrymem list --type user_preference
 
-  {_bold('[3/5] Search your memories')}
+  {_bold("[3/5] Search your memories")}
   >>> carrymem search "theme"
   >>> carrymem search "database"
 
-  {_bold('[4/5] Create a rule')}
+  {_bold("[4/5] Create a rule")}
   >>> carrymem add-rule "use PostgreSQL" --trigger "database selection"
   >>> carrymem rules list
 
-  {_bold('[5/5] Connect to your AI tool')}
+  {_bold("[5/5] Connect to your AI tool")}
   >>> carrymem setup-mcp --tool cursor
   >>> carrymem setup-mcp --tool claude-code
 
-  {_green('You are all set!')} CarryMem will help your AI remember you.
+  {_green("You are all set!")} CarryMem will help your AI remember you.
 
-  {_dim('Next steps:')}
+  {_dim("Next steps:")}
     carrymem          See what your AI knows about you
     carrymem doctor          Run diagnostics
     carrymem help            Full command reference

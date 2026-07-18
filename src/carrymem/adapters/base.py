@@ -20,6 +20,7 @@ Available official adapters (planned):
 Community adapters are welcome!
 """
 
+import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -959,6 +960,13 @@ class StorageAdapter(ABC):
         Returns:
             List of matching entry dicts.
         """
+        # TODO(v0.9.0): remove
+        warnings.warn(
+            "search_fulltext() is deprecated and will be removed in v0.9.0. "
+            "Use recall(query, update_access=False) instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         results: List[StoredMemory] = self.recall(query, update_access=False)
         return [r.to_dict() for r in results]
 
@@ -1324,6 +1332,7 @@ class VersioningProvider(Protocol):
 # area, enabling Interface Segregation. Clients depend only on the capability
 # they need (e.g., ``GraphClient``) rather than the full ``StorageAdapter``.
 # ``VersioningProvider`` (TD-007) serves as the 4th ISP group (versioning).
+
 
 @runtime_checkable
 class StorageClient(Protocol):

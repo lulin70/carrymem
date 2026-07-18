@@ -23,6 +23,7 @@ import json
 import os
 import sqlite3
 import threading
+import warnings
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
@@ -547,12 +548,16 @@ class TestKnowledgeGraph:
 
     def test_list_graph_relations_returns_list(self, adapter):
         """list_graph_relations returns a list."""
-        result = adapter.list_graph_relations()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            result = adapter.list_graph_relations()
         assert isinstance(result, list)
 
     def test_get_graph_stats_returns_dict(self, adapter):
         """get_graph_stats returns a dict."""
-        result = adapter.get_graph_stats()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            result = adapter.get_graph_stats()
         assert isinstance(result, dict)
 
     def test_store_graph_entities_returns_int(self, adapter):

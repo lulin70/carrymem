@@ -116,3 +116,48 @@ jobs:
             --tb=long \
             --timeout=600 \
             -v
+
+  # ═══════════════════════════════════════
+  # TD-042: Failure notification — auto-create GitHub Issue when nightly fails
+  #   Runs only if any of the above jobs (slow-tests/vscode-e2e/vector-tests) fails.
+  #   User rule 3): "发布前必须做模拟真实用户使用的测试" — nightly guards this,
+  #   so silent failures must be surfaced as actionable issues.
+  # ═══════════════════════════════════════
+  notify-failure:
+    name: Notify Nightly Failure
+    runs-on: ubuntu-latest
+    needs: [slow-tests, vscode-e2e, vector-tests]
+    if: failure()
+    permissions:
+      issues: write
+    steps:
+      - name: Create GitHub Issue for nightly failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const date = new Date().toISOString().split('T')[0];
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Nightly build failed — ${date}`,
+              body: [
+                `## Nightly Build Failure`,
+                ``,
+                `**Date**: ${date}`,
+                `**Run**: ${runUrl}`,
+                `**Triggered by**: ${context.eventName}`,
+                ``,
+                `### Failed jobs`,
+                `The nightly workflow failed. Please investigate the failing jobs.`,
+                ``,
+                `### Action items`,
+                `1. Check the [workflow run](${runUrl}) for details`,
+                `2. Identify the failing job(s) and re-run if flaky`,
+                `3. Fix the root cause or file a bug report`,
+                `4. Close this issue once resolved`,
+                ``,
+                `> This issue was auto-created by the \`notify-failure\` job (TD-042).`,
+              ].join('\n'),
+              labels: ['nightly-failure', 'bug', 'devops']
+            });

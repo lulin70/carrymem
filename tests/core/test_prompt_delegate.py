@@ -114,8 +114,10 @@ class TestSummarizeSession(unittest.TestCase):
         """summarize_session() raises StorageNotConfiguredError without adapter."""
         cm = CarryMem(storage=None, auto_backup_interval=0)
         try:
-            with self.assertRaises(StorageNotConfiguredError):
-                cm.summarize_session("sess_123")
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DeprecationWarning)
+                with self.assertRaises(StorageNotConfiguredError):
+                    cm.summarize_session("sess_123")
         finally:
             cm.close()
 
@@ -149,8 +151,10 @@ class TestAggregateMemories(unittest.TestCase):
         """aggregate_memories() raises StorageNotConfiguredError without adapter."""
         cm = CarryMem(storage=None, auto_backup_interval=0)
         try:
-            with self.assertRaises(StorageNotConfiguredError):
-                cm.aggregate_memories()
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DeprecationWarning)
+                with self.assertRaises(StorageNotConfiguredError):
+                    cm.aggregate_memories()
         finally:
             cm.close()
 

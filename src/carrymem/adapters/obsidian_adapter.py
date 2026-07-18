@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-from ..utils.helpers import content_hash, escape_like
+from ..utils.helpers import content_hash, escape_like, safe_json_loads
 from .base import MemoryEntry, StorageAdapter, StoredMemory
 
 _OBSIDIAN_SCHEMA_SQL = """
@@ -177,10 +177,12 @@ class ObsidianAdapter(StorageAdapter):
         if row and "unicode61" in (row["sql"] or ""):
             conn.execute("INSERT INTO notes_fts(notes_fts) VALUES('rebuild')")
             conn.execute("DROP TABLE IF EXISTS notes_fts")
-            conn.execute("""CREATE VIRTUAL TABLE notes_fts USING fts5(
+            conn.execute(
+                """CREATE VIRTUAL TABLE notes_fts USING fts5(
                     title, content,
                     content='notes', content_rowid='rowid', tokenize='trigram'
-                )""")
+                )"""
+            )
             conn.execute("INSERT INTO notes_fts(notes_fts) VALUES('rebuild')")
             conn.commit()
 
@@ -440,27 +442,22 @@ class ObsidianAdapter(StorageAdapter):
 
         tag_score = 0.0
         if query_tags:
-            note_tags = set()
+            note_tags: set[str] = set()
             if row["tags"]:
-                try:
-                    note_tags = set(json.loads(row["tags"]))
-                except (json.JSONDecodeError, TypeError):
-                    pass
+                note_tags = set(safe_json_loads(row["tags"], []))
             if note_tags:
                 overlap = len(query_tags & note_tags)
                 tag_score = overlap / max(len(query_tags), 1)
 
         wiki_score = 0.0
         if row["wiki_links"]:
-            try:
-                links = json.loads(row["wiki_links"])
+            links: list[str] = safe_json_loads(row["wiki_links"], [])
+            if links:
                 query_lower = query.lower()
                 for link in links:
                     if query_lower in link.lower() or link.lower() in query_lower:
                         wiki_score = 0.3
                         break
-            except (json.JSONDecodeError, TypeError):
-                pass
 
         return fts_score * 0.6 + tag_score * 0.25 + wiki_score * 0.15
 
@@ -513,12 +510,9 @@ class ObsidianAdapter(StorageAdapter):
 
             all_tags: Dict[str, int] = {}
             for row in tag_rows:
-                try:
-                    tags = json.loads(row["tags"])
-                    for tag in tags:
-                        all_tags[tag] = all_tags.get(tag, 0) + 1
-                except (json.JSONDecodeError, TypeError):
-                    pass
+                tags: list[str] = safe_json_loads(row["tags"], [])
+                for tag in tags:
+                    all_tags[tag] = all_tags.get(tag, 0) + 1
 
             return {
                 "adapter": self.name,
@@ -536,12 +530,9 @@ class ObsidianAdapter(StorageAdapter):
 
         all_tags: Dict[str, int] = {}
         for row in tag_rows:
-            try:
-                tags = json.loads(row["tags"])
-                for tag in tags:
-                    all_tags[tag] = all_tags.get(tag, 0) + 1
-            except (json.JSONDecodeError, TypeError):
-                pass
+            tags: list[str] = safe_json_loads(row["tags"], [])
+            for tag in tags:
+                all_tags[tag] = all_tags.get(tag, 0) + 1
 
         return dict(sorted(all_tags.items(), key=lambda x: -x[1]))
 
@@ -558,26 +549,9 @@ class ObsidianAdapter(StorageAdapter):
         return [self._row_to_dict(row) for row in rows]
 
     def _row_to_dict(self, row: sqlite3.Row) -> Dict[str, Any]:
-        tags = []
-        if row["tags"]:
-            try:
-                tags = json.loads(row["tags"])
-            except (json.JSONDecodeError, TypeError):
-                pass
-
-        wiki_links = []
-        if row["wiki_links"]:
-            try:
-                wiki_links = json.loads(row["wiki_links"])
-            except (json.JSONDecodeError, TypeError):
-                pass
-
-        frontmatter = {}
-        if row["frontmatter"]:
-            try:
-                frontmatter = json.loads(row["frontmatter"])
-            except (json.JSONDecodeError, TypeError):
-                pass
+        tags: list[str] = safe_json_loads(row["tags"], []) if row["tags"] else []
+        wiki_links: list[str] = safe_json_loads(row["wiki_links"], []) if row["wiki_links"] else []
+        frontmatter: dict[str, Any] = safe_json_loads(row["frontmatter"], {}) if row["frontmatter"] else {}
 
         result = {
             "id": row["id"],

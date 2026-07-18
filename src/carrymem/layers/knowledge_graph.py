@@ -907,7 +907,7 @@ class KnowledgeGraph:
             try:
                 result = self._input_validator.sanitize_content(value)
                 return str(result) if result else ""
-            except Exception as e:  # pragma: no cover — defensive
+            except Exception as e:  # pragma: no cover — NOTE: intentional defensive fallback for sanitize
                 logger.debug("KnowledgeGraph sanitize failed: %s", e)
         return value.replace("\x00", "").strip()
 

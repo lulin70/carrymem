@@ -2,7 +2,25 @@
 
 import json
 
-from carrymem.cli._base import *
+from carrymem.cli._base import (
+    _TIER_LABELS,
+    _TYPE_ICONS,
+    _add_common_args,
+    _bold,
+    _cli_validator,
+    _cyan,
+    _dim,
+    _find_memory,
+    _format_time,
+    _get_carrymem,
+    _green,
+    _make_parser,
+    _print_memory_card,
+    _red,
+    _t,
+    _truncate,
+    _yellow,
+)
 
 
 def cmd_add(args):
@@ -13,7 +31,7 @@ def cmd_add(args):
     parser.add_argument("--context", "-c", help=_t("cli.arg.context"))
     parser.add_argument("--force", "-f", action="store_true", help=_t("cli.arg.force_store"))
     parser.add_argument("--type", "-t", help=_t("cli.arg.type_override"))
-    parser.add_argument("--db", help=_t("cli.arg.db"))
+    _add_common_args(parser)
 
     parsed = parser.parse_args(args)
 
@@ -90,9 +108,13 @@ def cmd_list(args):
     parser.add_argument("--type", "-t", help=_t("cli.arg.type_filter"))
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace_default"))
     parser.add_argument(
-        "--format", "-f", choices=["table", "json", "plain"], default="table", help=_t("cli.arg.format_table")
+        "--format",
+        "-f",
+        choices=["table", "json", "plain"],
+        default="table",
+        help=_t("cli.arg.format_table"),
     )
-    parser.add_argument("--db", help=_t("cli.arg.db"))
+    _add_common_args(parser)
 
     parsed = parser.parse_args(args)
     cm = _get_carrymem(parsed.db, parsed.namespace)
@@ -137,9 +159,13 @@ def cmd_search(args):
     parser.add_argument("--type", "-t", help=_t("cli.arg.type_filter"))
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace_default"))
     parser.add_argument(
-        "--format", "-f", choices=["table", "json", "plain"], default="table", help=_t("cli.arg.format_table")
+        "--format",
+        "-f",
+        choices=["table", "json", "plain"],
+        default="table",
+        help=_t("cli.arg.format_table"),
     )
-    parser.add_argument("--db", help=_t("cli.arg.db"))
+    _add_common_args(parser)
 
     parsed = parser.parse_args(args)
 
@@ -188,7 +214,7 @@ def cmd_show(args):
     parser = _make_parser("show")
     parser.add_argument("key", help=_t("cli.arg.key"))
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace_default"))
-    parser.add_argument("--db", help=_t("cli.arg.db"))
+    _add_common_args(parser)
     parser.add_argument("--json", action="store_true", help=_t("cli.arg.json"))
 
     parsed = parser.parse_args(args)
@@ -247,7 +273,7 @@ def cmd_edit(args):
     parser.add_argument("key", help=_t("cli.arg.key_edit"))
     parser.add_argument("content", help=_t("cli.arg.content"))
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace_default"))
-    parser.add_argument("--db", help=_t("cli.arg.db"))
+    _add_common_args(parser)
 
     parsed = parser.parse_args(args)
 
@@ -301,7 +327,7 @@ def cmd_forget(args):
     parser = _make_parser("forget")
     parser.add_argument("key", help=_t("cli.arg.key_forget"))
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace_default"))
-    parser.add_argument("--db", help=_t("cli.arg.db"))
+    _add_common_args(parser)
     parser.add_argument("--force", "-y", action="store_true", help=_t("cli.arg.force"))
 
     parsed = parser.parse_args(args)
@@ -353,7 +379,7 @@ def cmd_clean(args):
     """Remove expired or low-quality memories, optionally as a dry run."""
     parser = _make_parser("clean")
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace_default"))
-    parser.add_argument("--db", help=_t("cli.arg.db"))
+    _add_common_args(parser)
     parser.add_argument("--expired", action="store_true", help=_t("cli.arg.expired"))
     parser.add_argument("--quality", type=float, default=0, help=_t("cli.arg.quality"))
     parser.add_argument("--dry-run", action="store_true", help=_t("cli.arg.dry_run"))

@@ -34,6 +34,7 @@ class PromptDelegateMixin:
         # From LifecycleMixin (property)
         @property
         def prompt_builder(self) -> PromptBuilder: ...
+
         # From RecallMixin
         def recall_memories(
             self,
@@ -199,9 +200,7 @@ class PromptDelegateMixin:
         filters: Dict[str, Any] = {"include_superseded": False}
         if memory_type:
             filters["type"] = memory_type
-        memories = self.recall_memories(
-            query="", limit=AGGREGATE_MEMORIES_LIMIT, filters=filters
-        )
+        memories = self.recall_memories(query="", limit=AGGREGATE_MEMORIES_LIMIT, filters=filters)
 
         if not memories:
             return []
