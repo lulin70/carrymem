@@ -43,6 +43,27 @@ class RuleCandidateGenerator:
         if not stored_memories:
             return []
 
+        candidates: List[Dict[str, Any]] = []
+
+        try:
+            engine = self._rule_engine_getter()
+            self._extract_candidates_from_memories(stored_memories, candidates)
+
+            existing_memories = self._recall_memories(limit=100)
+            if len(existing_memories) >= 5:
+                self._add_pattern_detection_candidates(candidates, engine, existing_memories)
+
+            self._add_implicit_preference_candidates(candidates)
+        except (ImportError, ValueError, KeyError, RuntimeError) as e:
+            logger.debug("Rule suggestion engine unavailable: %s", e)
+
+        return candidates[:3]
+
+    def _extract_candidates_from_memories(
+        self,
+        stored_memories: List[Dict[str, Any]],
+        candidates: List[Dict[str, Any]],
+    ) -> None:
         rule_worthy_types = {
             "user_preference",
             "correction",
@@ -51,85 +72,84 @@ class RuleCandidateGenerator:
             "sentiment_marker",
             "fact_declaration",
         }
-        candidates = []
 
+        for mem in stored_memories:
+            mem_type = mem.get("type", "")
+            if mem_type not in rule_worthy_types:
+                continue
+
+            content = mem.get("content", "")
+            if not content or len(content.strip()) < 3:
+                continue
+
+            trigger = self.extract_trigger(content, mem_type)
+            action = self.extract_action(content, mem_type)
+            rule_type = self.infer_rule_type(mem_type, content)
+
+            if trigger and action:
+                condition = self.extract_condition(content)
+                candidate = {
+                    "trigger": trigger,
+                    "action": action,
+                    "rule_type": rule_type,
+                    "scope": "personal",
+                    "override": mem_type in ("correction", "decision"),
+                    "confidence": mem.get("confidence", 0.7),
+                    "source_memory_type": mem_type,
+                    "source_memory_content": content[:200],
+                }
+                if condition:
+                    candidate["condition"] = condition
+                candidates.append(candidate)
+
+    def _add_pattern_detection_candidates(
+        self,
+        candidates: List[Dict[str, Any]],
+        engine: Any,
+        existing_memories: List[Dict[str, Any]],
+    ) -> None:
         try:
-            engine = self._rule_engine_getter()
-
-            for mem in stored_memories:
-                mem_type = mem.get("type", "")
-                if mem_type not in rule_worthy_types:
+            suggested = engine.suggest_rules(existing_memories, max_candidates=2)
+            for s in suggested[:2]:
+                if not s.trigger or not s.action:
                     continue
-
-                content = mem.get("content", "")
-                if not content or len(content.strip()) < 3:
+                if s.action == s.trigger:
                     continue
+                if len(s.action.split()) <= 2 and any(c in s.action for c in (",", "，")):
+                    continue
+                if s.trigger in (
+                    "related scenarios",
+                    "tech selection or solution design",
+                    "general context",
+                    "偏好选择",
+                    "通用场景",
+                ):
+                    continue
+                candidate_dict = {
+                    "trigger": s.trigger,
+                    "action": s.action,
+                    "rule_type": s.rule_type if hasattr(s, "rule_type") else "prefer",
+                    "scope": "personal",
+                    "override": False,
+                    "confidence": min(s.confidence if hasattr(s, "confidence") else 0.6, 0.85),
+                    "source": "pattern_detection",
+                }
+                if candidate_dict not in candidates:
+                    candidates.append(candidate_dict)
+        except (ValueError, KeyError, TypeError, RuntimeError) as e:
+            logger.warning("Pattern detection candidate generation failed: %s", e)
 
-                trigger = self.extract_trigger(content, mem_type)
-                action = self.extract_action(content, mem_type)
-                rule_type = self.infer_rule_type(mem_type, content)
-
-                if trigger and action:
-                    condition = self.extract_condition(content)
-                    candidate = {
-                        "trigger": trigger,
-                        "action": action,
-                        "rule_type": rule_type,
-                        "scope": "personal",
-                        "override": mem_type in ("correction", "decision"),
-                        "confidence": mem.get("confidence", 0.7),
-                        "source_memory_type": mem_type,
-                        "source_memory_content": content[:200],
-                    }
-                    if condition:
-                        candidate["condition"] = condition
-                    candidates.append(candidate)
-
-            existing_memories = self._recall_memories(limit=100)
-            if len(existing_memories) >= 5:
-                try:
-                    suggested = engine.suggest_rules(existing_memories, max_candidates=2)
-                    for s in suggested[:2]:
-                        if not s.trigger or not s.action:
-                            continue
-                        if s.action == s.trigger:
-                            continue
-                        if len(s.action.split()) <= 2 and any(c in s.action for c in (",", "，")):
-                            continue
-                        if s.trigger in (
-                            "related scenarios",
-                            "tech selection or solution design",
-                            "general context",
-                            "偏好选择",
-                            "通用场景",
-                        ):
-                            continue
-                        candidate_dict = {
-                            "trigger": s.trigger,
-                            "action": s.action,
-                            "rule_type": s.rule_type if hasattr(s, "rule_type") else "prefer",
-                            "scope": "personal",
-                            "override": False,
-                            "confidence": min(s.confidence if hasattr(s, "confidence") else 0.6, 0.85),
-                            "source": "pattern_detection",
-                        }
-                        if candidate_dict not in candidates:
-                            candidates.append(candidate_dict)
-                except (ValueError, KeyError, TypeError, RuntimeError) as e:
-                    logger.warning("Pattern detection candidate generation failed: %s", e)
-
-            try:
-                implicit = self.detect_implicit_preferences()
-                for imp in implicit:
-                    if not any(c.get("trigger") == imp["trigger"] for c in candidates):
-                        candidates.append(imp)
-            except (ValueError, KeyError, TypeError) as e:
-                logger.warning("Implicit preference detection failed: %s", e)
-
-        except (ImportError, ValueError, KeyError, RuntimeError) as e:
-            logger.debug("Rule suggestion engine unavailable: %s", e)
-
-        return candidates[:3]
+    def _add_implicit_preference_candidates(
+        self,
+        candidates: List[Dict[str, Any]],
+    ) -> None:
+        try:
+            implicit = self.detect_implicit_preferences()
+            for imp in implicit:
+                if not any(c.get("trigger") == imp["trigger"] for c in candidates):
+                    candidates.append(imp)
+        except (ValueError, KeyError, TypeError) as e:
+            logger.warning("Implicit preference detection failed: %s", e)
 
     # ------------------------------------------------------------------
     # Implicit preference detection

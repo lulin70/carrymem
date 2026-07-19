@@ -120,7 +120,7 @@ class TestJSONAdapter(unittest.TestCase):
             source_layer="rule",
         )
         self.adapter.store_entry(entry)
-        self.assertTrue(os.path.exists(self.path))
+        self.assertIs(os.path.exists(self.path), True)
 
         adapter2 = JSONAdapter(path=self.path, namespace="default")
         results = adapter2.recall(query="sky")
@@ -179,7 +179,7 @@ class TestCarryMemWithJSON(unittest.TestCase):
         cm = CarryMem(storage=adapter)
         try:
             result = cm.classify_and_remember("I prefer dark mode")
-            self.assertTrue(result["stored"])
+            self.assertIs(result["stored"], True)
             memories = cm.recall_memories(query="dark mode")
             self.assertGreater(len(memories), 0)
         finally:
@@ -199,7 +199,7 @@ class TestAsyncCarryMem(unittest.TestCase):
             cm = AsyncCarryMem(storage="sqlite", db_path=self.db_path)
             try:
                 result = await cm.classify_and_remember("I prefer dark mode")
-                self.assertTrue(result["stored"])
+                self.assertIs(result["stored"], True)
                 memories = await cm.recall_memories(query="dark mode")
                 self.assertGreater(len(memories), 0)
             finally:
@@ -251,11 +251,11 @@ class TestMCPHTTPServer(unittest.TestCase):
 
     def test_auth_check_no_key(self):
         server = MCPHTTPServer(host="127.0.0.1", port=9999)
-        self.assertTrue(server._check_auth({}))
+        self.assertIs(server._check_auth({}), True)
 
     def test_auth_check_valid_key(self):
         server = MCPHTTPServer(host="127.0.0.1", port=9999, api_key="secret")
-        self.assertTrue(server._check_auth({"authorization": "Bearer secret"}))
+        self.assertIs(server._check_auth({"authorization": "Bearer secret"}), True)
 
     def test_auth_check_invalid_key(self):
         server = MCPHTTPServer(host="127.0.0.1", port=9999, api_key="secret")

@@ -81,14 +81,14 @@ class TestE2ESecurityPipeline(unittest.TestCase):
         msg = "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
         findings = detect_sensitive_content(msg)
         pattern_names = [f[0] for f in findings]
-        self.assertTrue(any("bearer" in p or "jwt" in p for p in pattern_names), "Bearer/JWT token should be detected")
+        self.assertIs(any("bearer" in p or "jwt" in p for p in pattern_names), True, "Bearer/JWT token should be detected")
 
     def test_db_connection_string_detected(self):
         """Verify: Database connection strings with credentials are detected."""
         msg = "Connect via postgresql://admin:mypassword@db.example.com:5432/mydb"
         findings = detect_sensitive_content(msg)
         pattern_names = [f[0] for f in findings]
-        self.assertTrue(any("db_connection" in p for p in pattern_names), "DB connection string should be detected")
+        self.assertIs(any("db_connection" in p for p in pattern_names), True, "DB connection string should be detected")
 
     def test_private_key_detected(self):
         """Verify: Private key blocks are detected."""
@@ -110,7 +110,7 @@ class TestE2ESecurityPipeline(unittest.TestCase):
         """Verify: should_redact returns True for messages containing API keys."""
         msg = "My key is sk-abcdefghijklmnopqrstuvwx"
         should, reason = should_redact(msg)
-        self.assertTrue(should, "Message with API key should be flagged for redaction")
+        self.assertIs(should, True, "Message with API key should be flagged for redaction")
         self.assertIsNotNone(reason, "Reason should explain why redaction is needed")
         self.assertIn("sensitive", reason.lower(), "Reason should mention sensitivity")
 
@@ -179,7 +179,7 @@ class TestE2ESecurityPipeline(unittest.TestCase):
     def test_encryption_active_with_key(self):
         """Verify: MemoryEncryption is active when encryption_key is provided."""
         enc = MemoryEncryption(key="test-encryption-password-123")
-        self.assertTrue(enc.is_active, "Encryption should be active with a key")
+        self.assertIs(enc.is_active, True, "Encryption should be active with a key")
         self.assertEqual(enc.backend, "fernet", f"Backend should be fernet, got {enc.backend}")
 
     def test_encryption_roundtrip(self):

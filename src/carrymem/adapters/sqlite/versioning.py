@@ -8,12 +8,24 @@ from ..base import StoredMemory
 class VersionManager:
     """Manages memory version history and rollback."""
 
-    def __init__(self, adapter):
+    def __init__(self, adapter, conn_mgr, serializer, security) -> None:
+        """Initialize version manager with explicit dependencies.
+
+        Args:
+            adapter: SQLiteAdapter reference (for public API: namespace,
+                decrypt_field, update_memory).
+            conn_mgr: ConnectionManager instance.
+            serializer: RowSerializer instance.
+            security: SecurityOps instance.
+        """
         self._adapter = adapter
+        self._conn_mgr = conn_mgr
+        self._serializer = serializer
+        self._security = security
 
     def get_memory_history(self, storage_key: str) -> List[Dict[str, Any]]:
         """Return version history for a memory, current version first."""
-        conn = self._adapter._conn_mgr.get_connection()
+        conn = self._conn_mgr.get_connection()
         row = conn.execute(
             "SELECT id FROM memories WHERE storage_key = ? AND namespace = ?",
             (storage_key, self._adapter.namespace),
@@ -31,7 +43,7 @@ class VersionManager:
             "SELECT * FROM memories WHERE storage_key = ? AND namespace = ?",
             (storage_key, self._adapter.namespace),
         ).fetchone()
-        current = self._adapter._serializer.row_to_stored(current_row)
+        current = self._serializer.row_to_stored(current_row)
 
         history = []
         if current:
@@ -62,8 +74,8 @@ class VersionManager:
 
     def rollback_memory(self, storage_key: str, version: int) -> Optional[StoredMemory]:
         """Restore a memory to a previous version, returning the stored result."""
-        with self._adapter._conn_mgr.lock:
-            conn = self._adapter._conn_mgr.get_connection()
+        with self._conn_mgr.lock:
+            conn = self._conn_mgr.get_connection()
             row = conn.execute(
                 "SELECT id FROM memories WHERE storage_key = ? AND namespace = ?",
                 (storage_key, self._adapter.namespace),
@@ -80,7 +92,7 @@ class VersionManager:
                 return None
 
             old_content = version_row["content"]
-            if self._adapter._security.encryption and self._adapter._security.encryption.is_active:
+            if self._security.encryption and self._security.encryption.is_active:
                 old_content = self._adapter.decrypt_field(old_content)
             return self._adapter.update_memory(  # type: ignore[no-any-return]
                 storage_key=storage_key,

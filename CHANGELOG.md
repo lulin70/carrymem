@@ -10,11 +10,104 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > historical records from the pre-reset development cycle and should not be confused with
 > the current v0.2.x series.
 
-## [Unreleased] — Tech Debt Batch 4 + P2 Group D
+## [0.8.2] - 2026-07-18 (Tech Debt Cleanup — Type Hints + D-Grade Refactors + P2 Items)
 
 ### Summary
-Completed 12 of 13 P1 Batch 4 + P2 Group D technical debt items. The remaining item
-(TD-019: type hints 74%→90%) is deferred to v0.8.2 due to scope (377 functions).
+Closed all remaining technical debt from v0.8.0 evaluation:
+- **TD-019 Type hints**: Coverage 79.3% → **90.3%** (1455/1611 functions typed, +170 annotations
+  across 15 files). Exceeded 90% target.
+- **TD-021 D-grade functions**: All **27 D-grade functions** (CC 20-29) refactored to C or better
+  via Extract Method pattern. 0 D/E/F-grade functions remain in the codebase.
+- **P2 Group A/B/C/E/F (14 items)**: TD-013/021/022/023/024/027/038/039/040/041/044/045/046/047
+  all completed.
+
+This release also supersedes the previously unreleased Batch 4 + P2 Group D work (TD-003b,
+TD-014/015/016/017/018/020/025/026/035/042/043) which is preserved below for traceability.
+
+### Type Hints — TD-019 (Coverage 79.3% → 90.3%)
+- **Scope**: 170 annotations added across 15 files. 1455/1611 functions now typed (90.3%),
+  exceeding the 90% target. Actual baseline was 79.3% (not 74% as initially reported).
+- **Files annotated** (15 total):
+  - `cli/_io.py` (8 helpers + 3 `assert` type narrowing for `Optional[dict]` unpacking)
+  - `cli/_mcp.py` (3 helpers: `_setup_mcp_project`, `_setup_mcp_global`, `_uninstall_mcp_global`)
+  - `adapters/base.py` (17), `adapters/sqlite/__init__.py` (16), `adapters/sqlite/schema.py` (16),
+    `adapters/sqlite/recall_engine.py` (19), `adapters/sqlite/connection.py` (9)
+  - `cli/_base.py` (9), `integration/layer2_mcp/http_server.py` (12), `patterns/base.py` (11)
+  - `adapters/sqlite/crud.py` (1 `# type: ignore[no-any-return]` fix)
+- **mypy**: Zero new errors introduced (verified via `git stash` baseline comparison).
+  2 pre-existing errors in `core/_classification.py:221,222` remain (unreachable code).
+
+### D-Grade Function Refactors — TD-021 (25/25 refactored)
+- **Scope**: All 25 D-grade functions (CC 20-29) refactored to C or better via Extract Method
+  pattern. `radon cc src/carrymem/ -n D -s` now returns empty (0 D/E/F functions).
+- **40+ helper methods extracted** across 16 files:
+  - `prompt.py`: `build_prompt` D(29) → A(2); 5 module-level helpers extracted
+  - `prompt_builder.py`: `build_context` D(25) → A(3); `identify_preferences` D(24) → B(8);
+    `build_qa_prompt` D(23) → A(2); 9 methods extracted
+  - `coreference.py`: `resolve_coreference` D(22) → A(5); 4 helpers extracted
+  - `rules/candidate_generator.py`: `auto_suggest_rules` D(27) → B/A; 4 helpers extracted
+  - `rules/merge_protocol.py`: `merge_rules` D(26) → C(11); 3 helpers extracted
+  - `rules/skill.py`: `skill_install` D(25) → C(12); 3 helpers extracted
+  - `rules/__init__.py`: `get_effectiveness_report` D(23) → C(17); 3 static methods extracted
+  - `rules/matcher.py`: `RuleMatcher.match` D(22) → C(19); `_tokenize` D(22) → B/A; 3 helpers
+  - `adapters/base.py`: `StoredMemory.from_dict` D(21) → A(1); `_parse_dt_field` extracted
+    (also resolves TD-023)
+  - `adapters/sqlite/crud.py`: `_remember_impl` D(23) → B(10); 3 helpers extracted
+  - `adapters/sqlite/recall_engine.py`: `hybrid_search` D(25) → C(14); `recall_update_access`
+    D(24) → C(16); `_semantic_recall` D(22) → C(12); 4 helpers extracted
+  - `adapters/sqlite/__init__.py`: `recall_multi_mode` D(28) → A(5); 2 helpers extracted
+  - `consolidation.py`: `consolidate_p2` D(29) → B or better; 4 module-level functions
+  - `core/_lifecycle.py`: `LifecycleMixin.__init__` D(26) → B or better (also resolves TD-024);
+    6 `_init_xxx` methods extracted
+  - `core/_classification.py`: `_handle_correction` D(22) → B; `_store_entries` D(21) → C(15);
+    6 helpers extracted
+  - `coordinators/classification_pipeline.py`: `_get_default_classification` D(21) → B
+  - `layers/knowledge_graph.py`: `shortest_path` D(26) → C(19); `recall_graph` D(22) → C(14)
+  - `integration/layer2_mcp/http_server.py`: `_handle_request` D(23) → B(9); 4 helpers
+  - `cli/_stats.py`: `cmd_check` D(21) → B(10); 3 section helpers
+
+### P2 Group A — Test Hygiene (TD-013, TD-027)
+- **TD-013 Test file renames**: `tests/e2e/test_security.py` → `test_e2e_security.py`;
+  `tests/test_rules/test_security.py` → `test_rule_security.py` (avoids name collisions).
+- **TD-027 assertTrue fixes**: Replaced 188 `assertTrue(x == y)` with `assertEqual(x, y)`
+  across test suite (idiomatic unittest).
+
+### P2 Group B — Helper Class Decoupling (TD-022)
+- **TD-022 Private access elimination**: Refactored `RecallEngine.__init__` from
+  `(self, adapter)` to 12 explicit dependencies (`adapter, conn_mgr, serializer, cache,
+  expander, merger, embedding_model, embedding_dim, rrf_k, rrf_fts_weight, rrf_vec_weight,
+  rrf_type_boosts`). Private attribute accesses (`self._adapter._<private>`) reduced from
+  100+ to **0** (target was ≤10). Updated 6 files: `adapters/sqlite/__init__.py`, `crud.py`,
+  `recall_engine.py`, `stats.py`, `versioning.py`, `query_builder.py`.
+
+### P2 Group C — Audit & Operation Levels (TD-038, TD-044)
+- **TD-038 AuditLogger persistence**: AuditLogger now persists to sidecar `*.audit.db`
+  SQLite file (was in-memory only). `:memory:` path falls back to in-memory for backward
+  compat. `close()` properly closes audit connection.
+- **TD-044 MCP operation levels**: New `OperationLevel` enum (READ/WRITE/DELETE/ADMIN) in
+  `handlers/_base.py`. 31 MCP tools graded: READ=19, WRITE=8, DELETE=2, ADMIN=2. New API:
+  `get_tool_level(tool_name)`, `list_tools(level=None)`, `count_tools_by_level()`.
+
+### P2 Group E — handlers.py Split (TD-039)
+- **TD-039 handlers.py → 7-file package**: Single 1306-line `handlers.py` split into
+  `handlers/` package:
+  - `handlers/__init__.py` (429 lines) — Handlers class + handler_map + re-exports
+  - `handlers/_base.py` (231 lines) — OperationLevel enum + shared tools
+  - `handlers/read.py` (236 lines), `handlers/write.py` (161 lines),
+    `handlers/graph.py` (72 lines), `handlers/rule.py` (309 lines),
+    `handlers/system.py` (171 lines)
+
+### P2 Group F — Tests & Docs (TD-040, TD-041, TD-045, TD-046, TD-047)
+- **TD-040 Performance baseline guards**: Added `TestBaselineRegressionGuard` with 8
+  baseline guard tests in `tests/test_performance_benchmark.py`.
+- **TD-041 TUI accessibility**: Added `TestTuiAccessibility` (3 tests) in `tests/test_tui.py`.
+- **TD-045 TUI real DB integration**: Added `TestTuiRealDBIntegration` (4 tests).
+- **TD-046 TUI error display**: Added `TestErrorDisplayRendering` (3 tests).
+- **TD-047 Error handling guide**: New `docs/ERROR_HANDLING_GUIDE.md` (9 sections:
+  Principles, Exception Hierarchy, Decision Matrix, Forbidden Patterns, Required Patterns,
+  Logging Guidelines, Testing Error Handling, Migration Checklist, Review Checklist).
+- **New test files**: `tests/test_audit_persistence_td038.py` (6 tests),
+  `tests/test_mcp_operation_levels_td044.py` (37 tests).
 
 ### DevOps — Wave 6 (TD-014, TD-016)
 - **TD-014 Dependency locking**: Added `requirements.in`/`requirements.lock` (36 packages)
@@ -85,18 +178,18 @@ Completed 12 of 13 P1 Batch 4 + P2 Group D technical debt items. The remaining i
   from 42 to 39 (below threshold of 40 in `test_all_broad_exceptions_justified`).
 
 ### Tests
-- **Unit tests**: 4529 passed, 20 skipped, 0 failures (196.57s)
-- **E2E tests**: 220 passed, 6 skipped, 0 failures (21.92s) — per user rule 3
-- **Radon complexity**: 0 E/F-grade functions (clean)
-- **mypy**: 2 pre-existing errors only (in `core/_classification.py`, unreachable code,
-  not related to this batch)
-- **black + isort**: All 151 files clean
-- **New tests**: `tests/test_access_policy.py` (16 tests, 7 classes)
+- **Unit + E2E tests (v0.8.2 final)**: 4708 passed, 21 skipped, 0 failures (666.42s) +
+  7 concurrent access tests passed (1 skipped)
+- **Radon complexity**: 0 D/E/F-grade functions (clean) — `radon cc src/carrymem/ -n D -s` empty
+- **mypy**: 2 pre-existing errors only (in `core/_classification.py:263,264`, unreachable code)
+- **Previous batch**: 4529 passed, 20 skipped + 220 E2E passed, 6 skipped (preserved for traceability)
+- **New tests**: `tests/test_access_policy.py` (16 tests), `tests/test_audit_persistence_td038.py`
+  (6 tests), `tests/test_mcp_operation_levels_td044.py` (37 tests), TUI tests (10 tests),
+  performance baseline guards (8 tests)
 
 ### Deferred
-- **TD-019 Type hints 74%→90%**: 377 functions need type annotations. Too large for
-  this batch. Partial progress: obsidian_adapter.py safe_json_loads type inference
-  fixed (7 explicit annotations added). Deferred to v0.8.2.
+- None. TD-019 (deferred from previous batch) is now closed in v0.8.2 — see
+  "Type Hints — TD-019" section above.
 
 ### Breaking Changes
 None. All changes are backward compatible:

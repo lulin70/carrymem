@@ -223,16 +223,16 @@ class TestRawTextIntegration(unittest.TestCase):
 
     def test_classify_and_remember_saves_raw_text(self):
         result = self.cm.classify_and_remember("I prefer using PostgreSQL for database tasks")
-        self.assertTrue(result.get("stored", False))
+        self.assertIs(result.get("stored", False), True)
 
         memories = self.cm.recall_memories("PostgreSQL", limit=5)
         self.assertGreaterEqual(len(memories), 1)
         has_raw = any(m.get("raw_text", "") != "" for m in memories)
-        self.assertTrue(has_raw, "At least one memory should have raw_text populated")
+        self.assertIs(has_raw, True, "At least one memory should have raw_text populated")
 
     def test_raw_text_preserves_original_phrasing(self):
         result = self.cm.classify_and_remember("We decided to use PostgreSQL because of its great JSON support")
-        self.assertTrue(result.get("stored", False))
+        self.assertIs(result.get("stored", False), True)
 
         memories = self.cm.recall_memories("JSON support", limit=5)
         self.assertGreaterEqual(len(memories), 1, "Should find memory via raw_text phrase")

@@ -160,14 +160,14 @@ class TestScheduleConsolidation(unittest.TestCase):
     def test_schedule_consolidation_starts_timer(self):
         """schedule_consolidation() returns dict with scheduled=True."""
         result = self.cm.schedule_consolidation(interval_hours=1.0, dry_run=True)
-        self.assertTrue(result["scheduled"])
+        self.assertIs(result["scheduled"], True)
         self.assertEqual(result["interval_hours"], 1.0)
 
     def test_stop_consolidation(self):
         """stop_consolidation() stops the active timer."""
         self.cm.schedule_consolidation(interval_hours=1.0, dry_run=True)
         result = self.cm.stop_consolidation()
-        self.assertTrue(result["stopped"])
+        self.assertIs(result["stopped"], True)
 
     def test_stop_consolidation_no_active(self):
         """stop_consolidation() returns stopped=False when no timer active."""

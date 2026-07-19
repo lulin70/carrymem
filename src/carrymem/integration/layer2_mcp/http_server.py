@@ -140,49 +140,20 @@ class MCPHTTPServer:
                 writer.close()
                 return
 
-            request_str = request_line.decode("utf-8", errors="replace").strip()
-            parts = request_str.split(" ")
-            if len(parts) < 2:
+            method, path = self._parse_request_line(request_line)
+            if method is None:
                 writer.close()
                 return
 
-            method = parts[0]
-            path = parts[1]
-
-            headers = {}
-            content_length = 0
-            while True:
-                line = await reader.readline()
-                if not line or line == b"\r\n":
-                    break
-                line_str = line.decode("utf-8", errors="replace").strip()
-                if ":" in line_str:
-                    key, val = line_str.split(":", 1)
-                    headers[key.strip().lower()] = val.strip()
-                    if key.strip().lower() == "content-length":
-                        content_length = int(val.strip())
-
+            headers, content_length = await self._parse_request_headers(reader)
             request_origin = headers.get("origin", "")
 
-            body = b""
-            if content_length > 0:
-                if content_length > _MAX_REQUEST_SIZE:
-                    await self._send_response(writer, 413, {"error": "Request too large"}, request_origin)
-                    return
-                body = await reader.readexactly(content_length)
+            body = await self._read_request_body(reader, writer, content_length, request_origin)
+            if body is None:
+                return
 
             # Public endpoints (no auth required)
-            if path == "/health":
-                await self._send_response(writer, 200, {"status": "ok", "version": _version}, request_origin)
-                return
-            elif path == "/healthz":
-                health_status = self._health_checker.check()
-                status_code = 200 if health_status["status"] == "ok" else 503
-                await self._send_response(writer, status_code, health_status, request_origin)
-                return
-            elif path == "/metrics":
-                metrics_text = self._metrics.to_prometheus()
-                await self._send_text_response(writer, 200, metrics_text, request_origin)
+            if await self._try_public_endpoint(path, writer, request_origin):
                 return
 
             # Protected endpoints (require auth)
@@ -190,33 +161,109 @@ class MCPHTTPServer:
                 await self._send_response(writer, 401, {"error": "Unauthorized"}, request_origin)
                 return
 
-            if method == "GET" and path == "/sse":
-                await self._handle_sse(writer, request_origin)
-            elif method == "POST" and path == "/message":
-                await self._handle_message(writer, body, request_origin)
-            else:
-                await self._send_response(writer, 404, {"error": "Not found"}, request_origin)
+            await self._route_protected_endpoint(method, path, writer, body, request_origin)
 
         # NOTE: Broad exception in HTTP server request handler is intentional to catch
         # all errors and return sanitized error responses. This prevents raw exceptions
         # from breaking the HTTP protocol and leaking sensitive information.
         except Exception as e:
-            # Log detailed error for debugging
-            logger.error("Request handling error: %s", e, exc_info=True)
-            try:
-                # Return sanitized error message (no stack trace or sensitive info)
-                error_msg = "Internal server error"
-                if os.environ.get("CARRYMEM_DEBUG") == "1":
-                    # Only show details in debug mode
-                    error_msg = str(e)
-                await self._send_response(writer, 500, {"error": error_msg}, "")
-            except (OSError, ConnectionError, RuntimeError) as e2:
-                logger.debug("Failed to send error response: %s", e2)
+            await self._handle_request_exception(writer, e)
         finally:
             try:
                 writer.close()
             except (OSError, ConnectionError) as e:
                 logger.debug("Failed to close connection: %s", e)
+
+    @staticmethod
+    def _parse_request_line(request_line: bytes) -> tuple:
+        """Parse HTTP request line into (method, path); returns (None, None) on malformed input."""
+        request_str = request_line.decode("utf-8", errors="replace").strip()
+        parts = request_str.split(" ")
+        if len(parts) < 2:
+            return None, None
+        return parts[0], parts[1]
+
+    async def _parse_request_headers(self, reader) -> tuple:
+        """Read HTTP headers from ``reader`` until blank line; returns (headers, content_length)."""
+        headers: Dict[str, str] = {}
+        content_length = 0
+        while True:
+            line = await reader.readline()
+            if not line or line == b"\r\n":
+                break
+            line_str = line.decode("utf-8", errors="replace").strip()
+            if ":" in line_str:
+                key, val = line_str.split(":", 1)
+                headers[key.strip().lower()] = val.strip()
+                if key.strip().lower() == "content-length":
+                    content_length = int(val.strip())
+        return headers, content_length
+
+    async def _read_request_body(
+        self,
+        reader,
+        writer,
+        content_length: int,
+        request_origin: str,
+    ) -> Optional[bytes]:
+        """Read request body; returns body bytes (b"" if none), or None if a 413 was already sent."""
+        if content_length <= 0:
+            return b""
+        if content_length > _MAX_REQUEST_SIZE:
+            await self._send_response(writer, 413, {"error": "Request too large"}, request_origin)
+            return None
+        body: bytes = await reader.readexactly(content_length)
+        return body
+
+    async def _try_public_endpoint(
+        self,
+        path: str,
+        writer,
+        request_origin: str,
+    ) -> bool:
+        """Handle public monitoring endpoints. Returns True if a response was sent."""
+        if path == "/health":
+            await self._send_response(writer, 200, {"status": "ok", "version": _version}, request_origin)
+            return True
+        if path == "/healthz":
+            health_status = self._health_checker.check()
+            status_code = 200 if health_status["status"] == "ok" else 503
+            await self._send_response(writer, status_code, health_status, request_origin)
+            return True
+        if path == "/metrics":
+            metrics_text = self._metrics.to_prometheus()
+            await self._send_text_response(writer, 200, metrics_text, request_origin)
+            return True
+        return False
+
+    async def _route_protected_endpoint(
+        self,
+        method: str,
+        path: str,
+        writer,
+        body: bytes,
+        request_origin: str,
+    ) -> None:
+        """Dispatch to a protected MCP endpoint, or send a 404 response."""
+        if method == "GET" and path == "/sse":
+            await self._handle_sse(writer, request_origin)
+        elif method == "POST" and path == "/message":
+            await self._handle_message(writer, body, request_origin)
+        else:
+            await self._send_response(writer, 404, {"error": "Not found"}, request_origin)
+
+    async def _handle_request_exception(self, writer, exc: Exception) -> None:
+        """Log the exception and send a sanitized 500 response; never raises out."""
+        logger.error("Request handling error: %s", exc, exc_info=True)
+        try:
+            # Return sanitized error message (no stack trace or sensitive info)
+            error_msg = "Internal server error"
+            if os.environ.get("CARRYMEM_DEBUG") == "1":
+                # Only show details in debug mode
+                error_msg = str(exc)
+            await self._send_response(writer, 500, {"error": error_msg}, "")
+        except (OSError, ConnectionError, RuntimeError) as e2:
+            logger.debug("Failed to send error response: %s", e2)
 
     async def _handle_sse(self, writer, request_origin: str = ""):
         if len(self._clients) >= _MAX_SSE_CLIENTS:

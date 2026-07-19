@@ -39,7 +39,7 @@ class TestChineseTokenization(unittest.TestCase):
         """Verify: Chinese text is tokenized into meaningful segments."""
         tokens = RuleMatcher._tokenize("数据库选型方案")
         self.assertGreater(len(tokens), 0, "Should produce tokens for Chinese text")
-        self.assertTrue(any("数据" in t for t in tokens), "Should contain 数据")
+        self.assertIs(any("数据" in t for t in tokens), True, "Should contain 数据")
 
     def test_tokenize_english_text(self):
         """Verify: English text is tokenized by spaces."""
@@ -129,7 +129,7 @@ class TestConditionalPreference(unittest.TestCase):
         has_condition = any(r.get("condition") for r in auto_rules)
         cm.close()
         if auto_rules:
-            self.assertTrue(has_condition, "Should extract condition from conditional expression")
+            self.assertIs(has_condition, True, "Should extract condition from conditional expression")
 
     def test_condition_extraction_english(self):
         """Verify: Condition is extracted from English conditional expressions."""
@@ -139,7 +139,7 @@ class TestConditionalPreference(unittest.TestCase):
         cm.close()
         if auto_rules:
             has_condition = any(r.get("condition") for r in auto_rules)
-            self.assertTrue(has_condition, "Should extract condition from English if-then")
+            self.assertIs(has_condition, True, "Should extract condition from English if-then")
 
     def test_unconditional_rule_still_works(self):
         """Verify: Rules without condition still work normally."""
@@ -258,7 +258,7 @@ class TestRuleExpiry(unittest.TestCase):
             rule_type="prefer",
             expires_at=past,
         )
-        self.assertTrue(rule.is_expired())
+        self.assertIs(rule.is_expired(), True)
 
     def test_expired_rules_not_matched(self):
         """Verify: Expired rules are filtered out during matching."""

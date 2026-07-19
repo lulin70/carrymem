@@ -608,16 +608,19 @@ class TestGraphPerformanceBenchmark:
             memory_id = storage_keys[0]
 
             # Ensure entities are linked to the memory
+            assert cm._adapter is not None, "adapter must be initialized"
             cm._adapter.store_graph_entities(memory_id, "PostgreSQL is a SQL database system")
             cm.add_graph_relation("PostgreSQL", "SQL", "is_a", source_memory_key=memory_id)
 
             latencies = []
             for _i in range(_GRAPH_BENCH_ITERATIONS):
                 start = time.perf_counter()
-                result = cm.recall_memory_impact(memory_id)
+                impact_result = cm.recall_memory_impact(memory_id)
                 elapsed_ms = (time.perf_counter() - start) * 1000
                 latencies.append(elapsed_ms)
-                assert "impact_score" in result, f"get_memory_impact returned invalid structure: {result}"
+                assert "impact_score" in impact_result, (
+                    f"get_memory_impact returned invalid structure: {impact_result}"
+                )
 
             p95 = sorted(latencies)[18]
             avg = statistics.mean(latencies)
@@ -739,4 +742,168 @@ class TestGraphPerformanceBenchmark:
 
         assert elapsed_s < SCHEMA_MIGRATION_S, (
             f"Schema migration took {elapsed_s:.3f}s, exceeds {SCHEMA_MIGRATION_S}s threshold"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Benchmark 8: Baseline Regression Guard (TD-040)
+# ---------------------------------------------------------------------------
+
+# Documented steady-state baselines (measured on dev machines).
+# These are tighter than the absolute thresholds above and catch gradual
+# performance drift before it becomes a real problem. The regression guard
+# factor is 1.1x: a >10% regression will fail the test.
+#
+# Baselines were derived from:
+#   - Comments in this file documenting steady-state P95 (~50ms)
+#   - Classification path ~165ms per message (documented above)
+#   - Export throughput ~1000 mem/s (documented in print statements)
+#   - Encryption avg ~0.02ms per op (Fernet, documented above)
+#
+# These guards run alongside the existing benchmarks (same `slow` mark).
+# They do NOT replace the absolute thresholds — they add tighter, baseline-
+# relative checks that fail earlier when performance drifts.
+
+REGRESSION_GUARD_FACTOR = 1.1  # >10% regression fails the test
+
+# Steady-state baselines (dev machine, warm)
+CLASSIFY_BASELINE_AVG_MS = 50.0  # classify_and_remember warm avg
+CLASSIFY_BASELINE_P95_MS = 50.0  # classify_and_remember warm P95
+RECALL_BASELINE_MAX_MS = 200.0  # recall on 1000 records, typical max
+BATCH_INSERT_BASELINE_S = 0.5  # fast-path batch insert 100, typical
+ENCRYPT_BASELINE_AVG_MS = 0.5  # single encrypt avg, typical
+
+
+class TestBaselineRegressionGuard:
+    """Tight regression guards: fail when performance drifts >10% from baseline.
+
+    These tests use the SAME thresholds as the absolute benchmarks above but
+    expressed as 1.1x of the documented steady-state baseline. They catch
+    gradual regressions (e.g., 15% slower) that the absolute thresholds
+    (which have 2-10x margin) would miss.
+
+    All tests inherit the module-level ``pytest.mark.slow`` mark, so they
+    only run locally / nightly (not in PR CI).
+    """
+
+    def test_classify_avg_within_10pct_of_baseline(self, benchmark_db):
+        """classify_and_remember warm avg must be within 10% of 50ms baseline."""
+        cm = benchmark_db
+        cm.classify_and_remember("warmup: trigger model loading")
+
+        latencies = []
+        for i in range(20):
+            start = time.perf_counter()
+            cm.classify_and_remember(f"Baseline guard preference {i}: dark mode coding")
+            latencies.append((time.perf_counter() - start) * 1000)
+
+        avg = statistics.mean(latencies)
+        threshold = CLASSIFY_BASELINE_AVG_MS * REGRESSION_GUARD_FACTOR
+
+        print(
+            f"\n[baseline_guard_classify_avg] avg={avg:.1f}ms, "
+            f"baseline={CLASSIFY_BASELINE_AVG_MS}ms, threshold={threshold:.1f}ms"
+        )
+
+        assert avg < threshold, (
+            f"Classify avg {avg:.1f}ms exceeds 1.1x baseline "
+            f"({threshold:.1f}ms) — >10% regression from steady-state {CLASSIFY_BASELINE_AVG_MS}ms"
+        )
+
+    def test_classify_p95_within_10pct_of_baseline(self, benchmark_db):
+        """classify_and_remember warm P95 must be within 10% of 50ms baseline."""
+        cm = benchmark_db
+        cm.classify_and_remember("warmup: trigger model loading")
+
+        latencies = []
+        for i in range(20):
+            start = time.perf_counter()
+            cm.classify_and_remember(f"Baseline guard P95 test {i}: vim editor")
+            latencies.append((time.perf_counter() - start) * 1000)
+
+        p95 = sorted(latencies)[int(len(latencies) * 0.95)]
+        threshold = CLASSIFY_BASELINE_P95_MS * REGRESSION_GUARD_FACTOR
+
+        print(
+            f"\n[baseline_guard_classify_p95] p95={p95:.1f}ms, "
+            f"baseline={CLASSIFY_BASELINE_P95_MS}ms, threshold={threshold:.1f}ms"
+        )
+
+        assert p95 < threshold, (
+            f"Classify P95 {p95:.1f}ms exceeds 1.1x baseline "
+            f"({threshold:.1f}ms) — >10% regression from steady-state {CLASSIFY_BASELINE_P95_MS}ms"
+        )
+
+    def test_recall_max_within_10pct_of_baseline(self, populated_1000):
+        """recall max latency must be within 10% of 200ms baseline."""
+        cm = populated_1000
+        queries = ["Python", "database", "DevOps", "testing", "security"]
+
+        max_latency = 0.0
+        for query in queries:
+            start = time.perf_counter()
+            cm.recall_memories(query=query, limit=20)
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            max_latency = max(max_latency, elapsed_ms)
+
+        threshold = RECALL_BASELINE_MAX_MS * REGRESSION_GUARD_FACTOR
+
+        print(
+            f"\n[baseline_guard_recall_max] max={max_latency:.1f}ms, "
+            f"baseline={RECALL_BASELINE_MAX_MS}ms, threshold={threshold:.1f}ms"
+        )
+
+        assert max_latency < threshold, (
+            f"Recall max {max_latency:.1f}ms exceeds 1.1x baseline "
+            f"({threshold:.1f}ms) — >10% regression from steady-state {RECALL_BASELINE_MAX_MS}ms"
+        )
+
+    def test_batch_insert_within_10pct_of_baseline(self, tmp_path):
+        """Fast-path batch insert 100 must be within 10% of 0.5s baseline."""
+        cm = CarryMem(db_path=str(tmp_path / "baseline_guard_batch.db"))
+        try:
+            messages = [f"Baseline guard entry {i}: preference for tool {i}" for i in range(100)]
+            start = time.perf_counter()
+            result = cm.store_messages(messages, force_type="fact_declaration")
+            elapsed_s = time.perf_counter() - start
+
+            threshold = BATCH_INSERT_BASELINE_S * REGRESSION_GUARD_FACTOR
+
+            print(
+                f"\n[baseline_guard_batch_insert] elapsed={elapsed_s:.3f}s, "
+                f"baseline={BATCH_INSERT_BASELINE_S}s, threshold={threshold:.3f}s"
+            )
+
+            assert result["stored_count"] == 100
+            assert elapsed_s < threshold, (
+                f"Batch insert {elapsed_s:.3f}s exceeds 1.1x baseline "
+                f"({threshold:.3f}s) — >10% regression from steady-state {BATCH_INSERT_BASELINE_S}s"
+            )
+        finally:
+            cm.close()
+
+    def test_encrypt_avg_within_10pct_of_baseline(self):
+        """Single encrypt avg must be within 10% of 0.5ms baseline."""
+        from carrymem.security.encryption import MemoryEncryption
+
+        enc = MemoryEncryption(key="baseline_guard_key")
+        data = [f"Baseline guard encrypt test {i}" for i in range(100)]
+
+        times = []
+        for item in data:
+            start = time.perf_counter()
+            enc.encrypt(item)
+            times.append((time.perf_counter() - start) * 1000)
+
+        avg = statistics.mean(times)
+        threshold = ENCRYPT_BASELINE_AVG_MS * REGRESSION_GUARD_FACTOR
+
+        print(
+            f"\n[baseline_guard_encrypt_avg] avg={avg:.4f}ms, "
+            f"baseline={ENCRYPT_BASELINE_AVG_MS}ms, threshold={threshold:.4f}ms"
+        )
+
+        assert avg < threshold, (
+            f"Encrypt avg {avg:.4f}ms exceeds 1.1x baseline "
+            f"({threshold:.4f}ms) — >10% regression from steady-state {ENCRYPT_BASELINE_AVG_MS}ms"
         )

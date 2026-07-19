@@ -149,8 +149,8 @@ class TestSemanticClassifier(unittest.TestCase):
     def test_should_use_llm_returns_true(self):
         config = _make_config()
         classifier = SemanticClassifier(config)
-        self.assertTrue(classifier.should_use_llm("any message"))
-        self.assertTrue(classifier.should_use_llm("any message", context="some context"))
+        self.assertIs(classifier.should_use_llm("any message"), True)
+        self.assertIs(classifier.should_use_llm("any message", context="some context"), True)
 
     def test_init_config_defaults(self):
         config = _make_config()

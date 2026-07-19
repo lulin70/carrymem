@@ -155,8 +155,17 @@ class QueryBuilder:
 class QueryBuilderWithContext(QueryBuilder):
     """QueryBuilder that can rebuild context using DB profile data."""
 
-    def __init__(self, adapter):
+    def __init__(self, adapter, conn_mgr=None):
+        """Initialize with adapter and optional explicit conn_mgr.
+
+        Args:
+            adapter: SQLiteAdapter reference (for public API: namespace).
+            conn_mgr: ConnectionManager instance. If None, falls back to
+                ``adapter._conn_mgr`` for backward compatibility with any
+                external callers that still construct this class directly.
+        """
         self._adapter = adapter
+        self._conn_mgr = conn_mgr if conn_mgr is not None else getattr(adapter, "_conn_mgr", None)
 
     def rebuild_context(self, original_query: str, keywords: str) -> str:
         """Augment the original query with profile keywords when available."""
@@ -164,7 +173,9 @@ class QueryBuilderWithContext(QueryBuilder):
             return original_query
 
         try:
-            conn = self._adapter._conn_mgr.get_connection()
+            if self._conn_mgr is None:
+                return original_query
+            conn = self._conn_mgr.get_connection()
             profile_rows = conn.execute(
                 "SELECT content, type FROM memories "
                 "WHERE namespace = ? AND type IN ('user_preference', 'decision', 'fact_declaration') "

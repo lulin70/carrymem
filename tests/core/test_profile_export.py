@@ -95,7 +95,7 @@ class TestExportProfile(unittest.TestCase):
         """export_profile() writes to file when output_path given."""
         output_path = os.path.join(self.tmpdir, "profile.json")
         result = self.cm.export_profile(output_path=output_path)
-        self.assertTrue(os.path.exists(output_path))
+        self.assertIs(os.path.exists(output_path), True)
         with open(output_path) as f:
             data = json.load(f)
         self.assertIn("schema_version", data)
@@ -104,7 +104,7 @@ class TestExportProfile(unittest.TestCase):
         """export_profile() returns consistent structure with all expected keys."""
         result = self.cm.export_profile()
         expected_keys = {"schema_version", "format", "exported_at", "identity", "summary", "preferences", "stats"}
-        self.assertTrue(expected_keys.issubset(set(result.keys())))
+        self.assertIs(expected_keys.issubset(set(result.keys())), True)
 
 
 class TestImportMemories(unittest.TestCase):
@@ -199,19 +199,19 @@ class TestExportMemories(unittest.TestCase):
     def test_export_memories_returns_dict(self):
         """export_memories() returns a result dict."""
         result = self.cm.export_memories()
-        self.assertTrue(result["exported"])
+        self.assertIs(result["exported"], True)
         self.assertEqual(result["format"], "json")
 
     def test_export_memories_with_namespace(self):
         """export_memories() accepts namespace parameter."""
         result = self.cm.export_memories(namespace="default")
-        self.assertTrue(result["exported"])
+        self.assertIs(result["exported"], True)
 
     def test_export_memories_to_file(self):
         """export_memories() writes to file when output_path given."""
         output_path = os.path.join(self.tmpdir, "memories.json")
         result = self.cm.export_memories(output_path=output_path)
-        self.assertTrue(os.path.exists(output_path))
+        self.assertIs(os.path.exists(output_path), True)
 
     def test_export_memories_markdown_format(self):
         """export_memories() supports markdown format."""

@@ -353,98 +353,133 @@ def consolidate_p2(
 
     result["stats"]["clusters_found"] = len(clusters)
 
+    _process_p2_cluster_requests(clusters, result)
+    _process_p2_supersede_requests(p0_report, active, result)
+
+    return result
+
+
+def _build_p2_cluster_request(cluster: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Build a consolidation request for a cluster of related memories."""
+    content_parts = []
+    for m in cluster:
+        text = m.get("content", "") or m.get("raw_text", "")
+        mtype = m.get("type", "unknown")
+        created = m.get("created_at", "")
+        if isinstance(created, str):
+            created_str = created[:10]
+        else:
+            created_str = (created.isoformat() if hasattr(created, "isoformat") else str(created))[:10]
+        content_parts.append(f"[{mtype}] ({created_str or 'unknown'}) {text}")
+
+    source_keys = [m.get("storage_key", "") for m in cluster]
+    dominant_type = max(
+        set(m.get("type", "") for m in cluster),
+        key=lambda t: sum(1 for m in cluster if m.get("type") == t),
+    )
+
+    return {
+        "action": "consolidate",
+        "source_keys": source_keys,
+        "dominant_type": dominant_type,
+        "content": "\n".join(content_parts),
+        "memory_count": len(cluster),
+        "instruction": (
+            "The above are related memories about the same topic. "
+            "Merge them into a single concise statement that captures "
+            "all key information, noting any changes over time. "
+            "Then call classify_and_remember with the merged content, "
+            f"setting the type to '{dominant_type}'."
+        ),
+    }
+
+
+def _process_p2_cluster_requests(
+    clusters: List[List[Dict[str, Any]]],
+    result: Dict[str, Any],
+) -> None:
+    """Append consolidation requests for each non-preference cluster."""
     for cluster in clusters:
         has_preference = any(m.get("type") == "user_preference" for m in cluster)
         if has_preference:
             result["stats"]["preferences_preserved"] += 1
             continue
 
-        content_parts = []
-        for m in cluster:
-            text = m.get("content", "") or m.get("raw_text", "")
-            mtype = m.get("type", "unknown")
-            created = m.get("created_at", "")
-            if isinstance(created, str):
-                created_str = created[:10]
-            else:
-                created_str = (created.isoformat() if hasattr(created, "isoformat") else str(created))[:10]
-            content_parts.append(f"[{mtype}] ({created_str or 'unknown'}) {text}")
-
-        source_keys = [m.get("storage_key", "") for m in cluster]
-        dominant_type = max(
-            set(m.get("type", "") for m in cluster),
-            key=lambda t: sum(1 for m in cluster if m.get("type") == t),
-        )
-
-        request = {
-            "action": "consolidate",
-            "source_keys": source_keys,
-            "dominant_type": dominant_type,
-            "content": "\n".join(content_parts),
-            "memory_count": len(cluster),
-            "instruction": (
-                "The above are related memories about the same topic. "
-                "Merge them into a single concise statement that captures "
-                "all key information, noting any changes over time. "
-                "Then call classify_and_remember with the merged content, "
-                f"setting the type to '{dominant_type}'."
-            ),
-        }
+        request = _build_p2_cluster_request(cluster)
         result["consolidation_requests"].append(request)
         result["stats"]["memories_to_consolidate"] += len(cluster)
 
-    if p0_report:
-        for item in p0_report.get("to_supersede", []):
-            older_key = item.get("older_key")
-            newer_key = item.get("newer_key")
-            if not older_key or not newer_key:
-                continue
 
-            older_mem = next((m for m in active if m.get("storage_key") == older_key), None)
-            newer_mem = next((m for m in active if m.get("storage_key") == newer_key), None)
+def _build_p2_supersede_request(
+    older_key: str,
+    newer_key: str,
+    older_mem: Dict[str, Any],
+    newer_mem: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Build a consolidation request for a superseded memory pair."""
+    content_parts = [
+        (
+            f"[{older_mem.get('type', 'unknown')}] "
+            f"({older_mem.get('created_at', '')[:10]}) "
+            f"{older_mem.get('content', '')}"
+        ),
+        (
+            f"[{newer_mem.get('type', 'unknown')}] "
+            f"({newer_mem.get('created_at', '')[:10]}) "
+            f"{newer_mem.get('content', '')}"
+        ),
+    ]
 
-            if not older_mem or not newer_mem:
-                continue
+    return {
+        "action": "consolidate_superseded",
+        "source_keys": [older_key, newer_key],
+        "dominant_type": newer_mem.get("type", "personal_fact"),
+        "content": "\n".join(content_parts),
+        "memory_count": 2,
+        "instruction": (
+            "The above shows an older memory and its newer version. "
+            "Merge them into a single statement that reflects the "
+            "current state, noting the change. "
+            "Then call classify_and_remember with the merged content, "
+            f"setting the type to '{newer_mem.get('type', 'personal_fact')}'."
+        ),
+    }
 
-            if older_mem.get("type") == "user_preference":
-                result["stats"]["preferences_preserved"] += 1
-                continue
 
-            already_requested = any(older_key in req.get("source_keys", []) for req in result["consolidation_requests"])
-            if already_requested:
-                continue
+def _process_p2_supersede_requests(
+    p0_report: Optional[Dict[str, Any]],
+    active: List[Dict[str, Any]],
+    result: Dict[str, Any],
+) -> None:
+    """Append consolidation requests for each superseded pair in p0_report."""
+    if not p0_report:
+        return
 
-            content_parts = [
-                (
-                    f"[{older_mem.get('type', 'unknown')}] "
-                    f"({older_mem.get('created_at', '')[:10]}) "
-                    f"{older_mem.get('content', '')}"
-                ),
-                (
-                    f"[{newer_mem.get('type', 'unknown')}] "
-                    f"({newer_mem.get('created_at', '')[:10]}) "
-                    f"{newer_mem.get('content', '')}"
-                ),
-            ]
+    for item in p0_report.get("to_supersede", []):
+        older_key = item.get("older_key")
+        newer_key = item.get("newer_key")
+        if not older_key or not newer_key:
+            continue
 
-            request = {
-                "action": "consolidate_superseded",
-                "source_keys": [older_key, newer_key],
-                "dominant_type": newer_mem.get("type", "personal_fact"),
-                "content": "\n".join(content_parts),
-                "memory_count": 2,
-                "instruction": (
-                    "The above shows an older memory and its newer version. "
-                    "Merge them into a single statement that reflects the "
-                    "current state, noting the change. "
-                    "Then call classify_and_remember with the merged content, "
-                    f"setting the type to '{newer_mem.get('type', 'personal_fact')}'."
-                ),
-            }
-            result["consolidation_requests"].append(request)
-            result["stats"]["memories_to_consolidate"] += 2
+        older_mem = next((m for m in active if m.get("storage_key") == older_key), None)
+        newer_mem = next((m for m in active if m.get("storage_key") == newer_key), None)
 
-    return result
+        if not older_mem or not newer_mem:
+            continue
+
+        if older_mem.get("type") == "user_preference":
+            result["stats"]["preferences_preserved"] += 1
+            continue
+
+        already_requested = any(
+            older_key in req.get("source_keys", []) for req in result["consolidation_requests"]
+        )
+        if already_requested:
+            continue
+
+        request = _build_p2_supersede_request(older_key, newer_key, older_mem, newer_mem)
+        result["consolidation_requests"].append(request)
+        result["stats"]["memories_to_consolidate"] += 2
 
 
 def _find_semantic_clusters(

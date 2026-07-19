@@ -477,7 +477,7 @@ class TestCarryMemV050(unittest.TestCase):
 
     def test_importance_score_on_remember(self):
         result = self.cm.classify_and_remember("I prefer dark mode")
-        self.assertTrue(result["stored"])
+        self.assertIs(result["stored"], True)
         entries = result["entries"]
         self.assertGreater(len(entries), 0)
         self.assertGreater(entries[0].get("importance_score", 0), 0)
@@ -529,7 +529,7 @@ class TestCarryMemV050(unittest.TestCase):
         result = self.cm.classify_and_remember("I prefer dark mode")
         key = result["storage_keys"][0]
         updated = self.cm.update_memory(key, "I prefer light mode now", reason="Changed preference")
-        self.assertTrue(updated["updated"])
+        self.assertIs(updated["updated"], True)
         self.assertEqual(updated["version"], 2)
         self.assertEqual(updated["content"], "I prefer light mode now")
 
@@ -543,14 +543,14 @@ class TestCarryMemV050(unittest.TestCase):
         self.cm.update_memory(key, "I prefer light mode", reason="Changed")
         history = self.cm.get_memory_history(key)
         self.assertGreaterEqual(len(history), 2)
-        self.assertTrue(history[0].get("is_current"))
+        self.assertIs(history[0].get("is_current"), True)
 
     def test_rollback_memory(self):
         result = self.cm.classify_and_remember("I prefer dark mode")
         key = result["storage_keys"][0]
         self.cm.update_memory(key, "I prefer light mode")
         rolled_back = self.cm.rollback_memory(key, version=1)
-        self.assertTrue(rolled_back["rolled_back"])
+        self.assertIs(rolled_back["rolled_back"], True)
         self.assertEqual(rolled_back["content"], "I prefer dark mode")
 
     def test_rollback_nonexistent_version(self):

@@ -2,7 +2,7 @@
 
 > **文档性质**: 活文档 (Living Document) — 每完成一项立即更新状态
 > **创建时间**: 2026-07-17
-> **最后更新**: 2026-07-18 (v10 — Batch 4 (Wave 6-9) + P2 Group D 完成：12 项 TD 已完成 (TD-003b/014/015/016/017/018/020/025/026/035/042/043)；TD-019 类型标注 377 函数延后到 v0.8.2；4529 tests + 220 e2e 全通过)
+> **最后更新**: 2026-07-18 (v11 — v0.8.2 技术债清理完成：TD-019 类型标注 90.3%、TD-021 25 个 D 级函数全部重构、P2 14 项全部完成 (TD-013/021/022/023/024/027/038/039/040/041/044/045/046/047)；4708 tests + 7 concurrent 全通过；radon 0 D/E/F)
 > **基于**: 7 维度项目整理评估 (2026-07-17, B+ 77/100) + DevSquad 7 角色并行审核
 > **配套文档**: [ROADMAP_P0_P3.md](ROADMAP_P0_P3.md) — 执行路线图 (Wave 推进表 + 7-Role 投票矩阵 + 11 阶段生命周期映射)
 >
@@ -14,7 +14,7 @@
 
 ## 1. 概述
 
-本文档记录 CarryMem v0.8.0 的全部技术债，按优先级 (P0-P3) 和 DevSquad 11 阶段项目生命周期组织。
+本文档记录 CarryMem v0.8.2 的全部技术债，按优先级 (P0-P3) 和 DevSquad 11 阶段项目生命周期组织。
 
 **执行原则** (来自用户规则):
 - P0-P1: 按项目生命周期推进，文档先行，充分验证，推送 Git
@@ -206,7 +206,7 @@
 | **修复方案** | 重命名为 `test_e2e_security.py` 和 `test_rule_security.py`；合并到"测试卫生"批次 |
 | **负责角色** | Tester |
 | **验证标准** | `pytest --collect-only` 显示全部安全测试用例数与重命名前一致；两文件内容互补性已审计 |
-| **状态** | ⬜ 方案待共识 |
+| **状态** | ✅ 已完成 (v0.8.2: git mv 重命名 tests/e2e/test_security.py → test_e2e_security.py, tests/test_rules/test_security.py → test_rule_security.py; 48 测试通过) |
 
 #### TD-033: 发布前 e2e gate 缺失 ⚠️ 新增 (Tester + UI 共同提出)
 
@@ -346,7 +346,7 @@
 | **负责角色** | Architect + Coder |
 | **验证标准** | 进程重启后审计日志可查询 |
 | **依赖** | 无 |
-| **状态** | ⬜ 方案待共识 |
+| **状态** | ✅ 已完成 (v0.8.2: sidecar `*.audit.db` 模式; SQLiteAdapter 传入 db_path 创建持久化 AuditLogger; :memory: 保持内存模式向后兼容; 6 新测试通过) |
 
 ### 3.4 DevOps 债 (5 项) — 批次 4
 
@@ -455,7 +455,7 @@
 | **负责角色** | Coder |
 | **验证标准** | 命令 `mypy src/ --no-error-summary | wc -l` 无新增错误；公共 API 类型标注覆盖率 ≥90% |
 | **依赖** | 无 |
-| **状态** | 🟡 延后到 v0.8.2 (377 个函数需补类型标注，工作量过大；本批 TD-018 修复 obsidian_adapter.py 的 7 处 safe_json_loads 类型推断问题，作为部分推进) |
+| **状态** | ✅ 已完成 (v0.8.2: 170 annotations added across 15 files; coverage 79.3% → 90.3% (1455/1611 functions); mypy zero new errors) |
 | **生命周期** | P8 实现 |
 
 #### TD-020: 魔法数字未抽取（按域分文件）⚠️ 修正后
@@ -481,7 +481,7 @@
 | **负责角色** | Architect + Coder |
 | **验证标准** | `__init__` 复杂度 ≤15；全测试通过 |
 | **依赖** | **TD-007 (Mixin 间隐式协议修复为前置)** |
-| **状态** | ⬜ 方案待共识 |
+| **状态** | ✅ 已完成 (v0.8.2: extracted 6 `_init_xxx` helpers; __init__ D(26) → A(2); eager rule_engine init preserved) |
 
 ---
 
@@ -498,7 +498,7 @@
 | **修复方案** | 渐进式拆分，每个版本降 3-5 个 D 级函数到 C 级以下 |
 | **负责角色** | Coder |
 | **验证标准** | 命令 `radon cc -nc -d src/carrymem/ | wc -l` ≤10 |
-| **状态** | ⬜ 方案待共识 |
+| **状态** | ✅ 已完成 (v0.8.2: 25/25 D-grade functions refactored to C or better via Extract Method; radon cc -n D returns empty; 4708 tests pass) |
 
 ### TD-022: 辅助类伪解耦 (100+ 处私有访问)
 
@@ -510,7 +510,7 @@
 | **负责角色** | Architect |
 | **验证标准** | 命令 `grep -rn "self\._adapter\._" src/carrymem/adapters/sqlite/ | wc -l` ≤10 |
 | **依赖** | TD-006, TD-007 |
-| **状态** | ⬜ 方案待共识 |
+| **状态** | ✅ 已完成 (v0.8.2: 6 文件重构; RecallEngine/CRUDOperations/StatsCollector/VersioningManager 构造器接收显式依赖; 私有访问数量从 100+ 降到 0; 181 测试通过) |
 
 ### TD-023: StoredMemory.from_dict 重复 datetime 解析
 
@@ -521,7 +521,7 @@
 | **修复方案** | 提取 `_parse_dt_field(data, key) -> Optional[datetime]` 辅助函数 |
 | **负责角色** | Coder |
 | **验证标准** | 重复 try/except 块消除；全测试通过 |
-| **状态** | ⬜ 方案待共识 |
+| **状态** | ✅ 已完成 (v0.8.2: extracted `_parse_dt_field` helper in adapters/base.py; StoredMemory.from_dict D(21) → A(1)) |
 
 ### TD-027: 60+ 处 assertTrue 弱断言
 
@@ -532,7 +532,7 @@
 | **修复方案** | 将 `assertTrue(result["stored"])` 改为 `assertEqual(result["stored"], True)` 等 |
 | **负责角色** | Tester |
 | **验证标准** | 命令 `grep -rn "assertTrue" tests/ | wc -l` 减少 50%+ |
-| **状态** | ⬜ 方案待共识 |
+| **状态** | ✅ 已完成 (v0.8.2: 188 处 assertTrue 转换为 assertIs/assertEqual/assertIsInstance; 修复 2 处转换 bug) |
 
 ### TD-039: MCP handlers.py 单文件聚合 ⚠️ 新增 (Architect)
 
@@ -543,7 +543,7 @@
 | **修复方案** | 按域拆分（read/write/graph/rule/system） |
 | **负责角色** | Architect |
 | **验证标准** | 单文件 <500 行；按域分文件 |
-| **状态** | ⬜ 方案待共识 |
+| **状态** | ✅ 已完成 (v0.8.2: handlers.py 拆分为 handlers/ 包 7 文件: __init__(429)/_base(231)/read(236)/write(161)/graph(72)/rule(309)/system(171); 所有文件 <500 行; 254 测试通过) |
 
 ### TD-040: 性能基线漂移无守护 ⚠️ 新增 (Tester)
 
@@ -555,7 +555,7 @@
 | **修复方案** | 引入 `pytest-benchmark` 或在 CI 上传基准值并对比 ≥10% 回归告警 |
 | **负责角色** | Tester + DevOps |
 | **验证标准** | 性能回归 >10% 时 CI 失败 |
-| **状态** | ⬜ 方案待共识 |
+| **状态** | ✅ 已完成 (v0.8.2: 8 个基线守护测试 TestBaselineRegressionGuard + 15 个性能测试; 阈值设为基线 1.1 倍) |
 
 ### TD-041: TUI 可访问性测试缺失 ⚠️ 新增 (UI)
 
@@ -566,7 +566,7 @@
 | **修复方案** | 增加焦点环可见性测试（pilot.inspect_focused）、Tab 顺序测试、颜色对比度检查 |
 | **负责角色** | UI |
 | **验证标准** | 所有交互组件有可见焦点；Tab 顺序符合视觉顺序 |
-| **状态** | ⬜ 方案待共识 |
+| **状态** | ✅ 已完成 (v0.8.2: 3 个可访问性测试: focus_ring_css_rule/keybinding/tab_navigation) |
 
 ### TD-042: nightly.yml 失败无告警机制 ⚠️ 新增 (DevOps)
 
@@ -599,7 +599,7 @@
 | **修复方案** | 在工具元数据声明 read/write/delete/admin 等级 |
 | **负责角色** | Security + Architect |
 | **验证标准** | 31 个 MCP 工具均有操作分级标签 |
-| **状态** | ⬜ 方案待共识 |
+| **状态** | ✅ 已完成 (v0.8.2: OperationLevel 枚举 READ/WRITE/DELETE/ADMIN; 31 工具分级 READ=19/WRITE=8/DELETE=2/ADMIN=2; Handlers.get_tool_level/list_tools/count_tools_by_level API; 37 测试通过) |
 
 ### TD-045: Mock 滥用风险 ⚠️ 新增 (Tester)
 
@@ -611,7 +611,7 @@
 | **修复方案** | 增加 1-2 个"TUI + 真实内存 DB"smoke 测试 |
 | **负责角色** | Tester |
 | **验证标准** | 至少 1 个 TUI 集成测试使用真实 CarryMem |
-| **状态** | ⬜ 方案待共识 |
+| **状态** | ✅ 已完成 (v0.8.2: 4 个 TUI + 真实 CarryMem(:memory:) 集成测试) |
 
 ### TD-046: TUI 错误提示一致性 ⚠️ 新增 (UI)
 
@@ -622,7 +622,7 @@
 | **修复方案** | 增加两类异常的 ErrorDisplay 渲染断言（CarryMemError 显示 code/message/hint，通用异常降级） |
 | **负责角色** | UI |
 | **验证标准** | CarryMemError 显示 [ERROR] code + message + 💡 hint；通用异常显示友好降级消息 |
-| **状态** | ⬜ 方案待共识 |
+| **状态** | ✅ 已完成 (v0.8.2: 3 个 ErrorDisplay 渲染测试: CarryMemError/通用异常/clear) |
 
 ### TD-047: 错误处理风格不一致 ⚠️ 新增 (Coder)
 
@@ -633,7 +633,7 @@
 | **修复方案** | 定一份 `ERROR_HANDLING_GUIDE.md` 规范：何时用 bare except、何时用具体异常、何时必须 log |
 | **负责角色** | Coder |
 | **验证标准** | `docs/ERROR_HANDLING_GUIDE.md` 存在；新代码遵循规范 |
-| **状态** | ⬜ 方案待共识 |
+| **状态** | ✅ 已完成 (v0.8.2: docs/ERROR_HANDLING_GUIDE.md 9 章节: 原则/异常层级/决策矩阵/禁止模式/必需模式/日志指南/测试/迁移清单/审查清单) |
 
 ---
 

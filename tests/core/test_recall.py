@@ -178,12 +178,25 @@ class TestRecallAccessThrottle(unittest.TestCase):
         from carrymem.adapters.base import StoredMemory
         from carrymem.adapters.sqlite.recall_engine import RecallEngine
 
-        engine = RecallEngine(adapter=None)
+        engine = RecallEngine(
+            adapter=None,
+            conn_mgr=None,
+            serializer=None,
+            cache=None,
+            expander=None,
+            merger=None,
+            embedding_model=None,
+            embedding_dim=0,
+            rrf_k=0,
+            rrf_fts_weight=0.0,
+            rrf_vec_weight=0.0,
+            rrf_type_boosts={},
+        )
         now = datetime.now(timezone.utc)
         stale_stored = StoredMemory(last_accessed_at=now - timedelta(seconds=120))
 
         os.environ["CARRYMEM_ACCESS_UPDATE_INTERVAL"] = "60"
-        self.assertTrue(engine._should_update_access(stale_stored, now))
+        self.assertIs(engine._should_update_access(stale_stored, now), True)
 
     def test_throttle_type_guard_string(self):
         """_should_update_access handles last_accessed_at as ISO string."""
@@ -192,7 +205,20 @@ class TestRecallAccessThrottle(unittest.TestCase):
         from carrymem.adapters.base import StoredMemory
         from carrymem.adapters.sqlite.recall_engine import RecallEngine
 
-        engine = RecallEngine(adapter=None)
+        engine = RecallEngine(
+            adapter=None,
+            conn_mgr=None,
+            serializer=None,
+            cache=None,
+            expander=None,
+            merger=None,
+            embedding_model=None,
+            embedding_dim=0,
+            rrf_k=0,
+            rrf_fts_weight=0.0,
+            rrf_vec_weight=0.0,
+            rrf_type_boosts={},
+        )
         now = datetime.now(timezone.utc)
         recent_str = (now - timedelta(seconds=5)).isoformat()
         stale_str = (now - timedelta(seconds=120)).isoformat()
@@ -201,7 +227,7 @@ class TestRecallAccessThrottle(unittest.TestCase):
         recent_stored = StoredMemory(last_accessed_at=recent_str)
         stale_stored = StoredMemory(last_accessed_at=stale_str)
         self.assertFalse(engine._should_update_access(recent_stored, now))
-        self.assertTrue(engine._should_update_access(stale_stored, now))
+        self.assertIs(engine._should_update_access(stale_stored, now), True)
 
     def test_throttle_fail_open_on_parse_error(self):
         """Unparseable last_accessed_at string → fail-open (trigger update)."""
@@ -210,12 +236,25 @@ class TestRecallAccessThrottle(unittest.TestCase):
         from carrymem.adapters.base import StoredMemory
         from carrymem.adapters.sqlite.recall_engine import RecallEngine
 
-        engine = RecallEngine(adapter=None)
+        engine = RecallEngine(
+            adapter=None,
+            conn_mgr=None,
+            serializer=None,
+            cache=None,
+            expander=None,
+            merger=None,
+            embedding_model=None,
+            embedding_dim=0,
+            rrf_k=0,
+            rrf_fts_weight=0.0,
+            rrf_vec_weight=0.0,
+            rrf_type_boosts={},
+        )
         now = datetime.now(timezone.utc)
         bad_stored = StoredMemory(last_accessed_at="not-a-date")
 
         os.environ["CARRYMEM_ACCESS_UPDATE_INTERVAL"] = "60"
-        self.assertTrue(engine._should_update_access(bad_stored, now))
+        self.assertIs(engine._should_update_access(bad_stored, now), True)
 
     def test_throttle_none_last_accessed_always_updates(self):
         """last_accessed_at=None (first access) always triggers update."""
@@ -224,12 +263,25 @@ class TestRecallAccessThrottle(unittest.TestCase):
         from carrymem.adapters.base import StoredMemory
         from carrymem.adapters.sqlite.recall_engine import RecallEngine
 
-        engine = RecallEngine(adapter=None)
+        engine = RecallEngine(
+            adapter=None,
+            conn_mgr=None,
+            serializer=None,
+            cache=None,
+            expander=None,
+            merger=None,
+            embedding_model=None,
+            embedding_dim=0,
+            rrf_k=0,
+            rrf_fts_weight=0.0,
+            rrf_vec_weight=0.0,
+            rrf_type_boosts={},
+        )
         now = datetime.now(timezone.utc)
         new_stored = StoredMemory(last_accessed_at=None)
 
         os.environ["CARRYMEM_ACCESS_UPDATE_INTERVAL"] = "60"
-        self.assertTrue(engine._should_update_access(new_stored, now))
+        self.assertIs(engine._should_update_access(new_stored, now), True)
 
     def test_throttle_configurable_via_env(self):
         """CARRYMEM_ACCESS_UPDATE_INTERVAL env var controls throttle interval."""
@@ -238,13 +290,26 @@ class TestRecallAccessThrottle(unittest.TestCase):
         from carrymem.adapters.base import StoredMemory
         from carrymem.adapters.sqlite.recall_engine import RecallEngine
 
-        engine = RecallEngine(adapter=None)
+        engine = RecallEngine(
+            adapter=None,
+            conn_mgr=None,
+            serializer=None,
+            cache=None,
+            expander=None,
+            merger=None,
+            embedding_model=None,
+            embedding_dim=0,
+            rrf_k=0,
+            rrf_fts_weight=0.0,
+            rrf_vec_weight=0.0,
+            rrf_type_boosts={},
+        )
         now = datetime.now(timezone.utc)
         stored = StoredMemory(last_accessed_at=now - timedelta(seconds=30))
 
         # 10s interval — 30s ago is stale → allow
         os.environ["CARRYMEM_ACCESS_UPDATE_INTERVAL"] = "10"
-        self.assertTrue(engine._should_update_access(stored, now))
+        self.assertIs(engine._should_update_access(stored, now), True)
 
         # 60s interval — 30s ago is recent → skip
         os.environ["CARRYMEM_ACCESS_UPDATE_INTERVAL"] = "60"
@@ -257,13 +322,26 @@ class TestRecallAccessThrottle(unittest.TestCase):
         from carrymem.adapters.base import StoredMemory
         from carrymem.adapters.sqlite.recall_engine import RecallEngine
 
-        engine = RecallEngine(adapter=None)
+        engine = RecallEngine(
+            adapter=None,
+            conn_mgr=None,
+            serializer=None,
+            cache=None,
+            expander=None,
+            merger=None,
+            embedding_model=None,
+            embedding_dim=0,
+            rrf_k=0,
+            rrf_fts_weight=0.0,
+            rrf_vec_weight=0.0,
+            rrf_type_boosts={},
+        )
         now = datetime.now(timezone.utc)
         naive_stale = (now - timedelta(seconds=120)).replace(tzinfo=None)
 
         os.environ["CARRYMEM_ACCESS_UPDATE_INTERVAL"] = "60"
         stored = StoredMemory(last_accessed_at=naive_stale)
-        self.assertTrue(engine._should_update_access(stored, now))
+        self.assertIs(engine._should_update_access(stored, now), True)
 
 
 class TestRecallAll(unittest.TestCase):

@@ -49,13 +49,13 @@ class TestNaturalConversationExtraction(unittest.TestCase):
     def test_natural_preference_extraction(self):
         """Verify: Casual preference expressions are stored as user_preference."""
         result = self.cm.classify_and_remember("我觉得PostgreSQL比MySQL好用多了")
-        self.assertTrue(result["stored"], "Casual preference should be stored")
+        self.assertIs(result["stored"], True, "Casual preference should be stored")
         self.assertEqual(result["type"], "user_preference")
 
     def test_natural_correction_extraction(self):
         """Verify: Correction expressions are stored as correction type."""
         result = self.cm.classify_and_remember("下次别用这个方案了，太慢了")
-        self.assertTrue(result["stored"], "Correction should be stored")
+        self.assertIs(result["stored"], True, "Correction should be stored")
         self.assertIn(
             result["type"],
             ["correction", "user_preference", "decision", "sentiment_marker", "fact_declaration"],
@@ -64,17 +64,17 @@ class TestNaturalConversationExtraction(unittest.TestCase):
     def test_natural_habit_extraction(self):
         """Verify: Habit mentions are stored."""
         result = self.cm.classify_and_remember("我一般都用Python写脚本")
-        self.assertTrue(result["stored"], "Habit mention should be stored")
+        self.assertIs(result["stored"], True, "Habit mention should be stored")
 
     def test_natural_sentiment_extraction(self):
         """Verify: Sentiment expressions are stored."""
         result = self.cm.classify_and_remember("这个框架真的太烦了")
-        self.assertTrue(result["stored"], "Sentiment should be stored")
+        self.assertIs(result["stored"], True, "Sentiment should be stored")
 
     def test_natural_decision_extraction(self):
         """Verify: Decision expressions are stored."""
         result = self.cm.classify_and_remember("我们团队一直都是用React的")
-        self.assertTrue(result["stored"], "Decision should be stored")
+        self.assertIs(result["stored"], True, "Decision should be stored")
 
     def test_noise_rejection_greeting(self):
         """Verify: Greetings are not stored."""
@@ -94,7 +94,7 @@ class TestNaturalConversationExtraction(unittest.TestCase):
     def test_auto_rules_generated_for_preference(self):
         """Verify: Storing a preference generates auto rule suggestions."""
         result = self.cm.classify_and_remember("Always use PostgreSQL for database")
-        self.assertTrue(result["stored"])
+        self.assertIs(result["stored"], True)
         auto_rules = result.get("auto_rules", [])
         self.assertGreater(len(auto_rules), 0, "Should generate auto rule suggestions")
 
@@ -111,7 +111,7 @@ class TestNaturalConversationExtraction(unittest.TestCase):
     def test_english_natural_preference(self):
         """Verify: English casual preferences are stored."""
         result = self.cm.classify_and_remember("I always use PostgreSQL, never MySQL")
-        self.assertTrue(result["stored"])
+        self.assertIs(result["stored"], True)
         auto_rules = result.get("auto_rules", [])
         self.assertGreater(len(auto_rules), 0, "English preference should generate rules")
 
@@ -134,7 +134,7 @@ class TestE2EUserJourney(unittest.TestCase):
     def test_full_journey_conversation_to_injection(self):
         """Verify: Conversation -> Store -> Rule -> Inject -> Behavior Change."""
         result = self.cm.classify_and_remember("I always use PostgreSQL, never MySQL")
-        self.assertTrue(result["stored"])
+        self.assertIs(result["stored"], True)
 
         auto_rules = result.get("auto_rules", [])
         self.assertGreater(len(auto_rules), 0, "Should suggest rules")
@@ -187,10 +187,10 @@ class TestE2EUserJourney(unittest.TestCase):
         rule_id = rule.id
 
         rules_before = self.engine.list_rules(status="active")
-        self.assertTrue(any(r.id == rule_id for r in rules_before))
+        self.assertIs(any(r.id == rule_id for r in rules_before), True)
 
         deleted = self.engine.delete_rule(rule_id)
-        self.assertTrue(deleted)
+        self.assertIs(deleted, True)
 
         rules_after = self.engine.list_rules(status="active")
         self.assertFalse(any(r.id == rule_id for r in rules_after))
@@ -265,9 +265,9 @@ class TestRuleManagementMCP(unittest.TestCase):
         self.assertGreaterEqual(len(rules), 2)
 
         for r in rules:
-            self.assertTrue(hasattr(r, "trigger"))
-            self.assertTrue(hasattr(r, "action"))
-            self.assertTrue(hasattr(r, "override"))
+            self.assertIs(hasattr(r, "trigger"), True)
+            self.assertIs(hasattr(r, "action"), True)
+            self.assertIs(hasattr(r, "override"), True)
 
     def test_delete_nonexistent_rule(self):
         """Verify: Deleting a non-existent rule returns False."""

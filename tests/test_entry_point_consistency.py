@@ -148,8 +148,8 @@ class TestCoreOperationConsistency(unittest.TestCase):
             handlers.cleanup()
 
             # 验证两个 key 格式一致（都应该是 cm_ 开头）
-            self.assertTrue(cli_key.startswith("cm_"))
-            self.assertTrue(mcp_key.startswith("cm_"))
+            self.assertIs(cli_key.startswith("cm_"), True)
+            self.assertIs(mcp_key.startswith("cm_"), True)
         except ImportError:
             pass
 
@@ -211,7 +211,7 @@ class TestCoreOperationConsistency(unittest.TestCase):
         # CLI 删除
         cm_cli = CarryMem(db_path=self.db_path, storage="sqlite")
         deleted_cli = cm_cli.forget_memory(key)
-        self.assertTrue(deleted_cli)
+        self.assertIs(deleted_cli, True)
 
         # 验证已删除
         memories = cm_cli.recall_memories(limit=100)
@@ -233,7 +233,7 @@ class TestCoreOperationConsistency(unittest.TestCase):
 
             handlers = Handlers(data_path=self.db_path, namespace="default")
             mcp_result = handle_forget_memory(handlers._carrymem, {"memory_id": key2})
-            self.assertTrue(mcp_result.get("deleted", False))
+            self.assertIs(mcp_result.get("deleted", False), True)
             handlers.cleanup()
         except ImportError:
             pass
@@ -312,7 +312,7 @@ class TestOutputFormatConsistency(unittest.TestCase):
         # MCP 成功响应包含 success=True
         expected_mcp = {"success": True, "data": {}}
         self.assertIn("success", expected_mcp)
-        self.assertTrue(expected_mcp["success"])
+        self.assertIs(expected_mcp["success"], True)
 
     def test_error_response_format(self):
         """测试错误响应的标准格式."""

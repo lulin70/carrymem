@@ -63,7 +63,7 @@ class TestMCPToolsE2E(unittest.TestCase):
         result = self.loop.run_until_complete(
             _call_tool(self.server, "classify_message", {"message": "I prefer dark mode for coding"})
         )
-        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertIn("schema_version", data)
         self.assertIn("entries", data)
@@ -74,7 +74,7 @@ class TestMCPToolsE2E(unittest.TestCase):
         result = self.loop.run_until_complete(
             _call_tool(self.server, "classify_and_remember", {"message": "I prefer Python over Java"})
         )
-        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertTrue(
             data.get("stored") or data.get("should_remember"),
@@ -89,7 +89,7 @@ class TestMCPToolsE2E(unittest.TestCase):
         )
         # Then recall
         result = self.loop.run_until_complete(_call_tool(self.server, "recall_memories", {"query": "PostgreSQL"}))
-        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertIn("memories", data)
         self.assertIsInstance(data["memories"], list)
@@ -100,7 +100,7 @@ class TestMCPToolsE2E(unittest.TestCase):
         store_result = self.loop.run_until_complete(
             _call_tool(self.server, "declare_preference", {"message": "I prefer using TypeScript for frontend"})
         )
-        self.assertTrue(store_result.get("success"))
+        self.assertIs(store_result.get("success"), True)
 
         # Get the storage key
         store_data = store_result.get("data", store_result)
@@ -111,14 +111,14 @@ class TestMCPToolsE2E(unittest.TestCase):
             forget_result = self.loop.run_until_complete(
                 _call_tool(self.server, "forget_memory", {"memory_id": memory_id})
             )
-            self.assertTrue(forget_result.get("success"), f"Forget failed: {forget_result}")
+            self.assertIs(forget_result.get("success"), True, f"Forget failed: {forget_result}")
             forget_data = forget_result.get("data", forget_result)
-            self.assertTrue(forget_data.get("deleted"), "Memory should be deleted")
+            self.assertIs(forget_data.get("deleted"), True, "Memory should be deleted")
 
     def test_get_classification_schema_tool(self):
         """Verify: get_classification_schema returns valid schema."""
         result = self.loop.run_until_complete(_call_tool(self.server, "get_classification_schema", {"format": "json"}))
-        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         schema = data.get("schema", data)
         self.assertIn("memory_types", schema)
@@ -133,7 +133,7 @@ class TestMCPToolsE2E(unittest.TestCase):
             {"message": "No, that's wrong, use YAML not JSON"},
         ]
         result = self.loop.run_until_complete(_call_tool(self.server, "batch_classify", {"messages": messages}))
-        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertIn("results", data)
         self.assertEqual(len(data["results"]), 3, "Should return results for all 3 messages")
@@ -147,7 +147,7 @@ class TestMCPToolsE2E(unittest.TestCase):
         result = self.loop.run_until_complete(
             _call_tool(self.server, "declare_preference", {"message": "My timezone is UTC+8"})
         )
-        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertTrue(data.get("declared"), "Declaration should succeed")
         self.assertGreater(len(data.get("storage_keys", [])), 0, "Should return storage keys")
@@ -160,7 +160,7 @@ class TestMCPToolsE2E(unittest.TestCase):
         )
         # Get profile
         result = self.loop.run_until_complete(_call_tool(self.server, "get_memory_profile", {}))
-        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertIn("summary", data)
         self.assertIn("stats", data)
@@ -176,7 +176,7 @@ class TestMCPToolsE2E(unittest.TestCase):
         result = self.loop.run_until_complete(
             _call_tool(self.server, "get_system_prompt", {"context": "code review", "max_memories": 5})
         )
-        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertIn("system_prompt", data)
         self.assertIsInstance(data["system_prompt"], str)
@@ -188,7 +188,7 @@ class TestMCPToolsE2E(unittest.TestCase):
         result = self.loop.run_until_complete(
             _call_tool(self.server, "get_system_prompt", {"language": "zh", "max_memories": 1})
         )
-        self.assertTrue(result.get("success"))
+        self.assertIs(result.get("success"), True)
         data = result.get("data", result)
         self.assertEqual(data.get("language"), "zh")
 
@@ -208,7 +208,7 @@ class TestMCPToolsE2E(unittest.TestCase):
                 },
             )
         )
-        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertTrue(data.get("added"), "Rule should be added")
         self.assertIn("rule_id", data)
@@ -231,7 +231,7 @@ class TestMCPToolsE2E(unittest.TestCase):
         )
         # List rules
         result = self.loop.run_until_complete(_call_tool(self.server, "list_rules", {"status": "active"}))
-        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertIn("rules", data)
         self.assertIn("total", data)
@@ -261,7 +261,7 @@ class TestMCPToolsE2E(unittest.TestCase):
                 },
             )
         )
-        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertIn("scene", data)
         self.assertIn("matches", data)
@@ -290,7 +290,7 @@ class TestMCPToolsE2E(unittest.TestCase):
                 },
             )
         )
-        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertIn("injection", data)
         self.assertIn("context", data)
@@ -309,7 +309,7 @@ class TestMCPToolsE2E(unittest.TestCase):
             )
         )
         result = self.loop.run_until_complete(_call_tool(self.server, "my_rules", {"status": "active"}))
-        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertIn("summary", data)
         self.assertIn("rules", data)
@@ -343,9 +343,9 @@ class TestMCPToolsE2E(unittest.TestCase):
                     },
                 )
             )
-            self.assertTrue(update_result.get("success"), f"Update failed: {update_result}")
+            self.assertIs(update_result.get("success"), True, f"Update failed: {update_result}")
             update_data = update_result.get("data", update_result)
-            self.assertTrue(update_data.get("updated"), "Rule should be updated")
+            self.assertIs(update_data.get("updated"), True, "Rule should be updated")
             self.assertIn("logging module", update_data.get("action", ""))
 
     def test_delete_rule_tool(self):
@@ -376,9 +376,9 @@ class TestMCPToolsE2E(unittest.TestCase):
                     },
                 )
             )
-            self.assertTrue(del_result.get("success"), f"Delete failed: {del_result}")
+            self.assertIs(del_result.get("success"), True, f"Delete failed: {del_result}")
             del_data = del_result.get("data", del_result)
-            self.assertTrue(del_data.get("deleted"), "Rule should be deleted")
+            self.assertIs(del_data.get("deleted"), True, "Rule should be deleted")
 
     # === Consolidation Tools ===
 
@@ -402,7 +402,7 @@ class TestMCPToolsE2E(unittest.TestCase):
                 },
             )
         )
-        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertTrue(data.get("dry_run", True), "Should be in dry_run mode")
 
@@ -420,7 +420,7 @@ class TestMCPToolsE2E(unittest.TestCase):
                 },
             )
         )
-        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertTrue(data.get("scheduled"), "Consolidation should be scheduled")
 
@@ -443,7 +443,7 @@ class TestMCPToolsE2E(unittest.TestCase):
         )
         # Stop
         result = self.loop.run_until_complete(_call_tool(self.server, "stop_consolidation", {}))
-        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertTrue(data.get("stopped"), "Consolidation should be stopped")
 
@@ -462,7 +462,7 @@ class TestMCPToolsE2E(unittest.TestCase):
                 },
             )
         )
-        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertIn("identity", data)
         self.assertIn("version", data)
@@ -470,7 +470,7 @@ class TestMCPToolsE2E(unittest.TestCase):
     def test_onboard_tool(self):
         """Verify: onboard returns welcome message for new users."""
         result = self.loop.run_until_complete(_call_tool(self.server, "onboard", {"language": "en"}))
-        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertIn("welcome", data)
         self.assertIn("next_steps", data)
@@ -479,7 +479,7 @@ class TestMCPToolsE2E(unittest.TestCase):
     def test_onboard_tool_chinese(self):
         """Verify: onboard supports Chinese language."""
         result = self.loop.run_until_complete(_call_tool(self.server, "onboard", {"language": "zh"}))
-        self.assertTrue(result.get("success"))
+        self.assertIs(result.get("success"), True)
         data = result.get("data", result)
         self.assertEqual(data.get("language"), "zh")
         self.assertIn("welcome", data)
@@ -510,7 +510,7 @@ class TestMCPToolsE2E(unittest.TestCase):
         for tool_name, args in tools_to_test:
             result = self.loop.run_until_complete(_call_tool(self.server, tool_name, args))
             self.assertIn("success", result, f"{tool_name}: response missing 'success' key")
-            self.assertTrue(result["success"], f"{tool_name}: expected success=True")
+            self.assertIs(result["success"], True, f"{tool_name}: expected success=True")
 
     def test_unknown_tool_returns_error(self):
         """Verify: Unknown tool name returns error response with available_tools hint."""
@@ -535,13 +535,13 @@ class TestMCPToolsE2E(unittest.TestCase):
         store_result = self.loop.run_until_complete(
             _call_tool(self.server, "classify_and_remember", {"message": "Our team uses Kubernetes for orchestration"})
         )
-        self.assertTrue(store_result.get("success"))
+        self.assertIs(store_result.get("success"), True)
 
         # Step 2: Recall the memory
         recall_result = self.loop.run_until_complete(
             _call_tool(self.server, "recall_memories", {"query": "Kubernetes"})
         )
-        self.assertTrue(recall_result.get("success"))
+        self.assertIs(recall_result.get("success"), True)
         recall_data = recall_result.get("data", recall_result)
         memories = recall_data.get("memories", [])
 
@@ -549,7 +549,7 @@ class TestMCPToolsE2E(unittest.TestCase):
         prompt_result = self.loop.run_until_complete(
             _call_tool(self.server, "get_system_prompt", {"context": "deployment infrastructure", "max_memories": 10})
         )
-        self.assertTrue(prompt_result.get("success"))
+        self.assertIs(prompt_result.get("success"), True)
         prompt_data = prompt_result.get("data", prompt_result)
         prompt_text = prompt_data.get("system_prompt", "")
         self.assertIsInstance(prompt_text, str)
@@ -566,7 +566,7 @@ class TestMCPToolsE2E(unittest.TestCase):
 
         # Verify via recall that memories were stored
         recall_result = self.loop.run_until_complete(_call_tool(self.server, "recall_memories", {"limit": 20}))
-        self.assertTrue(recall_result.get("success"))
+        self.assertIs(recall_result.get("success"), True)
         recall_data = recall_result.get("data", recall_result)
         memories = recall_data.get("memories", [])
         self.assertGreaterEqual(
@@ -594,7 +594,7 @@ class TestMCPToolsE2E(unittest.TestCase):
                 },
             )
         )
-        self.assertTrue(result.get("success"))
+        self.assertIs(result.get("success"), True)
         data = result.get("data", result)
         memories = data.get("memories", [])
         for mem in memories:
@@ -634,7 +634,7 @@ class TestGraphToolsE2E(unittest.TestCase):
         result = self.loop.run_until_complete(
             _call_tool(self.server, "query_graph", {"entity_text": "PostgreSQL", "max_hops": 2})
         )
-        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertIn("entities", data, "query_graph must return 'entities'")
         self.assertIn("memories", data, "query_graph must return 'memories'")
@@ -658,7 +658,7 @@ class TestGraphToolsE2E(unittest.TestCase):
                 {"src_entity": "Python", "dst_entity": "Computer_Science", "max_hops": 4},
             )
         )
-        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertIn("path", data)
         self.assertIn("length", data)
@@ -674,7 +674,7 @@ class TestGraphToolsE2E(unittest.TestCase):
         store_result = self.loop.run_until_complete(
             _call_tool(self.server, "declare_preference", {"message": "I prefer PostgreSQL for data science"})
         )
-        self.assertTrue(store_result.get("success"))
+        self.assertIs(store_result.get("success"), True)
         store_data = store_result.get("data", store_result)
         storage_keys = store_data.get("storage_keys", [])
         self.assertGreater(len(storage_keys), 0, "Should return at least one storage_key")
@@ -690,7 +690,7 @@ class TestGraphToolsE2E(unittest.TestCase):
         result = self.loop.run_until_complete(
             _call_tool(self.server, "get_memory_impact", {"memory_id": memory_id})
         )
-        self.assertTrue(result.get("success"), f"Expected success, got: {result}")
+        self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertIn("entity_count", data)
         self.assertIn("relation_count", data)
@@ -707,7 +707,7 @@ class TestGraphToolsE2E(unittest.TestCase):
         store_result = self.loop.run_until_complete(
             _call_tool(self.server, "classify_and_remember", {"message": "I prefer PostgreSQL for database development"})
         )
-        self.assertTrue(store_result.get("success"), f"Store failed: {store_result}")
+        self.assertIs(store_result.get("success"), True, f"Store failed: {store_result}")
         store_data = store_result.get("data", store_result)
         storage_keys = store_data.get("storage_keys", [])
         self.assertGreater(len(storage_keys), 0, "Should store at least one memory")
@@ -720,13 +720,13 @@ class TestGraphToolsE2E(unittest.TestCase):
         added = self.cm.add_graph_relation(
             "PostgreSQL", "SQL", "is_a", source_memory_key=memory_id
         )
-        self.assertTrue(added, "add_graph_relation should succeed")
+        self.assertIs(added, True, "add_graph_relation should succeed")
 
         # Step 4: query_graph — find connected entities and memories
         query_result = self.loop.run_until_complete(
             _call_tool(self.server, "query_graph", {"entity_text": "PostgreSQL", "max_hops": 2})
         )
-        self.assertTrue(query_result.get("success"))
+        self.assertIs(query_result.get("success"), True)
         query_data = query_result.get("data", query_result)
         self.assertIn("entities", query_data)
         self.assertIn("memories", query_data)
@@ -742,9 +742,9 @@ class TestGraphToolsE2E(unittest.TestCase):
                 {"src_entity": "PostgreSQL", "dst_entity": "SQL", "max_hops": 4},
             )
         )
-        self.assertTrue(path_result.get("success"))
+        self.assertIs(path_result.get("success"), True)
         path_data = path_result.get("data", path_result)
-        self.assertTrue(path_data["found"], "Path between PostgreSQL and SQL should be found")
+        self.assertIs(path_data["found"], True, "Path between PostgreSQL and SQL should be found")
         self.assertEqual(path_data["length"], 1, "Direct relation = 1 hop")
         self.assertEqual(path_data["path"][0], "PostgreSQL")
         self.assertEqual(path_data["path"][-1], "SQL")
@@ -753,7 +753,7 @@ class TestGraphToolsE2E(unittest.TestCase):
         impact_result = self.loop.run_until_complete(
             _call_tool(self.server, "get_memory_impact", {"memory_id": memory_id})
         )
-        self.assertTrue(impact_result.get("success"))
+        self.assertIs(impact_result.get("success"), True)
         impact_data = impact_result.get("data", impact_result)
         self.assertIn("entity_count", impact_data)
         self.assertIn("relation_count", impact_data)
@@ -781,16 +781,13 @@ class TestMCPToolsCoverage(unittest.TestCase):
     def test_core_tools_exist(self):
         """Verify all core tools are present in CORE_TOOL_NAMES."""
         expected_core = {"classify_message", "get_classification_schema", "batch_classify"}
-        self.assertTrue(
-            expected_core.issubset(CORE_TOOL_NAMES), f"Missing core tools: {expected_core - CORE_TOOL_NAMES}"
+        self.assertIs(expected_core.issubset(CORE_TOOL_NAMES), True, f"Missing core tools: {expected_core - CORE_TOOL_NAMES}"
         )
 
     def test_optional_tools_exist(self):
         """Verify optional storage tools are present."""
         expected_optional = {"classify_and_remember", "recall_memories", "forget_memory"}
-        self.assertTrue(
-            expected_optional.issubset(OPTIONAL_TOOL_NAMES),
-            f"Missing optional tools: {expected_optional - OPTIONAL_TOOL_NAMES}",
+        self.assertIs(expected_optional.issubset(OPTIONAL_TOOL_NAMES), True, f"Missing optional tools: {expected_optional - OPTIONAL_TOOL_NAMES}",
         )
 
     def test_total_tool_count(self):
@@ -872,7 +869,7 @@ class TestMCPToolsServerIntegration(unittest.TestCase):
             self.assertEqual(result["id"], 3)
             content = result["result"]["content"][0]["text"]
             parsed = json.loads(content)
-            self.assertTrue(parsed.get("success"), f"Tool call should succeed: {parsed}")
+            self.assertIs(parsed.get("success"), True, f"Tool call should succeed: {parsed}")
             loop.run_until_complete(server.cleanup())
         finally:
             loop.close()
@@ -932,9 +929,7 @@ class TestMCPAccessControlE2E(unittest.TestCase):
             result = self.loop.run_until_complete(
                 _call_tool(server, "classify_and_remember", {"message": "I prefer dark mode"})
             )
-            self.assertTrue(
-                result.get("success", False),
-                f"Write should succeed with authorized user_id, got: {result}",
+            self.assertIs(result.get("success", False), True, f"Write should succeed with authorized user_id, got: {result}",
             )
         finally:
             self.loop.run_until_complete(server.cleanup())
@@ -954,7 +949,7 @@ class TestMCPAccessControlE2E(unittest.TestCase):
         store_result = self.loop.run_until_complete(
             _call_tool(server_alice, "classify_and_remember", {"message": "I prefer PostgreSQL"})
         )
-        self.assertTrue(store_result.get("success"), f"Store as alice should succeed: {store_result}")
+        self.assertIs(store_result.get("success"), True, f"Store as alice should succeed: {store_result}")
         store_data = store_result.get("data", store_result)
         storage_keys = store_data.get("storage_keys", [])
         self.assertGreater(len(storage_keys), 0, "Should have stored at least one memory")
@@ -993,7 +988,7 @@ class TestMCPAccessControlE2E(unittest.TestCase):
             result = self.loop.run_until_complete(
                 _call_tool(server, "recall_memories", {"limit": 10})
             )
-            self.assertTrue(result.get("success"), f"Read should succeed without policy: {result}")
+            self.assertIs(result.get("success"), True, f"Read should succeed without policy: {result}")
         finally:
             self.loop.run_until_complete(server.cleanup())
 
@@ -1031,7 +1026,7 @@ class TestMCPConfidenceLabelE2E(unittest.TestCase):
         store_result = self.loop.run_until_complete(
             _call_tool(self.server, "classify_and_remember", {"message": "I prefer Rust for systems programming"})
         )
-        self.assertTrue(store_result.get("success"))
+        self.assertIs(store_result.get("success"), True)
         storage_keys = store_result.get("data", store_result).get("storage_keys", [])
         self.assertGreater(len(storage_keys), 0)
         memory_id = storage_keys[0]
@@ -1042,13 +1037,13 @@ class TestMCPConfidenceLabelE2E(unittest.TestCase):
             "Rust", "systems language", "is_a",
             source_memory_key=memory_id, confidence="INFERRED",
         )
-        self.assertTrue(added, "add_graph_relation with confidence=INFERRED should succeed")
+        self.assertIs(added, True, "add_graph_relation with confidence=INFERRED should succeed")
 
         # Step 3: Query graph via MCP — verify confidence is in results
         query_result = self.loop.run_until_complete(
             _call_tool(self.server, "query_graph", {"entity_text": "Rust", "max_hops": 2})
         )
-        self.assertTrue(query_result.get("success"))
+        self.assertIs(query_result.get("success"), True)
         query_data = query_result.get("data", query_result)
         self.assertIn("entities", query_data)
 

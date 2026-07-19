@@ -108,62 +108,10 @@ class LifecycleMixin:
         self._namespace = namespace
         self._session_id: Optional[str] = None  # v0.7.0: Session dual-layer memory
 
-        if db_path is None:
-            db_path = os.environ.get("CARRYMEM_DB_PATH")
-
-        if db_path is not None and db_path != ":memory:":
-            try:
-                _validate_file_path(db_path)
-            except ValueError:
-                raise
-
-        if storage is None:
-            self._adapter: Optional[StorageAdapter] = None
-        elif storage == "sqlite":
-            try:
-                self._adapter = SQLiteAdapter(
-                    db_path=db_path,
-                    namespace=namespace,
-                    encryption_key=encryption_key,
-                    enable_vector_search=config.get("enable_vector_search", True) if config else True,
-                    embedding_model=(
-                        config.get("embedding_model", "all-MiniLM-L6-v2") if config else "all-MiniLM-L6-v2"
-                    ),
-                )
-            except (OSError, ValueError, TypeError, sqlite3.Error) as e:
-                raise CarryMemError.from_cause(e) from e
-        elif isinstance(storage, StorageAdapter):
-            self._adapter = storage
-        elif isinstance(storage, str):
-            from carrymem.adapters.loader import load_adapter
-
-            try:
-                adapter_cls = load_adapter(storage)
-            except (ImportError, ValueError, TypeError) as e:
-                raise CarryMemError.from_cause(e) from e
-            if adapter_cls is None:
-                raise CarryMemError(
-                    code="CM-100",
-                    message=get_message("CM-100"),
-                    hint=get_hint("CM-100"),
-                    cause=ValueError(f"Unknown adapter: {storage!r}"),
-                )
-            if storage == "obsidian":
-                raise CarryMemError(
-                    code="CM-100",
-                    message=get_message("CM-100"),
-                    hint=get_hint("CM-110"),
-                    cause=ValueError("ObsidianAdapter requires a vault_path."),
-                )
-            else:
-                self._adapter = adapter_cls()
-        else:
-            raise CarryMemError(
-                code="CM-202",
-                message=get_message("CM-202"),
-                hint=get_hint("CM-202"),
-                cause=ValueError(f"Invalid storage type: {storage!r}"),
-            )
+        db_path = self._resolve_db_path(db_path)
+        self._adapter: Optional[StorageAdapter] = self._init_adapter(
+            storage, db_path, namespace, config, encryption_key
+        )
 
         self._knowledge_adapter = knowledge_adapter
         self._rule_engine: Optional[RuleEngine] = None
@@ -183,32 +131,113 @@ class LifecycleMixin:
         # "vtable constructor failed: memories_fts" (SQLITE_SCHEMA) errors.
         # Eager init ensures all schema changes complete before worker
         # threads can access the database.
+        self._init_rule_engine_eager()
+
+        self._init_backup_state(config, auto_backup_interval)
+        self._init_access_control()
+        self._init_entity_normalizer()
+        self._perform_initial_backup()
+
+    @staticmethod
+    def _resolve_db_path(db_path: Optional[str]) -> Optional[str]:
+        if db_path is None:
+            db_path = os.environ.get("CARRYMEM_DB_PATH")
+        if db_path is not None and db_path != ":memory:":
+            try:
+                _validate_file_path(db_path)
+            except ValueError:
+                raise
+        return db_path
+
+    def _init_adapter(
+        self,
+        storage: StorageType,
+        db_path: Optional[str],
+        namespace: str,
+        config: Optional[Dict[str, Any]],
+        encryption_key: Optional[str],
+    ) -> Optional[StorageAdapter]:
+        if storage is None:
+            return None
+        if storage == "sqlite":
+            try:
+                return SQLiteAdapter(
+                    db_path=db_path,
+                    namespace=namespace,
+                    encryption_key=encryption_key,
+                    enable_vector_search=config.get("enable_vector_search", True) if config else True,
+                    embedding_model=(
+                        config.get("embedding_model", "all-MiniLM-L6-v2") if config else "all-MiniLM-L6-v2"
+                    ),
+                )
+            except (OSError, ValueError, TypeError, sqlite3.Error) as e:
+                raise CarryMemError.from_cause(e) from e
+        if isinstance(storage, StorageAdapter):
+            return storage
+        if isinstance(storage, str):
+            return self._init_adapter_from_name(storage)
+        raise CarryMemError(
+            code="CM-202",
+            message=get_message("CM-202"),
+            hint=get_hint("CM-202"),
+            cause=ValueError(f"Invalid storage type: {storage!r}"),
+        )
+
+    @staticmethod
+    def _init_adapter_from_name(storage: str) -> StorageAdapter:
+        from carrymem.adapters.loader import load_adapter
+
+        try:
+            adapter_cls = load_adapter(storage)
+        except (ImportError, ValueError, TypeError) as e:
+            raise CarryMemError.from_cause(e) from e
+        if adapter_cls is None:
+            raise CarryMemError(
+                code="CM-100",
+                message=get_message("CM-100"),
+                hint=get_hint("CM-100"),
+                cause=ValueError(f"Unknown adapter: {storage!r}"),
+            )
+        if storage == "obsidian":
+            raise CarryMemError(
+                code="CM-100",
+                message=get_message("CM-100"),
+                hint=get_hint("CM-110"),
+                cause=ValueError("ObsidianAdapter requires a vault_path."),
+            )
+        return adapter_cls()
+
+    def _init_rule_engine_eager(self) -> None:
+        # Preserve existing behavior (do not propagate init failure to
+        # avoid blocking startup), but log a warning so silent FTS
+        # vtable init failures do not go unnoticed. See TD-002.
         if self._adapter is not None and hasattr(self._adapter, "db_path"):
             try:
                 _ = self.rule_engine
             except Exception as e:
-                # Preserve existing behavior (do not propagate init failure to
-                # avoid blocking startup), but log a warning so silent FTS
-                # vtable init failures do not go unnoticed. See TD-002.
                 logger.warning(
                     "Rule engine lazy init failed (FTS vtable may be invalid): %s",
                     e,
                     exc_info=True,
                 )
 
+    def _init_backup_state(self, config: Optional[Dict[str, Any]], auto_backup_interval: int) -> None:
         # Auto-backup state
         self._write_count = 0
         self._auto_backup_interval = auto_backup_interval
         self._initial_backup_done = False
         self._backup_dir = config.get("backup_dir") if config else None
 
+    def _init_access_control(self) -> None:
         # Access control (P1-8 MVP) — set via CarryMem.access_policy property
         self._access_policy: Optional[AccessPolicy] = None
 
+    def _init_entity_normalizer(self) -> None:
         # v0.5.1: Entity normalization lazy-init state (ClassificationMixin owns the property)
         self._entity_normalizer: Optional[Any] = None
         self._input_validator: Optional[Any] = None
 
+    def _perform_initial_backup(self) -> None:
         # Perform initial backup on first creation with SQLite
         if self._adapter and self._adapter.capabilities.get("backup", False):
             db_file = getattr(self._adapter, "db_path", None)

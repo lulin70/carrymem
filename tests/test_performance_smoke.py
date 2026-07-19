@@ -124,3 +124,93 @@ class TestBatchInsertSmoke:
             f"Batch insert 10 took {elapsed:.2f}s (threshold {BATCH_10_SMOKE_S}s). "
             f"This indicates a catastrophic performance regression."
         )
+
+
+# ---------------------------------------------------------------------------
+# Baseline Regression Guard (TD-040)
+# ---------------------------------------------------------------------------
+
+# Tighter regression guards marked ``slow`` so they don't run in PR CI
+# (where CI_FACTOR=10 makes tight thresholds flaky). These run locally /
+# nightly and catch >10% drift from documented steady-state baselines.
+#
+# The smoke thresholds above are 10-100x looser and only catch catastrophic
+# regressions. These guards fill the gap: they catch gradual 10-50%
+# regressions that would otherwise slip through PR CI.
+
+import pytest  # noqa: E402 — re-import for marker clarity
+
+# Baselines measured on dev machines (macOS, warm cache). 1.1x threshold
+# means a >10% regression fails the test. These are intentionally tighter
+# than the smoke thresholds above, but still have ~10% headroom to avoid
+# flakiness from normal system jitter.
+_SMOKE_CLASSIFY_BASELINE_S = 1.0  # single classify_and_remember warm
+_SMOKE_RECALL_BASELINE_S = 0.1  # recall from 20 records
+_SMOKE_BATCH10_BASELINE_S = 0.5  # batch insert 10 (fast path)
+_REGRESSION_FACTOR = 1.1
+
+
+@pytest.mark.slow
+class TestBaselineRegressionGuardSmoke:
+    """Tight baseline guards (marked slow, run locally/nightly only).
+
+    Unlike the loose smoke tests above (which catch only catastrophic
+    regressions), these compare against 1.1x of documented baselines and
+    catch >10% drift. Marked ``slow`` so PR CI (``-m "not slow"``) skips
+    them — they run nightly and locally where thresholds are stable.
+    """
+
+    def test_classify_within_10pct_baseline(self, smoke_db):
+        """Single classify_and_remember must be within 10% of 1.0s baseline.
+
+        Baseline: ~0.5s on dev machine (warm). 1.1x = 1.1s. The smoke
+        threshold above (15s) is 30x looser and only catches catastrophic
+        stalls (model loading failure, deadlocks).
+        """
+        cm = smoke_db
+        # Warmup to avoid paying model-loading cost in measurement
+        cm.classify_and_remember("warmup for baseline guard")
+
+        start = time.perf_counter()
+        cm.classify_and_remember("Baseline guard: I prefer dark mode for coding")
+        elapsed = time.perf_counter() - start
+
+        threshold = _SMOKE_CLASSIFY_BASELINE_S * _REGRESSION_FACTOR
+
+        assert elapsed < threshold, (
+            f"Classify took {elapsed:.3f}s, exceeds 1.1x baseline "
+            f"({threshold:.3f}s) — >10% regression from steady-state {_SMOKE_CLASSIFY_BASELINE_S}s"
+        )
+
+    def test_recall_within_10pct_baseline(self, smoke_db):
+        """Recall from 20 records must be within 10% of 0.1s baseline."""
+        cm = smoke_db
+        for i in range(20):
+            cm.classify_and_remember(f"Baseline guard recall entry {i}: Python data analysis")
+
+        start = time.perf_counter()
+        cm.recall_memories(query="Python", limit=10)
+        elapsed = time.perf_counter() - start
+
+        threshold = _SMOKE_RECALL_BASELINE_S * _REGRESSION_FACTOR
+
+        assert elapsed < threshold, (
+            f"Recall took {elapsed:.3f}s, exceeds 1.1x baseline "
+            f"({threshold:.3f}s) — >10% regression from steady-state {_SMOKE_RECALL_BASELINE_S}s"
+        )
+
+    def test_batch10_within_10pct_baseline(self, smoke_db):
+        """Batch insert 10 must be within 10% of 0.5s baseline (fast path)."""
+        cm = smoke_db
+        messages = [f"Baseline guard batch entry {i}: preference for tool {i}" for i in range(10)]
+
+        start = time.perf_counter()
+        cm.store_messages(messages, force_type="fact_declaration")
+        elapsed = time.perf_counter() - start
+
+        threshold = _SMOKE_BATCH10_BASELINE_S * _REGRESSION_FACTOR
+
+        assert elapsed < threshold, (
+            f"Batch insert 10 took {elapsed:.3f}s, exceeds 1.1x baseline "
+            f"({threshold:.3f}s) — >10% regression from steady-state {_SMOKE_BATCH10_BASELINE_S}s"
+        )

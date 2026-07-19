@@ -97,7 +97,7 @@ class TestMemoryEncryption(unittest.TestCase):
 
     def test_is_active_true(self):
         enc = MemoryEncryption(key="test_password", key_file=self.key_file)
-        self.assertTrue(enc.is_active)
+        self.assertIs(enc.is_active, True)
 
     def test_backend_is_set(self):
         enc = MemoryEncryption(key="test_password", key_file=self.key_file)
@@ -105,8 +105,8 @@ class TestMemoryEncryption(unittest.TestCase):
 
     def test_auto_key_generation(self):
         enc = MemoryEncryption(key_file=self.key_file)
-        self.assertTrue(enc.is_active)
-        self.assertTrue(os.path.exists(self.key_file))
+        self.assertIs(enc.is_active, True)
+        self.assertIs(os.path.exists(self.key_file), True)
 
     def test_key_file_permissions(self):
         enc = MemoryEncryption(key_file=self.key_file)
@@ -132,8 +132,8 @@ class TestBackupManager(unittest.TestCase):
     def test_create_backup(self):
         manager = BackupManager(self.db_path, backup_dir=self.backup_dir)
         path = manager.create_backup()
-        self.assertTrue(os.path.exists(path))
-        self.assertTrue(path.endswith(".db"))
+        self.assertIs(os.path.exists(path), True)
+        self.assertIs(path.endswith(".db"), True)
 
     def test_backup_is_valid_sqlite(self):
         manager = BackupManager(self.db_path, backup_dir=self.backup_dir)
@@ -254,7 +254,7 @@ class TestCarryMemV060(unittest.TestCase):
         cm = CarryMem(storage="sqlite", db_path=self.db_path, encryption_key="my_secret")
         try:
             result = cm.classify_and_remember("I prefer dark mode")
-            self.assertTrue(result["stored"])
+            self.assertIs(result["stored"], True)
 
             conn = sqlite3.connect(self.db_path)
             conn.row_factory = sqlite3.Row
@@ -294,7 +294,7 @@ class TestCarryMemV060(unittest.TestCase):
         try:
             cm.classify_and_remember("I prefer dark mode")
             backup_result = cm.backup(backup_dir=os.path.join(self.tmpdir, "backups"))
-            self.assertTrue(backup_result["backed_up"])
+            self.assertIs(backup_result["backed_up"], True)
 
             backups = cm.list_backups(backup_dir=os.path.join(self.tmpdir, "backups"))
             self.assertGreater(len(backups), 0)

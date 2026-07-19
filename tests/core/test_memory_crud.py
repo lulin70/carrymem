@@ -25,7 +25,7 @@ class TestDeclare(unittest.TestCase):
     def test_declare_stores_memory_with_confidence_1(self):
         """declare() stores a memory with confidence=1.0."""
         result = self.cm.declare("I prefer dark mode")
-        self.assertTrue(result["declared"])
+        self.assertIs(result["declared"], True)
         self.assertEqual(result["source"], "declaration")
         for entry in result["entries"]:
             self.assertEqual(entry["confidence"], 1.0)
@@ -33,7 +33,7 @@ class TestDeclare(unittest.TestCase):
     def test_declare_preference_stores_as_preference(self):
         """declare_preference() stores as user_preference type."""
         result = self.cm.declare_preference("I like Python")
-        self.assertTrue(result["declared"])
+        self.assertIs(result["declared"], True)
         self.assertIn("storage_keys", result)
         self.assertGreater(len(result["storage_keys"]), 0)
 
@@ -62,7 +62,7 @@ class TestDeclare(unittest.TestCase):
         """declare() on similar content stores a new entry (no dedup by default)."""
         self.cm.declare("I prefer dark mode")
         result2 = self.cm.declare("I prefer dark mode")
-        self.assertTrue(result2["declared"])
+        self.assertIs(result2["declared"], True)
 
     def test_declare_returns_storage_keys(self):
         """declare() returns non-empty storage_keys."""
@@ -94,7 +94,7 @@ class TestForget(unittest.TestCase):
         result = self.cm.declare("Memory to forget")
         key = result["storage_keys"][0]
         forgot = self.cm.forget_memory(key)
-        self.assertTrue(forgot)
+        self.assertIs(forgot, True)
 
     def test_forget_nonexistent_returns_false(self):
         """forget_memory() returns False for non-existent key."""
@@ -107,7 +107,7 @@ class TestForget(unittest.TestCase):
         result = self.cm.declare("Memory for perm test")
         key = result["storage_keys"][0]
         forgot = self.cm.forget_memory(key)
-        self.assertTrue(forgot)
+        self.assertIs(forgot, True)
 
 
 class TestClassifyAndRemember(unittest.TestCase):
@@ -165,7 +165,7 @@ class TestUpdateMemory(unittest.TestCase):
         result = self.cm.declare("Original content")
         key = result["storage_keys"][0]
         updated = self.cm.update_memory(key, "Updated content")
-        self.assertTrue(updated["updated"])
+        self.assertIs(updated["updated"], True)
         self.assertEqual(updated["content"], "Updated content")
 
     def test_update_nonexistent_returns_error(self):

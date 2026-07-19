@@ -184,7 +184,7 @@ class TestSlowQueryLogging(unittest.TestCase):
                 executed = True
                 conn.execute("SELECT 1").fetchall()
 
-            self.assertTrue(executed, "Query should still execute even when timing is disabled")
+            self.assertIs(executed, True, "Query should still execute even when timing is disabled")
         finally:
             conn_module._SLOW_QUERY_THRESHOLD_MS = original
 
@@ -236,7 +236,7 @@ class TestConnectionCleanup(unittest.TestCase):
             self.assertIsNotNone(conn)
 
         # After context exit, manager should be closed
-        self.assertTrue(mgr._closed)
+        self.assertIs(mgr._closed, True)
 
 
 class TestConcurrentReadWrite(unittest.TestCase):

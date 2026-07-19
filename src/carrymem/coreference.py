@@ -17,7 +17,7 @@ Strategy:
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 # ---------------------------------------------------------------------------
 # Pronoun patterns
@@ -168,6 +168,72 @@ def _zh_relationship_gender(rel: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _collect_entities(
+    context: Optional[str],
+    recent_memories: Optional[List[Dict[str, Any]]],
+) -> List[Tuple[str, str]]:
+    """Collect entities from the context string and recent memories."""
+    entities: List[Tuple[str, str]] = []
+    if context:
+        entities.extend(_extract_entities_en(context))
+        entities.extend(_extract_entities_zh(context))
+    if recent_memories:
+        for mem in recent_memories[:10]:
+            content = mem.get("content", "") or mem.get("raw_text", "")
+            if content:
+                entities.extend(_extract_entities_en(content))
+                entities.extend(_extract_entities_zh(content))
+    return entities
+
+
+def _resolve_english_pronouns(
+    resolved: str,
+    entities: List[Tuple[str, str]],
+) -> Tuple[str, bool]:
+    """Resolve English subject/object/possessive pronouns. Returns (resolved, any_resolved)."""
+    any_resolved = False
+    for pronoun in EN_SUBJECT_PRONOUNS | EN_OBJECT_PRONOUNS | EN_POSSESSIVE_PRONOUNS:
+        if pronoun in resolved.lower():
+            target = _find_matching_entity(pronoun, entities)
+            if target:
+                resolved = _replace_pronoun(resolved, pronoun, target)
+                any_resolved = True
+    return resolved, any_resolved
+
+
+def _resolve_english_demonstratives(
+    resolved: str,
+    entities: List[Tuple[str, str]],
+) -> Tuple[str, bool]:
+    """Resolve English demonstrative pronouns (this/that/these/those). Returns (resolved, any_resolved)."""
+    any_resolved = False
+    for pronoun in EN_DEMONSTRATIVE:
+        if re.search(r"\b" + re.escape(pronoun) + r"\b", resolved, re.IGNORECASE):
+            target = _find_matching_entity(pronoun, entities)
+            if target:
+                resolved = _replace_pronoun(resolved, pronoun, target)
+                any_resolved = True
+    return resolved, any_resolved
+
+
+def _resolve_chinese_pronoun_set(
+    resolved: str,
+    pronouns: Set[str],
+    entities: List[Tuple[str, str]],
+) -> Tuple[str, bool]:
+    """Resolve a set of Chinese pronouns in text. Returns (resolved, any_resolved)."""
+    any_resolved = False
+    for pronoun in pronouns:
+        if pronoun in resolved:
+            target = _find_matching_entity(pronoun, entities)
+            if target:
+                target = _sanitize_replacement(target)
+                if target:
+                    resolved = resolved.replace(pronoun, target, 1)
+                    any_resolved = True
+    return resolved, any_resolved
+
+
 def resolve_coreference(
     message: str,
     context: Optional[str] = None,
@@ -187,64 +253,24 @@ def resolve_coreference(
     if not has_pronoun(message):
         return message, False
 
-    # Collect entities from all sources
-    entities = []
-
-    # From context string
-    if context:
-        entities.extend(_extract_entities_en(context))
-        entities.extend(_extract_entities_zh(context))
-
-    # From recent memories
-    if recent_memories:
-        for mem in recent_memories[:10]:
-            content = mem.get("content", "") or mem.get("raw_text", "")
-            if content:
-                entities.extend(_extract_entities_en(content))
-                entities.extend(_extract_entities_zh(content))
-
+    entities = _collect_entities(context, recent_memories)
     if not entities:
         return message, False
 
-    # Try to resolve each pronoun
     resolved = message
     any_resolved = False
 
-    # English pronoun resolution
-    for pronoun in EN_SUBJECT_PRONOUNS | EN_OBJECT_PRONOUNS | EN_POSSESSIVE_PRONOUNS:
-        if pronoun in resolved.lower():
-            target = _find_matching_entity(pronoun, entities)
-            if target:
-                resolved = _replace_pronoun(resolved, pronoun, target)
-                any_resolved = True
+    resolved, en_resolved = _resolve_english_pronouns(resolved, entities)
+    any_resolved = any_resolved or en_resolved
 
-    # English demonstrative resolution (this/that/these/those)
-    for pronoun in EN_DEMONSTRATIVE:
-        if re.search(r"\b" + re.escape(pronoun) + r"\b", resolved, re.IGNORECASE):
-            target = _find_matching_entity(pronoun, entities)
-            if target:
-                resolved = _replace_pronoun(resolved, pronoun, target)
-                any_resolved = True
+    resolved, en_dem_resolved = _resolve_english_demonstratives(resolved, entities)
+    any_resolved = any_resolved or en_dem_resolved
 
-    # Chinese pronoun resolution
-    for pronoun in ZH_PRONOUNS:
-        if pronoun in resolved:
-            target = _find_matching_entity(pronoun, entities)
-            if target:
-                target = _sanitize_replacement(target)
-                if target:
-                    resolved = resolved.replace(pronoun, target, 1)
-                    any_resolved = True
+    resolved, zh_resolved = _resolve_chinese_pronoun_set(resolved, ZH_PRONOUNS, entities)
+    any_resolved = any_resolved or zh_resolved
 
-    # Chinese demonstrative resolution
-    for pronoun in ZH_DEMONSTRATIVE:
-        if pronoun in resolved:
-            target = _find_matching_entity(pronoun, entities)
-            if target:
-                target = _sanitize_replacement(target)
-                if target:
-                    resolved = resolved.replace(pronoun, target, 1)
-                    any_resolved = True
+    resolved, zh_dem_resolved = _resolve_chinese_pronoun_set(resolved, ZH_DEMONSTRATIVE, entities)
+    any_resolved = any_resolved or zh_dem_resolved
 
     return resolved, any_resolved
 

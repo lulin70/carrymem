@@ -207,6 +207,20 @@ def skill_verify(data: dict) -> dict:
     }
 
 
+def _check_skill_dependencies(manifest: dict, storage) -> List[str]:
+    dependencies = manifest.get("dependencies", [])
+    if not dependencies:
+        return []
+    installed_skill_names = set()
+    existing_rules = storage.list_all(limit=10000)
+    for r in existing_rules:
+        if hasattr(r, "metadata") and isinstance(r.metadata, dict):
+            skill_name = r.metadata.get("_skill_name")
+            if skill_name:
+                installed_skill_names.add(skill_name)
+    return [d for d in dependencies if d not in installed_skill_names]
+
+
 def skill_install(
     data: dict,
     storage,
@@ -224,22 +238,13 @@ def skill_install(
     if target_scope not in VALID_RULE_SCOPES:
         return {"installed": 0, "errors": [f"Invalid scope: {target_scope}"]}
 
-    dependencies = manifest.get("dependencies", [])
-    if dependencies:
-        installed_skill_names = set()
-        existing_rules = storage.list_all(limit=10000)
-        for r in existing_rules:
-            if hasattr(r, "metadata") and isinstance(r.metadata, dict):
-                skill_name = r.metadata.get("_skill_name")
-                if skill_name:
-                    installed_skill_names.add(skill_name)
-        missing = [d for d in dependencies if d not in installed_skill_names]
-        if missing:
-            return {
-                "installed": 0,
-                "errors": [f"Missing dependencies: {', '.join(missing)}"],
-                "missing_dependencies": missing,
-            }
+    missing = _check_skill_dependencies(manifest, storage)
+    if missing:
+        return {
+            "installed": 0,
+            "errors": [f"Missing dependencies: {', '.join(missing)}"],
+            "missing_dependencies": missing,
+        }
 
     imported_rules = data.get("rules", [])
     if len(imported_rules) > SKILL_MAX_RULES:

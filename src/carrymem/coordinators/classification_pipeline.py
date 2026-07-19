@@ -374,8 +374,6 @@ class ClassificationPipeline:
         Returns:
             A default classification match if found, None otherwise.
         """
-        from carrymem.utils.language import language_manager
-
         # Handle None message - P0-D: fail-closed, do not store
         if message is None:
             return None  # type: ignore[unreachable]
@@ -383,11 +381,32 @@ class ClassificationPipeline:
         message_lower = message.lower()
         msg_stripped = message.strip()
 
-        # === V4-03 Quality Gate 1: Minimum length (ultra-short = likely noise) ===
-        if len(msg_stripped) < 8:
+        if not self._passes_default_quality_gates(msg_stripped, message_lower):
             return None
 
+        return self._match_default_keyword_type(message, message_lower, language)
+
+    @staticmethod
+    def _passes_default_quality_gates(msg_stripped: str, message_lower: str) -> bool:
+        """V4-03 quality gates: minimum length, chitchat blacklist, substance check."""
+        # === V4-03 Quality Gate 1: Minimum length (ultra-short = likely noise) ===
+        if len(msg_stripped) < 8:
+            return False
+
         # === V4-03 Quality Gate 2: Chitchat/Noise blacklist ===
+        if ClassificationPipeline._is_chitchat_blacklisted(message_lower):
+            return False
+
+        # === V4-03 Quality Gate 3: Require substantive content ===
+        # Messages with only 1-2 words are likely noise/chitchat
+        word_count = len(msg_stripped.split())
+        if word_count <= 2 and len(msg_stripped) < 20:
+            return False
+
+        return True
+
+    @staticmethod
+    def _is_chitchat_blacklisted(message_lower: str) -> bool:
         chitchat_blacklist = [
             # Weather/small talk
             "sunny",
@@ -421,14 +440,20 @@ class ClassificationPipeline:
             "yes?",
             "no?",
         ]
-        if any(black in message_lower for black in chitchat_blacklist):
-            return None
+        return any(black in message_lower for black in chitchat_blacklist)
 
-        # === V4-03 Quality Gate 3: Require substantive content ===
-        # Messages with only 1-2 words are likely noise/chitchat
-        word_count = len(msg_stripped.split())
-        if word_count <= 2 and len(msg_stripped) < 20:
-            return None
+    @staticmethod
+    def _match_default_keyword_type(
+        message: str,
+        message_lower: str,
+        language: str,
+    ) -> Optional[Dict[str, Any]]:
+        """Match message against keyword lists for each memory type.
+
+        Returns a default classification match dict, or None if no keywords match
+        (P0-D: fail-closed - unclassifiable content is NOT stored).
+        """
+        from carrymem.utils.language import language_manager
 
         preference_keywords = language_manager.get_keywords("user_preference", language)
         correction_keywords = language_manager.get_keywords("correction", language)

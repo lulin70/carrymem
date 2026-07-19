@@ -196,7 +196,7 @@ class TestHealthChecker(unittest.TestCase):
         """Test: readyz returns ready after set_ready(True)."""
         self.hc.set_ready(True)
         result = self.hc.readyz()
-        self.assertTrue(result["ready"])
+        self.assertIs(result["ready"], True)
 
     def test_slo_violation_causes_degraded(self):
         """Test 11: SLO violation (P99 > threshold) causes degraded status."""
@@ -216,7 +216,7 @@ class TestHealthChecker(unittest.TestCase):
         # Should be ok if no other failures
         slo_classify = next((s for s in result["slo"] if s["operation"] == "classify_and_remember"), None)
         self.assertIsNotNone(slo_classify)
-        self.assertTrue(slo_classify["within_slo"])
+        self.assertIs(slo_classify["within_slo"], True)
 
 
 if __name__ == "__main__":

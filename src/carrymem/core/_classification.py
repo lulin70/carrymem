@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union, cast
 
 from carrymem.adapters.base import MemoryEntry
 from carrymem.constants import (
@@ -211,40 +211,16 @@ class ClassificationMixin:
 
         for entry_dict in classify_result["entries"]:
             entry = MemoryEntry.from_dict(entry_dict)
-            if force_type:
-                entry.type = force_type
-                entry.confidence = DEFAULT_FORCE_TYPE_CONFIDENCE
-            if coreference_resolved:
-                entry.raw_text = message
-            if session_id and isinstance(entry.metadata, dict):
-                entry.metadata["session_id"] = session_id
-            elif session_id and not entry.metadata:
-                entry.metadata = {"session_id": session_id}
-            if entity_meta:
-                if not entry.metadata:
-                    entry.metadata = {}
-                if isinstance(entry.metadata, dict):
-                    entry.metadata["entities"] = entity_meta
+            self._apply_entry_overrides(
+                entry, force_type, coreference_resolved, message, session_id, entity_meta
+            )
             if entry.suggested_action == "store":
-                try:
-                    if entry.type == "correction":
-                        updated = self._handle_correction(entry)
-                        if updated:
-                            updated_memories.append(updated)
-
-                    stored = self._adapter.store_entry(entry)  # type: ignore[union-attr]
-                    stored_memories.append(stored.to_dict())
-                    storage_keys.append(stored.storage_key)
-                    # v0.7.0: Populate knowledge graph entities
-                    adapter = self._adapter
-                    if adapter and adapter.capabilities.get("graph", False):
-                        try:
-                            adapter.store_graph_entities(stored.storage_key, resolved_message, self._namespace)
-                        except (ValueError, RuntimeError, AttributeError) as e:
-                            logger.debug("Knowledge graph entity extraction skipped: %s", e)
-                except (ValueError, KeyError, TypeError) as e:
-                    logger.warning("Failed to store memory: %s", e)
-                    continue
+                stored_dict, storage_key, updated = self._store_single_entry(entry, resolved_message)
+                if updated:
+                    updated_memories.append(updated)
+                if stored_dict is not None:
+                    stored_memories.append(stored_dict)
+                    storage_keys.append(cast(str, storage_key))
 
         auto_rules = []
         try:
@@ -267,6 +243,59 @@ class ClassificationMixin:
             "summary": classify_result["summary"],
         }
 
+    @staticmethod
+    def _apply_entry_overrides(
+        entry: MemoryEntry,
+        force_type: Optional[str],
+        coreference_resolved: bool,
+        message: str,
+        session_id: Optional[str],
+        entity_meta: List[Dict[str, Any]],
+    ) -> None:
+        """Apply force_type, coreference, session_id, and entity metadata overrides in-place."""
+        if force_type:
+            entry.type = force_type
+            entry.confidence = DEFAULT_FORCE_TYPE_CONFIDENCE
+        if coreference_resolved:
+            entry.raw_text = message
+        if session_id and isinstance(entry.metadata, dict):
+            entry.metadata["session_id"] = session_id
+        elif session_id and not entry.metadata:
+            entry.metadata = {"session_id": session_id}
+        if entity_meta:
+            if not entry.metadata:
+                entry.metadata = {}
+            if isinstance(entry.metadata, dict):
+                entry.metadata["entities"] = entity_meta
+
+    def _store_single_entry(
+        self,
+        entry: MemoryEntry,
+        resolved_message: str,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str], Optional[CorrectionUpdateInfo]]:
+        """Store a single entry, returning (stored_dict, storage_key, updated_info).
+
+        On storage failure, returns (None, None, updated_info) where updated_info
+        may still be populated from a successful correction-handling step.
+        """
+        updated: Optional[CorrectionUpdateInfo] = None
+        try:
+            if entry.type == "correction":
+                updated = self._handle_correction(entry)
+            stored = self._adapter.store_entry(entry)  # type: ignore[union-attr]
+            storage_key = stored.storage_key
+            # v0.7.0: Populate knowledge graph entities
+            adapter = self._adapter
+            if adapter and adapter.capabilities.get("graph", False):
+                try:
+                    adapter.store_graph_entities(storage_key, resolved_message, self._namespace)
+                except (ValueError, RuntimeError, AttributeError) as e:
+                    logger.debug("Knowledge graph entity extraction skipped: %s", e)
+            return stored.to_dict(), storage_key, updated
+        except (ValueError, KeyError, TypeError) as e:
+            logger.warning("Failed to store memory: %s", e)
+            return None, None, updated
+
     def _handle_correction(self, correction_entry: MemoryEntry) -> Optional[CorrectionUpdateInfo]:
         if not self._adapter:
             return None
@@ -275,10 +304,19 @@ class ClassificationMixin:
         if not content or len(content.strip()) < MIN_CORRECTION_CONTENT_LENGTH:
             return None
 
-        updated_info = None
+        keywords = content.lower().split()
+        updated_info = self._find_correctable_memory(content, keywords)
+        updated_info = self._find_correctable_rule(content, keywords, updated_info)
 
+        return updated_info
+
+    def _find_correctable_memory(
+        self,
+        content: str,
+        keywords: List[str],
+    ) -> Optional[CorrectionUpdateInfo]:
+        """Find and update a memory matching correction keywords."""
         try:
-            keywords = content.lower().split()
             related = self.recall_memories(limit=CORRECTION_RECALL_LIMIT)
             for mem in related:
                 mem_content = mem.get("content", "").lower()
@@ -286,23 +324,39 @@ class ClassificationMixin:
                 if mem_type in ("user_preference", "decision", "fact_declaration"):
                     overlap = sum(1 for kw in keywords if kw in mem_content and len(kw) > 1)
                     if overlap >= CORRECTION_KEYWORD_OVERLAP:
-                        storage_key = mem.get("storage_key", "")
-                        if storage_key and hasattr(self._adapter, "update_memory"):
-                            try:
-                                reason = f"Corrected by: {content[:CONTENT_PREVIEW_LENGTH]}"
-                                self._adapter.update_memory(storage_key, content, reason)
-                                updated_info = {
-                                    "storage_key": storage_key,
-                                    "old_content": mem.get("content", "")[:CONTENT_PREVIEW_LENGTH],
-                                    "new_content": content[:CONTENT_PREVIEW_LENGTH],
-                                    "reason": reason,
-                                }
-                            except (ValueError, KeyError, TypeError) as e:
-                                logger.warning("Correction update failed: %s", e)
-                        break
+                        return self._try_update_correctable_memory(mem, content)
         except (ValueError, KeyError, TypeError, RuntimeError) as e:
             logger.warning("Correction handling failed: %s", e)
+        return None
 
+    def _try_update_correctable_memory(
+        self,
+        mem: Dict[str, Any],
+        content: str,
+    ) -> Optional[CorrectionUpdateInfo]:
+        """Attempt to update a single memory; returns the update info or None."""
+        storage_key = mem.get("storage_key", "")
+        if storage_key and hasattr(self._adapter, "update_memory"):
+            try:
+                reason = f"Corrected by: {content[:CONTENT_PREVIEW_LENGTH]}"
+                self._adapter.update_memory(storage_key, content, reason)  # type: ignore[union-attr]
+                return {
+                    "storage_key": storage_key,
+                    "old_content": mem.get("content", "")[:CONTENT_PREVIEW_LENGTH],
+                    "new_content": content[:CONTENT_PREVIEW_LENGTH],
+                    "reason": reason,
+                }
+            except (ValueError, KeyError, TypeError) as e:
+                logger.warning("Correction update failed: %s", e)
+        return None
+
+    def _find_correctable_rule(
+        self,
+        content: str,
+        keywords: List[str],
+        updated_info: Optional[CorrectionUpdateInfo],
+    ) -> Optional[CorrectionUpdateInfo]:
+        """Find and update an active rule matching correction keywords."""
         try:
             engine = self.rule_engine
             rules = engine.list_rules(status="active", limit=ACTIVE_RULES_LIST_LIMIT)
@@ -310,23 +364,31 @@ class ClassificationMixin:
                 rule_content = (rule.trigger + " " + rule.action).lower()
                 overlap = sum(1 for kw in keywords if kw in rule_content and len(kw) > 1)
                 if overlap >= CORRECTION_KEYWORD_OVERLAP:
-                    try:
-                        safe_action = self._sanitize_rule_content(content[:RULE_CONTENT_MAX_LENGTH])
-                        engine.update_rule(rule.id, action=safe_action)
-                        if updated_info is None:
-                            updated_info = {
-                                "rule_updated": rule.id,
-                                "new_action": safe_action[:CONTENT_PREVIEW_LENGTH],
-                            }
-                        else:
-                            updated_info["rule_updated"] = rule.id
-                    except (ValueError, KeyError, TypeError) as e:
-                        logger.warning("Rule update in correction handling failed: %s", e)
-                    break
+                    return self._try_update_correctable_rule(rule, content, updated_info)
         except (ImportError, ValueError, KeyError, TypeError, RuntimeError) as e:
             logger.warning("Rule correction handling failed: %s", e)
+        return updated_info
 
-        return updated_info  # type: ignore[return-value]
+    def _try_update_correctable_rule(
+        self,
+        rule: Any,
+        content: str,
+        updated_info: Optional[CorrectionUpdateInfo],
+    ) -> Optional[CorrectionUpdateInfo]:
+        """Attempt to update a single rule; returns the (possibly updated) info."""
+        try:
+            safe_action = self._sanitize_rule_content(content[:RULE_CONTENT_MAX_LENGTH])
+            self.rule_engine.update_rule(rule.id, action=safe_action)
+            if updated_info is None:
+                return {
+                    "rule_updated": rule.id,
+                    "new_action": safe_action[:CONTENT_PREVIEW_LENGTH],
+                }
+            updated_info["rule_updated"] = rule.id
+            return updated_info
+        except (ValueError, KeyError, TypeError) as e:
+            logger.warning("Rule update in correction handling failed: %s", e)
+            return updated_info
 
     def _count_by_type(self, entries: List[MemoryEntry]) -> Dict[str, int]:
         counts: Dict[str, int] = {}

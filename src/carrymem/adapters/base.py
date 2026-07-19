@@ -129,6 +129,20 @@ class MemoryEntry:
         )
 
 
+def _parse_datetime_field(value: Any) -> Optional["datetime"]:
+    """Parse a datetime field from str/datetime, returning None on failure/empty."""
+    if not value:
+        return None
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value)
+        except (ValueError, TypeError):
+            return None
+    if isinstance(value, datetime):
+        return value
+    return None
+
+
 @dataclass
 class StoredMemory(MemoryEntry):
     """Extended memory entry with storage metadata.
@@ -222,55 +236,11 @@ class StoredMemory(MemoryEntry):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "StoredMemory":
         """Reconstruct a StoredMemory from a serialized dictionary."""
-        created_at = None
-        if data.get("created_at"):
-            if isinstance(data["created_at"], str):
-                try:
-                    created_at = datetime.fromisoformat(data["created_at"])
-                except (ValueError, TypeError):
-                    created_at = None
-            elif isinstance(data["created_at"], datetime):
-                created_at = data["created_at"]
-
-        updated_at = None
-        if data.get("updated_at"):
-            if isinstance(data["updated_at"], str):
-                try:
-                    updated_at = datetime.fromisoformat(data["updated_at"])
-                except (ValueError, TypeError):
-                    updated_at = None
-            elif isinstance(data["updated_at"], datetime):
-                updated_at = data["updated_at"]
-
-        expires_at = None
-        if data.get("expires_at"):
-            if isinstance(data["expires_at"], str):
-                try:
-                    expires_at = datetime.fromisoformat(data["expires_at"])
-                except (ValueError, TypeError):
-                    expires_at = None
-            elif isinstance(data["expires_at"], datetime):
-                expires_at = data["expires_at"]
-
-        last_accessed_at = None
-        if data.get("last_accessed_at"):
-            if isinstance(data["last_accessed_at"], str):
-                try:
-                    last_accessed_at = datetime.fromisoformat(data["last_accessed_at"])
-                except (ValueError, TypeError):
-                    last_accessed_at = None
-            elif isinstance(data["last_accessed_at"], datetime):
-                last_accessed_at = data["last_accessed_at"]
-
-        superseded_at = None
-        if data.get("superseded_at"):
-            if isinstance(data["superseded_at"], str):
-                try:
-                    superseded_at = datetime.fromisoformat(data["superseded_at"])
-                except (ValueError, TypeError):
-                    superseded_at = None
-            elif isinstance(data["superseded_at"], datetime):
-                superseded_at = data["superseded_at"]
+        created_at = _parse_datetime_field(data.get("created_at"))
+        updated_at = _parse_datetime_field(data.get("updated_at"))
+        expires_at = _parse_datetime_field(data.get("expires_at"))
+        last_accessed_at = _parse_datetime_field(data.get("last_accessed_at"))
+        superseded_at = _parse_datetime_field(data.get("superseded_at"))
 
         return cls(
             id=data.get("id", ""),

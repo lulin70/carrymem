@@ -39,15 +39,18 @@ if not HAS_TEXTUAL:
 
 else:
     import pytest
-    from textual.app import App
+    from textual.app import App, ComposeResult
     from textual.containers import Container, Horizontal, Vertical
     from textual.widgets import Input, Static
 
+    from carrymem import CarryMem
+    from carrymem.errors import CarryMemError
     from carrymem.tui import (
         _MORANDI,
         _TYPE_ICONS,
         _TYPE_LABELS,
         CarryMemTUI,
+        ErrorDisplay,
         HelpScreen,
         MemoryDetailScreen,
         StatsPanel,
@@ -158,9 +161,7 @@ else:
 
         def test_palette_values_are_hex_colors(self):
             for name, color in _MORANDI.items():
-                self.assertTrue(
-                    color.startswith("#"),
-                    f"Palette {name}={color} is not a hex color",
+                self.assertIs(color.startswith("#"), True, f"Palette {name}={color} is not a hex color",
                 )
                 self.assertEqual(len(color), 7, f"Palette {name} should be #RRGGBB format")
 
@@ -516,7 +517,7 @@ else:
                 search_input = app.query_one("#search-input", Input)
                 # Initially not focused
                 await pilot.press("/")
-                self.assertTrue(search_input.has_focus)
+                self.assertIs(search_input.has_focus, True)
 
         @patch("carrymem.tui.CarryMem")
         async def test_s_focuses_search(self, MockCM):
@@ -527,7 +528,7 @@ else:
             async with app.run_test() as pilot:
                 search_input = app.query_one("#search-input", Input)
                 await pilot.press("s")
-                self.assertTrue(search_input.has_focus)
+                self.assertIs(search_input.has_focus, True)
 
         @patch("carrymem.tui.CarryMem")
         async def test_search_submit_triggers_reload(self, MockCM):
@@ -752,7 +753,7 @@ else:
             # Verify the screen was constructed with correct memory data
             self.assertEqual(screen.memory["content"], "I prefer dark mode in IDEs")
             # Check that detail-content widget exists
-            self.assertTrue(any(w.id == "detail-content" for w in widgets))
+            self.assertIs(any(w.id == "detail-content" for w in widgets), True)
 
         def test_detail_screen_shows_confidence_and_importance(self):
             screen = MemoryDetailScreen(SAMPLE_MEMORIES[0])
@@ -761,7 +762,7 @@ else:
             self.assertEqual(screen.memory["importance_score"], 8.5)
             # Verify compose yields detail-meta1 widget
             widgets = list(screen.compose())
-            self.assertTrue(any(w.id == "detail-meta1" for w in widgets))
+            self.assertIs(any(w.id == "detail-meta1" for w in widgets), True)
 
         @patch("carrymem.tui.CarryMem")
         async def test_detail_screen_pushed_from_app(self, MockCM):
@@ -841,7 +842,7 @@ else:
                 self.assertFalse(app._add_mode)
                 await pilot.press("a")
                 await pilot.pause()
-                self.assertTrue(app._add_mode)
+                self.assertIs(app._add_mode, True)
 
         @patch("carrymem.tui.CarryMem")
         async def test_add_mode_changes_placeholder(self, MockCM):
@@ -879,7 +880,7 @@ else:
             async with app.run_test() as pilot:
                 await pilot.press("a")
                 await pilot.pause()
-                self.assertTrue(app._add_mode)
+                self.assertIs(app._add_mode, True)
                 await pilot.press("escape")
                 await pilot.pause()
                 self.assertFalse(app._add_mode)
@@ -1050,3 +1051,425 @@ else:
                 await pilot.press("2")  # change filter
                 await pilot.pause()
                 self.assertEqual(app.selected_index, -1)
+
+    # ══════════════════════════════════════════════════════════════════
+    # Test Group 17: TUI Accessibility (TD-041)
+    # ══════════════════════════════════════════════════════════════════
+
+    # NOTE (TD-041/045/046): Unlike the unittest.TestCase classes above,
+    # these three test groups use plain pytest classes (no TestCase base).
+    # Reason: pytest-asyncio in AUTO mode only properly awaits async test
+    # methods on plain classes. Async methods inside unittest.TestCase are
+    # invoked synchronously by unittest's runner — the coroutine is never
+    # awaited, so the test body (and its assertions) never actually executes
+    # (it "passes" trivially). Using plain pytest classes ensures the
+    # assertions genuinely run and the tests provide real coverage.
+    #
+    # Additionally, the source ``tui.py`` has invalid CSS properties
+    # (``border-radius``, ``caret``) that cause textual 8.x to raise
+    # ``StylesheetParseError`` on ``CarryMemTUI`` mount. To test the
+    # underlying behavior without modifying source code, these tests use:
+    #   - Static inspection of ``CarryMemTUI.CSS`` and ``CarryMemTUI.BINDINGS``
+    #     for CSS-rule and keybinding existence (no mount required).
+    #   - Minimal ``App`` subclasses (with ``CSS = ""``) that mount only the
+    #     widget under test (Input or ErrorDisplay), bypassing the broken
+    #     stylesheet so the widget's actual behavior can be exercised.
+
+    class TestTuiAccessibility:
+        """TUI accessibility: keyboard navigation and visible focus indicators.
+
+        Accessibility (a11y) requirements:
+          - Keyboard users must be able to reach every interactive widget
+            via Tab (no mouse required).
+          - The focused widget must display a visible focus ring so sighted
+            keyboard users can see where they are.
+
+        These tests verify both: (1) the ``Input:focus`` CSS rule (which
+        paints the focus ring) is present in the source stylesheet, and
+        (2) Tab navigation reaches the search input. The minimal-app
+        approach is used because ``CarryMemTUI.CSS`` has invalid properties
+        that prevent mounting in textual 8.x (source bug, out of scope).
+        """
+
+        def test_focus_ring_css_rule_exists_in_source(self):
+            """``Input:focus`` CSS rule must exist in ``CarryMemTUI.CSS``.
+
+            The focus ring is painted by the ``Input:focus`` CSS rule
+            (border: solid border_active; outline: primary;). Without
+            this rule, sighted keyboard users cannot see which widget has
+            focus. This test verifies the rule is present in the source
+            stylesheet so the focus ring will render once the CSS
+            property bugs (border-radius, caret) are fixed separately.
+            """
+            css = CarryMemTUI.CSS
+            # The CSS must contain an Input:focus rule
+            assert "Input:focus" in css, (
+                "CarryMemTUI.CSS must define an Input:focus rule for the "
+                "visible focus ring (accessibility)"
+            )
+            # The focus rule must apply border_active (visible border change)
+            assert str(_MORANDI["border_active"]) in css, (
+                "Focus ring CSS must reference border_active color so the "
+                "focused widget's border visibly changes"
+            )
+            # The focus rule must apply outline (additional focus indicator)
+            assert "outline" in css, (
+                "Focus ring CSS must include an 'outline' property for an "
+                "additional visible focus indicator beyond border color"
+            )
+
+        def test_focus_search_keybinding_exists(self):
+            """``focus_search`` keybinding must exist for keyboard users.
+
+            Keyboard accessibility requires that users can focus the
+            search input without a mouse. The ``/`` and ``s`` keybindings
+            trigger the ``focus_search`` action. This test verifies both
+            keybindings are registered in ``CarryMemTUI.BINDINGS``.
+            """
+            bindings = CarryMemTUI.BINDINGS
+            # Find the focus_search action binding
+            focus_bindings = [b for b in bindings if getattr(b, "action", "") == "focus_search"]
+            assert len(focus_bindings) >= 1, (
+                "CarryMemTUI must define a focus_search keybinding for "
+                "keyboard-only users to focus the search input"
+            )
+            # Verify the / key is mapped (primary a11y keybinding)
+            key_values = [getattr(b, "key", "") for b in focus_bindings]
+            assert "/" in key_values, (
+                "The '/' keybinding must be mapped to focus_search — it's "
+                "the primary keyboard-accessible way to focus search"
+            )
+
+        async def test_tab_reaches_search_input(self):
+            """Tab key must move focus to a focusable widget.
+
+            Mounts a minimal app containing only an Input widget (bypassing
+            the broken ``CarryMemTUI.CSS``) and verifies Tab reaches it.
+            This confirms the keyboard navigation path works in textual
+            8.x — when the source CSS bugs are fixed, the same path will
+            work in the full ``CarryMemTUI``.
+            """
+
+            class _MinimalInputApp(App):
+                """Minimal app with one Input — bypasses broken CarryMemTUI CSS."""
+
+                CSS = ""
+
+                def compose(self) -> ComposeResult:
+                    yield Input(id="search-input", placeholder="Search...")
+
+            app = _MinimalInputApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                search_input = app.query_one("#search-input", Input)
+                # Press Tab — should move focus to the search input
+                # (the only focusable widget in this minimal app).
+                await pilot.press("tab")
+                await pilot.pause()
+                assert search_input.has_focus is True, (
+                    "Tab must move focus to the search input (keyboard navigation)"
+                )
+                assert search_input.has_pseudo_class("focus") is True, (
+                    "Tab-focused widget must have :focus pseudo-class so the "
+                    "Input:focus CSS rule applies the visible focus ring"
+                )
+                # A second Tab must not leave the app with no focused widget
+                await pilot.press("tab")
+                await pilot.pause()
+                assert app.focused is not None, (
+                    "Tab must not leave the app with no focused widget"
+                )
+
+    # ══════════════════════════════════════════════════════════════════
+    # Test Group 18: TUI + Real CarryMem DB Smoke (TD-045)
+    # ══════════════════════════════════════════════════════════════════
+
+    class TestTuiRealDBIntegration:
+        """Smoke tests using a real CarryMem instance (NOT a MagicMock).
+
+        These tests exercise the real ``CarryMem`` database layer that the
+        TUI depends on, without mounting the full ``CarryMemTUI`` (which
+        is blocked by source CSS bugs — see TestTuiAccessibility note).
+        They verify the contract between ``CarryMem`` and the TUI:
+
+          - ``CarryMem(db_path=...)`` constructs without error.
+          - ``recall_memories`` returns a ``list`` (the TUI's rendering
+            loop iterates over it: ``for i, m in enumerate(self.memories, 1)``).
+          - ``declare`` persists a memory that ``recall_memories`` returns.
+          - ``get_stats`` returns the dict shape the TUI's StatsPanel expects.
+
+        Pattern: real sqlite file DB via ``tempfile.TemporaryDirectory``,
+        no MagicMock anywhere. This catches integration bugs (type
+        mismatches, schema drift) that mock-based tests would miss.
+        """
+
+        def _make_real_cm(self, db_path: str) -> CarryMem:
+            """Create a real CarryMem instance backed by a sqlite file DB."""
+            return CarryMem(db_path=db_path)
+
+        def test_real_carrymem_constructs_with_db(self, tmp_path):
+            """``CarryMem(db_path=...)`` constructs without error.
+
+            The TUI's ``__init__`` calls ``CarryMem(db_path=self.db_path,
+            namespace=self.namespace)``. This verifies the construction
+            path works with a real sqlite file DB (no exception raised).
+            """
+            db_path = str(tmp_path / "tui_smoke_construct.db")
+            cm = self._make_real_cm(db_path)
+            try:
+                assert cm is not None, "CarryMem must construct and return an instance"
+                # Verify the adapter is configured (not None) — the TUI's
+                # _load_memories would raise StorageNotConfiguredError otherwise.
+                assert getattr(cm, "_adapter", None) is not None, (
+                    "CarryMem._adapter must be set so the TUI's recall_memories "
+                    "call does not raise StorageNotConfiguredError"
+                )
+            finally:
+                cm.close()
+
+        def test_real_recall_returns_list_matching_tui_contract(self, tmp_path):
+            """``recall_memories`` returns a list (TUI rendering contract).
+
+            The TUI's ``_load_memories`` does:
+              ``self.memories = self.cm.recall_memories(query=query, filters=filters, limit=50)``
+            and later iterates:
+              ``for i, m in enumerate(self.memories, 1): mtype = m.get("type", "unknown")``
+
+            This verifies ``recall_memories`` returns a ``list`` (not dict)
+            of mappings — the contract the TUI rendering loop depends on.
+            """
+            db_path = str(tmp_path / "tui_smoke_recall.db")
+            cm = self._make_real_cm(db_path)
+            try:
+                # Empty DB recall must return a list (not dict, not None)
+                results = cm.recall_memories(query="", limit=50)
+                assert isinstance(results, list), (
+                    f"recall_memories must return a list (TUI iterates over it), "
+                    f"got {type(results).__name__}"
+                )
+            finally:
+                cm.close()
+
+        def test_real_declare_persists_and_recall_finds_it(self, tmp_path):
+            """``declare`` persists a memory that ``recall_memories`` finds.
+
+            End-to-end smoke: writes a real memory via ``declare``, then
+            verifies ``recall_memories`` returns a non-empty list. This
+            exercises the full declare → persist → recall pipeline with a
+            real sqlite DB — the same pipeline the TUI's ``a`` (add memory)
+            keybinding triggers via ``self.cm.declare(value)`` followed by
+            ``self._load_memories()``.
+            """
+            db_path = str(tmp_path / "tui_smoke_declare.db")
+            cm = self._make_real_cm(db_path)
+            try:
+                cm.declare("I prefer Python 3.12 for new projects")
+                results = cm.recall_memories(query="Python", limit=50)
+                assert isinstance(results, list), (
+                    f"recall_memories must return a list after declare, "
+                    f"got {type(results).__name__}"
+                )
+                assert len(results) > 0, (
+                    "recall_memories must return at least one memory after "
+                    "declare('I prefer Python 3.12...') — declare did not persist"
+                )
+                # Verify the returned item has the 'type' field the TUI reads
+                first = results[0]
+                assert isinstance(first, dict), (
+                    f"recall_memories items must be dicts (TUI reads m.get('type')), "
+                    f"got {type(first).__name__}"
+                )
+                assert "type" in first, (
+                    "recall_memories items must have a 'type' field — "
+                    "the TUI's _render_memories reads m.get('type', 'unknown')"
+                )
+            finally:
+                cm.close()
+
+        def test_real_get_stats_returns_dict_shape_tui_expects(self, tmp_path):
+            """``get_stats`` returns dict with ``total_count`` and ``by_type``.
+
+            The TUI's ``StatsPanel.update_stats`` reads:
+              ``total = stats.get('total_count', 0)``
+              ``by_type = stats.get('by_type', {})``
+
+            This verifies the real ``get_stats`` returns a dict with both
+            keys so the StatsPanel renders without KeyError.
+            """
+            db_path = str(tmp_path / "tui_smoke_stats.db")
+            cm = self._make_real_cm(db_path)
+            try:
+                stats = cm.get_stats()
+                assert isinstance(stats, dict), (
+                    f"get_stats must return a dict (StatsPanel reads stats.get(...)), "
+                    f"got {type(stats).__name__}"
+                )
+                assert "total_count" in stats, (
+                    "get_stats must include 'total_count' — "
+                    "StatsPanel.update_stats reads stats.get('total_count', 0)"
+                )
+                assert "by_type" in stats, (
+                    "get_stats must include 'by_type' — "
+                    "StatsPanel.update_stats reads stats.get('by_type', {})"
+                )
+            finally:
+                cm.close()
+
+    # ══════════════════════════════════════════════════════════════════
+    # Test Group 19: TUI ErrorDisplay Rendering (TD-046)
+    # ══════════════════════════════════════════════════════════════════
+
+    class TestErrorDisplayRendering:
+        """Verify ``ErrorDisplay.show_error`` renders friendly error boxes.
+
+        ErrorDisplay is the TUI's friendly error surface: it converts
+        low-level exceptions into a human-readable box showing the error
+        code, message, and hint. Two rendering paths exist:
+
+          1. ``CarryMemError`` instances render their own code/message/hint.
+          2. Other exceptions are passed through ``CarryMemError.from_cause``
+             to map them to a friendly code (e.g., ValueError → CM-201/202).
+
+        These tests mount a minimal App containing only an ``ErrorDisplay``
+        widget (bypassing the broken ``CarryMemTUI.CSS``) and verify both
+        rendering paths produce the expected content and toggle the
+        ``error-visible`` / ``error-hidden`` CSS classes so the box
+        actually appears on screen.
+        """
+
+        async def _mount_error_display(self):
+            """Mount an ErrorDisplay on a minimal app and return (app, display)."""
+            # Local class — defined inside the method so each test gets a
+            # fresh class (avoiding cross-test state contamination).
+            class _ErrorApp(App):
+                CSS = ""
+
+                def compose(self) -> ComposeResult:
+                    yield ErrorDisplay(id="error-display")
+
+            app = _ErrorApp()
+            pilot_ctx = app.run_test()
+            pilot = await pilot_ctx.__aenter__()
+            try:
+                await pilot.pause()
+                ed = app.query_one("#error-display", ErrorDisplay)
+                return app, pilot, pilot_ctx, ed
+            except Exception:
+                await pilot_ctx.__aexit__(None, None, None)
+                raise
+
+        async def test_show_error_renders_carrymem_error(self):
+            """``CarryMemError`` renders with its code, message, and hint.
+
+            Verifies the friendly-error path: when the TUI catches a
+            ``CarryMemError``, the rendered box must contain the error
+            code (so users can quote it in support tickets), the message
+            (the human-readable explanation), and the hint (the suggested
+            fix). The ``error-visible`` class must be applied so the box
+            is shown; ``error-hidden`` must be removed.
+            """
+            app, pilot, pilot_ctx, ed = await self._mount_error_display()
+            try:
+                test_error = CarryMemError(
+                    code="CM-301",
+                    message="Memory classification failed.",
+                    hint="Please check the memory content format.",
+                )
+                ed.show_error(test_error)
+                await pilot.pause()
+
+                # ``content`` is the textual Static's public attribute
+                # holding the rendered text.
+                rendered = ed.content
+                assert "CM-301" in rendered, "Error code must be rendered"
+                assert "Memory classification failed." in rendered, (
+                    "Error message must be rendered"
+                )
+                assert "Please check the memory content format." in rendered, (
+                    "Error hint must be rendered"
+                )
+                assert ed.has_class("error-visible") is True, (
+                    "error-visible class must be applied after show_error"
+                )
+                assert ed.has_class("error-hidden") is False, (
+                    "error-hidden class must be removed after show_error"
+                )
+            finally:
+                await pilot_ctx.__aexit__(None, None, None)
+
+        async def test_show_error_renders_generic_exception(self):
+            """Generic exceptions are downgraded to a friendly CarryMemError.
+
+            Verifies the ``CarryMemError.from_cause`` fallback path: when
+            the TUI catches a non-CarryMemError exception (e.g., a bare
+            ``ValueError`` from a bug), ``show_error`` must:
+              - Map it to a friendly code (CM-201 / CM-202 for ValueError)
+              - Render the friendly message (not the raw ValueError text)
+              - Apply the ``error-visible`` class so the box appears
+            This protects users from seeing raw Python tracebacks.
+            """
+            app, pilot, pilot_ctx, ed = await self._mount_error_display()
+            try:
+                test_error = ValueError("invalid user input: empty content")
+                ed.show_error(test_error)
+                await pilot.pause()
+
+                rendered = ed.content
+                # Friendly code for a generic ValueError is CM-201 (validation)
+                # or CM-202 (invalid input/parameter). Both start with "CM-2".
+                assert "CM-2" in rendered, (
+                    "Generic ValueError must be mapped to a CM-2xx friendly code"
+                )
+                # The raw ValueError type name must NOT appear in the rendered
+                # friendly message (users shouldn't see Python internals).
+                assert "ValueError" not in rendered, (
+                    "Raw exception type name must not leak to the user"
+                )
+                assert ed.has_class("error-visible") is True, (
+                    "error-visible class must be applied for generic exceptions"
+                )
+                assert ed.has_class("error-hidden") is False, (
+                    "error-hidden class must be removed for generic exceptions"
+                )
+            finally:
+                await pilot_ctx.__aexit__(None, None, None)
+
+        async def test_clear_error_resets_display(self):
+            """``clear_error`` empties the box and re-applies ``error-hidden``.
+
+            Verifies the reset path: after showing an error, calling
+            ``clear_error`` must empty the rendered content and toggle
+            the CSS classes back to the hidden state, so the error box
+            disappears from the screen.
+            """
+            app, pilot, pilot_ctx, ed = await self._mount_error_display()
+            try:
+                # Show an error first.
+                ed.show_error(
+                    CarryMemError(
+                        code="CM-301",
+                        message="Memory classification failed.",
+                        hint="Check input.",
+                    )
+                )
+                await pilot.pause()
+                assert ed.has_class("error-visible") is True
+
+                # Now clear it.
+                ed.clear_error()
+                await pilot.pause()
+
+                # Content must be empty.
+                rendered = ed.content
+                assert rendered.strip() == "", (
+                    "clear_error must empty the rendered content"
+                )
+                # CSS classes must toggle back to hidden.
+                assert ed.has_class("error-visible") is False, (
+                    "error-visible must be removed after clear_error"
+                )
+                assert ed.has_class("error-hidden") is True, (
+                    "error-hidden must be applied after clear_error"
+                )
+            finally:
+                await pilot_ctx.__aexit__(None, None, None)

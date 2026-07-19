@@ -20,8 +20,52 @@ class RecallEngine:
     # Overridable via CARRYMEM_ACCESS_UPDATE_INTERVAL env var. 0 = always update.
     _DEFAULT_ACCESS_UPDATE_INTERVAL = 60
 
-    def __init__(self, adapter):
+    def __init__(
+        self,
+        adapter,
+        conn_mgr,
+        serializer,
+        cache,
+        expander,
+        merger,
+        embedding_model,
+        embedding_dim: int,
+        rrf_k: int,
+        rrf_fts_weight: float,
+        rrf_vec_weight: float,
+        rrf_type_boosts: Dict[str, float],
+    ) -> None:
+        """Initialize recall engine with explicit dependencies.
+
+        Args:
+            adapter: SQLiteAdapter reference (for public API: namespace, enable_cache,
+                enable_vector, semantic_enabled).
+            conn_mgr: ConnectionManager instance.
+            serializer: RowSerializer instance.
+            cache: RecallCache instance or None.
+            expander: SemanticExpander instance or None.
+            merger: ResultMerger instance or None.
+            embedding_model: Embedding model instance or None.
+            embedding_dim: Embedding dimension (int).
+            rrf_k: RRF k parameter.
+            rrf_fts_weight: RRF FTS weight.
+            rrf_vec_weight: RRF vector weight.
+            rrf_type_boosts: RRF type boost mapping.
+        """
         self._adapter = adapter
+        self._conn_mgr = conn_mgr
+        self._serializer = serializer
+        self._cache = cache
+        self._expander = expander
+        self._merger = merger
+        self._embedding_model = embedding_model
+        self._embedding_dim = embedding_dim
+        # RRF config lives on the engine so hybrid_search can override per-call
+        # without mutating adapter state.
+        self._rrf_k = rrf_k
+        self._rrf_fts_weight = rrf_fts_weight
+        self._rrf_vec_weight = rrf_vec_weight
+        self._rrf_type_boosts = rrf_type_boosts
 
     @classmethod
     def _get_access_update_interval(cls) -> int:
@@ -86,16 +130,16 @@ class RecallEngine:
         update_access: bool = True,
     ) -> List[StoredMemory]:
         """Run multi-phase recall with caching, returning matching stored memories."""
-        if self._adapter._enable_cache and self._adapter._cache:
-            cached = self._adapter._cache.get(self._adapter.namespace, query, filters, limit)
+        if self._adapter.enable_cache and self._cache:
+            cached = self._cache.get(self._adapter.namespace, query, filters, limit)
             if cached is not None:
-                return [self._adapter._serializer.dict_to_stored(d) or StoredMemory() for d in cached]
+                return [self._serializer.dict_to_stored(d) or StoredMemory() for d in cached]
 
-        with self._adapter._conn_mgr.lock:
+        with self._conn_mgr.lock:
             results = self._recall_impl(query, filters, limit, namespaces, update_access=update_access)
 
-        if self._adapter._enable_cache and self._adapter._cache and results:
-            self._adapter._cache.put(
+        if self._adapter.enable_cache and self._cache and results:
+            self._cache.put(
                 self._adapter.namespace,
                 query,
                 filters,
@@ -219,7 +263,7 @@ class RecallEngine:
 
     def _execute_no_query_recall(self, where_clause, params, limit):
         """Execute recall when no query is provided (importance-based ordering)."""
-        conn = self._adapter._conn_mgr.get_connection()
+        conn = self._conn_mgr.get_connection()
         sql = f"""
             SELECT * FROM memories
             {where_clause}
@@ -244,7 +288,7 @@ class RecallEngine:
             rows = self._like_search(query, where_clause, params, limit)
 
         if not rows or len(rows) < max(3, limit // 4):
-            qb = QueryBuilderWithContext(self._adapter)
+            qb = QueryBuilderWithContext(self._adapter, self._conn_mgr)
             rebuilt_query = qb.rebuild_context(query, keywords)
             if rebuilt_query and rebuilt_query != query and rebuilt_query != keywords:
                 extra_rows = self._fts_search(rebuilt_query, where_clause, params, limit)
@@ -259,7 +303,7 @@ class RecallEngine:
 
     def _recall_vector_phase(self, query, where_clause, params, limit, rows):
         """Vector search + RRF fusion."""
-        if self._adapter._enable_vector:
+        if self._adapter.enable_vector:
             vec_rows = self._vector_search(query, where_clause, params, limit)
             if vec_rows:
                 rows = self._rrf_fuse(rows, vec_rows, limit)
@@ -282,7 +326,7 @@ class RecallEngine:
                 rows = self._expand_with_like(expanded_queries, where_clause, params, limit, rows, seen_ids)
 
         # Semantic expansion if results insufficient
-        if self._adapter._enable_semantic and len(rows) < limit and self._adapter._expander and self._adapter._merger:
+        if self._adapter.semantic_enabled and len(rows) < limit and self._expander and self._merger:
             final_results = self._try_semantic_expansion(query, where_clause, params, limit, rows)
             if final_results is not None:
                 return final_results, True
@@ -328,12 +372,12 @@ class RecallEngine:
     def _try_semantic_expansion(self, query, where_clause, params, limit, rows):
         """Try semantic expansion. Returns list[StoredMemory] on success, None if no expansion."""
         expanded_rows = self._semantic_recall(query, where_clause, params, limit)
-        expanded_results = [self._adapter._serializer.row_to_stored(r) for r in expanded_rows if r]
+        expanded_results = [self._serializer.row_to_stored(r) for r in expanded_rows if r]
         if not expanded_results:
             return None
 
-        original_results = [self._adapter._serializer.row_to_stored(r) for r in rows if r]
-        merged = self._adapter._merger.merge(
+        original_results = [self._serializer.row_to_stored(r) for r in rows if r]
+        merged = self._merger.merge(
             original_results=original_results,
             expanded_results=expanded_results,
             query=query,
@@ -345,7 +389,7 @@ class RecallEngine:
             if isinstance(item, StoredMemory):
                 final_results.append(item)
             elif isinstance(item, dict):
-                stored = self._adapter._serializer.dict_to_stored(item)
+                stored = self._serializer.dict_to_stored(item)
                 if stored:
                     final_results.append(stored)
         return final_results
@@ -378,20 +422,15 @@ class RecallEngine:
         always update (backward compat / test mode).
         """
         filters = filters or {}
-        conn = self._adapter._conn_mgr.get_connection()
+        conn = self._conn_mgr.get_connection()
         now = datetime.now(timezone.utc)
         now_iso = now.isoformat()
-        results = []
-        seen_keys = set()
+        results: list = []
+        seen_keys: set = set()
         batch_updates: List[tuple] = []
 
         if is_stored:
-            for stored in rows:
-                if stored.storage_key not in seen_keys:
-                    seen_keys.add(stored.storage_key)
-                    if update_access and self._should_update_access(stored, now):
-                        self.increment_access(stored, batch_updates, now_iso)
-                    results.append(stored)
+            self._collect_stored_access_updates(rows, update_access, now, now_iso, seen_keys, batch_updates, results)
             if update_access and batch_updates:
                 conn.executemany(
                     "UPDATE memories SET access_count = ?, "
@@ -400,23 +439,7 @@ class RecallEngine:
                     batch_updates,
                 )
         else:
-            # P1-2: Diversity filtering - limit same-type dominance
-            type_counts: Dict[str, int] = {}
-            max_per_type = max(3, limit // 3)
-
-            for row in rows:
-                stored = self._adapter._serializer.row_to_stored(row)
-                if stored and stored.storage_key not in seen_keys:
-                    mtype = stored.type or "unknown"
-                    type_counts[mtype] = type_counts.get(mtype, 0) + 1
-
-                    if type_counts[mtype] > max_per_type and mtype == "sentiment_marker":
-                        continue
-
-                    seen_keys.add(stored.storage_key)
-                    if update_access and self._should_update_access(stored, now):
-                        self.increment_access(stored, batch_updates, now_iso)
-                    results.append(stored)
+            self._collect_row_access_updates(rows, update_access, now, now_iso, limit, seen_keys, batch_updates, results)
             if update_access and batch_updates:
                 conn.executemany(
                     "UPDATE memories SET access_count = access_count + 1, "
@@ -432,17 +455,50 @@ class RecallEngine:
 
         return results
 
+    def _collect_stored_access_updates(
+        self, rows, update_access, now, now_iso, seen_keys, batch_updates, results
+    ) -> None:
+        """Dedupe StoredMemory rows and queue access-count updates (is_stored path)."""
+        for stored in rows:
+            if stored.storage_key not in seen_keys:
+                seen_keys.add(stored.storage_key)
+                if update_access and self._should_update_access(stored, now):
+                    self.increment_access(stored, batch_updates, now_iso)
+                results.append(stored)
+
+    def _collect_row_access_updates(
+        self, rows, update_access, now, now_iso, limit, seen_keys, batch_updates, results
+    ) -> None:
+        """Dedupe raw DB rows with diversity filtering and queue access updates."""
+        # P1-2: Diversity filtering - limit same-type dominance
+        type_counts: Dict[str, int] = {}
+        max_per_type = max(3, limit // 3)
+
+        for row in rows:
+            stored = self._serializer.row_to_stored(row)
+            if stored and stored.storage_key not in seen_keys:
+                mtype = stored.type or "unknown"
+                type_counts[mtype] = type_counts.get(mtype, 0) + 1
+
+                if type_counts[mtype] > max_per_type and mtype == "sentiment_marker":
+                    continue
+
+                seen_keys.add(stored.storage_key)
+                if update_access and self._should_update_access(stored, now):
+                    self.increment_access(stored, batch_updates, now_iso)
+                results.append(stored)
+
     def _semantic_recall(self, query: str, where_clause: str, params: List, limit: int):
         """Perform semantic expansion search.
 
         Expands query using synonym graph, spell correction, cross-language mapping,
         then re-searches FTS5 with expanded terms. Uses batched queries to avoid N+1.
         """
-        if not self._adapter._expander:
+        if not self._expander:
             return []
 
         try:
-            expansions = self._adapter._expander.expand(query)
+            expansions = self._expander.expand(query)
 
             all_expanded_rows = []
 
@@ -451,32 +507,19 @@ class RecallEngine:
             if not valid_expansions:
                 return []
 
-            self._adapter._conn_mgr.get_connection()
+            self._conn_mgr.get_connection()
             try:
                 combined_query = " OR ".join(f'"{e}"' for e in valid_expansions)
                 all_expanded_rows = self._fts_search(combined_query, where_clause, params, limit)
-                seen_row_ids = set()
-                deduped = []
-                for row in all_expanded_rows:
-                    row_id = row["id"] if hasattr(row, "__getitem__") else None
-                    if row_id and row_id not in seen_row_ids:
-                        seen_row_ids.add(row_id)
-                        deduped.append(row)
-                        if len(deduped) >= limit:
-                            break
+                seen_row_ids: set = set()
+                deduped: list = []
+                self._append_deduped_rows(all_expanded_rows, seen_row_ids, deduped, limit)
                 all_expanded_rows = deduped
 
                 if len(all_expanded_rows) < limit:
-                    cjk_expansions = [e for e in valid_expansions if has_cjk(e)]
-                    if cjk_expansions:
-                        like_rows = self._combined_like_search(cjk_expansions, where_clause, params, limit)
-                        for row in like_rows:
-                            row_id = row["id"] if hasattr(row, "__getitem__") else None
-                            if row_id and row_id not in seen_row_ids:
-                                seen_row_ids.add(row_id)
-                                all_expanded_rows.append(row)
-                                if len(all_expanded_rows) >= limit:
-                                    break
+                    self._append_cjk_like_rows(
+                        valid_expansions, where_clause, params, limit, all_expanded_rows, seen_row_ids
+                    )
             finally:
                 pass
 
@@ -486,12 +529,32 @@ class RecallEngine:
             logger.warning("Semantic recall search failed: %s", e)
             return []
 
+    def _append_deduped_rows(self, new_rows, seen_ids, accumulator, limit) -> None:
+        """Append new_rows to accumulator, deduping by row id, stopping at limit."""
+        for row in new_rows:
+            row_id = row["id"] if hasattr(row, "__getitem__") else None
+            if row_id and row_id not in seen_ids:
+                seen_ids.add(row_id)
+                accumulator.append(row)
+                if len(accumulator) >= limit:
+                    break
+
+    def _append_cjk_like_rows(
+        self, valid_expansions, where_clause, params, limit, accumulator, seen_ids
+    ) -> None:
+        """Run CJK LIKE search and append deduped rows to accumulator."""
+        cjk_expansions = [e for e in valid_expansions if has_cjk(e)]
+        if not cjk_expansions:
+            return
+        like_rows = self._combined_like_search(cjk_expansions, where_clause, params, limit)
+        self._append_deduped_rows(like_rows, seen_ids, accumulator, limit)
+
     def _vector_search(self, query: str, where_clause: str, params: List, limit: int):
-        if not self._adapter._embedding_model:
+        if not self._embedding_model:
             return []
         try:
-            query_embedding = self._adapter._embedding_model.encode(query)
-            conn = self._adapter._conn_mgr.get_connection()
+            query_embedding = self._embedding_model.encode(query)
+            conn = self._conn_mgr.get_connection()
             vec_sql = """
                 SELECT m.*, v.distance
                 FROM memories m
@@ -504,7 +567,7 @@ class RecallEngine:
                 where_clause=where_clause
             )
             vec_params = params + [
-                struct.pack(f"{self._adapter._embedding_dim}f", *query_embedding.tolist()),
+                struct.pack(f"{self._embedding_dim}f", *query_embedding.tolist()),
                 limit,
             ]
             return conn.execute(vec_sql, vec_params).fetchall()
@@ -525,7 +588,7 @@ class RecallEngine:
             rid = row["id"] if row and "id" in row.keys() else None
             if not rid:
                 continue
-            base_score = self._adapter._rrf_fts_weight / (self._adapter._rrf_k + rank)
+            base_score = self._rrf_fts_weight / (self._rrf_k + rank)
             type_boost = self._type_boost(row)
             rrf_scores[rid] = rrf_scores.get(rid, 0.0) + base_score * type_boost
             row_data[rid] = row
@@ -534,7 +597,7 @@ class RecallEngine:
             rid = row["id"] if row and "id" in row.keys() else None
             if not rid:
                 continue
-            base_score = self._adapter._rrf_vec_weight / (self._adapter._rrf_k + rank)
+            base_score = self._rrf_vec_weight / (self._rrf_k + rank)
             type_boost = self._type_boost(row)
             rrf_scores[rid] = rrf_scores.get(rid, 0.0) + base_score * type_boost
             if rid not in row_data:
@@ -550,13 +613,13 @@ class RecallEngine:
         Default: fact/decision +20%, sentiment -50%.
         """
         mtype = row["type"] if row and "type" in row.keys() else ""
-        return self._adapter._rrf_type_boosts.get(mtype, 1.0)  # type: ignore[no-any-return]
+        return self._rrf_type_boosts.get(mtype, 1.0)
 
     def _fts_search(self, query, where_clause, params, limit):
         from .query_builder import QueryBuilder
 
         try:
-            conn = self._adapter._conn_mgr.get_connection()
+            conn = self._conn_mgr.get_connection()
             safe_query = QueryBuilder.sanitize_fts_query(query)
             if not safe_query:
                 return []
@@ -577,7 +640,7 @@ class RecallEngine:
             return []
 
     def _like_search(self, query, where_clause, params, limit):
-        conn = self._adapter._conn_mgr.get_connection()
+        conn = self._conn_mgr.get_connection()
         escaped = escape_like(query)
         like_clause = (
             " AND (content LIKE ? ESCAPE '\\' OR raw_text LIKE ? " "ESCAPE '\\' OR original_message LIKE ? ESCAPE '\\')"
@@ -601,7 +664,7 @@ class RecallEngine:
         (content, raw_text, original_message).  Each term is escaped via
         ``escape_like`` and uses ``ESCAPE '\\'`` to prevent LIKE injection.
         """
-        conn = self._adapter._conn_mgr.get_connection()
+        conn = self._conn_mgr.get_connection()
         like_parts = []
         like_params = []
         for term in terms:
@@ -641,7 +704,7 @@ class RecallEngine:
         Returns:
             List of StoredMemory ordered by vector similarity.
         """
-        if not self._adapter._enable_vector or not self._adapter._embedding_model:
+        if not self._adapter.enable_vector or not self._embedding_model:
             return []
 
         from .query_builder import _ALLOWED_FILTER_KEYS, _VALID_MEMORY_TYPES
@@ -675,9 +738,9 @@ class RecallEngine:
 
         where_clause = "WHERE " + " AND ".join(conditions)
 
-        with self._adapter._conn_mgr.lock:
+        with self._conn_mgr.lock:
             vec_rows = self._vector_search(query, where_clause, params, limit)
-            results = [self._adapter._serializer.row_to_stored(r) for r in vec_rows if r]
+            results = [self._serializer.row_to_stored(r) for r in vec_rows if r]
         return [r for r in results if r]
 
     def hybrid_search(
@@ -694,6 +757,37 @@ class RecallEngine:
 
         Temporarily overrides adapter RRF config for this call, then restores.
         """
+        where_clause, params = self._build_hybrid_where_clause(filters, namespaces)
+
+        # Save original RRF config (engine-local, not adapter state)
+        orig_fts_w = self._rrf_fts_weight
+        orig_vec_w = self._rrf_vec_weight
+        orig_k = self._rrf_k
+
+        # Apply per-call overrides
+        if fts_weight is not None:
+            self._rrf_fts_weight = fts_weight
+        if vec_weight is not None:
+            self._rrf_vec_weight = vec_weight
+        if rrf_k is not None:
+            self._rrf_k = rrf_k
+
+        try:
+            results = self._run_hybrid_search(query, where_clause, params, limit)
+        finally:
+            # Restore original RRF config
+            self._rrf_fts_weight = orig_fts_w
+            self._rrf_vec_weight = orig_vec_w
+            self._rrf_k = orig_k
+
+        return [r for r in results if r]
+
+    def _build_hybrid_where_clause(
+        self,
+        filters: Optional[Dict[str, Any]],
+        namespaces: Optional[List[str]],
+    ) -> tuple:
+        """Validate filters and build (where_clause, params) for hybrid search."""
         from .query_builder import _ALLOWED_FILTER_KEYS, _VALID_MEMORY_TYPES
 
         filters = filters or {}
@@ -726,44 +820,25 @@ class RecallEngine:
             conditions.append("created_at <= ?")
             params.append(filters["created_before"])
 
-        where_clause = "WHERE " + " AND ".join(conditions)
+        return "WHERE " + " AND ".join(conditions), params
 
-        # Save original RRF config
-        orig_fts_w = self._adapter._rrf_fts_weight
-        orig_vec_w = self._adapter._rrf_vec_weight
-        orig_k = self._adapter._rrf_k
-
-        # Apply per-call overrides
-        if fts_weight is not None:
-            self._adapter._rrf_fts_weight = fts_weight
-        if vec_weight is not None:
-            self._adapter._rrf_vec_weight = vec_weight
-        if rrf_k is not None:
-            self._adapter._rrf_k = rrf_k
-
-        try:
-            with self._adapter._conn_mgr.lock:
-                fts_rows = self._fts_search(query, where_clause, params, limit)
-                if self._adapter._enable_vector:
-                    vec_rows = self._vector_search(query, where_clause, params, limit)
-                else:
-                    vec_rows = []
-                if fts_rows and vec_rows:
-                    fused = self._rrf_fuse(fts_rows, vec_rows, limit)
-                elif fts_rows:
-                    fused = fts_rows
-                elif vec_rows:
-                    fused = vec_rows
-                else:
-                    fused = []
-                results = [self._adapter._serializer.row_to_stored(r) for r in fused if r]
-        finally:
-            # Restore original RRF config
-            self._adapter._rrf_fts_weight = orig_fts_w
-            self._adapter._rrf_vec_weight = orig_vec_w
-            self._adapter._rrf_k = orig_k
-
-        return [r for r in results if r]
+    def _run_hybrid_search(self, query: str, where_clause: str, params: List, limit: int) -> list:
+        """Execute FTS+vector search under conn lock and fuse results via RRF."""
+        with self._conn_mgr.lock:
+            fts_rows = self._fts_search(query, where_clause, params, limit)
+            if self._adapter.enable_vector:
+                vec_rows = self._vector_search(query, where_clause, params, limit)
+            else:
+                vec_rows = []
+            if fts_rows and vec_rows:
+                fused = self._rrf_fuse(fts_rows, vec_rows, limit)
+            elif fts_rows:
+                fused = fts_rows
+            elif vec_rows:
+                fused = vec_rows
+            else:
+                fused = []
+            return [self._serializer.row_to_stored(r) for r in fused if r]
 
     def search_by_time(
         self,
@@ -810,8 +885,8 @@ class RecallEngine:
 
         where_clause = "WHERE " + " AND ".join(conditions)
 
-        with self._adapter._conn_mgr.lock:
-            conn = self._adapter._conn_mgr.get_connection()
+        with self._conn_mgr.lock:
+            conn = self._conn_mgr.get_connection()
             sql = f"""
                 SELECT * FROM memories
                 {where_clause}
@@ -820,6 +895,6 @@ class RecallEngine:
             """
             params.append(limit)
             rows = conn.execute(sql, params).fetchall()
-            results = [self._adapter._serializer.row_to_stored(r) for r in rows if r]
+            results = [self._serializer.row_to_stored(r) for r in rows if r]
 
         return [r for r in results if r]

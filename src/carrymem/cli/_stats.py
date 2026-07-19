@@ -296,6 +296,68 @@ def cmd_profile(args):
     return 0
 
 
+def _print_conflicts_check(cm) -> None:
+    """Print conflict detection results for cmd_check."""
+    print("  Conflicts:")
+    try:
+        conflicts = cm.check_conflicts()
+        if not conflicts:
+            print(f"    {_green('No conflicts detected')}")
+        else:
+            for c in conflicts:
+                ctype = c.get("conflict_type", "unknown")
+                severity = c.get("severity", "unknown")
+                reason = c.get("reason", "")
+                keys = c.get("memory_keys", [])
+                sev_color = _red if severity == "high" else _yellow
+                print(f"    {sev_color(f'[{severity.upper()}]')} {ctype}: {reason}")
+                for key in keys:
+                    print(f"      {_dim(f'- {key}')}")
+    except (KeyError, ValueError, TypeError) as e:
+        print(f"    {_red(f'Error: {e}')}")
+    print()
+
+
+def _print_quality_check(cm) -> None:
+    """Print low-quality memory results for cmd_check."""
+    print("  Low Quality Memories:")
+    try:
+        low_quality = cm.check_quality(min_score=0.3)
+        if not low_quality:
+            print(f"    {_green('All memories have good quality')}")
+        else:
+            for item in low_quality:
+                key = item.get("storage_key", "")
+                score = item.get("score", 0)
+                reasons = item.get("reasons", [])
+                content = item.get("content", "")
+                print(f"    {_yellow(f'Score: {score:.3f}')} | {_truncate(content, 50)}")
+                reasons_str = ", ".join(reasons)
+                print(f"      {_dim(f'Key: {key} | Reasons: {reasons_str}')}")
+    except (KeyError, ValueError, TypeError) as e:
+        print(f"    {_red(f'Error: {e}')}")
+    print()
+
+
+def _print_expired_check(cm) -> None:
+    """Print expired memory results for cmd_check."""
+    print("  Expired Memories:")
+    try:
+        expired = cm.list_expired()
+        if not expired:
+            print(f"    {_green('No expired memories')}")
+        else:
+            for item in expired:
+                key = item.get("storage_key", "")
+                content = item.get("content", "")
+                expires = item.get("expires_at", "")
+                print(f"    {_yellow('[EXPIRED]')} {_truncate(content, 50)}")
+                print(f"      {_dim(f'Key: {key} | Expired: {expires}')}")
+    except (KeyError, ValueError, TypeError) as e:
+        print(f"    {_red(f'Error: {e}')}")
+    print()
+
+
 def cmd_check(args):
     """Run quality checks for conflicts, low-quality, and expired memories."""
     parser = _make_parser("check")
@@ -315,60 +377,11 @@ def cmd_check(args):
     print(f"  {'=' * 45}\n")
 
     if run_all or parsed.conflicts:
-        print("  Conflicts:")
-        try:
-            conflicts = cm.check_conflicts()
-            if not conflicts:
-                print(f"    {_green('No conflicts detected')}")
-            else:
-                for c in conflicts:
-                    ctype = c.get("conflict_type", "unknown")
-                    severity = c.get("severity", "unknown")
-                    reason = c.get("reason", "")
-                    keys = c.get("memory_keys", [])
-                    sev_color = _red if severity == "high" else _yellow
-                    print(f"    {sev_color(f'[{severity.upper()}]')} {ctype}: {reason}")
-                    for key in keys:
-                        print(f"      {_dim(f'- {key}')}")
-        except (KeyError, ValueError, TypeError) as e:
-            print(f"    {_red(f'Error: {e}')}")
-        print()
-
+        _print_conflicts_check(cm)
     if run_all or parsed.quality:
-        print("  Low Quality Memories:")
-        try:
-            low_quality = cm.check_quality(min_score=0.3)
-            if not low_quality:
-                print(f"    {_green('All memories have good quality')}")
-            else:
-                for item in low_quality:
-                    key = item.get("storage_key", "")
-                    score = item.get("score", 0)
-                    reasons = item.get("reasons", [])
-                    content = item.get("content", "")
-                    print(f"    {_yellow(f'Score: {score:.3f}')} | {_truncate(content, 50)}")
-                    reasons_str = ", ".join(reasons)
-                    print(f"      {_dim(f'Key: {key} | Reasons: {reasons_str}')}")
-        except (KeyError, ValueError, TypeError) as e:
-            print(f"    {_red(f'Error: {e}')}")
-        print()
-
+        _print_quality_check(cm)
     if run_all or parsed.expired:
-        print("  Expired Memories:")
-        try:
-            expired = cm.list_expired()
-            if not expired:
-                print(f"    {_green('No expired memories')}")
-            else:
-                for item in expired:
-                    key = item.get("storage_key", "")
-                    content = item.get("content", "")
-                    expires = item.get("expires_at", "")
-                    print(f"    {_yellow('[EXPIRED]')} {_truncate(content, 50)}")
-                    print(f"      {_dim(f'Key: {key} | Expired: {expires}')}")
-        except (KeyError, ValueError, TypeError) as e:
-            print(f"    {_red(f'Error: {e}')}")
-        print()
+        _print_expired_check(cm)
 
     cm.close()
     return 0

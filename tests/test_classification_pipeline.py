@@ -406,13 +406,13 @@ class TestIsLowInfoAssistantReply(unittest.TestCase):
     """Test the _is_low_info_assistant_reply static method."""
 
     def test_empty_message_is_low_info(self):
-        self.assertTrue(ClassificationPipeline._is_low_info_assistant_reply(""))
+        self.assertIs(ClassificationPipeline._is_low_info_assistant_reply(""), True)
 
     def test_whitespace_only_is_low_info(self):
-        self.assertTrue(ClassificationPipeline._is_low_info_assistant_reply("   "))
+        self.assertIs(ClassificationPipeline._is_low_info_assistant_reply("   "), True)
 
     def test_none_message_is_low_info(self):
-        self.assertTrue(ClassificationPipeline._is_low_info_assistant_reply(None))
+        self.assertIs(ClassificationPipeline._is_low_info_assistant_reply(None), True)
 
     def test_generic_confirmation_is_low_info(self):
         cases = [
@@ -436,19 +436,17 @@ class TestIsLowInfoAssistantReply(unittest.TestCase):
         ]
         for msg in cases:
             with self.subTest(msg=msg):
-                self.assertTrue(
-                    ClassificationPipeline._is_low_info_assistant_reply(msg),
-                    f"'{msg}' should be classified as low info",
+                self.assertIs(ClassificationPipeline._is_low_info_assistant_reply(msg), True, f"'{msg}' should be classified as low info",
                 )
 
     def test_that_makes_sense_is_low_info(self):
-        self.assertTrue(ClassificationPipeline._is_low_info_assistant_reply("That makes sense"))
+        self.assertIs(ClassificationPipeline._is_low_info_assistant_reply("That makes sense"), True)
 
     def test_sounds_good_is_low_info(self):
-        self.assertTrue(ClassificationPipeline._is_low_info_assistant_reply("Sounds good"))
+        self.assertIs(ClassificationPipeline._is_low_info_assistant_reply("Sounds good"), True)
 
     def test_short_reply_without_facts_is_low_info(self):
-        self.assertTrue(ClassificationPipeline._is_low_info_assistant_reply("I will help you"))
+        self.assertIs(ClassificationPipeline._is_low_info_assistant_reply("I will help you"), True)
 
     def test_reply_with_version_number_not_low_info(self):
         self.assertFalse(ClassificationPipeline._is_low_info_assistant_reply("The server runs on Python 3.11"))
@@ -487,30 +485,30 @@ class TestIsLowInfoAssistantReply(unittest.TestCase):
         )
 
     def test_conversational_without_facts_is_low_info(self):
-        self.assertTrue(ClassificationPipeline._is_low_info_assistant_reply("I think that is great and wonderful"))
+        self.assertIs(ClassificationPipeline._is_low_info_assistant_reply("I think that is great and wonderful"), True)
 
     def test_conversational_with_facts_not_low_info(self):
         self.assertFalse(ClassificationPipeline._is_low_info_assistant_reply("I think PostgreSQL 14.2 is great"))
 
     def test_emotional_without_facts_is_low_info(self):
-        self.assertTrue(ClassificationPipeline._is_low_info_assistant_reply("I'm glad to hear that"))
+        self.assertIs(ClassificationPipeline._is_low_info_assistant_reply("I'm glad to hear that"), True)
 
     def test_you_re_welcome_is_low_info(self):
-        self.assertTrue(ClassificationPipeline._is_low_info_assistant_reply("You're welcome"))
+        self.assertIs(ClassificationPipeline._is_low_info_assistant_reply("You're welcome"), True)
 
     def test_assistant_prefix_stripped(self):
         """[assistant said] prefix should be stripped before analysis."""
-        self.assertTrue(ClassificationPipeline._is_low_info_assistant_reply("[assistant said] I understand"))
+        self.assertIs(ClassificationPipeline._is_low_info_assistant_reply("[assistant said] I understand"), True)
 
     def test_ai_said_prefix_stripped(self):
-        self.assertTrue(ClassificationPipeline._is_low_info_assistant_reply("[ai said] Got it"))
+        self.assertIs(ClassificationPipeline._is_low_info_assistant_reply("[ai said] Got it"), True)
 
     def test_bot_said_prefix_stripped(self):
-        self.assertTrue(ClassificationPipeline._is_low_info_assistant_reply("[bot said] Sure"))
+        self.assertIs(ClassificationPipeline._is_low_info_assistant_reply("[bot said] Sure"), True)
 
     def test_bracket_after_prefix_stripped(self):
         """Edge case: prefix followed by ] should strip the bracket."""
-        self.assertTrue(ClassificationPipeline._is_low_info_assistant_reply("[assistant said]] I understand"))
+        self.assertIs(ClassificationPipeline._is_low_info_assistant_reply("[assistant said]] I understand"), True)
 
     def test_long_factual_reply_not_low_info(self):
         self.assertFalse(

@@ -27,7 +27,7 @@ class TestValidateAndResolve(unittest.TestCase):
             "I prefer dark mode", None, None, None
         )
         self.assertEqual(resolved, "I prefer dark mode")
-        self.assertTrue(should_continue)
+        self.assertIs(should_continue, True)
         self.assertIsNone(redact_result)
         self.assertFalse(coref)
 
@@ -50,14 +50,14 @@ class TestValidateAndResolve(unittest.TestCase):
     def test_validate_and_resolve_with_session_id(self):
         """_validate_and_resolve injects session_id into context."""
         resolved, should_continue, _, _ = self.cm._validate_and_resolve("test message", {}, None, "sess_abc")
-        self.assertTrue(should_continue)
+        self.assertIs(should_continue, True)
 
     def test_validate_and_resolve_with_pronoun_attempts_coref(self):
         """_validate_and_resolve attempts coreference resolution when pronouns present."""
         # Even if coreference resolution fails, it should not raise
         resolved, should_continue, _, coref = self.cm._validate_and_resolve("I like it", None, None, None)
         # Should still continue (coreference failure is non-critical)
-        self.assertTrue(should_continue)
+        self.assertIs(should_continue, True)
 
 
 class TestClassifyMessage(unittest.TestCase):

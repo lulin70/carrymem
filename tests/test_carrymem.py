@@ -573,7 +573,7 @@ class TestCarryMemCore(unittest.TestCase):
 
     def test_classify_and_remember(self):
         result = self.cm.classify_and_remember("I prefer dark mode")
-        self.assertTrue(result["stored"])
+        self.assertIs(result["stored"], True)
 
     def test_recall_memories(self):
         self.cm.classify_and_remember("I prefer dark mode")
@@ -584,11 +584,11 @@ class TestCarryMemCore(unittest.TestCase):
         result = self.cm.classify_and_remember("I prefer dark mode")
         key = result["storage_keys"][0]
         deleted = self.cm.forget_memory(key)
-        self.assertTrue(deleted)
+        self.assertIs(deleted, True)
 
     def test_declare(self):
         result = self.cm.declare("I always use Python 3.12")
-        self.assertTrue(result["declared"])
+        self.assertIs(result["declared"], True)
         self.assertEqual(result["source"], "declaration")
 
     def test_declare_confidence_1(self):
@@ -620,7 +620,7 @@ class TestCarryMemCore(unittest.TestCase):
     def test_classify_message_no_storage(self):
         cm = CarryMem(storage=None)
         result = cm.classify_message("I prefer dark mode")
-        self.assertTrue(result["should_remember"])
+        self.assertIs(result["should_remember"], True)
 
     def test_storage_not_configured_error(self):
         cm = CarryMem(storage=None)
@@ -644,7 +644,7 @@ class TestNamespace(unittest.TestCase):
         results_a = cm_a.recall_memories(query="mode")
         results_b = cm_b.recall_memories(query="mode")
         contents_a = [r["content"] for r in results_a]
-        self.assertTrue(any("project A" in c for c in contents_a))
+        self.assertIs(any("project A" in c for c in contents_a), True)
         self.assertFalse(any("project B" in c for c in contents_a))
 
     def test_cross_namespace_recall(self):
@@ -724,7 +724,7 @@ class TestSQLiteAdapter(unittest.TestCase):
         )
         stored = self.adapter.store_entry(entry)
         deleted = self.adapter.delete(stored.storage_key)
-        self.assertTrue(deleted)
+        self.assertIs(deleted, True)
 
     def test_get_stats(self):
         entry = MemoryEntry(
@@ -844,7 +844,7 @@ class TestExportImport(unittest.TestCase):
 
     def test_export_json_to_dict(self):
         result = self.cm.export_memories()
-        self.assertTrue(result["exported"])
+        self.assertIs(result["exported"], True)
         self.assertEqual(result["format"], "json")
         self.assertGreater(result["total_memories"], 0)
         self.assertIsNotNone(result["data"])
@@ -855,8 +855,8 @@ class TestExportImport(unittest.TestCase):
         export_path = tempfile.mktemp(suffix=".json")
         try:
             result = self.cm.export_memories(output_path=export_path)
-            self.assertTrue(result["exported"])
-            self.assertTrue(os.path.exists(export_path))
+            self.assertIs(result["exported"], True)
+            self.assertIs(os.path.exists(export_path), True)
             with open(export_path, "r") as f:
                 data = json.load(f)
             self.assertIn("memories", data)
@@ -867,7 +867,7 @@ class TestExportImport(unittest.TestCase):
 
     def test_export_markdown(self):
         result = self.cm.export_memories(format="markdown")
-        self.assertTrue(result["exported"])
+        self.assertIs(result["exported"], True)
         self.assertEqual(result["format"], "markdown")
         self.assertIn("# CarryMem Memory Export", result["content"])
         self.assertIn("user_preference", result["content"])
@@ -876,7 +876,7 @@ class TestExportImport(unittest.TestCase):
         export_path = tempfile.mktemp(suffix=".md")
         try:
             result = self.cm.export_memories(output_path=export_path, format="markdown")
-            self.assertTrue(os.path.exists(export_path))
+            self.assertIs(os.path.exists(export_path), True)
             with open(export_path, "r") as f:
                 content = f.read()
             self.assertIn("# CarryMem Memory Export", content)
@@ -1013,7 +1013,7 @@ class TestCJKRecall(unittest.TestCase):
         results = self.cm.recall_memories(query="偏好")
         self.assertGreater(len(results), 0)
         contents = [r["content"] for r in results]
-        self.assertTrue(any("PostgreSQL" in c for c in contents))
+        self.assertIs(any("PostgreSQL" in c for c in contents), True)
 
     def test_chinese_recall_original_message(self):
         self.cm.classify_and_remember("我偏好使用PostgreSQL")
@@ -1046,7 +1046,7 @@ class TestEdgeCases(unittest.TestCase):
         engine = MemoryClassificationEngine()
         entry = engine.to_memory_entry("I prefer dark mode")
         self.assertEqual(entry["schema_version"], "1.0.0")
-        self.assertTrue(entry["should_remember"])
+        self.assertIs(entry["should_remember"], True)
 
     def test_mixed_language_message(self):
         engine = MemoryClassificationEngine()
@@ -1135,7 +1135,7 @@ class TestSynonymExpansion(unittest.TestCase):
         expansions = self.expander.expand("dark mode")
         # Should have dark mode related terms (may include theme, 深色, ダーク etc.)
         has_dark_related = any("dark" in e.lower() or "深" in e or "ダーク" in e for e in expansions)
-        self.assertTrue(has_dark_related, f"Expected dark-related terms in {expansions[:10]}")
+        self.assertIs(has_dark_related, True, f"Expected dark-related terms in {expansions[:10]}")
         self.assertGreater(len(expansions), 3)
 
     def test_en_database_synonyms(self):
@@ -1286,17 +1286,17 @@ class TestCrossLanguageMapping(unittest.TestCase):
     def test_cn_to_en_database(self):
         expansions = self.expander.expand("数据库")
         has_en = any(e.isascii() and len(e) > 2 for e in expansions[1:])
-        self.assertTrue(has_en, f"Expected English terms in {expansions}")
+        self.assertIs(has_en, True, f"Expected English terms in {expansions}")
 
     def test_cn_to_jp_dark_mode(self):
         expansions = self.expander.expand("深色模式")
         has_jp = any("\u3040" <= c <= "\u30ff" for e in expansions for c in e)
-        self.assertTrue(has_jp, f"Expected Japanese terms in {expansions}")
+        self.assertIs(has_jp, True, f"Expected Japanese terms in {expansions}")
 
     def test_en_to_cn_editor(self):
         expansions = self.expander.expand("editor")
         has_cn = any("\u4e00" <= c <= "\u9fff" for e in expansions for c in e)
-        self.assertTrue(has_cn, f"Expected Chinese terms in {expansions}")
+        self.assertIs(has_cn, True, f"Expected Chinese terms in {expansions}")
 
     def test_en_to_jp_os(self):
         expansions = self.expander.expand("OS")
@@ -1306,12 +1306,12 @@ class TestCrossLanguageMapping(unittest.TestCase):
     def test_jp_to_en_framework(self):
         expansions = self.expander.expand("フレームワーク")
         has_en = any(e.lower() in ["framework", "django", "react"] for e in expansions)
-        self.assertTrue(has_en, f"Expected English framework terms in {expansions}")
+        self.assertIs(has_en, True, f"Expected English framework terms in {expansions}")
 
     def test_jp_to_cn_terminal(self):
         expansions = self.expander.expand("ターミナル")
         has_cn = any("终端" in e or "命令行" in e for e in expansions)
-        self.assertTrue(has_cn, f"Expected Chinese terminal terms in {expansions}")
+        self.assertIs(has_cn, True, f"Expected Chinese terminal terms in {expansions}")
 
     def test_trilingual_roundtrip(self):
         """Test that CN→EN→JP all connect through common concepts."""
@@ -1331,12 +1331,12 @@ class TestCrossLanguageMapping(unittest.TestCase):
         expansions = self.expander.expand("我喜欢dark mode")
         self.assertIn("我喜欢dark mode", expansions[0])
         has_dark_mode = any("dark mode" in e.lower() or "深色" in e for e in expansions)
-        self.assertTrue(has_dark_mode)
+        self.assertIs(has_dark_mode, True)
 
     def test_technical_term_translation(self):
         expansions = self.expander.expand("机器学习")
         has_ml = any(e.lower() in ["machine learning", "ml", "ai"] for e in expansions)
-        self.assertTrue(has_ml, f"Expected ML terms in {expansions}")
+        self.assertIs(has_ml, True, f"Expected ML terms in {expansions}")
 
 
 class TestEndToEndSemanticRecall(unittest.TestCase):
@@ -1362,7 +1362,7 @@ class TestEndToEndSemanticRecall(unittest.TestCase):
         results = self.cm.recall_memories(query="数据库")
         self.assertGreater(len(results), 0, f"Expected results for '数据库', got {len(results)}")
         contents = [r["content"] for r in results]
-        self.assertTrue(any("PostgreSQL" in c for c in contents), f"PostgreSQL not found in {contents}")
+        self.assertIs(any("PostgreSQL" in c for c in contents), True, f"PostgreSQL not found in {contents}")
 
     def test_en_dark_mode_finds_cn_theme(self):
         """English query finds Chinese stored preference."""
@@ -1384,7 +1384,7 @@ class TestEndToEndSemanticRecall(unittest.TestCase):
         results = self.cm.recall_memories(query="Postgres")
         self.assertGreater(len(results), 0, f"Expected results for 'Postgres', got {len(results)}")
         contents = [r["content"] for r in results]
-        self.assertTrue(any("PostgreSQL" in c for c in contents))
+        self.assertIs(any("PostgreSQL" in c for c in contents), True)
 
     def test_synonym_db_finds_sqlite(self):
         """'DB' should find memories about SQLite."""
@@ -1437,7 +1437,7 @@ class TestEndToEndSemanticRecall(unittest.TestCase):
         self.cm.declare("PostgreSQL version must be 14+")
 
         results = self.cm.recall_memories(query="数据库", filters={"type": "user_preference"})
-        self.assertTrue(all(r["type"] == "user_preference" for r in results))
+        self.assertIs(all(r["type"] == "user_preference" for r in results), True)
 
     def test_semantic_recall_namespace_isolation(self):
         """Semantic recall should respect namespace isolation."""
@@ -1479,7 +1479,7 @@ class TestEndToEndSemanticRecall(unittest.TestCase):
             # Check if result is dict-like with metadata
             if isinstance(first_result, dict):
                 has_score = "_relevance_score" in first_result or "confidence" in first_result
-                self.assertTrue(has_score, "Results should have scoring info")
+                self.assertIs(has_score, True, "Results should have scoring info")
 
 
 class TestResultMerger(unittest.TestCase):

@@ -58,7 +58,7 @@ class TestPromotionIntegration(unittest.TestCase):
         auto_rules = result.get("auto_rules", [])
         if auto_rules:
             has_avoid = any(r.get("rule_type") == "avoid" for r in auto_rules)
-            self.assertTrue(has_avoid, "Correction should suggest avoid rule")
+            self.assertIs(has_avoid, True, "Correction should suggest avoid rule")
 
     def test_decision_type_suggests_always_rule(self):
         """Verify: Decision memories suggest always-type rules."""
@@ -66,7 +66,7 @@ class TestPromotionIntegration(unittest.TestCase):
         auto_rules = result.get("auto_rules", [])
         if auto_rules:
             has_always = any(r.get("rule_type") in ("always", "prefer") for r in auto_rules)
-            self.assertTrue(has_always, "Decision should suggest always/prefer rule")
+            self.assertIs(has_always, True, "Decision should suggest always/prefer rule")
 
 
 class TestMultiTurnConversation(unittest.TestCase):
@@ -103,7 +103,7 @@ class TestMultiTurnConversation(unittest.TestCase):
         """Verify: Correction can follow a preference."""
         self.cm.classify_and_remember("我用MySQL")
         result = self.cm.classify_and_remember("不对，应该是PostgreSQL不是MySQL")
-        self.assertTrue(result["stored"])
+        self.assertIs(result["stored"], True)
 
     def test_auto_rules_accumulate(self):
         """Verify: Auto rule suggestions accumulate across turns."""
@@ -157,7 +157,7 @@ class TestRuleManagement(unittest.TestCase):
         """Verify: Can delete a rule."""
         rule = self.engine.add_rule(trigger="临时", action="临时动作", rule_type="prefer")
         deleted = self.engine.delete_rule(rule.id)
-        self.assertTrue(deleted)
+        self.assertIs(deleted, True)
 
         retrieved = self.engine.get_rule(rule.id)
         self.assertIsNone(retrieved)
@@ -182,10 +182,10 @@ class TestRuleManagement(unittest.TestCase):
 
         rules = self.engine.list_rules(status="active")
         for r in rules:
-            self.assertTrue(hasattr(r, "trigger"))
-            self.assertTrue(hasattr(r, "action"))
-            self.assertTrue(hasattr(r, "override"))
-            self.assertTrue(hasattr(r, "scope"))
+            self.assertIs(hasattr(r, "trigger"), True)
+            self.assertIs(hasattr(r, "action"), True)
+            self.assertIs(hasattr(r, "override"), True)
+            self.assertIs(hasattr(r, "scope"), True)
 
     def test_rule_conflict_detection(self):
         """Verify: Adding conflicting rule generates warning."""
@@ -225,7 +225,7 @@ class TestCorrectionUpdate(unittest.TestCase):
         """Verify: Correction updates related existing memory."""
         self.cm.classify_and_remember("我用MySQL数据库")
         result = self.cm.classify_and_remember("不对，应该是PostgreSQL不是MySQL")
-        self.assertTrue(result["stored"])
+        self.assertIs(result["stored"], True)
 
 
 class TestOnboarding(unittest.TestCase):

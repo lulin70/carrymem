@@ -150,6 +150,71 @@ PROMPT_TEMPLATES: Dict[str, Dict[str, Any]] = {
 }
 
 
+def _bucket_memories(memories: List[Dict[str, Any]]) -> tuple:
+    """Bucket memories into (mandatory, important, optional, outdated)."""
+    active = [m for m in memories if not m.get("superseded_at")]
+    outdated = [m for m in memories if m.get("superseded_at")]
+
+    mandatory = [m for m in active if m.get("type") in ("correction", "decision", "user_preference")]
+    important = [
+        m
+        for m in active
+        if m.get("type") not in ("correction", "decision", "user_preference") and m.get("confidence", 0) >= 0.8
+    ]
+    optional = [m for m in active if m not in mandatory and m not in important]
+    return mandatory, important, optional, outdated
+
+
+def _progressive_depths(progressive: bool) -> tuple:
+    """Compute bucket → depth mapping for progressive disclosure.
+
+    Mandatory always renders at full depth (never sacrifice key directives).
+    """
+    depth_mandatory = 3
+    depth_important = 2 if progressive else 3
+    depth_context = 2 if progressive else 3
+    depth_outdated = 1 if progressive else 3
+    return depth_mandatory, depth_important, depth_context, depth_outdated
+
+
+def _append_memory_bucket(
+    parts: List[str],
+    items: List[Dict[str, Any]],
+    header: str,
+    language: str,
+    depth: int,
+    limit: int = 0,
+) -> None:
+    """Append a memory bucket section to ``parts`` in-place."""
+    if not items:
+        return
+    parts.append(header)
+    selected = items[:limit] if limit else items
+    for m in selected:
+        parts.append(format_memory_entry(m, language, depth=depth))
+
+
+def _append_update_notes(parts: List[str], memories: List[Dict[str, Any]], language: str) -> None:
+    """Append knowledge update notes section to ``parts`` in-place."""
+    update_notes = _build_superseded_notes(memories, language)
+    if not update_notes:
+        return
+    if language == "zh":
+        parts.append("\n### 知识更新记录")
+    else:
+        parts.append("\n### Knowledge Updates")
+    parts.extend(update_notes)
+
+
+def _append_knowledge_section(parts: List[str], knowledge: List[Dict[str, Any]], header: str) -> None:
+    """Append the knowledge section to ``parts`` in-place."""
+    if not knowledge:
+        return
+    parts.append("\n" + header)
+    for k in knowledge:
+        parts.append(format_knowledge_entry(k))
+
+
 def build_prompt(
     memories: List[Dict[str, Any]],
     knowledge: List[Dict[str, Any]],
@@ -173,56 +238,19 @@ def build_prompt(
     parts.extend(t["priority"])
 
     if memories:
-        active = [m for m in memories if not m.get("superseded_at")]
-        outdated = [m for m in memories if m.get("superseded_at")]
+        mandatory, important, optional, outdated = _bucket_memories(memories)
+        depth_mandatory, depth_important, depth_context, depth_outdated = _progressive_depths(progressive)
 
-        mandatory = [m for m in active if m.get("type") in ("correction", "decision", "user_preference")]
-        important = [
-            m
-            for m in active
-            if m.get("type") not in ("correction", "decision", "user_preference") and m.get("confidence", 0) >= 0.8
-        ]
-        optional = [m for m in active if m not in mandatory and m not in important]
+        _append_memory_bucket(parts, mandatory, "\n### Mandatory (must follow)", language, depth_mandatory)
+        _append_memory_bucket(parts, important, "\n### Important (high confidence)", language, depth_important)
+        _append_memory_bucket(parts, optional, "\n### Context (for reference)", language, depth_context)
+        _append_memory_bucket(
+            parts, outdated, "\n### Outdated (superseded, do NOT use)", language, depth_outdated, limit=3
+        )
 
-        # v0.5.2: Bucket → depth mapping for progressive disclosure.
-        # Mandatory always renders at full depth (never sacrifice key directives).
-        depth_mandatory = 3
-        depth_important = 2 if progressive else 3
-        depth_context = 2 if progressive else 3
-        depth_outdated = 1 if progressive else 3
+        _append_update_notes(parts, memories, language)
 
-        if mandatory:
-            parts.append("\n### Mandatory (must follow)")
-            for m in mandatory:
-                parts.append(format_memory_entry(m, language, depth=depth_mandatory))
-
-        if important:
-            parts.append("\n### Important (high confidence)")
-            for m in important:
-                parts.append(format_memory_entry(m, language, depth=depth_important))
-
-        if optional:
-            parts.append("\n### Context (for reference)")
-            for m in optional:
-                parts.append(format_memory_entry(m, language, depth=depth_context))
-
-        if outdated:
-            parts.append("\n### Outdated (superseded, do NOT use)")
-            for m in outdated[:3]:
-                parts.append(format_memory_entry(m, language, depth=depth_outdated))
-
-        update_notes = _build_superseded_notes(memories, language)
-        if update_notes:
-            if language == "zh":
-                parts.append("\n### 知识更新记录")
-            else:
-                parts.append("\n### Knowledge Updates")
-            parts.extend(update_notes)
-
-    if knowledge:
-        parts.append("\n" + t["knowledge_header"])
-        for k in knowledge:
-            parts.append(format_knowledge_entry(k))
+    _append_knowledge_section(parts, knowledge, t["knowledge_header"])
 
     parts.append("\n" + t["guidelines_header"])
     parts.extend(t["guidelines"])

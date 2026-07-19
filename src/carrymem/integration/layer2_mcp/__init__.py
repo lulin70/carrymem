@@ -15,7 +15,7 @@ Configuration:
 
 import threading as _threading
 
-from .handlers import Handlers
+from .handlers import Handlers, OperationLevel
 from .server import MCPServer
 from .tools import TOOLS
 
@@ -57,4 +57,4 @@ def build_system_prompt(context=None, max_memories=10, max_knowledge=5, max_rule
     )
 
 
-__all__ = ["MCPServer", "TOOLS", "Handlers", "build_system_prompt"]
+__all__ = ["MCPServer", "TOOLS", "Handlers", "OperationLevel", "build_system_prompt"]

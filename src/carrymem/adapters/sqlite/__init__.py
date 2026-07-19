@@ -16,9 +16,10 @@ Public API is fully backward compatible with the monolithic sqlite_adapter.
 """
 
 import os
+import sqlite3
 import warnings
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from ..base import MemoryEntry, StorageAdapter, StoredMemory
 from .connection import ConnectionManager
@@ -138,31 +139,12 @@ class SQLiteAdapter(StorageAdapter):
         # --- Supersede (depends on adapter for namespace) ---
         self._supersede = SupersedeManager(self)
 
-        # --- CRUD (depends on serializer, supersede, conn_mgr) ---
-        self._crud = CRUDOperations(self)
-
-        # --- Versioning (depends on serializer, crud) ---
-        self._version = VersionManager(self)
-
-        # --- Stats (depends on serializer) ---
-        self._stats = StatsManager(self)
-
-        # --- Query builder with context ---
-        self._query_builder = QueryBuilderWithContext(self)
-
-        # --- Audit logger (in-memory, P2-5 refactor) ---
-        self._audit = None
-        try:
-            from ...security.audit import AuditLogger
-
-            # Note: AuditLogger refactored to in-memory only (P2-5).
-            # Old signature: AuditLogger(get_connection_fn, namespace=...)
-            # New signature: AuditLogger(max_events=10000)
-            self._audit = AuditLogger()
-        except (ImportError, OSError) as e:
-            from ...utils.logger import logger
-
-            logger.warning("Audit logger initialization failed: %s", e)
+        # --- Audit logger (TD-038: SQLite persistence) ---
+        # Derive a sidecar audit.db path from the main db_path so audit
+        # events survive process restarts. For in-memory databases (testing),
+        # keep AuditLogger in-memory to preserve backward compatibility and
+        # avoid leaking temp files.
+        self._audit = self._init_audit_logger()
 
         # --- RRF configuration ---
         _rc = rrf_config or {}
@@ -187,93 +169,192 @@ class SQLiteAdapter(StorageAdapter):
         self._schema.init_schema()
 
         # --- Vector search setup (may switch connection) ---
-        self._enable_vector = False
-        self._embedding_model = None
-        self._embedding_dim = 384
         self._embedding_model_name = embedding_model
-
-        self._enable_vector = (
-            enable_vector_search and SQLITE_VEC_AVAILABLE and PYSQLITE3_AVAILABLE and SENTENCE_TRANSFORMERS_AVAILABLE
+        self._enable_vector, self._embedding_model, self._embedding_dim = self._setup_vector_search(
+            enable_vector_search, embedding_model, _external_embedding_model
         )
-
-        if self._enable_vector:
-            try:
-                if _external_embedding_model is not None:
-                    self._embedding_model = _external_embedding_model
-                else:
-                    self._embedding_model = _get_or_load_embedding_model(embedding_model)
-                self._embedding_dim = self._embedding_model.get_embedding_dimension()  # type: ignore[attr-defined]
-                # Close existing connection and switch to pysqlite3 with vec0
-                self._conn_mgr.close_memory_conn_for_vector_switch()
-                self._conn_mgr.set_enable_vector(True)
-                # Now get_connection will create a pysqlite3 connection with vec0
-                self._schema.init_vec_schema(self._embedding_dim)
-                from ...utils.logger import logger
-
-                logger.info("Vector search enabled: model=%s, dim=%d", embedding_model, self._embedding_dim)
-            except (ImportError, OSError, ValueError, RuntimeError) as e:
-                from ...utils.logger import logger
-
-                self._enable_vector = False
-                logger.warning("Vector search initialization failed: %s", e)
 
         # --- Run migrations (vector schema first if enabled) ---
         self._schema.migrate_all(enable_vector=self._enable_vector)
 
         # --- Semantic recall components ---
-        self._enable_semantic = enable_semantic_recall
-        self._expander = None
-        self._merger = None
-
-        try:
-            from ...semantic.expander import SemanticExpander
-            from ...semantic.merger import ResultMerger
-
-            SEMANTIC_AVAILABLE = True
-        except ImportError:
-            SEMANTIC_AVAILABLE = False
-
-        self._enable_semantic = enable_semantic_recall and SEMANTIC_AVAILABLE
-
-        if self._enable_semantic:
-            config = semantic_config or {}
-            try:
-                self._expander = SemanticExpander(
-                    custom_synonym_files=config.get("custom_synonym_files"),
-                    enable_spell_correction=config.get("enable_spell_correction", True),
-                    max_expansions=config.get("max_expansions", 50),
-                    edit_distance_threshold=config.get("edit_distance_threshold", 2),
-                )
-                self._merger = ResultMerger(
-                    min_relevance=config.get("min_relevance", 0.3),
-                )
-            except (ValueError, TypeError, KeyError, RuntimeError) as e:
-                from ...utils.logger import logger
-
-                self._enable_semantic = False
-                logger.warning("Semantic recall initialization failed: %s", e)
+        self._enable_semantic, self._expander, self._merger = self._init_semantic_components(
+            enable_semantic_recall, semantic_config
+        )
 
         # --- Recall cache ---
-        self._enable_cache = enable_cache
-        self._cache = None
-        if enable_cache:
-            try:
-                from ...cache import RecallCache
+        self._enable_cache, self._cache = self._init_recall_cache(enable_cache, cache_config)
 
-                cc = cache_config or {}
-                self._cache = RecallCache(
-                    max_size=cc.get("max_size", 256),
-                    ttl_seconds=cc.get("ttl_seconds", 300),
-                )
-            except ImportError:
-                self._enable_cache = False
+        # --- Sub-components (injected with explicit dependencies) ---
+        # TD-022: auxiliary classes receive deps via constructor; no private access.
+        self._crud = CRUDOperations(
+            adapter=self,
+            conn_mgr=self._conn_mgr,
+            serializer=self._serializer,
+            supersede=self._supersede,
+            cache=self._cache,
+            audit=self._audit,
+            embedding_model=self._embedding_model,
+            embedding_dim=self._embedding_dim,
+        )
 
-        # --- Recall engine (depends on all above) ---
-        self._recall_engine = RecallEngine(self)
+        self._version = VersionManager(
+            adapter=self,
+            conn_mgr=self._conn_mgr,
+            serializer=self._serializer,
+            security=self._security,
+        )
+
+        self._stats = StatsManager(
+            adapter=self,
+            conn_mgr=self._conn_mgr,
+            serializer=self._serializer,
+        )
+
+        self._query_builder = QueryBuilderWithContext(self, self._conn_mgr)
+
+        self._recall_engine = RecallEngine(
+            adapter=self,
+            conn_mgr=self._conn_mgr,
+            serializer=self._serializer,
+            cache=self._cache,
+            expander=self._expander,
+            merger=self._merger,
+            embedding_model=self._embedding_model,
+            embedding_dim=self._embedding_dim,
+            rrf_k=self._rrf_k,
+            rrf_fts_weight=self._rrf_fts_weight,
+            rrf_vec_weight=self._rrf_vec_weight,
+            rrf_type_boosts=self._rrf_type_boosts,
+        )
 
         # --- Knowledge graph (v0.7.0: lazy init on first access) ---
         self._knowledge_graph: Optional[Any] = None
         self._memify: Optional[Any] = None  # v0.7.2: lazy init MemifyEngine
+
+    def _init_audit_logger(self) -> Optional[Any]:
+        """Initialize audit logger with SQLite persistence, falling back to in-memory."""
+        try:
+            from ...security.audit import AuditLogger
+
+            audit_persist_path: Optional[str] = None
+            main_db_path = self._conn_mgr.db_path
+            if main_db_path != ":memory:":
+                audit_persist_path = main_db_path + ".audit.db"
+
+            if audit_persist_path is not None:
+                try:
+                    return AuditLogger(persist_path=audit_persist_path)
+                except (OSError, sqlite3.Error) as persist_err:
+                    from ...utils.logger import logger
+
+                    logger.warning(
+                        "Audit logger SQLite persistence at %s failed, "
+                        "falling back to in-memory mode: %s",
+                        audit_persist_path,
+                        persist_err,
+                    )
+                    return AuditLogger()
+            # In-memory main DB → keep audit logger in-memory (backward compat).
+            return AuditLogger()
+        except (ImportError, OSError) as e:
+            from ...utils.logger import logger
+
+            logger.warning("Audit logger initialization failed: %s", e)
+            return None
+
+    def _setup_vector_search(
+        self,
+        enable_vector_search: bool,
+        embedding_model: str,
+        _external_embedding_model: Optional[object],
+    ) -> Tuple[bool, Any, int]:
+        """Initialize vector search; returns (enabled, model, dim)."""
+        enable_vector = (
+            enable_vector_search and SQLITE_VEC_AVAILABLE and PYSQLITE3_AVAILABLE and SENTENCE_TRANSFORMERS_AVAILABLE
+        )
+        model: Any = None
+        dim = 384
+
+        if enable_vector:
+            try:
+                if _external_embedding_model is not None:
+                    model = _external_embedding_model
+                else:
+                    model = _get_or_load_embedding_model(embedding_model)
+                dim = model.get_embedding_dimension()
+                # Close existing connection and switch to pysqlite3 with vec0
+                self._conn_mgr.close_memory_conn_for_vector_switch()
+                self._conn_mgr.set_enable_vector(True)
+                # Now get_connection will create a pysqlite3 connection with vec0
+                self._schema.init_vec_schema(dim)
+                from ...utils.logger import logger
+
+                logger.info("Vector search enabled: model=%s, dim=%d", embedding_model, dim)
+            except (ImportError, OSError, ValueError, RuntimeError) as e:
+                from ...utils.logger import logger
+
+                enable_vector = False
+                model = None
+                logger.warning("Vector search initialization failed: %s", e)
+
+        return enable_vector, model, dim
+
+    def _init_semantic_components(
+        self,
+        enable_semantic_recall: bool,
+        semantic_config: Optional[Dict[str, Any]],
+    ) -> Tuple[bool, Any, Any]:
+        """Initialize semantic expander and merger; returns (enabled, expander, merger)."""
+        try:
+            from ...semantic.expander import SemanticExpander
+            from ...semantic.merger import ResultMerger
+
+            semantic_available = True
+        except ImportError:
+            semantic_available = False
+
+        enabled = enable_semantic_recall and semantic_available
+        if not enabled:
+            return False, None, None
+
+        config = semantic_config or {}
+        try:
+            expander = SemanticExpander(
+                custom_synonym_files=config.get("custom_synonym_files"),
+                enable_spell_correction=config.get("enable_spell_correction", True),
+                max_expansions=config.get("max_expansions", 50),
+                edit_distance_threshold=config.get("edit_distance_threshold", 2),
+            )
+            merger = ResultMerger(
+                min_relevance=config.get("min_relevance", 0.3),
+            )
+            return True, expander, merger
+        except (ValueError, TypeError, KeyError, RuntimeError) as e:
+            from ...utils.logger import logger
+
+            logger.warning("Semantic recall initialization failed: %s", e)
+            return False, None, None
+
+    def _init_recall_cache(
+        self,
+        enable_cache: bool,
+        cache_config: Optional[Dict[str, Any]],
+    ) -> Tuple[bool, Any]:
+        """Initialize recall cache; returns (enabled, cache)."""
+        if not enable_cache:
+            return False, None
+        try:
+            from ...cache import RecallCache
+
+            cc = cache_config or {}
+            cache = RecallCache(
+                max_size=cc.get("max_size", 256),
+                ttl_seconds=cc.get("ttl_seconds", 300),
+            )
+            return True, cache
+        except ImportError:
+            return False, None
 
     # ── Properties ──────────────────────────────────────────────
 
@@ -312,6 +393,16 @@ class SQLiteAdapter(StorageAdapter):
     def semantic_enabled(self) -> bool:
         """Return whether semantic recall is enabled."""
         return self._enable_semantic
+
+    @property
+    def enable_cache(self) -> bool:
+        """Return whether the recall cache is enabled (runtime-mutable flag)."""
+        return self._enable_cache
+
+    @property
+    def enable_vector(self) -> bool:
+        """Return whether vector search is enabled (runtime-mutable flag)."""
+        return self._enable_vector
 
     @property
     def expander(self):
@@ -564,6 +655,17 @@ class SQLiteAdapter(StorageAdapter):
 
     def close(self):
         """Close the underlying connection manager and release resources."""
+        # Close audit logger's SQLite connection (if persistent) so pending
+        # writes are flushed before the adapter goes away. In-memory audit
+        # loggers have no DB connection and skip this path.
+        if self._audit is not None:
+            audit_db_conn = getattr(self._audit, "_db_conn", None)
+            if audit_db_conn is not None:
+                try:
+                    audit_db_conn.close()
+                except sqlite3.Error:
+                    # Best-effort cleanup; ignore errors during teardown.
+                    pass
         self._conn_mgr.close()
 
     # ── Cache Management (overrides base no-op) ──────────────────────
@@ -1032,48 +1134,16 @@ class SQLiteAdapter(StorageAdapter):
             # Initialize every requested mode with empty list to ensure it appears in results
             mode_results[mode] = []
             try:
-                if mode == "fts":
-                    rows = self._recall_engine.recall(
-                        query, filters=filters, limit=limit, namespaces=namespaces, update_access=False
-                    )
-                    mode_results["fts"] = [r.to_dict() for r in rows if r]
-                elif mode == "vector":
-                    if self._enable_vector:
-                        rows = self._recall_engine.vector_search_only(query, filters, limit, namespaces)
-                        mode_results["vector"] = [r.to_dict() for r in rows if r]
-                elif mode == "hybrid":
-                    rows = self._recall_engine.hybrid_search(query, None, None, None, filters, limit, namespaces)
-                    mode_results["hybrid"] = [r.to_dict() for r in rows if r]
-                elif mode == "graph":
-                    if entity:
-                        graph_result = self.recall_graph(entity, limit=limit, namespace=self.namespace)
-                        mode_results["graph"] = list(graph_result.get("memories", []))
-                elif mode == "time":
-                    if time_range:
-                        start_dt, end_dt = time_range[0], time_range[1]
-                        rows = self._recall_engine.search_by_time(start_dt, end_dt, filters, limit, namespaces)
-                        mode_results["time"] = [r.to_dict() for r in rows if r]
-                elif mode == "entity":
-                    if entity:
-                        mode_results["entity"] = list(
-                            self.recall_by_entity(entity, limit=limit, namespace=self.namespace)
-                        )
+                mode_results[mode] = self._execute_recall_mode(
+                    mode, query, limit, filters, namespaces, time_range, entity
+                )
             except (ValueError, KeyError, TypeError, RuntimeError) as e:
                 from ...utils.logger import logger
 
                 logger.warning("recall_multi_mode mode '%s' failed: %s", mode, e)
                 mode_results[mode] = []
 
-        # Merge and deduplicate by storage_key
-        seen_keys: set = set()
-        merged: list = []
-        for mode_name, mems in mode_results.items():
-            for m in mems:
-                if isinstance(m, dict):
-                    key = m.get("storage_key", "")
-                    if key and key not in seen_keys:
-                        seen_keys.add(key)
-                        merged.append(m)
+        merged = self._merge_mode_results(mode_results)
 
         return {
             "modes": mode_results,
@@ -1081,6 +1151,64 @@ class SQLiteAdapter(StorageAdapter):
             "mode_count": len(mode_results),
             "total_count": len(merged),
         }
+
+    def _execute_recall_mode(
+        self,
+        mode: str,
+        query: str,
+        limit: int,
+        filters: Optional[Dict[str, Any]],
+        namespaces: Optional[list],
+        time_range: Optional[tuple],
+        entity: Optional[str],
+    ) -> list:
+        """Dispatch a single recall mode and return its raw result list."""
+        if mode == "fts":
+            rows = self._recall_engine.recall(
+                query, filters=filters, limit=limit, namespaces=namespaces, update_access=False
+            )
+            return [r.to_dict() for r in rows if r]
+        if mode == "vector":
+            if self._enable_vector:
+                rows = self._recall_engine.vector_search_only(query, filters, limit, namespaces)
+                return [r.to_dict() for r in rows if r]
+            return []
+        if mode == "hybrid":
+            rows = self._recall_engine.hybrid_search(query, None, None, None, filters, limit, namespaces)
+            return [r.to_dict() for r in rows if r]
+        if mode == "graph":
+            if entity:
+                graph_result = self.recall_graph(entity, limit=limit, namespace=self.namespace)
+                return list(graph_result.get("memories", []))
+            return []
+        if mode == "time":
+            if time_range:
+                start_dt, end_dt = time_range[0], time_range[1]
+                rows = self._recall_engine.search_by_time(start_dt, end_dt, filters, limit, namespaces)
+                return [r.to_dict() for r in rows if r]
+            return []
+        if mode == "entity":
+            if entity:
+                return list(self.recall_by_entity(entity, limit=limit, namespace=self.namespace))
+            return []
+        return []
+
+    @staticmethod
+    def _merge_mode_results(mode_results: Dict[str, list]) -> list:
+        """Merge per-mode results, deduplicating by storage_key.
+
+        Returns the full merged list (untruncated); caller slices for output.
+        """
+        seen_keys: set = set()
+        merged: list = []
+        for mems in mode_results.values():
+            for m in mems:
+                if isinstance(m, dict):
+                    key = m.get("storage_key", "")
+                    if key and key not in seen_keys:
+                        seen_keys.add(key)
+                        merged.append(m)
+        return merged
 
     # ── Version management ──────────────────────────────────────
 

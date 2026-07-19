@@ -147,7 +147,7 @@ class TestPluginLoading(unittest.TestCase):
         plugin = pm.load("basic")
         self.assertIsNotNone(plugin)
         self.assertEqual(plugin.name, "basic")
-        self.assertTrue(plugin.loaded)
+        self.assertIs(plugin.loaded, True)
 
     def test_load_sets_version(self):
         """Test: Loaded plugin has correct version."""
@@ -206,7 +206,7 @@ class TestPluginUnloading(unittest.TestCase):
     def test_unload_calls_on_unload(self):
         """Test 5: unload() calls plugin's on_unload()."""
         self.pm.unload("unloadable")
-        self.assertTrue(self.plugin.unloaded)
+        self.assertIs(self.plugin.unloaded, True)
 
     def test_unload_removes_from_registry(self):
         """Test: After unload, plugin is no longer in registry."""
@@ -245,7 +245,7 @@ class TestPluginListAndStatus(unittest.TestCase):
         plugins = self.pm.list_plugins()
         self.assertIn("alpha", plugins)
         self.assertIn("beta", plugins)
-        self.assertTrue(plugins["alpha"].loaded)
+        self.assertIs(plugins["alpha"].loaded, True)
         self.assertFalse(plugins["beta"].loaded)
 
     def test_list_status_has_version(self):
@@ -340,7 +340,7 @@ class TestExampleNotificationPlugin(unittest.TestCase):
         """Test: on_load sets internal state."""
         plugin = ExampleNotificationPlugin()
         plugin.on_load(None)
-        self.assertTrue(plugin._loaded)
+        self.assertIs(plugin._loaded, True)
 
     def test_example_plugin_on_unload_resets_state(self):
         """Test: on_unload resets loaded flag."""
@@ -413,7 +413,7 @@ class TestPluginReload(unittest.TestCase):
         v2_id = id(plugin_v2)
         # Should be different instances after reload
         self.assertNotEqual(v1_id, v2_id)
-        self.assertTrue(plugin_v2.loaded)
+        self.assertIs(plugin_v2.loaded, True)
 
 
 class TestUnloadAll(unittest.TestCase):
@@ -442,8 +442,8 @@ class TestUnloadAll(unittest.TestCase):
         statuses = self.pm.list_plugins()
         self.assertFalse(statuses["p1"].loaded)
         self.assertFalse(statuses["p2"].loaded)
-        self.assertTrue(self.p1.unloaded)
-        self.assertTrue(self.p2.unloaded)
+        self.assertIs(self.p1.unloaded, True)
+        self.assertIs(self.p2.unloaded, True)
 
 
 class TestHookPointConstants(unittest.TestCase):
@@ -453,7 +453,7 @@ class TestHookPointConstants(unittest.TestCase):
         """Test: All required hook points are defined."""
         expected = ["on_memory_stored", "on_memory_recalled", "on_classified", "on_error"]
         for hp in expected:
-            self.assertTrue(hasattr(HookPoint, hp.upper()))
+            self.assertIs(hasattr(HookPoint, hp.upper()), True)
 
     def test_all_list_contains_all_hooks(self):
         """Test: HookPoint.ALL contains all hook points."""

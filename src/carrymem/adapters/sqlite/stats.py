@@ -8,12 +8,22 @@ from ..base import StoredMemory
 class StatsManager:
     """Provides statistics, profiles, aggregated recalls, and timelines."""
 
-    def __init__(self, adapter):
+    def __init__(self, adapter, conn_mgr, serializer) -> None:
+        """Initialize stats manager with explicit dependencies.
+
+        Args:
+            adapter: SQLiteAdapter reference (for public API: namespace, name,
+                capabilities).
+            conn_mgr: ConnectionManager instance.
+            serializer: RowSerializer instance.
+        """
         self._adapter = adapter
+        self._conn_mgr = conn_mgr
+        self._serializer = serializer
 
     def get_stats(self) -> Dict[str, Any]:
         """Return summary statistics for stored memories."""
-        conn = self._adapter._conn_mgr.get_connection()
+        conn = self._conn_mgr.get_connection()
         total = conn.execute(
             "SELECT COUNT(*) FROM memories WHERE namespace = ?",
             (self._adapter.namespace,),
@@ -30,12 +40,12 @@ class StatsManager:
             "total_count": total,
             "by_type": by_type,
             "capabilities": self._adapter.capabilities,
-            "db_path": self._adapter._conn_mgr.db_path,
+            "db_path": self._conn_mgr.db_path,
         }
 
     def get_profile(self) -> Dict[str, Any]:
         """Return a detailed memory profile for the active namespace."""
-        conn = self._adapter._conn_mgr.get_connection()
+        conn = self._conn_mgr.get_connection()
         total = conn.execute(
             "SELECT COUNT(*) FROM memories WHERE namespace = ?",
             (self._adapter.namespace,),
@@ -129,7 +139,7 @@ class StatsManager:
         limit_per_type: int = 50,
     ) -> Dict[str, List[StoredMemory]]:
         """Recall memories grouped by type."""
-        with self._adapter._conn_mgr.lock:
+        with self._conn_mgr.lock:
             return self._recall_aggregated_impl(memory_type, namespaces, limit_per_type)
 
     def _recall_aggregated_impl(
@@ -151,16 +161,16 @@ class StatsManager:
 
         where_clause = "WHERE " + " AND ".join(conditions)
 
-        conn = self._adapter._conn_mgr.get_connection()
+        conn = self._conn_mgr.get_connection()
         if memory_type:
             sql = f"SELECT * FROM memories {where_clause} ORDER BY importance_score DESC, created_at DESC LIMIT ?"
             params.append(limit_per_type)
             rows = conn.execute(sql, params).fetchall()
             return {
                 memory_type: [
-                    self._adapter._serializer.row_to_stored(r)
+                    self._serializer.row_to_stored(r)
                     for r in rows
-                    if self._adapter._serializer.row_to_stored(r)
+                    if self._serializer.row_to_stored(r)
                 ]
             }
 
@@ -175,7 +185,7 @@ class StatsManager:
             if mtype not in result:
                 result[mtype] = []
             if len(result[mtype]) < limit_per_type:
-                stored = self._adapter._serializer.row_to_stored(row)
+                stored = self._serializer.row_to_stored(row)
                 if stored:
                     result[mtype].append(stored)
         return result
@@ -187,7 +197,7 @@ class StatsManager:
         limit: int = 20,
     ) -> List[StoredMemory]:
         """Recall memories for a topic ordered as a timeline."""
-        with self._adapter._conn_mgr.lock:
+        with self._conn_mgr.lock:
             return self._recall_timeline_impl(topic, namespaces, limit)
 
     def _recall_timeline_impl(
@@ -212,8 +222,8 @@ class StatsManager:
 
         where_clause = "WHERE " + " AND ".join(conditions)
 
-        conn = self._adapter._conn_mgr.get_connection()
+        conn = self._conn_mgr.get_connection()
         sql = f"SELECT * FROM memories {where_clause} ORDER BY created_at ASC LIMIT ?"
         params.append(limit)
         rows = conn.execute(sql, params).fetchall()
-        return [self._adapter._serializer.row_to_stored(r) for r in rows if self._adapter._serializer.row_to_stored(r)]
+        return [self._serializer.row_to_stored(r) for r in rows if self._serializer.row_to_stored(r)]

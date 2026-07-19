@@ -122,16 +122,7 @@ class RuleMatcher:
         all_active = [r for r in all_active if not r.is_expired()]
 
         if context_conditions:
-            filtered = []
-            for r in all_active:
-                if not r.condition:
-                    filtered.append(r)
-                else:
-                    rule_conds = set(self._tokenize(r.condition))
-                    match_conds = set(self._tokenize(" ".join(context_conditions)))
-                    if rule_conds & match_conds:
-                        filtered.append(r)
-            all_active = filtered
+            all_active = self._filter_by_context_conditions(all_active, context_conditions)
 
         if scopes:
             all_active = [r for r in all_active if r.scope in scopes]
@@ -163,6 +154,20 @@ class RuleMatcher:
         results.sort(key=lambda x: x.score, reverse=True)
 
         return results[:limit]
+
+    def _filter_by_context_conditions(
+        self, all_active: list, context_conditions: List[str]
+    ) -> list:
+        filtered = []
+        for r in all_active:
+            if not r.condition:
+                filtered.append(r)
+            else:
+                rule_conds = set(self._tokenize(r.condition))
+                match_conds = set(self._tokenize(" ".join(context_conditions)))
+                if rule_conds & match_conds:
+                    filtered.append(r)
+        return filtered
 
     def _match_global_rules(self, all_active: Optional[list] = None) -> List[MatchResult]:
         """Find all active global rules"""
@@ -326,44 +331,44 @@ class RuleMatcher:
     def _tokenize(cls, text: str) -> List[str]:
         if not text or not text.strip():
             return []
-
-        if has_cjk(text):
-            if cls._jieba_available is None:
-                try:
-                    import jieba
-
-                    cls._jieba_available = True
-                except ImportError:
-                    cls._jieba_available = False
-
-            if cls._jieba_available:
-                import jieba  # noqa: F811
-
-                tokens = list(jieba.cut(text))
-                return [t.strip() for t in tokens if t.strip() and len(t.strip()) > 0]
-            else:
-                tokens = []
-                i = 0
-                while i < len(text):
-                    ch = text[i]
-                    if "\u4e00" <= ch <= "\u9fff":
-                        tokens.append(ch)
-                        if i + 1 < len(text) and "\u4e00" <= text[i + 1] <= "\u9fff":
-                            tokens.append(text[i : i + 2])
-                        if i + 2 < len(text) and "\u4e00" <= text[i + 2] <= "\u9fff":
-                            tokens.append(text[i : i + 3])
-                        i += 1
-                    elif ch.isalnum():
-                        word = []
-                        while i < len(text) and (text[i].isalnum() or text[i] == "_"):
-                            word.append(text[i])
-                            i += 1
-                        tokens.append("".join(word).lower())
-                    else:
-                        i += 1
-                return tokens
-        else:
+        if not has_cjk(text):
             return [w.lower() for w in text.split() if w.strip()]
+        if cls._jieba_available is None:
+            try:
+                import jieba
+
+                cls._jieba_available = True
+            except ImportError:
+                cls._jieba_available = False
+        if cls._jieba_available:
+            import jieba  # noqa: F811
+
+            tokens = list(jieba.cut(text))
+            return [t.strip() for t in tokens if t.strip() and len(t.strip()) > 0]
+        return cls._tokenize_cjk_fallback(text)
+
+    @classmethod
+    def _tokenize_cjk_fallback(cls, text: str) -> List[str]:
+        tokens = []
+        i = 0
+        while i < len(text):
+            ch = text[i]
+            if "\u4e00" <= ch <= "\u9fff":
+                tokens.append(ch)
+                if i + 1 < len(text) and "\u4e00" <= text[i + 1] <= "\u9fff":
+                    tokens.append(text[i : i + 2])
+                if i + 2 < len(text) and "\u4e00" <= text[i + 2] <= "\u9fff":
+                    tokens.append(text[i : i + 3])
+                i += 1
+            elif ch.isalnum():
+                word = []
+                while i < len(text) and (text[i].isalnum() or text[i] == "_"):
+                    word.append(text[i])
+                    i += 1
+                tokens.append("".join(word).lower())
+            else:
+                i += 1
+        return tokens
 
     def _deduplicate(self, results: List[MatchResult]) -> List[MatchResult]:
         """

@@ -267,9 +267,29 @@ class KnowledgeGraph:
         ns_filter = "AND namespace = ?" if namespace else ""
         ns_params: list = [namespace] if namespace else []
 
-        # Find starting entity IDs
+        entity_ids = self._lookup_graph_entity_ids(conn, safe_entity, ns_filter, ns_params)
+        if not entity_ids:
+            return {"entities": [], "memories": []}
+
+        visited_entities, visited_memories = self._bfs_traverse_graph(
+            conn, entity_ids, max_hops, ns_filter, ns_params
+        )
+
+        entities_data = self._fetch_graph_entities(conn, visited_entities)
+        memories_data = self._fetch_graph_memories(conn, visited_memories, limit)
+
+        return {"entities": entities_data, "memories": memories_data}
+
+    def _lookup_graph_entity_ids(
+        self,
+        conn: sqlite3.Connection,
+        safe_entity: str,
+        ns_filter: str,
+        ns_params: list,
+    ) -> List[int]:
+        """Look up starting entity IDs for recall_graph. Empty on error or no match."""
         try:
-            entity_ids = [
+            return [
                 row["id"]
                 for row in conn.execute(
                     f"SELECT id FROM memory_entities WHERE entity_text = ? {ns_filter}",
@@ -278,94 +298,126 @@ class KnowledgeGraph:
             ]
         except sqlite3.Error as e:
             logger.warning("recall_graph entity lookup failed: %s", e)
-            return {"entities": [], "memories": []}
+            return []
 
-        if not entity_ids:
-            return {"entities": [], "memories": []}
-
-        # BFS traversal
-        visited_entities: set[int] = set(entity_ids)
-        visited_memories: set[str] = set()
+    def _bfs_traverse_graph(
+        self,
+        conn: sqlite3.Connection,
+        entity_ids: List[int],
+        max_hops: int,
+        ns_filter: str,
+        ns_params: list,
+    ) -> tuple:
+        """BFS-traverse memory_relations from starting entities; returns (visited_entities, visited_memories)."""
+        visited_entities: set = set(entity_ids)
+        visited_memories: set = set()
         current_frontier = list(entity_ids)
 
         for hop in range(max_hops):
             if not current_frontier:
                 break
-            next_frontier: list[int] = []
+            next_frontier: List[int] = []
             placeholders = ",".join("?" * len(current_frontier))
 
             try:
-                # Find relations from current frontier
+                # Find relations from current frontier (forward)
                 rows = conn.execute(
                     f"SELECT src_entity_id, dst_entity_id, source_memory_key "
                     f"FROM memory_relations "
                     f"WHERE src_entity_id IN ({placeholders}) {ns_filter}",
                     current_frontier + ns_params,
                 ).fetchall()
-
                 for row in rows:
-                    dst_id = row["dst_entity_id"]
-                    if dst_id not in visited_entities:
-                        visited_entities.add(dst_id)
-                        next_frontier.append(dst_id)
-                    mem_key = row["source_memory_key"]
-                    if mem_key:
-                        visited_memories.add(mem_key)
+                    self._collect_bfs_neighbor(
+                        row["dst_entity_id"],
+                        row["source_memory_key"],
+                        visited_entities,
+                        visited_memories,
+                        next_frontier,
+                    )
 
-                # Also check reverse direction
+                # Also check reverse direction (backward)
                 rows = conn.execute(
                     f"SELECT src_entity_id, dst_entity_id, source_memory_key "
                     f"FROM memory_relations "
                     f"WHERE dst_entity_id IN ({placeholders}) {ns_filter}",
                     current_frontier + ns_params,
                 ).fetchall()
-
                 for row in rows:
-                    src_id = row["src_entity_id"]
-                    if src_id not in visited_entities:
-                        visited_entities.add(src_id)
-                        next_frontier.append(src_id)
-                    mem_key = row["source_memory_key"]
-                    if mem_key:
-                        visited_memories.add(mem_key)
+                    self._collect_bfs_neighbor(
+                        row["src_entity_id"],
+                        row["source_memory_key"],
+                        visited_entities,
+                        visited_memories,
+                        next_frontier,
+                    )
             except sqlite3.Error as e:
                 logger.warning("recall_graph hop %d failed: %s", hop, e)
                 break
 
             current_frontier = next_frontier
 
-        # Fetch entity details
-        entity_placeholders = ",".join("?" * len(visited_entities))
-        entities_data: List[Dict[str, Any]] = []
-        memories_data: List[Dict[str, Any]] = []
+        return visited_entities, visited_memories
 
+    @staticmethod
+    def _collect_bfs_neighbor(
+        neighbor_id: int,
+        mem_key: Optional[str],
+        visited_entities: set,
+        visited_memories: set,
+        next_frontier: List[int],
+    ) -> None:
+        """Add neighbor to next frontier if newly discovered; always collect its memory key."""
+        if neighbor_id not in visited_entities:
+            visited_entities.add(neighbor_id)
+            next_frontier.append(neighbor_id)
+        if mem_key:
+            visited_memories.add(mem_key)
+
+    def _fetch_graph_entities(
+        self,
+        conn: sqlite3.Connection,
+        visited_entities: set,
+    ) -> List[Dict[str, Any]]:
+        """Fetch distinct entity text/type pairs for the given entity IDs."""
+        if not visited_entities:
+            return []
+        entity_placeholders = ",".join("?" * len(visited_entities))
         try:
             entity_rows = conn.execute(
                 f"SELECT DISTINCT entity_text, entity_type FROM memory_entities "
                 f"WHERE id IN ({entity_placeholders})",
                 list(visited_entities),
             ).fetchall()
-            entities_data = [
-                {"entity_text": row["entity_text"], "entity_type": row["entity_type"]} for row in entity_rows
+            return [
+                {"entity_text": row["entity_text"], "entity_type": row["entity_type"]}
+                for row in entity_rows
             ]
         except sqlite3.Error as e:
             logger.warning("recall_graph entity fetch failed: %s", e)
+            return []
 
-        # Fetch memories (limited)
-        if visited_memories:
-            mem_keys = list(visited_memories)[:limit]
-            mem_placeholders = ",".join("?" * len(mem_keys))
-            try:
-                mem_rows = conn.execute(
-                    f"SELECT * FROM memories WHERE storage_key IN ({mem_placeholders}) "
-                    f"ORDER BY importance_score DESC",
-                    mem_keys,
-                ).fetchall()
-                memories_data = [self._row_to_dict(row) for row in mem_rows]
-            except sqlite3.Error as e:
-                logger.warning("recall_graph memory fetch failed: %s", e)
-
-        return {"entities": entities_data, "memories": memories_data}
+    def _fetch_graph_memories(
+        self,
+        conn: sqlite3.Connection,
+        visited_memories: set,
+        limit: int,
+    ) -> List[Dict[str, Any]]:
+        """Fetch memory dicts for the given memory keys, limited to ``limit``."""
+        if not visited_memories:
+            return []
+        mem_keys = list(visited_memories)[:limit]
+        mem_placeholders = ",".join("?" * len(mem_keys))
+        try:
+            mem_rows = conn.execute(
+                f"SELECT * FROM memories WHERE storage_key IN ({mem_placeholders}) "
+                f"ORDER BY importance_score DESC",
+                mem_keys,
+            ).fetchall()
+            return [self._row_to_dict(row) for row in mem_rows]
+        except sqlite3.Error as e:
+            logger.warning("recall_graph memory fetch failed: %s", e)
+            return []
 
     def shortest_path(
         self,
@@ -408,75 +460,20 @@ class KnowledgeGraph:
         ns_filter = "AND namespace = ?" if namespace else ""
         ns_params: list = [namespace] if namespace else []
 
-        # Look up entity IDs for src and dst
-        try:
-            src_ids = [
-                row["id"]
-                for row in conn.execute(
-                    f"SELECT id FROM memory_entities WHERE entity_text = ? {ns_filter}",
-                    [safe_src] + ns_params,
-                ).fetchall()
-            ]
-            dst_ids = [
-                row["id"]
-                for row in conn.execute(
-                    f"SELECT id FROM memory_entities WHERE entity_text = ? {ns_filter}",
-                    [safe_dst] + ns_params,
-                ).fetchall()
-            ]
-        except sqlite3.Error as e:
-            logger.warning("shortest_path entity lookup failed: %s", e)
-            return {"path": [], "length": -1, "found": False}
-
+        src_ids = self._lookup_path_entity_ids(conn, safe_src, ns_filter, ns_params)
+        dst_ids = self._lookup_path_entity_ids(conn, safe_dst, ns_filter, ns_params)
         if not src_ids or not dst_ids:
             return {"path": [], "length": -1, "found": False}
 
-        # Bidirectional BFS
-        # Forward frontier from src, backward frontier from dst
-        forward_visited: Dict[int, Optional[int]] = {sid: None for sid in src_ids}
-        backward_visited: Dict[int, Optional[int]] = {did: None for did in dst_ids}
-        forward_frontier = list(src_ids)
-        backward_frontier = list(dst_ids)
-
-        meeting_point: Optional[int] = None
-
-        for hop in range(max_hops):
-            # Expand forward frontier
-            if forward_frontier:
-                next_forward = self._expand_bfs(conn, forward_frontier, forward_visited, ns_filter, ns_params)
-                forward_frontier = next_forward
-                # Check for meeting point
-                for eid in forward_visited:
-                    if eid in backward_visited:
-                        meeting_point = eid
-                        break
-                if meeting_point is not None:
-                    break
-
-            # Expand backward frontier
-            if backward_frontier:
-                next_backward = self._expand_bfs(conn, backward_frontier, backward_visited, ns_filter, ns_params)
-                backward_frontier = next_backward
-                # Check for meeting point
-                for eid in backward_visited:
-                    if eid in forward_visited:
-                        meeting_point = eid
-                        break
-                if meeting_point is not None:
-                    break
-
-            if not forward_frontier and not backward_frontier:
-                break
+        forward_visited, backward_visited, meeting_point = self._run_bidirectional_bfs(
+            conn, src_ids, dst_ids, max_hops, ns_filter, ns_params
+        )
 
         if meeting_point is None:
             return {"path": [], "length": -1, "found": False}
 
         # Reconstruct path: src → meeting_point → dst
-        forward_path = self._reconstruct_path(forward_visited, meeting_point)
-        backward_path = self._reconstruct_path(backward_visited, meeting_point)
-        # backward_path is from dst to meeting_point; reverse and drop the meeting point
-        backward_path_reversed = list(reversed(backward_path))[1:]
-        full_path_ids = forward_path + backward_path_reversed
+        full_path_ids = self._assemble_full_path(forward_visited, backward_visited, meeting_point)
 
         # Resolve entity IDs to text
         entity_texts = self._resolve_entity_texts(conn, full_path_ids)
@@ -489,6 +486,88 @@ class KnowledgeGraph:
             "length": len(full_path_ids) - 1,
             "found": True,
         }
+
+    def _lookup_path_entity_ids(
+        self,
+        conn: sqlite3.Connection,
+        entity_text: str,
+        ns_filter: str,
+        ns_params: list,
+    ) -> List[int]:
+        """Look up entity IDs matching ``entity_text`` for shortest_path. Empty on error."""
+        try:
+            return [
+                row["id"]
+                for row in conn.execute(
+                    f"SELECT id FROM memory_entities WHERE entity_text = ? {ns_filter}",
+                    [entity_text] + ns_params,
+                ).fetchall()
+            ]
+        except sqlite3.Error as e:
+            logger.warning("shortest_path entity lookup failed: %s", e)
+            return []
+
+    def _run_bidirectional_bfs(
+        self,
+        conn: sqlite3.Connection,
+        src_ids: List[int],
+        dst_ids: List[int],
+        max_hops: int,
+        ns_filter: str,
+        ns_params: list,
+    ) -> tuple:
+        """Run bidirectional BFS from src and dst frontiers, returning visited maps and meeting point."""
+        forward_visited: Dict[int, Optional[int]] = {sid: None for sid in src_ids}
+        backward_visited: Dict[int, Optional[int]] = {did: None for did in dst_ids}
+        forward_frontier = list(src_ids)
+        backward_frontier = list(dst_ids)
+        meeting_point: Optional[int] = None
+
+        for _ in range(max_hops):
+            if forward_frontier:
+                forward_frontier = self._expand_bfs(
+                    conn, forward_frontier, forward_visited, ns_filter, ns_params
+                )
+                meeting_point = self._find_meeting_point(forward_visited, backward_visited)
+                if meeting_point is not None:
+                    break
+
+            if backward_frontier:
+                backward_frontier = self._expand_bfs(
+                    conn, backward_frontier, backward_visited, ns_filter, ns_params
+                )
+                meeting_point = self._find_meeting_point(backward_visited, forward_visited)
+                if meeting_point is not None:
+                    break
+
+            if not forward_frontier and not backward_frontier:
+                break
+
+        return forward_visited, backward_visited, meeting_point
+
+    @staticmethod
+    def _find_meeting_point(
+        primary_visited: Dict[int, Optional[int]],
+        secondary_visited: Dict[int, Optional[int]],
+    ) -> Optional[int]:
+        """Return the first entity ID present in both visited maps, else None."""
+        for eid in primary_visited:
+            if eid in secondary_visited:
+                return eid
+        return None
+
+    @staticmethod
+    def _assemble_full_path(
+        forward_visited: Dict[int, Optional[int]],
+        backward_visited: Dict[int, Optional[int]],
+        meeting_point: int,
+    ) -> List[int]:
+        """Combine forward and backward paths through the meeting point into one ordered list."""
+        forward_path = KnowledgeGraph._reconstruct_path(forward_visited, meeting_point)
+        backward_path = KnowledgeGraph._reconstruct_path(backward_visited, meeting_point)
+        # backward_path is from dst to meeting_point; reverse and drop the meeting point
+        backward_path_reversed = list(reversed(backward_path))[1:]
+        return forward_path + backward_path_reversed
 
     def _expand_bfs(
         self,

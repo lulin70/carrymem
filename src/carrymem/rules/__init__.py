@@ -26,7 +26,7 @@ Usage:
 import logging
 import sqlite3
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 _logger = logging.getLogger(__name__)
 
@@ -389,6 +389,26 @@ class RuleEngine:
         """
         return RuleLimiter.get_usage_stats(self.storage)
 
+    def _count_confidence_buckets(self, active: List[Rule]) -> Dict[str, int]:
+        buckets = {"high": 0, "medium": 0, "low": 0}
+        for r in active:
+            if r.confidence >= 0.8:
+                buckets["high"] += 1
+            elif r.confidence >= 0.5:
+                buckets["medium"] += 1
+            else:
+                buckets["low"] += 1
+        return buckets
+
+    def _count_type_and_trigger(self, active: List[Rule]) -> Tuple[Dict[str, int], Dict[str, int]]:
+        type_counts: Dict[str, int] = {}
+        type_trigger_counts: Dict[str, int] = {}
+        for r in active:
+            rt = r.rule_type
+            type_counts[rt] = type_counts.get(rt, 0) + 1
+            type_trigger_counts[rt] = type_trigger_counts.get(rt, 0) + r.trigger_count
+        return type_counts, type_trigger_counts
+
     def get_effectiveness_report(self) -> dict:
         """
         Get comprehensive rule effectiveness report.
@@ -412,21 +432,8 @@ class RuleEngine:
         override_rules = [r for r in active if r.override]
         soft_rules = [r for r in active if not r.override]
 
-        type_counts: Dict[str, int] = {}
-        type_trigger_counts: Dict[str, int] = {}
-        for r in active:
-            rt = r.rule_type
-            type_counts[rt] = type_counts.get(rt, 0) + 1
-            type_trigger_counts[rt] = type_trigger_counts.get(rt, 0) + r.trigger_count
-
-        confidence_buckets = {"high": 0, "medium": 0, "low": 0}
-        for r in active:
-            if r.confidence >= 0.8:
-                confidence_buckets["high"] += 1
-            elif r.confidence >= 0.5:
-                confidence_buckets["medium"] += 1
-            else:
-                confidence_buckets["low"] += 1
+        type_counts, type_trigger_counts = self._count_type_and_trigger(active)
+        confidence_buckets = self._count_confidence_buckets(active)
 
         top_triggered = sorted(active, key=lambda r: r.trigger_count, reverse=True)[:10]
         never_triggered_list = [
