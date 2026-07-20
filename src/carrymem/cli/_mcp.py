@@ -17,6 +17,7 @@ from carrymem.cli._base import (
     _t,
     _yellow,
 )
+from carrymem.cli._format import formatter
 
 __all__ = [
     # Public commands
@@ -237,7 +238,7 @@ def _setup_mcp_project(parsed):
                 with open(claude_file) as f:
                     existing = json.load(f)
                 if "carrymem" in existing.get("mcpServers", {}):
-                    print(f"  {_dim('Claude Code: already configured')} ({claude_file})")
+                    formatter.info(f"Claude Code: already configured ({claude_file})")
                     configured.append("claude-code")
                     skip_claude = True
             except (FileNotFoundError, json.JSONDecodeError, PermissionError):
@@ -246,10 +247,10 @@ def _setup_mcp_project(parsed):
         if not skip_claude:
             success, updated, msg = _merge_json_file(claude_file, mcp_config, force=parsed.force)
             if success:
-                print(f"  {_green('Claude Code:')} {msg} ({claude_file})")
+                formatter.success(f"Claude Code: {msg} ({claude_file})")
                 configured.append("claude-code")
             else:
-                print(f"  {_red('Claude Code:')} {msg}")
+                formatter.error("E_MCP_SETUP", f"Claude Code: {msg}")
 
     if parsed.tool in ("cursor", "all"):
         cursor_dir = project_dir / ".cursor"
@@ -261,7 +262,7 @@ def _setup_mcp_project(parsed):
                 with open(cursor_file) as f:
                     existing = json.load(f)
                 if "carrymem" in existing.get("mcpServers", {}):
-                    print(f"  {_dim('Cursor: already configured')} ({cursor_file})")
+                    formatter.info(f"Cursor: already configured ({cursor_file})")
                     configured.append("cursor")
                     skip_cursor = True
             except (FileNotFoundError, json.JSONDecodeError, PermissionError):
@@ -270,13 +271,13 @@ def _setup_mcp_project(parsed):
         if not skip_cursor:
             success, updated, msg = _merge_json_file(cursor_file, mcp_config, force=parsed.force)
             if success:
-                print(f"  {_green('Cursor:')} {msg} ({cursor_file})")
+                formatter.success(f"Cursor: {msg} ({cursor_file})")
                 configured.append("cursor")
             else:
-                print(f"  {_red('Cursor:')} {msg}")
+                formatter.error("E_MCP_SETUP", f"Cursor: {msg}")
 
     if configured:
-        print(f"\n  {_green('MCP integration ready for:')} {', '.join(configured)}")
+        formatter.success(f"MCP integration ready for: {', '.join(configured)}")
         print(f"  {_dim(f'Command: {module_cmd}')}")
         print(f"\n  {_bold('Restart your AI tool to activate CarryMem')}")
     else:
@@ -291,10 +292,10 @@ def _apply_claude_tool_config(tool_name, mcp_config, force, configured, failed):
     claude_file = Path.home() / ".claude.json"
     tool_key = tool_name.lower().replace(" ", "-")
     if success:
-        print(f"  {_green(f'{tool_name}:')} {msg} ({claude_file})")
+        formatter.success(f"{tool_name}: {msg} ({claude_file})")
         configured.append(tool_key)
     else:
-        print(f"  {_red(f'{tool_name}:')} {msg}")
+        formatter.error("E_MCP_SETUP", f"{tool_name}: {msg}")
         failed.append(tool_key)
 
 
@@ -303,10 +304,10 @@ def _apply_json_tool_config(tool_name, file_path, mcp_config, force, configured,
     success, _updated, msg = _merge_json_file(file_path, mcp_config, force=force)
     tool_key = tool_name.lower().replace(" ", "-")
     if success:
-        print(f"  {_green(f'{tool_name}:')} {msg} ({file_path})")
+        formatter.success(f"{tool_name}: {msg} ({file_path})")
         configured.append(tool_key)
     else:
-        print(f"  {_red(f'{tool_name}:')} {msg}")
+        formatter.error("E_MCP_SETUP", f"{tool_name}: {msg}")
         failed.append(tool_key)
 
 
@@ -320,17 +321,17 @@ def _apply_claude_fallback_tool_config(tool_name, primary_file, mcp_config, forc
         success, _updated, msg = _merge_json_file(file_to_use, mcp_config, force=force)
     tool_key = tool_name.lower().replace(" ", "-")
     if success:
-        print(f"  {_green(f'{tool_name}:')} {msg} ({file_to_use})")
+        formatter.success(f"{tool_name}: {msg} ({file_to_use})")
         configured.append(tool_key)
     else:
-        print(f"  {_red(f'{tool_name}:')} {msg}")
+        formatter.error("E_MCP_SETUP", f"{tool_name}: {msg}")
         failed.append(tool_key)
 
 
 def _print_global_setup_summary(configured, failed, db_path):
     """Print configuration summary (database path, command, configured/failed lists)."""
     print()
-    print(f"  {_green('Database:')} {db_path} (shared)")
+    formatter.success(f"Database: {db_path} (shared)")
 
     cmd_info = _resolve_mcp_command()
     if cmd_info["command"] == "carrymem":
@@ -341,10 +342,10 @@ def _print_global_setup_summary(configured, failed, db_path):
 
     if configured:
         configured_str = ", ".join(configured)
-        print(f"\n  {_green(f'Configured: {configured_str}')}")
+        formatter.success(f"Configured: {configured_str}")
     if failed:
         failed_str = ", ".join(failed)
-        print(f"  {_red(f'Failed: {failed_str}')}")
+        formatter.error("E_MCP_SETUP", f"Failed: {failed_str}")
 
     print(f"\n  {_bold('Restart all AI tools to activate CarryMem.')}")
 
@@ -361,11 +362,11 @@ def _verify_mcp_server():
             timeout=5,
         )
         if result.returncode == 0 or "carrymem" in (result.stdout + result.stderr).lower():
-            print(f"  {_green('MCP server:')} ready")
+            formatter.success("MCP server: ready")
         else:
-            print(f"  {_yellow('MCP server:')} could not verify (non-critical)")
+            formatter.warning("MCP server: could not verify (non-critical)")
     except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-        print(f"  {_yellow('MCP server:')} could not verify (non-critical)")
+        formatter.warning("MCP server: could not verify (non-critical)")
 
 
 def _setup_mcp_global(parsed):
@@ -513,16 +514,16 @@ def _uninstall_mcp_global(parsed):
                         del data["mcpServers"]["carrymem"]
                         with open(claude_file, "w", encoding="utf-8") as f:
                             json.dump(data, f, indent=2, ensure_ascii=False)
-                        print(f"  {_green('Claude Code:')} removed ({claude_file})")
+                        formatter.success(f"Claude Code: removed ({claude_file})")
                         removed.append("claude-code")
                     else:
-                        print(f"  {_dim('Claude Code: not configured')} ({claude_file})")
+                        formatter.info(f"Claude Code: not configured ({claude_file})")
                         not_found.append("claude-code")
                 except (json.JSONDecodeError, OSError) as e:
-                    print(f"  {_red('Claude Code:')} failed - {e}")
+                    formatter.error("E_MCP_UNINSTALL", f"Claude Code: failed - {e}")
                     not_found.append("claude-code")
             else:
-                print(f"  {_dim('Claude Code: config not found')}")
+                formatter.info("Claude Code: config not found")
                 not_found.append("claude-code")
         else:
             config_file = entry[0] if isinstance(entry[0], Path) else entry
@@ -535,23 +536,23 @@ def _uninstall_mcp_global(parsed):
                         with open(config_file, "w", encoding="utf-8") as f:
                             json.dump(data, f, indent=2, ensure_ascii=False)
                         tool_display = tool.replace("-", " ").title()
-                        print(f"  {_green(f'{tool_display}:')} removed ({config_file})")
+                        formatter.success(f"{tool_display}: removed ({config_file})")
                         removed.append(tool)
                     else:
                         tool_display = tool.replace("-", " ").title()
-                        print(f"  {_dim(f'{tool_display}: not configured')} ({config_file})")
+                        formatter.info(f"{tool_display}: not configured ({config_file})")
                         not_found.append(tool)
                 except (json.JSONDecodeError, OSError) as e:
                     tool_display = tool.replace("-", " ").title()
-                    print(f"  {_red(f'{tool_display}:')} failed - {e}")
+                    formatter.error("E_MCP_UNINSTALL", f"{tool_display}: failed - {e}")
                     not_found.append(tool)
             else:
                 tool_display = tool.replace("-", " ").title()
-                print(f"  {_dim(f'{tool_display}: config not found')}")
+                formatter.info(f"{tool_display}: config not found")
                 not_found.append(tool)
 
     if removed:
-        print(f"\n  {_green(f'Removed from: {', '.join(removed)}')}")
+        formatter.success(f"Removed from: {', '.join(removed)}")
     if not_found:
         print(f"  {_dim(f'Not configured: {', '.join(not_found)}')}")
     print(f"\n  {_bold('Restart AI tools to apply changes.')}")
@@ -594,7 +595,7 @@ def cmd_serve(args):
 
 def cmd_tui(args):
     """Launch the interactive Textual TUI for browsing memories."""
-    from carrymem.tui import HAS_TEXTUAL, run_tui
+    from carrymem.tui import HAS_TEXTUAL
 
     if not HAS_TEXTUAL:
         print(f"  {_yellow('Textual is not installed.')}")
@@ -602,12 +603,33 @@ def cmd_tui(args):
         print("  Then run: carrymem tui")
         return 1
 
+    # Import CarryMemTUI lazily so the HAS_TEXTUAL=False fallback above
+    # works even when textual is not installed (CarryMemTUI is only
+    # defined inside the `else` branch of tui.py).
+    from carrymem.tui import CarryMemTUI
+
     parser = _make_parser("tui")
     parser.add_argument("--namespace", "-n", default="default", help=_t("cli.arg.namespace"))
+    parser.add_argument(
+        "--theme",
+        choices=["morandi-dark", "morandi-light", "high-contrast"],
+        default="morandi-dark",
+        help="Color theme (default: morandi-dark)",
+    )
+    parser.add_argument(
+        "--high-contrast",
+        action="store_true",
+        help="Shortcut for --theme high-contrast (WCAG AAA accessibility)",
+    )
     _add_common_args(parser)
 
     parsed = parser.parse_args(args)
-    run_tui(db_path=parsed.db, namespace=parsed.namespace)  # type: ignore[call-arg]
+    # --high-contrast shortcut wins over --theme when both are given
+    theme_name = "high-contrast" if parsed.high_contrast else parsed.theme
+    app = CarryMemTUI(
+        db_path=parsed.db, namespace=parsed.namespace, theme_name=theme_name
+    )
+    app.run()
     return 0
 
 

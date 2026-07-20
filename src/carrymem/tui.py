@@ -5,6 +5,8 @@ Built with Textual. Launch with: carrymem tui
 Design: Morandi color palette for a calm, professional aesthetic.
 """
 
+from __future__ import annotations
+
 try:
     from textual.app import App, ComposeResult
     from textual.binding import Binding
@@ -20,53 +22,74 @@ except ImportError:
 
 if not HAS_TEXTUAL:
 
-    def run_tui():
-        """Print an install hint when Textual is unavailable."""
+    def run_tui(
+        db_path: "Optional[str]" = None,
+        namespace: str = "default",
+        theme_name: str = "morandi-dark",
+    ) -> None:
+        """Print an install hint when Textual is unavailable.
+
+        Signature mirrors the HAS_TEXTUAL branch so mypy treats both
+        conditional definitions as compatible. Arguments are accepted
+        but ignored — Textual is the hard dependency for the real TUI.
+        """
+        _ = (db_path, namespace, theme_name)  # explicitly ignore params
         print("  Textual is not installed.")
         print("  Install with: pip install textual")
         print("  Then run: carrymem tui")
 
 else:
     import sqlite3
-    from typing import Any, Dict, List, Mapping, Optional
+    from datetime import datetime, timedelta, timezone
+    from typing import Any, Callable, Dict, List, Mapping, Optional
 
     from carrymem import CarryMem
     from carrymem.constants import DB_PATH
     from carrymem.errors import CarryMemError
+    from carrymem.ui.themes import MorandiDarkTheme, get_theme, list_themes
+
+    # P1-P1 first-run onboarding (guarded import for safety)
+    try:
+        from carrymem.ui.onboarding import HAS_TEXTUAL as _ONBOARDING_AVAILABLE
+        from carrymem.ui.onboarding import OnboardingScreen
+    except ImportError:  # pragma: no cover — onboarding module is optional
+        OnboardingScreen = None  # type: ignore[assignment,misc]
+        _ONBOARDING_AVAILABLE = False
+
+    # P2-P4 ASCII dashboard rendering (pure functions, no textual dep)
+    render_full_dashboard: Optional[Callable[..., str]]
+    try:
+        from carrymem.ui.dashboard import render_full_dashboard
+    except ImportError:  # pragma: no cover — dashboard module is optional
+        render_full_dashboard = None
 
     _DEFAULT_DB = DB_PATH
+
+    # Initial render limit for lazy loading (P2-P5 virtual scrolling).
+    # When the memory list exceeds this size, only the first slice is
+    # rendered and a "Load more..." line is appended; pressing j/down
+    # past the last visible item expands the slice by another batch.
+    MAX_VISIBLE_MEMORIES = 100
 
     # ── Morandi Color Palette ──────────────────────────────────────
     # Soft, muted tones inspired by Italian painter Giorgio Morandi.
     # All colors are low-saturation, high-readability.
+    # Sourced from the pluggable Theme system (P1-A1); kept as a module-level
+    # alias for backward compatibility with module-level screens (MemoryDetailScreen,
+    # ErrorDisplay, etc.) that still reference `_MORANDI` directly.
 
-    _MORANDI = {
-        "primary": "#8B9A9D",  # dusty blue-gray
-        "secondary": "#A8AD9F",  # sage gray
-        "accent": "#C4A882",  # warm sand
-        "bg_dark": "#1E2024",  # deep charcoal
-        "bg_surface": "#282A2F",  # surface dark
-        "bg_elevated": "#33363D",  # elevated surface
-        "text_primary": "#D4D4D4",  # soft white
-        "text_secondary": "#9CA3AF",  # light gray
-        "text_muted": "#6B7280",  # medium gray
-        "success": "#7D9B8C",  # muted green
-        "warning": "#C4A35A",  # muted gold
-        "error": "#BC8F8F",  # muted rose
-        "info": "#8FAAB8",  # muted blue
-        "border": "#3D4047",  # subtle border
-        "border_active": "#8B9A9D",  # active border
-    }
+    _DEFAULT_THEME = MorandiDarkTheme()
+    _MORANDI = _DEFAULT_THEME.colors
 
     _TYPE_ICONS = {
-        "user_preference": "\u2b50",
-        "fact_declaration": "\U0001f4cc",
-        "correction": "\U0001f527",
-        "decision": "\U0001f3af",
-        "task_pattern": "\U0001f504",
-        "contextual_observation": "\U0001f441",
-        "knowledge": "\U0001f4da",
-        "unknown": "\u2753",
+        "user_preference": "\u25c6",  # ◆ diamond (preferences)
+        "fact_declaration": "\u25c7",  # ◇ hollow diamond (facts)
+        "correction": "\u2699",  # ⚙ gear (corrections)
+        "decision": "\u25c9",  # ◉ fisheye (decisions)
+        "task_pattern": "\u21bb",  # ↻ clockwise arrow (patterns)
+        "contextual_observation": "\u2299",  # ⊙ circled dot (observations)
+        "knowledge": "\u25a4",  # ▤ square with horizontal fill (knowledge)
+        "unknown": "?",  # plain question mark (unknown)
     }
 
     _TYPE_LABELS = {
@@ -109,7 +132,7 @@ else:
             """Render the memory detail overlay widgets."""
             m = self.memory
             mtype = m.get("type", "unknown")
-            icon = _TYPE_ICONS.get(mtype, "\u2753")
+            icon = _TYPE_ICONS.get(mtype, "?")
             content = m.get("content", "")
             confidence = m.get("confidence", 0)
             importance = m.get("importance_score", 0)
@@ -203,7 +226,7 @@ else:
         def compose(self) -> ComposeResult:
             """Render the delete confirmation dialog widgets."""
             mtype = self.memory.get("type", "unknown")
-            icon = _TYPE_ICONS.get(mtype, "❓")
+            icon = _TYPE_ICONS.get(mtype, "?")
             content = self.memory.get("content", "")
             key = self.memory.get("storage_key", "")
 
@@ -288,7 +311,7 @@ else:
         def compose(self) -> ComposeResult:
             """Render the edit memory dialog widgets."""
             mtype = self.memory.get("type", "unknown")
-            icon = _TYPE_ICONS.get(mtype, "❓")
+            icon = _TYPE_ICONS.get(mtype, "?")
             content = self.memory.get("content", "")
             key = self.memory.get("storage_key", "")
 
@@ -376,7 +399,7 @@ else:
         def compose(self) -> ComposeResult:
             """Render the keyboard shortcuts help screen."""
             lines = [
-                ("  \u2699  CarryMem TUI \u2014 Keyboard Shortcuts", "title"),
+                ("  CarryMem TUI \u2014 Keyboard Shortcuts", "title"),
                 ("", ""),
                 ("  Navigation:", "section"),
                 ("    / or s     Focus search bar", "item"),
@@ -397,8 +420,10 @@ else:
                 ("    r           Refresh memory list", "item"),
                 ("    d           Delete selected", "item"),
                 ("    e           Edit selected", "item"),
+                ("    D           Show dashboard (ASCII charts)", "item"),
                 ("", ""),
                 ("  System:", "section"),
+                ("    Ctrl+T      Cycle theme (dark / light / high-contrast)", "item"),
                 ("    ?           Show this help screen", "item"),
                 ("    q           Quit application", "item"),
                 ("", ""),
@@ -446,6 +471,60 @@ else:
         }}
         """
 
+    # ── Dashboard Screen (P2-P4) ────────────────────────────────────
+
+    class DashboardScreen(ModalScreen[None]):
+        """Full-screen ASCII dashboard showing memory growth, type distribution, and health score.
+
+        Rendered via :func:`carrymem.ui.dashboard.render_full_dashboard`.
+        Press ``Esc`` or ``q`` to dismiss.
+        """
+
+        BINDINGS = [
+            Binding("escape", "dismiss", "Close"),
+            Binding("q", "dismiss", "Close"),
+        ]
+
+        def __init__(self, memories: List[Dict[str, Any]]):
+            super().__init__()
+            self.memories = memories
+
+        def compose(self) -> ComposeResult:
+            """Render the full ASCII dashboard as a single Static widget."""
+            if render_full_dashboard is not None:
+                try:
+                    body = render_full_dashboard(self.memories)
+                except Exception:  # NOTE: intentional — dashboard rendering must not crash the modal
+                    body = "  Dashboard rendering failed."
+            else:
+                body = "  Dashboard module unavailable."
+            yield Static(body, id="dashboard-body")
+            yield Static("  \u2014 Press Esc or q to close \u2014", id="dashboard-hint")
+
+        CSS = f"""
+        DashboardScreen {{
+            align: center middle;
+            background: {_MORANDI['bg_dark']}99;
+        }}
+
+        #dashboard-body {{
+            width: 85%;
+            max-height: 85%;
+            padding: 1 2;
+            color: {_MORANDI['text_primary']};
+            background: {_MORANDI['bg_surface']};
+            border: round {_MORANDI['border_active']};
+            overflow-y: auto;
+        }}
+
+        #dashboard-hint {{
+            width: 85%;
+            padding: 1 0;
+            text-align: center;
+            color: {_MORANDI['text_muted']};
+        }}
+        """
+
     # ── Statistics Panel ────────────────────────────────────────────
 
     class StatsPanel(Static):
@@ -456,27 +535,49 @@ else:
             total = stats.get("total_count", 0)
             by_type = stats.get("by_type", {})
             lines = [
-                f"\u2502  Statistics",
-                f"\u2502  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+                "\u2502  Statistics",
+                "\u2502  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
                 f"\u2502  Total:   {total}",
                 f"\u2502  Showing: {shown}",
                 f"\u2502  Filter:  {filt or 'All'}",
-                f"\u2502",
+                "\u2502",
             ]
             type_counts = sorted(by_type.items(), key=lambda x: -x[1]) if isinstance(by_type, dict) else []
             for t, c in type_counts[:5]:
-                icon = _TYPE_ICONS.get(t, "\u2753")
-                label = _TYPE_LABELS.get(t, t)[:10]  # type: ignore[index]
+                icon = _TYPE_ICONS.get(t, "?")
+                label = _TYPE_LABELS.get(t, t)[:10]
                 lines.append(f"\u2502  {icon} {label}: {c}")
             self.update("\n".join(lines))
 
     # ── Error Display Component ─────────────────────────────────────
 
     class ErrorDisplay(Static):
-        """Red error prompt box with code, message, and hint."""
+        """Red error prompt box with code, message, hint, and recovery actions."""
 
-        def show_error(self, exc: Exception) -> None:
-            """Display an exception as a friendly error box."""
+        BINDINGS = [
+            Binding("r", "retry", "Retry"),
+            Binding("i", "ignore", "Ignore"),
+            Binding("h", "help", "Help"),
+        ]
+
+        def __init__(self, *args, **kwargs):
+            """Initialize the error display with empty recovery callbacks."""
+            super().__init__(*args, **kwargs)
+            self._retry_callback = None
+            self._help_url = None
+
+        def show_error(self, exc: Exception, retry_callback=None, help_url=None) -> None:
+            """Display an exception as a friendly error box.
+
+            Optionally accepts a ``retry_callback`` (invoked by action_retry)
+            and a ``help_url`` (opened by action_help). When supplied, the
+            corresponding action hints are appended to the rendered box so
+            the user knows which recovery keys are available.
+            """
+            # Store callbacks so action_retry / action_help can invoke them.
+            self._retry_callback = retry_callback
+            self._help_url = help_url
+
             if isinstance(exc, CarryMemError):
                 code = exc.code
                 message = exc.message
@@ -489,16 +590,43 @@ else:
 
             lines = [f"  [{_MORANDI['error']} ERROR] {code}", f"  {message}"]
             if hint:
-                lines.append(f"  💡 {hint}")
+                lines.append(f"  Hint: {hint}")
+            # Recovery action hints — [I] Ignore always available; [R]/[H]
+            # only when the corresponding callback/URL was supplied.
+            if retry_callback:
+                lines.append("  [R] Retry")
+            lines.append("  [I] Ignore")
+            if help_url:
+                lines.append("  [H] Help")
             self.update("\n".join(lines))
             self.add_class("error-visible")
             self.remove_class("error-hidden")
 
         def clear_error(self) -> None:
             """Hide the error box and clear its content."""
+            self._retry_callback = None
+            self._help_url = None
             self.update("")
             self.remove_class("error-visible")
             self.add_class("error-hidden")
+
+        def action_retry(self) -> None:
+            """Retry the failed operation by invoking the stored callback."""
+            if self._retry_callback:
+                self._retry_callback()
+            self.clear_error()
+
+        def action_ignore(self) -> None:
+            """Dismiss the error without retrying."""
+            self.clear_error()
+
+        def action_help(self) -> None:
+            """Open the help documentation URL in a browser if available."""
+            if self._help_url:
+                import webbrowser
+
+                webbrowser.open(self._help_url)
+            self.clear_error()
 
         CSS = f"""
         ErrorDisplay {{
@@ -520,18 +648,22 @@ else:
 
     # ── Main TUI Application ───────────────────────────────────────
 
-    class CarryMemTUI(App):
-        """Main Textual TUI application for browsing and managing memories."""
+    def _build_app_css(colors: Dict[str, str]) -> str:
+        """Build the CarryMemTUI stylesheet from a colors dict.
 
-        CSS = f"""
+        Lets the main app CSS be regenerated with an arbitrary theme at
+        instance time (P1-A1 theme abstraction), while preserving the
+        exact CSS content the module shipped with previously.
+        """
+        return f"""
         /* ══════════════════════════════════════════════════════════
            CarryMorandi TUI — Morandi Color Scheme
            ══════════════════════════════════════════════════════════ */
 
         Screen {{
             layout: vertical;
-            background: {_MORANDI['bg_dark']};
-            color: {_MORANDI['text_primary']};
+            background: {colors['bg_dark']};
+            color: {colors['text_primary']};
         }}
 
         /* ── Main Layout ─────────────────────────────────────── */
@@ -545,21 +677,21 @@ else:
 
         #sidebar {{
             width: 32;
-            border-right: solid {_MORANDI['border']};
+            border-right: solid {colors['border']};
             padding: 0 1;
-            background: {_MORANDI['bg_surface']};
+            background: {colors['bg_surface']};
         }}
 
         #sidebar-title {{
             text-style: bold;
-            color: {_MORANDI['accent']};
+            color: {colors['accent']};
             padding: 1 0;
             margin-bottom: 1;
-            border-bottom: solid {_MORANDI['border']};
+            border-bottom: solid {colors['border']};
         }}
 
         .sidebar-section {{
-            color: {_MORANDI['primary']};
+            color: {colors['primary']};
             text-style: bold;
             margin-top: 1;
             margin-bottom: 0;
@@ -568,22 +700,22 @@ else:
 
         .sidebar-item {{
             padding: 0 1;
-            color: {_MORANDI['text_secondary']};
+            color: {colors['text_secondary']};
         }}
 
         .sidebar-item:hover {{
-            background: {_MORANDI['bg_elevated']};
-            color: {_MORANDI['text_primary']};
+            background: {colors['bg_elevated']};
+            color: {colors['text_primary']};
         }}
 
         .sidebar-item.active {{
-            background: {_MORANDI['primary'] + '33'};
-            color: {_MORANDI['accent']};
+            background: {colors['primary'] + '33'};
+            color: {colors['accent']};
             text-style: bold;
         }}
 
         .sidebar-item .key {{
-            color: {_MORANDI['accent']};
+            color: {colors['accent']};
             min-width: 3;
             text-style: bold;
         }}
@@ -591,8 +723,8 @@ else:
         #stats-panel {{
             margin-top: 1;
             padding: 1 0;
-            border-top: solid {_MORANDI['border']};
-            color: {_MORANDI['text_muted']};
+            border-top: solid {colors['border']};
+            color: {colors['text_muted']};
         }}
 
         /* ── Content Area ─────────────────────────────────────── */
@@ -601,7 +733,7 @@ else:
             width: 1fr;
             padding: 0 1;
             overflow-y: auto;
-            background: {_MORANDI['bg_dark']};
+            background: {colors['bg_dark']};
         }}
 
         #memory-list {{
@@ -612,29 +744,29 @@ else:
         .memory-item {{
             padding: 1 1;
             margin-bottom: 1;
-            border-bottom: dashed {_MORANDI['border']};
+            border-bottom: dashed {colors['border']};
             border-radius: 0 4 4 0;
         }}
 
         .memory-item:hover {{
-            background: {_MORANDI['bg_elevated']}66;
+            background: {colors['bg_elevated']}66;
         }}
 
         .memory-item-header {{
-            color: {_MORANDI['text_primary']};
+            color: {colors['text_primary']};
         }}
 
         .memory-item-detail {{
-            color: {_MORANDI['text_muted']};
+            color: {colors['text_muted']};
             padding-left: 2;
         }}
 
         .memory-icon {{
-            color: {_MORANDI['accent']};
+            color: {colors['accent']};
         }}
 
         .memory-type {{
-            color: {_MORANDI['info']};
+            color: {colors['info']};
             text-style: bold;
         }}
 
@@ -642,10 +774,10 @@ else:
 
         #search-bar {{
             height: 3;
-            border-bottom: solid {_MORANDI['border']};
+            border-bottom: solid {colors['border']};
             padding: 0 1;
             dock: top;
-            background: {_MORANDI['bg_surface']};
+            background: {colors['bg_surface']};
         }}
 
         #search-input {{
@@ -653,30 +785,30 @@ else:
         }}
 
         Input {{
-            background: {_MORANDI['bg_elevated']};
-            border: solid {_MORANDI['border']};
-            color: {_MORANDI['text_primary']};
-            caret: {_MORANDI['accent']};
+            background: {colors['bg_elevated']};
+            border: solid {colors['border']};
+            color: {colors['text_primary']};
+            caret: {colors['accent']};
         }}
 
         Input:focus {{
-            border: solid {_MORANDI['border_active']};
-            outline: {_MORANDI['primary']};
+            border: solid {colors['border_active']};
+            outline: {colors['primary']};
         }}
 
         Input>.input--placeholder {{
-            color: {_MORANDI['text_muted']};
+            color: {colors['text_muted']};
         }}
 
         /* ── Status Bar ───────────────────────────────────────── */
 
         #status-bar {{
             height: 1;
-            background: {_MORANDI['bg_surface']};
-            color: {_MORANDI['text_muted']};
+            background: {colors['bg_surface']};
+            color: {colors['text_muted']};
             padding: 0 1;
             dock: bottom;
-            border-top: solid {_MORANDI['border']};
+            border-top: solid {colors['border']};
         }}
 
         /* ── Empty State ──────────────────────────────────────── */
@@ -684,42 +816,47 @@ else:
         #empty-state {{
             padding: 4 2;
             text-align: center;
-            color: {_MORANDI['text_muted']};
+            color: {colors['text_muted']};
         }}
 
         /* ── Footer Override ─────────────────────────────────── */
 
         Footer {{
-            background: {_MORANDI['bg_surface']};
-            color: {_MORANDI['text_secondary']};
-            border-top: solid {_MORANDI['border']};
+            background: {colors['bg_surface']};
+            color: {colors['text_secondary']};
+            border-top: solid {colors['border']};
             dock: bottom;
         }}
 
         Footer .binding--key {{
-            color: {_MORANDI['accent']};
+            color: {colors['accent']};
             text-style: bold;
             min-width: 2;
             padding: 0 1;
-            border: round {_MORANDI['border']};
-            background: {_MORANDI['bg_elevated']};
+            border: round {colors['border']};
+            background: {colors['bg_elevated']};
         }}
 
         /* ── Header Override ──────────────────────────────────── */
 
         Header {{
-            background: {_MORANDI['bg_surface']};
-            color: {_MORANDI['text_primary']};
+            background: {colors['bg_surface']};
+            color: {colors['text_primary']};
             text-style: bold;
-            border-bottom: solid {_MORANDI['border']};
+            border-bottom: solid {colors['border']};
             dock: top;
         }}
 
         Header.-on-high {{
-            background: {_MORANDI['primary'] + '22'};
-            color: {_MORANDI['accent']};
+            background: {colors['primary'] + '22'};
+            color: {colors['accent']};
         }}
         """
+
+    class CarryMemTUI(App):
+        """Main Textual TUI application for browsing and managing memories."""
+
+        CSS = _build_app_css(_MORANDI)
 
         BINDINGS = [
             Binding("q", "quit", "Quit"),
@@ -729,6 +866,7 @@ else:
             Binding("a", "add_memory", "Add"),
             Binding("r", "refresh", "Refresh"),
             Binding("d", "delete_memory", "Delete"),
+            Binding("D", "show_dashboard", "Dashboard"),
             Binding("e", "edit_memory", "Edit"),
             Binding("0", "view_all", "All"),
             Binding("1", "view_all", "All"),
@@ -736,6 +874,7 @@ else:
             Binding("3", "view_facts", "Facts"),
             Binding("4", "view_corrections", "Fixes"),
             Binding("5", "view_decisions", "Decis"),
+            Binding("ctrl+t", "cycle_theme", "Theme"),
             Binding("escape", "cancel_action", "Cancel"),
         ]
 
@@ -743,14 +882,30 @@ else:
         search_query: reactive[str] = reactive("")
         selected_index: reactive[int] = reactive(-1)
 
-        def __init__(self, db_path: Optional[str] = None, namespace: str = "default"):
-            """Initialize the TUI with a database path and namespace."""
+        def __init__(
+            self,
+            db_path: Optional[str] = None,
+            namespace: str = "default",
+            theme_name: str = "morandi-dark",
+            group_by_date: bool = True,
+        ):
+            """Initialize the TUI with a database path, namespace, and theme."""
+            self._theme = get_theme(theme_name)
+            self._morandi = self._theme.colors  # Used by CSS f-string
+            # Textual App.CSS is class-level; per-instance override requires type: ignore[misc]
+            self.CSS = _build_app_css(self._morandi)  # type: ignore[misc]
             super().__init__()
             self.db_path = db_path or str(_DEFAULT_DB)
             self.namespace = namespace
             self.cm = CarryMem(db_path=self.db_path, namespace=self.namespace)
             self.memories: List[Dict[str, Any]] = []
             self._add_mode = False
+            # P2-U4: when True, memories are grouped by date bucket; when
+            # False, the list renders flat (legacy behavior).
+            self.group_by_date = group_by_date
+            # P2-P5: lazy-loading window into self.memories.
+            self._total_memories = 0
+            self._visible_count = MAX_VISIBLE_MEMORIES
 
         def compose(self) -> ComposeResult:
             """Compose the main application layout."""
@@ -772,6 +927,8 @@ else:
                     yield Static("  [d]  Delete Memory", classes="sidebar-item")
                     yield Static("  [e]  Edit Memory", classes="sidebar-item")
                     yield Static("  [r]  Refresh List", classes="sidebar-item")
+                    yield Static("  [D]  Dashboard", classes="sidebar-item")
+                    yield Static("  [^T] Cycle Theme", classes="sidebar-item")
                     yield Static("  [/]  Search", classes="sidebar-item")
                     yield Static("  [?]  Help", classes="sidebar-item")
                     yield Static("  [q]  Quit", classes="sidebar-item")
@@ -782,8 +939,24 @@ else:
             yield Footer()
 
         def on_mount(self) -> None:
-            """Load memories when the app mounts."""
+            """Load memories when the app mounts.
+
+            P1-P1: If the database is empty (first run), push the
+            :class:`OnboardingScreen` so the user is guided through
+            storing and searching their first memory. The onboarding
+            screen is skipped silently if its module is unavailable.
+            """
             self._load_memories()
+            # First-run onboarding: detect empty memory database via the
+            # underlying adapter's ``count()`` API (CarryMem itself does
+            # not expose a public count method).
+            if _ONBOARDING_AVAILABLE and OnboardingScreen is not None:
+                try:
+                    adapter = getattr(self.cm, "_adapter", None)
+                    if adapter is not None and adapter.count() == 0:
+                        self.push_screen(OnboardingScreen(self.cm))
+                except Exception:  # NOTE: intentional — onboarding is non-critical; never block TUI launch
+                    pass
 
         # ── Search & Input ──────────────────────────────────────────
 
@@ -820,6 +993,9 @@ else:
 
                 query = self.search_query or ""
                 self.memories = self.cm.recall_memories(query=query, filters=filters, limit=50)
+                self._total_memories = len(self.memories)
+                # Reset the lazy-loading window (P2-P5).
+                self._visible_count = MAX_VISIBLE_MEMORIES
                 self.selected_index = -1
                 self._render_memories()
                 self._update_status()
@@ -853,10 +1029,27 @@ else:
                 )
                 return
 
+            # Lazy loading: only render the visible slice (P2-P5).
+            visible = self.memories[: self._visible_count]
+            has_more = len(self.memories) > len(visible)
+
+            if self.group_by_date:
+                parts = self._render_grouped_memories(visible)
+            else:
+                parts = self._render_flat_memories(visible)
+
+            if has_more:
+                parts.append(f"  ... Load more ... (showing {len(visible)} of {len(self.memories)})")
+                parts.append("")
+
+            self._set_content("\n".join(parts))
+
+        def _render_flat_memories(self, memories: List[Dict[str, Any]]) -> List[str]:
+            """Render memory items as a flat 1-based list (legacy behavior)."""
             parts: List[str] = []
-            for i, m in enumerate(self.memories, 1):
+            for i, m in enumerate(memories, 1):
                 mtype = m.get("type", "unknown")
-                icon = _TYPE_ICONS.get(mtype, "\u2753")
+                icon = _TYPE_ICONS.get(mtype, "?")
                 content = m.get("content", "")
                 confidence = m.get("confidence", 0)
                 importance = m.get("importance_score", 0)
@@ -868,8 +1061,89 @@ else:
                 parts.append(header)
                 parts.append(detail)
                 parts.append("")
+            return parts
 
-            self._set_content("\n".join(parts))
+        def _render_grouped_memories(self, memories: List[Dict[str, Any]]) -> List[str]:
+            """Render memory items grouped under date-bucket headers (P2-U4).
+
+            The 1-based index continues across groups so the selection marker
+            (e.g. ``>1.``) stays consistent with the flat-list numbering.
+            """
+            groups = self._group_memories_by_date(memories)
+            parts: List[str] = []
+            global_idx = 0
+            for group_name in ("Today", "Yesterday", "This Week", "Earlier"):
+                group_mems = groups.get(group_name, [])
+                if not group_mems:
+                    continue
+                parts.append(f"  [{_MORANDI['accent']} bold]{group_name} ({len(group_mems)})[/]")
+                parts.append("")
+                for m in group_mems:
+                    global_idx += 1
+                    mtype = m.get("type", "unknown")
+                    icon = _TYPE_ICONS.get(mtype, "?")
+                    content = m.get("content", "")
+                    confidence = m.get("confidence", 0)
+                    importance = m.get("importance_score", 0)
+                    key = m.get("storage_key", "")
+
+                    marker = ">" if global_idx - 1 == self.selected_index else " "
+                    header = f"{marker}{global_idx}. {icon} [{mtype}] {content}"
+                    detail = f"      Conf: {confidence:.0%}  " f"| Imp: {importance:.2f}  " f"| {key[:30]}"
+                    parts.append(header)
+                    parts.append(detail)
+                    parts.append("")
+            return parts
+
+        def _group_memories_by_date(self, memories: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+            """Group memories by date bucket: Today / Yesterday / This Week / Earlier."""
+            now = datetime.now(timezone.utc)
+            today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            yesterday_start = today_start - timedelta(days=1)
+            week_start = today_start - timedelta(days=7)
+
+            buckets: Dict[str, List[Dict[str, Any]]] = {
+                "Today": [],
+                "Yesterday": [],
+                "This Week": [],
+                "Earlier": [],
+            }
+            for m in memories:
+                dt = self._parse_created_at(m.get("created_at", ""))
+                if dt is None:
+                    buckets["Earlier"].append(m)
+                    continue
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                if dt >= today_start:
+                    buckets["Today"].append(m)
+                elif dt >= yesterday_start:
+                    buckets["Yesterday"].append(m)
+                elif dt >= week_start:
+                    buckets["This Week"].append(m)
+                else:
+                    buckets["Earlier"].append(m)
+            return buckets
+
+        @staticmethod
+        def _parse_created_at(created: str) -> Optional[datetime]:
+            """Parse a created_at ISO timestamp; return None on failure."""
+            if not created:
+                return None
+            s = created.replace("Z", "+00:00") if created.endswith("Z") else created
+            try:
+                return datetime.fromisoformat(s)
+            except (ValueError, TypeError):
+                return None
+
+        def _load_more_memories(self) -> None:
+            """Expand the lazy-loading window by MAX_VISIBLE_MEMORIES (P2-P5)."""
+            if self._visible_count >= len(self.memories):
+                return
+            self._visible_count = min(
+                self._visible_count + MAX_VISIBLE_MEMORIES,
+                len(self.memories),
+            )
 
         def _set_content(self, text: str) -> None:
             try:
@@ -944,6 +1218,10 @@ else:
         def action_show_help(self) -> None:
             """Push the keyboard shortcuts help screen."""
             self.push_screen(HelpScreen())
+
+        def action_show_dashboard(self) -> None:
+            """Push the dashboard screen showing ASCII charts (P2-P4)."""
+            self.push_screen(DashboardScreen(self.memories))
 
         def action_delete_memory(self) -> None:
             """Delete the currently selected memory after confirmation."""
@@ -1046,6 +1324,41 @@ else:
             self.current_filter = "decision"
             self._load_memories()
 
+        def action_cycle_theme(self) -> None:
+            """Cycle through registered themes (P1-C3 / P2-U2).
+
+            Updates the app's CSS in place by regenerating the stylesheet
+            from the next theme's color palette. The cycle order follows
+            :func:`carrymem.ui.themes.list_themes` (registry insertion
+            order): ``morandi-dark`` -> ``morandi-light`` -> ``high-contrast``
+            -> back to ``morandi-dark``.
+            """
+            current = self._theme.name
+            themes = list_themes()
+            try:
+                idx = themes.index(current)
+            except ValueError:
+                idx = -1
+            next_name = themes[(idx + 1) % len(themes)] if themes else current
+            self._theme = get_theme(next_name)
+            self._morandi = self._theme.colors
+            # Regenerate the app stylesheet and refresh. Best-effort: if
+            # the runtime stylesheet reload fails, the next render still
+            # picks up self._morandi via _render_memories.
+            new_css = _build_app_css(self._morandi)
+            try:
+                from textual.styles.stylesheet import Stylesheet
+
+                stylesheet = Stylesheet()
+                stylesheet.add_source(new_css)
+                self.stylesheet = stylesheet
+                self.stylesheet.apply(self)
+            except Exception:  # NOTE: intentional — best-effort theme switch; non-fatal if stylesheet reload fails
+                pass
+            self._set_status(f"Theme: {next_name}")
+            self._render_memories()
+            self._update_status()
+
         # ── Memory Detail View ──────────────────────────────────────
 
         def action_view_detail(self) -> None:
@@ -1059,6 +1372,10 @@ else:
             """Handle j/k/arrows/Enter/Esc navigation over the memory list."""
             if event.key in ("j", "down"):
                 if self.selected_index < len(self.memories) - 1:
+                    # Lazy loading: if the next item is outside the visible
+                    # window, expand the window before moving the cursor (P2-P5).
+                    if self.selected_index + 1 >= self._visible_count and self._visible_count < len(self.memories):
+                        self._load_more_memories()
                     self.selected_index += 1
                     self._render_memories()
             elif event.key in ("k", "up"):
@@ -1078,12 +1395,16 @@ else:
             if self.cm:
                 self.cm.close()
 
-    def run_tui(db_path: Optional[str] = None, namespace: str = "default") -> None:  # type: ignore[misc]
+    def run_tui(
+        db_path: Optional[str] = None,
+        namespace: str = "default",
+        theme_name: str = "morandi-dark",
+    ) -> None:
         """Launch the CarryMem TUI application."""
         if not HAS_TEXTUAL:
             print("  Textual is not installed.")
             print("  Install with: pip install textual")
             print("  Then run: carrymem tui")
             return
-        app = CarryMemTUI(db_path=db_path, namespace=namespace)
+        app = CarryMemTUI(db_path=db_path, namespace=namespace, theme_name=theme_name)
         app.run()

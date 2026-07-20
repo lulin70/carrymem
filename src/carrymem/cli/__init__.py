@@ -1,6 +1,7 @@
 # Re-export everything from submodules for backward compatibility
 from carrymem.cli._backup import *
 from carrymem.cli._base import *
+from carrymem.cli._format import HAS_RICH, OutputFormatter, formatter
 from carrymem.cli._io import *
 from carrymem.cli._mcp import *
 from carrymem.cli._memory import *
@@ -192,9 +193,11 @@ def main():
 
     handler = commands.get(command)
     if handler is None:
-        print(f"  {_red(_t('cli.error.unknown_command', command=command))}")
-        help_tip = "Run 'carrymem help' for usage"
-        print(f"  {_dim(help_tip)}")
+        formatter.error(
+            "E_CLI_UNKNOWN_COMMAND",
+            _t("cli.error.unknown_command", command=command),
+            hint="Run 'carrymem help' for usage",
+        )
         sys.exit(1)
 
     try:
@@ -204,20 +207,16 @@ def main():
         print()
         sys.exit(130)
     except CarryMemError as e:
-        print(f"  {_red(f'[ERROR] {e.code}')}")
-        print(f"  {e.message}")
-        if e.hint:
-            print(f"  {_dim(f'💡 {e.hint}')}")
+        # P0-T2: use the unified formatter so error boxes are color-blind
+        # friendly (✗ symbol + red) and consistent across all CLI commands.
+        formatter.error(e.code, e.message, hint=e.hint)
         sys.exit(1)
     # NOTE: Broad exception at CLI top-level is intentional to catch all unhandled errors
     # and convert them to user-friendly CarryMemError messages. This is the final safety net
     # to prevent raw tracebacks from reaching end users.
     except Exception as e:
         friendly = CarryMemError.from_cause(e)
-        print(f"  {_red(f'[ERROR] {friendly.code}')}")
-        print(f"  {friendly.message}")
-        if friendly.hint:
-            print(f"  {_dim(f'💡 {friendly.hint}')}")
+        formatter.error(friendly.code, friendly.message, hint=friendly.hint)
         sys.exit(1)
 
 

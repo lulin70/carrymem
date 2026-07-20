@@ -9,6 +9,7 @@
 # install_requires (core runtime)
 PyYAML>=5.0
 cryptography>=46.0.6
+rich>=13.0
 
 # [full] extras — matches setup.py extras_require["full"]
 aiosqlite>=0.19

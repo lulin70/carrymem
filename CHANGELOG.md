@@ -10,6 +10,239 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > historical records from the pre-reset development cycle and should not be confused with
 > the current v0.2.x series.
 
+## [0.9.0] - 2026-07-20 (UI/UX Overhaul — Morandi Aesthetic + Accessibility + Onboarding)
+
+### Summary
+First dedicated UI/UX release based on a DevSquad 5-role (UI/PM/Tester/Architect/Coder)
+evaluation of v0.8.2. Delivered **11 P0-P2 improvements** in a single release:
+- **P0 (3 items)**: Removed all high-saturation emoji from TUI (replaced with low-saturation
+  Unicode geometric symbols); added CLI rich integration with color-blind friendly markers;
+  unified success/warning/error symbols across CLI and TUI.
+- **P1 (4 items)**: Theme abstraction layer (`Theme` Protocol + registry); high-contrast mode
+  (CLI `--high-contrast` flag, WCAG AAA 21:1 ratio); first-run onboarding screen (4-step
+  interactive tutorial with sample memory seeding); ErrorDisplay recovery actions (Retry/Ignore/Help).
+- **P2 (4 items)**: Morandi light theme (10.82:1 contrast, exceeds WCAG AAA); memory list
+  grouping by date bucket (Today/Yesterday/This Week/Earlier); ASCII health dashboard
+  (growth chart + type distribution + health score); lazy-loading virtual scrolling
+  (`MAX_VISIBLE_MEMORIES=100`, "Load more..." expansion).
+
+### Design Principles Applied
+- **Comfortable over harsh** (user preference): Removed emoji in favor of Morandi-aligned
+  Unicode geometric symbols (◆◇⚙◉↻⊙▤) and ASCII box-drawing (│┤┐└┴┬├─┼┌┘═║╠╣╚╝╔╗).
+- **WCAG AA/AAA compliance**: All 3 themes meet contrast ratios — MorandiDark (default),
+  MorandiLight (10.82:1), HighContrast (21:1, pure black/white).
+- **Color-blind friendly**: Status indicated by shape (✓/▲/✗/ℹ) in addition to color.
+- **Documentation-first**: All 11 items specified in `docs/design/UI_UX_IMPROVEMENTS_v0.9.0.md`
+  before implementation; design spec includes test plan + verification table.
+
+### P0 — Quick Wins (3/3)
+
+#### P0-C1: emoji → Morandi text symbols
+- **Why**: High-saturation emoji (⭐📌🔧🎯🔄👁📚❓) conflicted with Morandi low-saturation
+  aesthetic; violated user's "comfortable over 刺眼emoji" preference.
+- **Changes**: `_TYPE_ICONS` dict in `src/carrymem/tui.py` rewritten with Unicode geometric
+  symbols: `◆` (preferences), `◇` (facts), `⚙` (corrections), `◉` (decisions), `↻` (patterns),
+  `⊙` (observations), `▤` (knowledge), `?` (unknown). ErrorDisplay "💡" → "Hint:".
+  HelpScreen "⚙" → plain "CarryMem TUI".
+
+#### P0-C2: CLI rich integration + progress feedback
+- **Why**: CLI had no colored output, tables, or progress indicators; long operations
+  (recall/consolidation/backup) gave no feedback.
+- **Changes**: New `src/carrymem/cli/_format.py` with `OutputFormatter` class:
+  - `success(msg)` / `warning(msg)` / `error(msg)` / `info(msg)` — colored output with
+    color-blind friendly symbols (✓ green, ▲ yellow, ✗ red, ℹ blue)
+  - `table(headers, rows)` — rich.table.Table wrapper for memory list/stats
+  - `progress(description)` — context manager for long operations
+- `HAS_RICH` import guard with plain-print fallback for envs without rich.
+- Replaced bare `print()` in `cli/_io.py`, `cli/_stats.py`, `cli/_mcp.py`, `cli/__init__.py`.
+- **Tests**: `tests/test_cli_format.py` — 45 tests across 11 classes.
+
+#### P0-T2: Color-blind friendly status symbols
+- **Why**: ~8% of male users have red-green color blindness; status indicated by color alone
+  was inaccessible.
+- **Changes**: Unified symbol set across CLI and TUI:
+  - `✓` (success, green) — check mark
+  - `▲` (warning, gold) — triangle
+  - `✗` (error, red) — X mark
+  - `ℹ` (info, blue) — i symbol
+- Shape distinguishability ensures status is recognizable without color perception.
+
+### P1 — Experience Improvements (4/4)
+
+#### P1-A1: Theme abstraction layer
+- **Why**: Hardcoded `_MORANDI` dict blocked any theme switching; prerequisite for
+  high-contrast/light themes.
+- **Changes**: New `src/carrymem/ui/themes.py`:
+  - `Theme` Protocol: `name: str` + `colors: Dict[str, str]`
+  - `MorandiDarkTheme` (default), `HighContrastTheme`, `MorandiLightTheme` (added by P2-U2)
+  - `_THEMES` registry + `get_theme(name)` / `list_themes()` / `register_theme(name, theme)` API
+- `tui.py` refactored: `_MORANDI` becomes module-level alias for `_DEFAULT_THEME.colors`;
+  `_build_app_css(colors)` extracted (200 lines, 76 color refs); `CarryMemTUI.__init__`
+  accepts `theme_name` parameter.
+- **Tests**: `tests/test_themes.py` — 40 tests (23 original + 17 added by P1-C3).
+
+#### P1-C3: High-contrast mode
+- **Why**: Visually impaired users need WCAG AAA contrast (21:1); standard Morandi palette
+  is muted by design.
+- **Changes**: `HighContrastTheme` — bg `#000000`, text `#FFFFFF`, success `#00FF00`,
+  warning `#FFFF00`, error `#FF0000`. Achieves 21:1 contrast ratio (exceeds WCAG AAA 7:1).
+- CLI flag: `carrymem tui --high-contrast` (shortcut for `--theme high-contrast`).
+- `carrymem tui --theme {morandi-dark,morandi-light,high-contrast}` (default: morandi-dark).
+
+#### P1-P1: First-run onboarding screen
+- **Why**: New users saw an empty list with no guidance; first-run experience was unwelcoming.
+- **Changes**: New `src/carrymem/ui/onboarding.py` with `OnboardingScreen(ModalScreen[None])`:
+  4-step interactive tutorial:
+  1. **Welcome** — explains what CarryMem does
+  2. **Store** — user types and stores their first memory via `cm.declare()`
+  3. **Search** — user searches the just-stored memory via `cm.recall_memories()`
+  4. **Done** — confirmation + "Press ? for shortcuts"
+- 5 sample memories available via `seed_sample_memories(cm)` (idempotent).
+- "Compose once, toggle display" pattern — all step widgets pre-mounted with unique IDs;
+  step transitions toggle `display` via CSS class. Avoids Textual 8.x `mount()` async pitfall.
+- Integration in `tui.py`: `CarryMemTUI.on_mount` checks `adapter.count() == 0`; if so,
+  pushes `OnboardingScreen`. Failures swallowed (non-critical UX enhancement).
+- `HAS_TEXTUAL` import guard — `SAMPLE_MEMORIES` and `seed_sample_memories()` importable
+  without textual installed.
+- **Tests**: `tests/test_onboarding.py` — 32 tests across 7 classes.
+
+#### P1-P3: ErrorDisplay recovery actions
+- **Why**: ErrorDisplay showed only a hint with no actions; users had to manually retry
+  by re-running the command.
+- **Changes**: `ErrorDisplay` class in `tui.py` enhanced:
+  - `BINDINGS = [Binding("r", "retry"), Binding("i", "ignore"), Binding("h", "help")]`
+  - `__init__(*args, **kwargs)` accepts optional `retry_callback`, `help_url`
+  - `show_error(exc, retry_callback=None, help_url=None)` displays `[R] Retry` / `[I] Ignore` / `[H] Help`
+  - `action_retry()` invokes stored callback; `action_ignore()` dismisses; `action_help()`
+    opens `help_url` in browser.
+- Backward compatible: existing `ErrorDisplay(id="error-display")` calls still work via
+  `*args, **kwargs` passthrough.
+
+### P2 — Polish (4/4)
+
+#### P2-U2: Light Morandi theme
+- **Why**: Daytime/bright-terminal users needed a light theme; only dark theme was available.
+- **Changes**: `MorandiLightTheme` in `ui/themes.py`:
+  - `bg_dark: #F5F3EE` (warm white), `bg_surface: #EBE8E1`, `bg_elevated: #E0DDD5`
+  - `text_primary: #3D3530` (deep brown), `text_secondary: #6B5D52`, `text_muted: #9A8C81`
+  - `primary: #6B7B7E`, `accent: #A08862`, `success: #5D7B6C`, `warning: #A4833A`,
+    `error: #9C6F6F`, `info: #6F8A98`
+  - Contrast ratio: 10.82:1 (exceeds WCAG AAA 7:1)
+- All 15 color keys preserved; drops into existing `_build_app_css(colors)` seamlessly.
+
+#### P2-U4: Memory list grouping by date
+- **Why**: Flat list was hard to scan when memories spanned many days; users wanted
+  temporal context.
+- **Changes**: `CarryMemTUI` accepts `group_by_date: bool = True` parameter.
+  - `_group_memories_by_date(memories)` buckets into: Today / Yesterday / This Week / Earlier
+  - `_render_grouped_memories(memories)` renders group headers with count (e.g., `Today (5)`)
+  - `_render_flat_memories(memories)` preserves legacy behavior when `group_by_date=False`
+  - `_parse_created_at(staticmethod)` parses ISO 8601 with optional `Z` suffix
+- `_render_memories` dispatches based on `self.group_by_date`.
+
+#### P2-P4: ASCII health dashboard
+- **Why**: StatsPanel showed only counts; users wanted visual health metrics.
+- **Changes**: New `src/carrymem/ui/dashboard.py` with pure functions (no I/O, no textual dep):
+  - `render_growth_chart(memories, days=7)` — ASCII bar chart of memory growth (██ blocks)
+  - `render_type_distribution(memories)` — horizontal bar chart with type icons (◆◇⚙◉↻⊙▤)
+  - `render_health_score(memories)` — boxed dashboard showing:
+    - **Coverage** — fraction of 8 memory types that have ≥1 entry
+    - **Freshness** — fraction created within last 30 days
+    - **Redundancy** — fraction of duplicate content (SHA-1 hash)
+    - Overall = `(coverage + freshness + (100 - redundancy)) / 3`
+  - `render_full_dashboard(memories)` — combines all three sections with title + separators
+- All renders use Unicode box-drawing chars only (│┤┐└┴┬├─┼┌┘═║╠╣╚╝╔╗); max width ≤ 80 cols.
+- Integration in `tui.py`: New `DashboardScreen(ModalScreen)` renders
+  `render_full_dashboard()`; bound to `D` key. Sidebar shows `[D]  Dashboard` shortcut.
+- **Tests**: `tests/test_dashboard.py` — 33 tests across 5 classes.
+
+#### P2-P5: Lazy-loading virtual scrolling
+- **Why**: Loading 1000+ memories at once caused UI lag; full render was unnecessary
+  when users only see ~30 at a time.
+- **Changes**:
+  - `MAX_VISIBLE_MEMORIES = 100` module constant
+  - `CarryMemTUI._total_memories` / `_visible_count` instance vars track window
+  - `_load_more_memories()` expands window by another 100, capped at total
+  - `on_key` handler: pressing `j`/`down` past the last visible item auto-expands
+  - "Load more... (showing N of M)" line appended when more items exist
+- Approach avoids `VirtualListView` widget swap (which would break 30+ existing tests
+  that query `app.query_one("#memory-list", Static)`); uses lazy slice instead.
+
+### Integration Wiring
+- **OnboardingScreen** integrated into `CarryMemTUI.on_mount`: detects `adapter.count() == 0`,
+  pushes onboarding modal. Failures swallowed (non-blocking).
+- **DashboardScreen** integrated as new `D` keybinding + `action_show_dashboard` method.
+- **Theme cycling** integrated as `Ctrl+T` keybinding + `action_cycle_theme` method:
+  cycles morandi-dark → morandi-light → high-contrast → back to morandi-dark.
+- **run_tui()** now accepts `theme_name` parameter (forwards to `CarryMemTUI`).
+- Sidebar and HelpScreen updated to document new shortcuts (`[D] Dashboard`, `[^T] Cycle Theme`).
+
+### Test Plan
+- **Unit tests**: 13 new tests in `tests/test_tui.py` covering theme cycling, dashboard
+  screen, onboarding integration, run_tui theme parameter. 45 new tests in
+  `test_cli_format.py`. 40 new tests in `test_themes.py`. 32 new tests in
+  `test_onboarding.py`. 33 new tests in `test_dashboard.py`. **Total: 163 new tests**.
+- **Targeted suite**: `python -m pytest tests/test_tui.py tests/test_themes.py
+  tests/test_onboarding.py tests/test_dashboard.py tests/test_cli_format.py
+  tests/test_exception_narrowing.py -q --no-cov` → **257 passed, 0 failed** (10.49s).
+- **Full non-e2e regression**: `python -m pytest tests/ --ignore=tests/e2e -q --no-cov
+  -m "not slow" --deselect tests/test_performance_benchmark.py::test_recall_500_memories_under_100ms`
+  → **4632 passed, 2 skipped, 57 deselected, 0 failed** (354.21s). No regressions.
+- **mypy**: 9 pre-existing errors (baseline 10 → 9 after fixing `tui.py:469
+  unused-ignore`). All 9 are in files unrelated to this release
+  (config.py/audit.py/obsidian_adapter.py/async_sqlite.py/_recall.py/server.py).
+  Zero new mypy errors introduced.
+- **flake8/black/isort**: `flake8 src/carrymem/ui/ src/carrymem/tui.py
+  src/carrymem/cli/_format.py --max-line-length=120` → 0 errors. `black --check` →
+  all 6 files unchanged. `isort --check-only` → all 6 files unchanged.
+- **radon cc**: 0 D/E/F-grade functions in new modules (`radon cc src/carrymem/ui/
+  src/carrymem/tui.py src/carrymem/cli/_format.py -n E -s` returns empty).
+- **Version consistency**: VERSION, `__version__.py`, `server.json`, `Dockerfile` all
+  at 0.9.0. `grep -rn "0\.8\.2" VERSION src/carrymem/__version__.py server.json
+  Dockerfile` → 0 results.
+- **Imports verified**: `from carrymem.tui import CarryMemTUI, DashboardScreen, run_tui`,
+  `from carrymem.ui.onboarding import OnboardingScreen`,
+  `from carrymem.ui.dashboard import render_full_dashboard`,
+  `from carrymem.ui.themes import list_themes` — all importable.
+
+### Files Changed (New + Modified)
+**New files (5):**
+- `src/carrymem/ui/__init__.py` — UI package marker
+- `src/carrymem/ui/themes.py` — Theme Protocol + 3 themes + registry
+- `src/carrymem/ui/onboarding.py` — OnboardingScreen + sample memory seeding
+- `src/carrymem/ui/dashboard.py` — ASCII dashboard rendering (pure functions)
+- `src/carrymem/cli/_format.py` — OutputFormatter (rich integration)
+- `docs/design/UI_UX_IMPROVEMENTS_v0.9.0.md` — Design spec (documentation-first)
+- `tests/test_themes.py` — 40 tests
+- `tests/test_onboarding.py` — 32 tests
+- `tests/test_dashboard.py` — 33 tests
+- `tests/test_cli_format.py` — 45 tests
+
+**Modified files:**
+- `src/carrymem/tui.py` — Theme refactoring, DashboardScreen, OnboardingScreen wiring,
+  Ctrl+T cycling, D keybinding, lazy loading, group_by_date, ErrorDisplay recovery
+- `src/carrymem/cli/_mcp.py` — `--theme` and `--high-contrast` CLI flags
+- `src/carrymem/cli/_io.py`, `_stats.py`, `__init__.py` — rich OutputFormatter integration
+- `tests/test_tui.py` — 13 new integration tests + 2 updated `run_tui` contract tests
+- `VERSION`, `src/carrymem/__version__.py`, `server.json`, `Dockerfile` — 0.8.2 → 0.9.0
+
+### Verification Commands
+| Check | Command | Expected | Actual |
+|-------|---------|----------|--------|
+| emoji removal | `grep -rn "⭐\|📌\|🔧\|🎯\|🔄\|👁\|📚\|💡" src/carrymem/tui.py` | 0 results | 0 results |
+| rich import | `python -c "from carrymem.cli._format import OutputFormatter"` | no error | no error |
+| themes | `python -c "from carrymem.ui.themes import list_themes; print(list_themes())"` | `['morandi-dark', 'morandi-light', 'high-contrast']` | matches |
+| onboarding | `python -c "from carrymem.ui.onboarding import OnboardingScreen"` | no error | no error |
+| dashboard | `python -c "from carrymem.ui.dashboard import render_full_dashboard"` | no error | no error |
+| flake8 | `flake8 src/carrymem/ui/ src/carrymem/tui.py src/carrymem/cli/_format.py --max-line-length=120` | 0 errors | 0 errors |
+| black | `black --check --line-length=120 src/carrymem/ui/ src/carrymem/tui.py src/carrymem/cli/_format.py` | all unchanged | all unchanged |
+| isort | `isort --check-only src/carrymem/ui/ src/carrymem/tui.py src/carrymem/cli/_format.py` | all unchanged | all unchanged |
+| radon (new modules) | `radon cc src/carrymem/ui/ src/carrymem/tui.py src/carrymem/cli/_format.py -n E -s` | empty (0 E/F) | empty |
+| targeted tests | `python -m pytest tests/test_tui.py tests/test_themes.py tests/test_onboarding.py tests/test_dashboard.py tests/test_cli_format.py tests/test_exception_narrowing.py -q --no-cov` | all pass | **257 passed, 0 failed** (10.49s) |
+| full non-e2e regression | `python -m pytest tests/ --ignore=tests/e2e -q --no-cov -m "not slow" --deselect tests/test_performance_benchmark.py::test_recall_500_memories_under_100ms` | no new failures | **4632 passed, 2 skipped, 57 deselected, 0 failed** (354.21s) |
+| mypy delta | `mypy src/ 2>&1 \| grep -E "tui.py\|ui/\|cli/_format.py" \| wc -l` | 0 (no errors in modified files) | 0 |
+| version consistency | `grep -rn "0\.8\.2" VERSION src/carrymem/__version__.py server.json Dockerfile` | 0 results | 0 results |
+
 ## [0.8.2] - 2026-07-18 (Tech Debt Cleanup — Type Hints + D-Grade Refactors + P2 Items)
 
 ### Summary

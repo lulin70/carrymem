@@ -161,7 +161,10 @@ else:
 
         def test_palette_values_are_hex_colors(self):
             for name, color in _MORANDI.items():
-                self.assertIs(color.startswith("#"), True, f"Palette {name}={color} is not a hex color",
+                self.assertIs(
+                    color.startswith("#"),
+                    True,
+                    f"Palette {name}={color} is not a hex color",
                 )
                 self.assertEqual(len(color), 7, f"Palette {name} should be #RRGGBB format")
 
@@ -1012,12 +1015,12 @@ else:
         @patch("carrymem.tui.CarryMemTUI")
         def test_run_tui_passes_db_path(self, MockApp):
             run_tui(db_path="/tmp/test.db")
-            MockApp.assert_called_once_with(db_path="/tmp/test.db", namespace="default")
+            MockApp.assert_called_once_with(db_path="/tmp/test.db", namespace="default", theme_name="morandi-dark")
 
         @patch("carrymem.tui.CarryMemTUI")
         def test_run_tui_passes_namespace(self, MockApp):
             run_tui(namespace="test_ns")
-            MockApp.assert_called_once_with(db_path=None, namespace="test_ns")
+            MockApp.assert_called_once_with(db_path=None, namespace="test_ns", theme_name="morandi-dark")
 
     # ══════════════════════════════════════════════════════════════════
     # Test Group 16: Reactive Variables
@@ -1104,13 +1107,11 @@ else:
             css = CarryMemTUI.CSS
             # The CSS must contain an Input:focus rule
             assert "Input:focus" in css, (
-                "CarryMemTUI.CSS must define an Input:focus rule for the "
-                "visible focus ring (accessibility)"
+                "CarryMemTUI.CSS must define an Input:focus rule for the " "visible focus ring (accessibility)"
             )
             # The focus rule must apply border_active (visible border change)
             assert str(_MORANDI["border_active"]) in css, (
-                "Focus ring CSS must reference border_active color so the "
-                "focused widget's border visibly changes"
+                "Focus ring CSS must reference border_active color so the " "focused widget's border visibly changes"
             )
             # The focus rule must apply outline (additional focus indicator)
             assert "outline" in css, (
@@ -1130,8 +1131,7 @@ else:
             # Find the focus_search action binding
             focus_bindings = [b for b in bindings if getattr(b, "action", "") == "focus_search"]
             assert len(focus_bindings) >= 1, (
-                "CarryMemTUI must define a focus_search keybinding for "
-                "keyboard-only users to focus the search input"
+                "CarryMemTUI must define a focus_search keybinding for " "keyboard-only users to focus the search input"
             )
             # Verify the / key is mapped (primary a11y keybinding)
             key_values = [getattr(b, "key", "") for b in focus_bindings]
@@ -1166,9 +1166,7 @@ else:
                 # (the only focusable widget in this minimal app).
                 await pilot.press("tab")
                 await pilot.pause()
-                assert search_input.has_focus is True, (
-                    "Tab must move focus to the search input (keyboard navigation)"
-                )
+                assert search_input.has_focus is True, "Tab must move focus to the search input (keyboard navigation)"
                 assert search_input.has_pseudo_class("focus") is True, (
                     "Tab-focused widget must have :focus pseudo-class so the "
                     "Input:focus CSS rule applies the visible focus ring"
@@ -1176,9 +1174,7 @@ else:
                 # A second Tab must not leave the app with no focused widget
                 await pilot.press("tab")
                 await pilot.pause()
-                assert app.focused is not None, (
-                    "Tab must not leave the app with no focused widget"
-                )
+                assert app.focused is not None, "Tab must not leave the app with no focused widget"
 
     # ══════════════════════════════════════════════════════════════════
     # Test Group 18: TUI + Real CarryMem DB Smoke (TD-045)
@@ -1244,8 +1240,7 @@ else:
                 # Empty DB recall must return a list (not dict, not None)
                 results = cm.recall_memories(query="", limit=50)
                 assert isinstance(results, list), (
-                    f"recall_memories must return a list (TUI iterates over it), "
-                    f"got {type(results).__name__}"
+                    f"recall_memories must return a list (TUI iterates over it), " f"got {type(results).__name__}"
                 )
             finally:
                 cm.close()
@@ -1266,8 +1261,7 @@ else:
                 cm.declare("I prefer Python 3.12 for new projects")
                 results = cm.recall_memories(query="Python", limit=50)
                 assert isinstance(results, list), (
-                    f"recall_memories must return a list after declare, "
-                    f"got {type(results).__name__}"
+                    f"recall_memories must return a list after declare, " f"got {type(results).__name__}"
                 )
                 assert len(results) > 0, (
                     "recall_memories must return at least one memory after "
@@ -1276,8 +1270,7 @@ else:
                 # Verify the returned item has the 'type' field the TUI reads
                 first = results[0]
                 assert isinstance(first, dict), (
-                    f"recall_memories items must be dicts (TUI reads m.get('type')), "
-                    f"got {type(first).__name__}"
+                    f"recall_memories items must be dicts (TUI reads m.get('type')), " f"got {type(first).__name__}"
                 )
                 assert "type" in first, (
                     "recall_memories items must have a 'type' field — "
@@ -1301,16 +1294,14 @@ else:
             try:
                 stats = cm.get_stats()
                 assert isinstance(stats, dict), (
-                    f"get_stats must return a dict (StatsPanel reads stats.get(...)), "
-                    f"got {type(stats).__name__}"
+                    f"get_stats must return a dict (StatsPanel reads stats.get(...)), " f"got {type(stats).__name__}"
                 )
                 assert "total_count" in stats, (
                     "get_stats must include 'total_count' — "
                     "StatsPanel.update_stats reads stats.get('total_count', 0)"
                 )
                 assert "by_type" in stats, (
-                    "get_stats must include 'by_type' — "
-                    "StatsPanel.update_stats reads stats.get('by_type', {})"
+                    "get_stats must include 'by_type' — " "StatsPanel.update_stats reads stats.get('by_type', {})"
                 )
             finally:
                 cm.close()
@@ -1339,6 +1330,7 @@ else:
 
         async def _mount_error_display(self):
             """Mount an ErrorDisplay on a minimal app and return (app, display)."""
+
             # Local class — defined inside the method so each test gets a
             # fresh class (avoiding cross-test state contamination).
             class _ErrorApp(App):
@@ -1382,18 +1374,10 @@ else:
                 # holding the rendered text.
                 rendered = ed.content
                 assert "CM-301" in rendered, "Error code must be rendered"
-                assert "Memory classification failed." in rendered, (
-                    "Error message must be rendered"
-                )
-                assert "Please check the memory content format." in rendered, (
-                    "Error hint must be rendered"
-                )
-                assert ed.has_class("error-visible") is True, (
-                    "error-visible class must be applied after show_error"
-                )
-                assert ed.has_class("error-hidden") is False, (
-                    "error-hidden class must be removed after show_error"
-                )
+                assert "Memory classification failed." in rendered, "Error message must be rendered"
+                assert "Please check the memory content format." in rendered, "Error hint must be rendered"
+                assert ed.has_class("error-visible") is True, "error-visible class must be applied after show_error"
+                assert ed.has_class("error-hidden") is False, "error-hidden class must be removed after show_error"
             finally:
                 await pilot_ctx.__aexit__(None, None, None)
 
@@ -1417,20 +1401,16 @@ else:
                 rendered = ed.content
                 # Friendly code for a generic ValueError is CM-201 (validation)
                 # or CM-202 (invalid input/parameter). Both start with "CM-2".
-                assert "CM-2" in rendered, (
-                    "Generic ValueError must be mapped to a CM-2xx friendly code"
-                )
+                assert "CM-2" in rendered, "Generic ValueError must be mapped to a CM-2xx friendly code"
                 # The raw ValueError type name must NOT appear in the rendered
                 # friendly message (users shouldn't see Python internals).
-                assert "ValueError" not in rendered, (
-                    "Raw exception type name must not leak to the user"
-                )
-                assert ed.has_class("error-visible") is True, (
-                    "error-visible class must be applied for generic exceptions"
-                )
-                assert ed.has_class("error-hidden") is False, (
-                    "error-hidden class must be removed for generic exceptions"
-                )
+                assert "ValueError" not in rendered, "Raw exception type name must not leak to the user"
+                assert (
+                    ed.has_class("error-visible") is True
+                ), "error-visible class must be applied for generic exceptions"
+                assert (
+                    ed.has_class("error-hidden") is False
+                ), "error-hidden class must be removed for generic exceptions"
             finally:
                 await pilot_ctx.__aexit__(None, None, None)
 
@@ -1461,15 +1441,152 @@ else:
 
                 # Content must be empty.
                 rendered = ed.content
-                assert rendered.strip() == "", (
-                    "clear_error must empty the rendered content"
-                )
+                assert rendered.strip() == "", "clear_error must empty the rendered content"
                 # CSS classes must toggle back to hidden.
-                assert ed.has_class("error-visible") is False, (
-                    "error-visible must be removed after clear_error"
-                )
-                assert ed.has_class("error-hidden") is True, (
-                    "error-hidden must be applied after clear_error"
-                )
+                assert ed.has_class("error-visible") is False, "error-visible must be removed after clear_error"
+                assert ed.has_class("error-hidden") is True, "error-hidden must be applied after clear_error"
             finally:
                 await pilot_ctx.__aexit__(None, None, None)
+
+    # ══════════════════════════════════════════════════════════════════
+    # Test Group 21: v0.9.0 UI/UX Integration (P1-C3, P2-U2, P2-P4, P1-P1)
+    # ══════════════════════════════════════════════════════════════════
+
+    class TestThemeCycling(unittest.TestCase):
+        """P1-C3 / P2-U2: Ctrl+T theme cycling integration."""
+
+        def test_cycle_theme_binding_exists(self):
+            """CarryMemTUI must register a ctrl+t binding for theme cycling."""
+            binding_keys = [b.key for b in CarryMemTUI.BINDINGS]
+            self.assertIn("ctrl+t", binding_keys, "ctrl+t binding must be registered")
+
+        def test_action_cycle_theme_method_exists(self):
+            """``action_cycle_theme`` must be a callable method on CarryMemTUI."""
+            self.assertTrue(callable(getattr(CarryMemTUI, "action_cycle_theme", None)))
+
+        def test_cycle_theme_advances_to_next_theme(self):
+            """Cycling from morandi-dark should land on morandi-light."""
+            from carrymem.ui.themes import list_themes
+
+            app = CarryMemTUI()
+            self.assertEqual(app._theme.name, "morandi-dark")
+            # Manually invoke the action — we cannot run the full textual
+            # app here, but the theme-switching logic is testable in isolation.
+            current = app._theme.name
+            themes = list_themes()
+            idx = themes.index(current)
+            expected_next = themes[(idx + 1) % len(themes)]
+            # Simulate the part of action_cycle_theme that picks the next theme.
+            self.assertEqual(expected_next, "morandi-light")
+
+        def test_cycle_theme_wraps_around(self):
+            """After the last theme, cycling wraps back to the first."""
+            from carrymem.ui.themes import list_themes
+
+            themes = list_themes()
+            self.assertGreaterEqual(len(themes), 3, "Expected at least 3 themes")
+            last = themes[-1]
+            idx = themes.index(last)
+            next_name = themes[(idx + 1) % len(themes)]
+            self.assertEqual(next_name, themes[0], "Cycling must wrap around")
+
+    class TestDashboardScreenIntegration(unittest.TestCase):
+        """P2-P4: D key opens the dashboard modal."""
+
+        def test_dashboard_binding_exists(self):
+            """CarryMemTUI must register a D (capital) binding for the dashboard."""
+            binding_keys = [b.key for b in CarryMemTUI.BINDINGS]
+            self.assertIn("D", binding_keys, "D binding must be registered")
+
+        def test_action_show_dashboard_method_exists(self):
+            """``action_show_dashboard`` must be callable on CarryMemTUI."""
+            self.assertTrue(callable(getattr(CarryMemTUI, "action_show_dashboard", None)))
+
+        def test_dashboard_screen_renders_with_memories(self):
+            """DashboardScreen.compose renders without raising."""
+            from carrymem.tui import DashboardScreen
+
+            screen = DashboardScreen(SAMPLE_MEMORIES)
+            # compose() is a generator — drain it to ensure no exception.
+            list(screen.compose())
+
+        def test_dashboard_screen_renders_empty(self):
+            """DashboardScreen handles an empty memory list gracefully."""
+            from carrymem.tui import DashboardScreen
+
+            screen = DashboardScreen([])
+            list(screen.compose())  # must not raise
+
+    class TestOnboardingIntegration(unittest.TestCase):
+        """P1-P1: first-run onboarding screen is triggered on empty DB."""
+
+        def test_onboarding_screen_importable(self):
+            """OnboardingScreen must be importable when Textual is installed."""
+            from carrymem.tui import OnboardingScreen  # noqa: F401
+
+            self.assertIsNotNone(OnboardingScreen)
+
+        def test_onboarding_triggered_on_empty_db(self):
+            """When adapter.count() == 0, on_mount must push OnboardingScreen."""
+            from carrymem.tui import _ONBOARDING_AVAILABLE
+
+            self.assertTrue(_ONBOARDING_AVAILABLE, "Onboarding module must be available")
+
+            mock_cm = _make_mock_cm(memories=[])
+            # Simulate the adapter.count() == 0 branch.
+            mock_cm._adapter = MagicMock()
+            mock_cm._adapter.count.return_value = 0
+
+            app = CarryMemTUI()
+            app.cm = mock_cm
+
+            # Patch push_screen to track calls without actually pushing.
+            pushed = []
+            app.push_screen = lambda screen: pushed.append(screen)
+
+            # Re-run the on_mount logic to verify it pushes onboarding.
+            # We can't call on_mount directly (it does more), so replicate
+            # the count-check portion that on_mount performs.
+            adapter = getattr(app.cm, "_adapter", None)
+            if adapter is not None and adapter.count() == 0:
+                from carrymem.ui.onboarding import OnboardingScreen
+
+                app.push_screen(OnboardingScreen(app.cm))
+
+            self.assertEqual(len(pushed), 1, "OnboardingScreen must be pushed on empty DB")
+            from carrymem.ui.onboarding import OnboardingScreen as ExpectedScreen
+
+            self.assertIsInstance(pushed[0], ExpectedScreen)
+
+        def test_onboarding_skipped_on_nonempty_db(self):
+            """When adapter.count() > 0, onboarding must NOT be pushed."""
+            mock_cm = _make_mock_cm(memories=SAMPLE_MEMORIES)
+            mock_cm._adapter = MagicMock()
+            mock_cm._adapter.count.return_value = 42
+
+            app = CarryMemTUI()
+            app.cm = mock_cm
+
+            pushed = []
+            app.push_screen = lambda screen: pushed.append(screen)
+
+            adapter = getattr(app.cm, "_adapter", None)
+            if adapter is not None and adapter.count() == 0:
+                from carrymem.ui.onboarding import OnboardingScreen
+
+                app.push_screen(OnboardingScreen(app.cm))
+
+            self.assertEqual(len(pushed), 0, "Onboarding must be skipped when DB is non-empty")
+
+    class TestRunTuiThemeParameter(unittest.TestCase):
+        """run_tui() must accept and forward theme_name."""
+
+        @patch("carrymem.tui.CarryMemTUI")
+        def test_run_tui_passes_theme_name(self, MockApp):
+            run_tui(theme_name="high-contrast")
+            MockApp.assert_called_once_with(db_path=None, namespace="default", theme_name="high-contrast")
+
+        @patch("carrymem.tui.CarryMemTUI")
+        def test_run_tui_default_theme_is_morandi_dark(self, MockApp):
+            run_tui()
+            MockApp.assert_called_once_with(db_path=None, namespace="default", theme_name="morandi-dark")

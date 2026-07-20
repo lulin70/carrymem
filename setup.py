@@ -92,6 +92,7 @@ setup(
     install_requires=[
         "PyYAML>=5.0",
         "cryptography>=46.0.6",  # CVE-2026-34073: X.509 cert validation bypass fix; hard dep since v0.7.3
+        "rich>=13.0",  # P0-C2: CLI colored output, tables, and progress indicators
     ],
     extras_require={
         "language": [

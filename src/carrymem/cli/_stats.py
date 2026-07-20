@@ -30,6 +30,7 @@ from carrymem.cli._base import (
     _truncate,
     _yellow,
 )
+from carrymem.cli._format import formatter
 
 
 def _show_value_report(cm, parsed) -> int:
@@ -161,13 +162,18 @@ def cmd_stats(args):
     print(f"\n  Total Memories: {_bold(str(total))}")
 
     if by_type:
-        print("\n  By Type:")
-        max_type_len = max(len(t) for t in by_type) if by_type else 10
+        # P0-C2: render the by-type breakdown as a rich table. The bar column
+        # preserves the visual distribution cue that the previous plain-text
+        # layout provided.
+        headers = ["Type", "Count", "Distribution", "%"]
+        rows: List[List[str]] = []
         for mtype, count in sorted(by_type.items(), key=lambda x: -x[1]):
             icon = _TYPE_ICONS.get(mtype, "  ")
             bar = "\u2588" * min(count, 30)
             pct = (count / total * 100) if total > 0 else 0
-            print(f"    {icon} {mtype.ljust(max_type_len)}  {count:4d}  {_cyan(bar)}  ({pct:.0f}%)")
+            rows.append([f"{icon} {mtype}", str(count), bar, f"{pct:.0f}%"])
+        print()
+        formatter.table(headers, rows, title="By Type")
 
     profile_stats = profile.get("stats", {})
     by_tier = profile_stats.get("by_tier", {})
@@ -286,7 +292,7 @@ def cmd_profile(args):
         result = cm.export_profile(output_path=output)
         pref_count = len(result.get("preferences", []))
         dec_count = len(result.get("decisions", []))
-        print(f"  {_green('Profile exported to')} {_cyan(output)}")
+        formatter.success(f"Profile exported to {output}")
         print(f"  {_dim(f'{pref_count} preferences, {dec_count} decisions')}")
     else:
         identity = cm.whoami()
@@ -302,7 +308,7 @@ def _print_conflicts_check(cm) -> None:
     try:
         conflicts = cm.check_conflicts()
         if not conflicts:
-            print(f"    {_green('No conflicts detected')}")
+            formatter.success("No conflicts detected")
         else:
             for c in conflicts:
                 ctype = c.get("conflict_type", "unknown")
@@ -314,7 +320,7 @@ def _print_conflicts_check(cm) -> None:
                 for key in keys:
                     print(f"      {_dim(f'- {key}')}")
     except (KeyError, ValueError, TypeError) as e:
-        print(f"    {_red(f'Error: {e}')}")
+        formatter.error("E_CHECK_CONFLICTS", f"Error: {e}")
     print()
 
 
@@ -324,7 +330,7 @@ def _print_quality_check(cm) -> None:
     try:
         low_quality = cm.check_quality(min_score=0.3)
         if not low_quality:
-            print(f"    {_green('All memories have good quality')}")
+            formatter.success("All memories have good quality")
         else:
             for item in low_quality:
                 key = item.get("storage_key", "")
@@ -335,7 +341,7 @@ def _print_quality_check(cm) -> None:
                 reasons_str = ", ".join(reasons)
                 print(f"      {_dim(f'Key: {key} | Reasons: {reasons_str}')}")
     except (KeyError, ValueError, TypeError) as e:
-        print(f"    {_red(f'Error: {e}')}")
+        formatter.error("E_CHECK_QUALITY", f"Error: {e}")
     print()
 
 
@@ -345,7 +351,7 @@ def _print_expired_check(cm) -> None:
     try:
         expired = cm.list_expired()
         if not expired:
-            print(f"    {_green('No expired memories')}")
+            formatter.success("No expired memories")
         else:
             for item in expired:
                 key = item.get("storage_key", "")
@@ -354,7 +360,7 @@ def _print_expired_check(cm) -> None:
                 print(f"    {_yellow('[EXPIRED]')} {_truncate(content, 50)}")
                 print(f"      {_dim(f'Key: {key} | Expired: {expires}')}")
     except (KeyError, ValueError, TypeError) as e:
-        print(f"    {_red(f'Error: {e}')}")
+        formatter.error("E_CHECK_EXPIRED", f"Error: {e}")
     print()
 
 
