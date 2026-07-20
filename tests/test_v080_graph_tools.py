@@ -650,9 +650,7 @@ class TestMigrateV100:
         manager = SchemaManager(conn_mgr)
         manager.migrate_v100()
 
-        row = conn.execute(
-            "SELECT confidence FROM memory_relations WHERE relation_type = 'is_a'"
-        ).fetchone()
+        row = conn.execute("SELECT confidence FROM memory_relations WHERE relation_type = 'is_a'").fetchone()
         assert row["confidence"] == "EXTRACTED"
 
     def test_migration_v100_idempotent(self):
@@ -681,8 +679,7 @@ class TestMigrateV100:
         indexes = {
             row[1]
             for row in conn.execute(
-                "SELECT type, name FROM sqlite_master "
-                "WHERE type='index' AND tbl_name='memory_relations'"
+                "SELECT type, name FROM sqlite_master " "WHERE type='index' AND tbl_name='memory_relations'"
             )
         }
         assert "idx_relations_confidence" in indexes

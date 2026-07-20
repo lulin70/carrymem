@@ -211,9 +211,7 @@ class ClassificationMixin:
 
         for entry_dict in classify_result["entries"]:
             entry = MemoryEntry.from_dict(entry_dict)
-            self._apply_entry_overrides(
-                entry, force_type, coreference_resolved, message, session_id, entity_meta
-            )
+            self._apply_entry_overrides(entry, force_type, coreference_resolved, message, session_id, entity_meta)
             if entry.suggested_action == "store":
                 stored_dict, storage_key, updated = self._store_single_entry(entry, resolved_message)
                 if updated:

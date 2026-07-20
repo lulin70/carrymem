@@ -166,13 +166,7 @@ class StatsManager:
             sql = f"SELECT * FROM memories {where_clause} ORDER BY importance_score DESC, created_at DESC LIMIT ?"
             params.append(limit_per_type)
             rows = conn.execute(sql, params).fetchall()
-            return {
-                memory_type: [
-                    self._serializer.row_to_stored(r)
-                    for r in rows
-                    if self._serializer.row_to_stored(r)
-                ]
-            }
+            return {memory_type: [self._serializer.row_to_stored(r) for r in rows if self._serializer.row_to_stored(r)]}
 
         # Single-query aggregation: fetch all non-superseded memories ordered by
         # (type, importance_score DESC), then slice limit_per_type per type in Python.

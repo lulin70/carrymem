@@ -22,7 +22,6 @@ import pytest
 
 from carrymem import CarryMem
 
-
 # ── 1. Knowledge Graph E2E (v0.7.0) ──────────────────────────────────────
 
 

@@ -541,9 +541,7 @@ class RecallEngine:
                 if len(accumulator) >= limit:
                     break
 
-    def _append_cjk_like_rows(
-        self, valid_expansions, where_clause, params, limit, accumulator, seen_ids
-    ) -> None:
+    def _append_cjk_like_rows(self, valid_expansions, where_clause, params, limit, accumulator, seen_ids) -> None:
         """Run CJK LIKE search and append deduped rows to accumulator."""
         cjk_expansions = [e for e in valid_expansions if has_cjk(e)]
         if not cjk_expansions:
@@ -565,9 +563,7 @@ class RecallEngine:
                 AND v.embedding MATCH ?
                 AND k = ?
                 ORDER BY v.distance
-            """.format(
-                where_clause=where_clause
-            )
+            """.format(where_clause=where_clause)
             vec_params = params + [
                 struct.pack(f"{self._embedding_dim}f", *query_embedding.tolist()),
                 limit,

@@ -269,9 +269,15 @@ jobs:
 
       - name: pip-audit (dependency vulnerability scan)
         run: |
-          pip install -e .
+          # Use isolated venv so we only audit carrymem's actual dependencies,
+          # not the runner's pre-installed system packages (which would produce
+          # 50+ false positives unrelated to this project).
+          python -m venv /tmp/audit-venv
+          /tmp/audit-venv/bin/pip install --upgrade pip
+          /tmp/audit-venv/bin/pip install -e .
+          /tmp/audit-venv/bin/pip install pip-audit
           # --no-deps: carrymem itself is local (not on PyPI); audit only dependencies
-          pip-audit --desc
+          /tmp/audit-venv/bin/pip-audit --desc
 
   # ═══════════════════════════════════════
   # ADVISORY: Docs Check (non-blocking)

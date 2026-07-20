@@ -421,14 +421,12 @@ class SchemaManager:
         """Create the vector search virtual table."""
         conn = self._conn_mgr.get_connection()
         try:
-            conn.execute(
-                f"""
+            conn.execute(f"""
                 CREATE VIRTUAL TABLE IF NOT EXISTS memory_vectors USING vec0(
                     memory_id TEXT PRIMARY KEY,
                     embedding float[{embedding_dim}]
                 )
-            """
-            )
+            """)
             conn.commit()
         except sqlite3.Error as e:
             logger.warning("Failed to create memory_vectors table: %s", e)

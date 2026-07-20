@@ -471,9 +471,7 @@ def _process_p2_supersede_requests(
             result["stats"]["preferences_preserved"] += 1
             continue
 
-        already_requested = any(
-            older_key in req.get("source_keys", []) for req in result["consolidation_requests"]
-        )
+        already_requested = any(older_key in req.get("source_keys", []) for req in result["consolidation_requests"])
         if already_requested:
             continue
 

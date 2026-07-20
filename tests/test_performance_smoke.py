@@ -77,9 +77,7 @@ class TestRecallSmoke:
         result = cm.recall_memories(query="Python", limit=10)
         elapsed = time.perf_counter() - start
 
-        assert isinstance(result, dict) or isinstance(result, list), (
-            f"Unexpected result type: {type(result)}"
-        )
+        assert isinstance(result, dict) or isinstance(result, list), f"Unexpected result type: {type(result)}"
         assert elapsed < RECALL_SMOKE_S, (
             f"Recall took {elapsed:.2f}s (threshold {RECALL_SMOKE_S}s). "
             f"This indicates a catastrophic performance regression."

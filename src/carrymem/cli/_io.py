@@ -128,9 +128,7 @@ def cmd_export(args):
     cm = _get_carrymem(parsed.db, parsed.namespace)
 
     with formatter.progress("Exporting memories"):
-        result = cm.export_memories(
-            output_path=parsed.output, format=parsed.format, namespace=parsed.namespace
-        )
+        result = cm.export_memories(output_path=parsed.output, format=parsed.format, namespace=parsed.namespace)
 
     if result.get("exported"):
         total = result.get("total_memories", 0)
@@ -385,9 +383,7 @@ def cmd_pack(args):
             if parsed.key:
                 formatter.success(f"{encrypted_count} encrypted entries included")
             else:
-                formatter.warning(
-                    f"Encrypted entries skipped ({encrypted_count}) (provide --key to include)"
-                )
+                formatter.warning(f"Encrypted entries skipped ({encrypted_count}) (provide --key to include)")
 
         # Build pack data
         source_machine = socket.gethostname().lower().replace(" ", "-")

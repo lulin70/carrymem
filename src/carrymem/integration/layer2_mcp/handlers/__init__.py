@@ -30,19 +30,19 @@ from typing import Any, Dict, List, Optional, Union
 
 # ── Shared utilities and constants (re-exported) ───────────────────
 from ._base import (
+    _MAX_KNOWLEDGE,
+    _MAX_LIMIT,
+    _MAX_MEMORIES,
+    _SAFE_ERROR_TYPES,
+    _TOOL_OPERATION_LEVELS,
     CLASSIFICATION_SCHEMA,
     CORE_TOOL_NAMES,
     OPTIONAL_TOOL_NAMES,
     TOOL_NAMES,
     OperationLevel,
-    _TOOL_OPERATION_LEVELS,
     _build_summary,
     _clamp,
     _format_memory_entry,
-    _MAX_KNOWLEDGE,
-    _MAX_LIMIT,
-    _MAX_MEMORIES,
-    _SAFE_ERROR_TYPES,
     _safe_error,
     _validate_input,
     _validate_query_input,
@@ -256,9 +256,7 @@ class Handlers:
             return OperationLevel(normalized)
         except ValueError as e:
             valid = ", ".join(repr(op_level.value) for op_level in OperationLevel)
-            raise ValueError(
-                f"Unknown operation level: {level!r}. Valid levels: {valid}"
-            ) from e
+            raise ValueError(f"Unknown operation level: {level!r}. Valid levels: {valid}") from e
 
     @classmethod
     def get_tool_level(cls, tool_name: str) -> Optional[OperationLevel]:

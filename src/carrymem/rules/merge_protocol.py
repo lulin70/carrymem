@@ -342,9 +342,7 @@ def _resolve_incoming_conflicts(
             )
 
     has_keep_incoming = any(c.decision == MergeDecision.KEEP_INCOMING for c in conflict_map[inc.id])
-    has_skip = any(
-        c.decision in (MergeDecision.KEEP_EXISTING, MergeDecision.SKIP) for c in conflict_map[inc.id]
-    )
+    has_skip = any(c.decision in (MergeDecision.KEEP_EXISTING, MergeDecision.SKIP) for c in conflict_map[inc.id])
     has_modified = any(c.decision == MergeDecision.MODIFY_INCOMING for c in conflict_map[inc.id])
 
     if has_skip and not has_keep_incoming:

@@ -105,8 +105,7 @@ class RefinementSessionManager:
     def _ensure_sessions_table(self):
         conn = self.storage._get_connection()
         try:
-            conn.execute(
-                """
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS refinement_sessions (
                     id TEXT PRIMARY KEY,
                     source_rule_id TEXT,
@@ -127,14 +126,11 @@ class RefinementSessionManager:
                     completed_at TEXT,
                     resulting_rule_id TEXT
                 )
-            """
-            )
-            conn.execute(
-                """
+            """)
+            conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_refinement_status
                 ON refinement_sessions(status)
-            """
-            )
+            """)
             conn.commit()
         finally:
             pass

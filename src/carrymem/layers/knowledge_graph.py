@@ -271,9 +271,7 @@ class KnowledgeGraph:
         if not entity_ids:
             return {"entities": [], "memories": []}
 
-        visited_entities, visited_memories = self._bfs_traverse_graph(
-            conn, entity_ids, max_hops, ns_filter, ns_params
-        )
+        visited_entities, visited_memories = self._bfs_traverse_graph(conn, entity_ids, max_hops, ns_filter, ns_params)
 
         entities_data = self._fetch_graph_entities(conn, visited_entities)
         memories_data = self._fetch_graph_memories(conn, visited_memories, limit)
@@ -389,10 +387,7 @@ class KnowledgeGraph:
                 f"WHERE id IN ({entity_placeholders})",
                 list(visited_entities),
             ).fetchall()
-            return [
-                {"entity_text": row["entity_text"], "entity_type": row["entity_type"]}
-                for row in entity_rows
-            ]
+            return [{"entity_text": row["entity_text"], "entity_type": row["entity_type"]} for row in entity_rows]
         except sqlite3.Error as e:
             logger.warning("recall_graph entity fetch failed: %s", e)
             return []
@@ -410,8 +405,7 @@ class KnowledgeGraph:
         mem_placeholders = ",".join("?" * len(mem_keys))
         try:
             mem_rows = conn.execute(
-                f"SELECT * FROM memories WHERE storage_key IN ({mem_placeholders}) "
-                f"ORDER BY importance_score DESC",
+                f"SELECT * FROM memories WHERE storage_key IN ({mem_placeholders}) " f"ORDER BY importance_score DESC",
                 mem_keys,
             ).fetchall()
             return [self._row_to_dict(row) for row in mem_rows]
@@ -525,17 +519,13 @@ class KnowledgeGraph:
 
         for _ in range(max_hops):
             if forward_frontier:
-                forward_frontier = self._expand_bfs(
-                    conn, forward_frontier, forward_visited, ns_filter, ns_params
-                )
+                forward_frontier = self._expand_bfs(conn, forward_frontier, forward_visited, ns_filter, ns_params)
                 meeting_point = self._find_meeting_point(forward_visited, backward_visited)
                 if meeting_point is not None:
                     break
 
             if backward_frontier:
-                backward_frontier = self._expand_bfs(
-                    conn, backward_frontier, backward_visited, ns_filter, ns_params
-                )
+                backward_frontier = self._expand_bfs(conn, backward_frontier, backward_visited, ns_filter, ns_params)
                 meeting_point = self._find_meeting_point(backward_visited, forward_visited)
                 if meeting_point is not None:
                     break

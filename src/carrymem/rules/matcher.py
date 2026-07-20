@@ -155,9 +155,7 @@ class RuleMatcher:
 
         return results[:limit]
 
-    def _filter_by_context_conditions(
-        self, all_active: list, context_conditions: List[str]
-    ) -> list:
+    def _filter_by_context_conditions(self, all_active: list, context_conditions: List[str]) -> list:
         filtered = []
         for r in all_active:
             if not r.condition:

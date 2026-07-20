@@ -24,7 +24,6 @@ from unittest.mock import patch
 
 import pytest
 
-
 # ──────────────────────────────────────────────────────────────────────────
 # python -m carrymem (src/carrymem/__main__.py)
 # ──────────────────────────────────────────────────────────────────────────
@@ -49,9 +48,10 @@ class TestPythonMCarryMem:
         assert result.stdout.startswith("CarryMem v"), f"unexpected stdout: {result.stdout!r}"
         # Verify version matches package metadata
         from carrymem import __version__
-        assert __version__ in result.stdout, (
-            f"version mismatch: stdout={result.stdout!r} vs __version__={__version__!r}"
-        )
+
+        assert (
+            __version__ in result.stdout
+        ), f"version mismatch: stdout={result.stdout!r} vs __version__={__version__!r}"
 
     def test_no_subcommand_exits_nonzero_with_help(self):
         """``python -m carrymem`` with no subcommand prints help and exits 1."""
@@ -69,9 +69,9 @@ class TestPythonMCarryMem:
         result = self._run("nonexistent-subcommand")
         assert result.returncode != 0, "expected non-zero exit for unknown subcommand"
         # argparse writes usage to stderr
-        assert "invalid choice" in result.stderr or "usage:" in result.stderr.lower(), (
-            f"unexpected stderr: {result.stderr!r}"
-        )
+        assert (
+            "invalid choice" in result.stderr or "usage:" in result.stderr.lower()
+        ), f"unexpected stderr: {result.stderr!r}"
 
     def test_help_flag_prints_usage(self):
         """``python -m carrymem --help`` prints usage and exits 0."""
@@ -100,9 +100,8 @@ class TestMainModuleInProcess:
             main()
         captured = capsys.readouterr()
         from carrymem import __version__
-        assert f"CarryMem v{__version__}" in captured.out, (
-            f"version not in stdout: {captured.out!r}"
-        )
+
+        assert f"CarryMem v{__version__}" in captured.out, f"version not in stdout: {captured.out!r}"
 
     def test_no_command_in_process_exits_1(self, capsys):
         """``main([])`` prints help and exits 1 (via ``sys.exit(1)``)."""
@@ -162,9 +161,9 @@ class TestMainModuleInProcess:
         assert "CarryMem" in captured.out, f"demo output missing banner: {captured.out!r}"
         assert "Demo" in captured.out, f"demo output missing 'Demo': {captured.out!r}"
         # Demo exercises classify_and_remember for 3 languages
-        assert "Classify" in captured.out or "Recall" in captured.out, (
-            f"demo output missing Classify/Recall section: {captured.out!r}"
-        )
+        assert (
+            "Classify" in captured.out or "Recall" in captured.out
+        ), f"demo output missing Classify/Recall section: {captured.out!r}"
 
     def test_mcp_subcommand_dispatches_to_server(self, tmp_path, capsys):
         """``main(["mcp"])`` dispatches to MCPServer.start().
@@ -172,15 +171,22 @@ class TestMainModuleInProcess:
         We mock MCPServer.start to avoid actually starting the server (which would block).
         Verifies the env var setup path for --config and --data-path flags.
         """
-        from carrymem.__main__ import main
         from unittest.mock import MagicMock
 
+        from carrymem.__main__ import main
+
         # Mock MCPServer before main() imports it
-        with patch("sys.argv", [
-            "carrymem", "mcp",
-            "--config", str(tmp_path / "config.json"),
-            "--data-path", str(tmp_path / "data"),
-        ]):
+        with patch(
+            "sys.argv",
+            [
+                "carrymem",
+                "mcp",
+                "--config",
+                str(tmp_path / "config.json"),
+                "--data-path",
+                str(tmp_path / "data"),
+            ],
+        ):
             # Patch the import inside main() — MCPServer is imported lazily
             with patch("carrymem.integration.layer2_mcp.server.MCPServer") as MockServer:
                 mock_instance = MagicMock()
@@ -188,6 +194,7 @@ class TestMainModuleInProcess:
                 # asyncio.run is called on server.start() — mock to return a coroutine
                 mock_instance.start = MagicMock(return_value=asyncio_coro())
                 import os
+
                 main()
                 # Verify env vars were set
                 assert os.environ.get("CARRYMEM_CONFIG_PATH") == str(tmp_path / "config.json")
@@ -277,5 +284,5 @@ class TestMcpMainModule:
         import importlib
 
         import carrymem.integration.layer2_mcp.__main__
-        importlib.reload(carrymem.integration.layer2_mcp.__main__)
 
+        importlib.reload(carrymem.integration.layer2_mcp.__main__)

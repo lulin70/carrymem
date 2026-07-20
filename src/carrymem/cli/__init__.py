@@ -12,8 +12,7 @@ from carrymem.errors import CarryMemError
 
 def show_help():
     """Print the CLI help text listing all available commands."""
-    print(
-        f"""
+    print(f"""
   {_bold(f'CarryMem v{__version__}')} - Your Portable AI Memory Layer
 
   {_dim(_t('cli.section.tagline'))}
@@ -110,8 +109,7 @@ def show_help():
     carrymem rules refine --session ref_xxx --confirm
 
   {_dim('Documentation: https://github.com/lulin70/carrymem')}
-"""
-    )
+""")
 
 
 def main():

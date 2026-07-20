@@ -32,11 +32,10 @@ import pytest
 from carrymem.adapters.base import MemoryEntry, StoredMemory
 from carrymem.adapters.sqlite import (
     PYSQLITE3_AVAILABLE,
-    SQLITE_VEC_AVAILABLE,
     SENTENCE_TRANSFORMERS_AVAILABLE,
+    SQLITE_VEC_AVAILABLE,
     SQLiteAdapter,
 )
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Fixtures
@@ -196,9 +195,7 @@ class TestCRUDOperations:
 
     def test_store_batch_atomic_success(self, adapter):
         """store_batch inserts all entries in a single transaction."""
-        entries = [
-            MemoryEntry(content=f"batch item {i}", type="user_preference") for i in range(5)
-        ]
+        entries = [MemoryEntry(content=f"batch item {i}", type="user_preference") for i in range(5)]
         results = adapter.store_batch(entries)
         assert len(results) == 5
         assert all(isinstance(r, StoredMemory) for r in results)
@@ -437,9 +434,7 @@ class TestPublicFacadeAPI:
         assert isinstance(parsed, list)
         # Import into fresh adapter — should not raise even with empty array
         db_path2 = adapter_with_data.db_path + ".imported.db"
-        a2 = SQLiteAdapter(
-            db_path2, enable_semantic_recall=False, enable_cache=False, enable_vector_search=False
-        )
+        a2 = SQLiteAdapter(db_path2, enable_semantic_recall=False, enable_cache=False, enable_vector_search=False)
         count = a2.import_data(exported)
         assert count == len(parsed)
         a2.close()
@@ -563,9 +558,7 @@ class TestKnowledgeGraph:
     def test_store_graph_entities_returns_int(self, adapter):
         """store_graph_entities returns int count of entities stored."""
         # Must use a real storage_key (FK constraint to memories table)
-        stored = adapter.store_entry(
-            MemoryEntry(content="I love Python and PostgreSQL", type="user_preference")
-        )
+        stored = adapter.store_entry(MemoryEntry(content="I love Python and PostgreSQL", type="user_preference"))
         result = adapter.store_graph_entities(stored.storage_key, "I love Python and PostgreSQL")
         assert isinstance(result, int)
         assert result >= 0
@@ -672,9 +665,7 @@ class TestVersionManagement:
 
     def test_get_memory_history_existing(self, adapter_with_data):
         """get_memory_history on existing memory returns list with at least one version."""
-        stored = adapter_with_data.store_entry(
-            MemoryEntry(content="versioned memory", type="user_preference")
-        )
+        stored = adapter_with_data.store_entry(MemoryEntry(content="versioned memory", type="user_preference"))
         history = adapter_with_data.get_memory_history(stored.storage_key)
         assert isinstance(history, list)
         assert len(history) >= 1
@@ -940,9 +931,7 @@ class TestBoundaryCases:
 
     def test_store_batch_large(self, adapter):
         """store_batch with 100 items succeeds atomically."""
-        entries = [
-            MemoryEntry(content=f"batch large {i}", type="user_preference") for i in range(100)
-        ]
+        entries = [MemoryEntry(content=f"batch large {i}", type="user_preference") for i in range(100)]
         results = adapter.store_batch(entries)
         assert len(results) == 100
         assert adapter.count() == 100

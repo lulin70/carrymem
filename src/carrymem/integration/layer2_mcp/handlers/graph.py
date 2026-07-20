@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from ._base import _clamp, _MAX_LIMIT, _validate_input, mcp_tool_handler
+from ._base import _MAX_LIMIT, _clamp, _validate_input, mcp_tool_handler
 
 
 @mcp_tool_handler

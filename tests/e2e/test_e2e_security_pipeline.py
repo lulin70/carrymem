@@ -82,8 +82,7 @@ class TestE2ESecurityPipeline(unittest.TestCase):
         findings = detect_sensitive_content(msg)
         pattern_names = [f[0] for f in findings]
         self.assertIs(
-            any("bearer" in p or "jwt" in p for p in pattern_names), True,
-            "Bearer/JWT token should be detected"
+            any("bearer" in p or "jwt" in p for p in pattern_names), True, "Bearer/JWT token should be detected"
         )
 
     def test_db_connection_string_detected(self):

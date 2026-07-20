@@ -157,8 +157,7 @@ class CRUDOperations:
                 # v0.5.2: Invalidate summary cache when raw_text is populated
                 # (summary was generated from empty raw_text, now stale)
                 conn.execute(
-                    "UPDATE memories SET raw_text = ?, summary = NULL, summary_level = NULL "
-                    "WHERE storage_key = ?",
+                    "UPDATE memories SET raw_text = ?, summary = NULL, summary_level = NULL " "WHERE storage_key = ?",
                     (self._adapter.encrypt_field(entry.raw_text), existing["storage_key"]),
                 )
                 conn.commit()

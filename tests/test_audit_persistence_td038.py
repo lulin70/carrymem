@@ -55,9 +55,9 @@ class TestSQLiteAdapterAuditPersistence:
         adapter1 = SQLiteAdapter(db_path=file_db_path)
         try:
             assert adapter1._audit is not None
-            assert adapter1._audit._db_conn is not None, (
-                "File-backed SQLiteAdapter should create a persistent AuditLogger"
-            )
+            assert (
+                adapter1._audit._db_conn is not None
+            ), "File-backed SQLiteAdapter should create a persistent AuditLogger"
             assert adapter1._audit._persist_path == file_db_path + ".audit.db"
             _log_sample_events(adapter1)
             assert len(adapter1._audit.query()) == 3
@@ -75,9 +75,7 @@ class TestSQLiteAdapterAuditPersistence:
             # In-memory list starts empty on a fresh instance, so query()
             # falls back to SQLite (this is the restart-resilience path).
             results = adapter2._audit.query()
-            assert len(results) == 3, (
-                f"Expected 3 persisted audit events after restart, got {len(results)}"
-            )
+            assert len(results) == 3, f"Expected 3 persisted audit events after restart, got {len(results)}"
             actions = {r.action for r in results}
             assert actions == {"remember", "forget", "WRITE"}
         finally:
@@ -160,9 +158,7 @@ class TestSQLiteAdapterInMemoryAuditBackwardCompat:
         adapter = SQLiteAdapter(db_path=":memory:")
         try:
             assert adapter._audit is not None
-            assert adapter._audit._db_conn is None, (
-                "In-memory SQLiteAdapter should keep AuditLogger in memory"
-            )
+            assert adapter._audit._db_conn is None, "In-memory SQLiteAdapter should keep AuditLogger in memory"
             assert adapter._audit._persist_path is None
 
             # Audit logging still works in-memory.

@@ -9,13 +9,12 @@ scope; the internal ``mce_status`` diagnostic is also covered.
 import pytest
 
 from carrymem.integration.layer2_mcp.handlers import (
+    _TOOL_OPERATION_LEVELS,
     Handlers,
     OperationLevel,
-    _TOOL_OPERATION_LEVELS,
     handler_map,
 )
 from carrymem.integration.layer2_mcp.tools import TOOL_NAMES, TOOLS
-
 
 # ── Invariant: every public tool has a level ──────────────────────
 
@@ -33,9 +32,7 @@ class TestAllToolsHaveLevel:
     def test_every_public_tool_has_level(self):
         """Every name in TOOL_NAMES must appear in _TOOL_OPERATION_LEVELS."""
         missing = sorted(TOOL_NAMES - set(_TOOL_OPERATION_LEVELS.keys()))
-        assert missing == [], (
-            f"Public tools missing OperationLevel annotation: {missing}"
-        )
+        assert missing == [], f"Public tools missing OperationLevel annotation: {missing}"
 
     def test_every_handler_map_entry_has_level(self):
         """Every entry in handler_map (incl. mce_status) must have a level.
@@ -45,23 +42,17 @@ class TestAllToolsHaveLevel:
         slips through unannotated.
         """
         missing = sorted(set(handler_map.keys()) - set(_TOOL_OPERATION_LEVELS.keys()))
-        assert missing == [], (
-            f"handler_map entries missing OperationLevel annotation: {missing}"
-        )
+        assert missing == [], f"handler_map entries missing OperationLevel annotation: {missing}"
 
     def test_no_extra_level_annotations_for_unknown_tools(self):
         """Conversely, every level annotation should map to a real tool."""
         unknown = sorted(set(_TOOL_OPERATION_LEVELS.keys()) - set(handler_map.keys()))
-        assert unknown == [], (
-            f"Level annotations reference unknown tools: {unknown}"
-        )
+        assert unknown == [], f"Level annotations reference unknown tools: {unknown}"
 
     def test_all_levels_are_valid_enum(self):
         """Every annotation value must be a valid OperationLevel member."""
         for tool_name, level in _TOOL_OPERATION_LEVELS.items():
-            assert isinstance(level, OperationLevel), (
-                f"{tool_name!r} has non-enum level: {level!r}"
-            )
+            assert isinstance(level, OperationLevel), f"{tool_name!r} has non-enum level: {level!r}"
 
 
 # ── Per-level breakdown ───────────────────────────────────────────
@@ -292,13 +283,9 @@ class TestToolsMetadataConsistency:
     def test_every_tool_in_tools_has_handler(self):
         """Every tool in TOOLS must have a handler in handler_map."""
         missing_handlers = sorted(TOOL_NAMES - set(handler_map.keys()))
-        assert missing_handlers == [], (
-            f"Tools without handlers in handler_map: {missing_handlers}"
-        )
+        assert missing_handlers == [], f"Tools without handlers in handler_map: {missing_handlers}"
 
     def test_every_tool_in_tools_has_level(self):
         """Every tool in TOOLS must have an OperationLevel annotation."""
         missing_levels = sorted(TOOL_NAMES - set(_TOOL_OPERATION_LEVELS.keys()))
-        assert missing_levels == [], (
-            f"Tools without OperationLevel: {missing_levels}"
-        )
+        assert missing_levels == [], f"Tools without OperationLevel: {missing_levels}"

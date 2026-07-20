@@ -687,9 +687,7 @@ class TestGraphToolsE2E(unittest.TestCase):
         self.cm.add_graph_relation("PostgreSQL", "SQL", "is_a", source_memory_key=memory_id)
 
         # Step 4: Query impact through MCP handler
-        result = self.loop.run_until_complete(
-            _call_tool(self.server, "get_memory_impact", {"memory_id": memory_id})
-        )
+        result = self.loop.run_until_complete(_call_tool(self.server, "get_memory_impact", {"memory_id": memory_id}))
         self.assertIs(result.get("success"), True, f"Expected success, got: {result}")
         data = result.get("data", result)
         self.assertIn("entity_count", data)
@@ -706,8 +704,7 @@ class TestGraphToolsE2E(unittest.TestCase):
         # Step 1: Create a memory (auto-extracts entities)
         store_result = self.loop.run_until_complete(
             _call_tool(
-                self.server, "classify_and_remember",
-                {"message": "I prefer PostgreSQL for database development"}
+                self.server, "classify_and_remember", {"message": "I prefer PostgreSQL for database development"}
             )
         )
         self.assertIs(store_result.get("success"), True, f"Store failed: {store_result}")
@@ -720,9 +717,7 @@ class TestGraphToolsE2E(unittest.TestCase):
         self.cm._adapter.store_graph_entities(memory_id, "PostgreSQL is a SQL database system")
 
         # Step 3: Add a relation between entities
-        added = self.cm.add_graph_relation(
-            "PostgreSQL", "SQL", "is_a", source_memory_key=memory_id
-        )
+        added = self.cm.add_graph_relation("PostgreSQL", "SQL", "is_a", source_memory_key=memory_id)
         self.assertIs(added, True, "add_graph_relation should succeed")
 
         # Step 4: query_graph — find connected entities and memories
@@ -766,7 +761,8 @@ class TestGraphToolsE2E(unittest.TestCase):
         # We have >= 2 entities (PostgreSQL, SQL) and >= 1 relation → score >= 1.2
         # Use >= 0.8 as conservative threshold (at least 1 entity + 1 relation)
         self.assertGreaterEqual(
-            impact_data["impact_score"], 0.8,
+            impact_data["impact_score"],
+            0.8,
             f"Impact score should be >= 0.8 for >=1 entity + >=1 relation, got {impact_data['impact_score']}",
         )
 
@@ -785,16 +781,16 @@ class TestMCPToolsCoverage(unittest.TestCase):
         """Verify all core tools are present in CORE_TOOL_NAMES."""
         expected_core = {"classify_message", "get_classification_schema", "batch_classify"}
         self.assertIs(
-            expected_core.issubset(CORE_TOOL_NAMES), True,
-            f"Missing core tools: {expected_core - CORE_TOOL_NAMES}"
+            expected_core.issubset(CORE_TOOL_NAMES), True, f"Missing core tools: {expected_core - CORE_TOOL_NAMES}"
         )
 
     def test_optional_tools_exist(self):
         """Verify optional storage tools are present."""
         expected_optional = {"classify_and_remember", "recall_memories", "forget_memory"}
         self.assertIs(
-            expected_optional.issubset(OPTIONAL_TOOL_NAMES), True,
-            f"Missing optional tools: {expected_optional - OPTIONAL_TOOL_NAMES}"
+            expected_optional.issubset(OPTIONAL_TOOL_NAMES),
+            True,
+            f"Missing optional tools: {expected_optional - OPTIONAL_TOOL_NAMES}",
         )
 
     def test_total_tool_count(self):
@@ -937,8 +933,7 @@ class TestMCPAccessControlE2E(unittest.TestCase):
                 _call_tool(server, "classify_and_remember", {"message": "I prefer dark mode"})
             )
             self.assertIs(
-                result.get("success", False), True,
-                f"Write should succeed with authorized user_id, got: {result}"
+                result.get("success", False), True, f"Write should succeed with authorized user_id, got: {result}"
             )
         finally:
             self.loop.run_until_complete(server.cleanup())
@@ -990,13 +985,9 @@ class TestMCPAccessControlE2E(unittest.TestCase):
         server = MCPServer(data_path=self.tmpdir)
         try:
             # Store something first
-            self.loop.run_until_complete(
-                _call_tool(server, "classify_and_remember", {"message": "I like Python"})
-            )
+            self.loop.run_until_complete(_call_tool(server, "classify_and_remember", {"message": "I like Python"}))
             # Read should work
-            result = self.loop.run_until_complete(
-                _call_tool(server, "recall_memories", {"limit": 10})
-            )
+            result = self.loop.run_until_complete(_call_tool(server, "recall_memories", {"limit": 10}))
             self.assertIs(result.get("success"), True, f"Read should succeed without policy: {result}")
         finally:
             self.loop.run_until_complete(server.cleanup())
@@ -1043,8 +1034,11 @@ class TestMCPConfidenceLabelE2E(unittest.TestCase):
         # Step 2: Add entities and a relation with confidence=INFERRED
         self.cm._adapter.store_graph_entities(memory_id, "Rust is a systems language")
         added = self.cm.add_graph_relation(
-            "Rust", "systems language", "is_a",
-            source_memory_key=memory_id, confidence="INFERRED",
+            "Rust",
+            "systems language",
+            "is_a",
+            source_memory_key=memory_id,
+            confidence="INFERRED",
         )
         self.assertIs(added, True, "add_graph_relation with confidence=INFERRED should succeed")
 
@@ -1060,8 +1054,7 @@ class TestMCPConfidenceLabelE2E(unittest.TestCase):
         relations = query_data.get("relations", [])
         if relations:
             rust_relations = [
-                r for r in relations
-                if r.get("source_entity") == "Rust" or r.get("entity_text") == "Rust"
+                r for r in relations if r.get("source_entity") == "Rust" or r.get("entity_text") == "Rust"
             ]
             for rel in rust_relations:
                 self.assertIn(

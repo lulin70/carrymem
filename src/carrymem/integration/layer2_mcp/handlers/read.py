@@ -9,6 +9,9 @@ import time
 from typing import Any, Dict
 
 from ._base import (
+    _MAX_KNOWLEDGE,
+    _MAX_LIMIT,
+    _MAX_MEMORIES,
     CLASSIFICATION_SCHEMA,
     CORE_TOOL_NAMES,
     OPTIONAL_TOOL_NAMES,
@@ -16,9 +19,6 @@ from ._base import (
     _build_summary,
     _clamp,
     _format_memory_entry,
-    _MAX_KNOWLEDGE,
-    _MAX_LIMIT,
-    _MAX_MEMORIES,
     _safe_error,
     _validate_input,
     _validate_query_input,

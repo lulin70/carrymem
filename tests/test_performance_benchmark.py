@@ -555,9 +555,7 @@ class TestGraphPerformanceBenchmark:
                 f"avg={avg:.2f}ms, p95={p95:.2f}ms, max={max_ms:.2f}ms"
             )
 
-            assert p95 < GRAPH_QUERY_P95_MS, (
-                f"query_graph P95 {p95:.2f}ms exceeds {GRAPH_QUERY_P95_MS}ms threshold"
-            )
+            assert p95 < GRAPH_QUERY_P95_MS, f"query_graph P95 {p95:.2f}ms exceeds {GRAPH_QUERY_P95_MS}ms threshold"
         finally:
             cm.close()
 
@@ -591,9 +589,9 @@ class TestGraphPerformanceBenchmark:
                 f"avg={avg:.2f}ms, p95={p95:.2f}ms, max={max_ms:.2f}ms"
             )
 
-            assert p95 < SHORTEST_PATH_P95_MS, (
-                f"shortest_path P95 {p95:.2f}ms exceeds {SHORTEST_PATH_P95_MS}ms threshold"
-            )
+            assert (
+                p95 < SHORTEST_PATH_P95_MS
+            ), f"shortest_path P95 {p95:.2f}ms exceeds {SHORTEST_PATH_P95_MS}ms threshold"
         finally:
             cm.close()
 
@@ -618,9 +616,7 @@ class TestGraphPerformanceBenchmark:
                 impact_result = cm.recall_memory_impact(memory_id)
                 elapsed_ms = (time.perf_counter() - start) * 1000
                 latencies.append(elapsed_ms)
-                assert "impact_score" in impact_result, (
-                    f"get_memory_impact returned invalid structure: {impact_result}"
-                )
+                assert "impact_score" in impact_result, f"get_memory_impact returned invalid structure: {impact_result}"
 
             p95 = sorted(latencies)[18]
             avg = statistics.mean(latencies)
@@ -631,9 +627,9 @@ class TestGraphPerformanceBenchmark:
                 f"avg={avg:.2f}ms, p95={p95:.2f}ms, max={max_ms:.2f}ms"
             )
 
-            assert p95 < MEMORY_IMPACT_P95_MS, (
-                f"get_memory_impact P95 {p95:.2f}ms exceeds {MEMORY_IMPACT_P95_MS}ms threshold"
-            )
+            assert (
+                p95 < MEMORY_IMPACT_P95_MS
+            ), f"get_memory_impact P95 {p95:.2f}ms exceeds {MEMORY_IMPACT_P95_MS}ms threshold"
         finally:
             cm.close()
 
@@ -731,20 +727,17 @@ class TestGraphPerformanceBenchmark:
 
         # Verify existing rows got default 'EXTRACTED'
         sample = conn.execute("SELECT confidence FROM memory_relations LIMIT 1").fetchone()
-        assert sample["confidence"] == "EXTRACTED", (
-            f"Default confidence should be EXTRACTED, got {sample['confidence']}"
-        )
+        assert (
+            sample["confidence"] == "EXTRACTED"
+        ), f"Default confidence should be EXTRACTED, got {sample['confidence']}"
 
-        print(
-            f"\n[schema_migration_1000rel] relations=1000, "
-            f"migration_time={elapsed_s:.3f}s"
-        )
+        print(f"\n[schema_migration_1000rel] relations=1000, " f"migration_time={elapsed_s:.3f}s")
 
         conn_mgr.close()
 
-        assert elapsed_s < SCHEMA_MIGRATION_S, (
-            f"Schema migration took {elapsed_s:.3f}s, exceeds {SCHEMA_MIGRATION_S}s threshold"
-        )
+        assert (
+            elapsed_s < SCHEMA_MIGRATION_S
+        ), f"Schema migration took {elapsed_s:.3f}s, exceeds {SCHEMA_MIGRATION_S}s threshold"
 
 
 # ---------------------------------------------------------------------------

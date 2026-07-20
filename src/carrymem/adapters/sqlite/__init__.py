@@ -249,8 +249,7 @@ class SQLiteAdapter(StorageAdapter):
                     from ...utils.logger import logger
 
                     logger.warning(
-                        "Audit logger SQLite persistence at %s failed, "
-                        "falling back to in-memory mode: %s",
+                        "Audit logger SQLite persistence at %s failed, " "falling back to in-memory mode: %s",
                         audit_persist_path,
                         persist_err,
                     )

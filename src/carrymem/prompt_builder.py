@@ -166,12 +166,7 @@ class PromptBuilder:
             for m in contextual_extra:
                 sk = m.get("storage_key")
                 conf = m.get("confidence", 0)
-                if (
-                    sk not in seen_keys
-                    and sk not in core_keys
-                    and conf < 0.9
-                    and preference_matches_scope(m, context)
-                ):
+                if sk not in seen_keys and sk not in core_keys and conf < 0.9 and preference_matches_scope(m, context):
                     context_prefs.append(m)
                     seen_keys.add(sk)
                     all_memories.append(m)
