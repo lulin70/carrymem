@@ -102,7 +102,7 @@ def _content_hash(memory: Any) -> str:
     content = memory.get("content", "")
     if not isinstance(content, str):
         content = str(content)
-    return hashlib.sha1(content.encode("utf-8", errors="replace")).hexdigest()
+    return hashlib.sha256(content.encode("utf-8", errors="replace")).hexdigest()
 
 
 # ── Public API ──────────────────────────────────────────────────────────
