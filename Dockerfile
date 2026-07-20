@@ -2,7 +2,7 @@
 # TD-026: pinned to slim-bookworm (Debian 12) for reproducibility.
 # dependabot docker ecosystem (see .github/dependabot.yml) will auto-pin
 # to @sha256:<digest> on its next weekly run.
-FROM python:3.12-slim-bookworm AS builder
+FROM python:3.14-slim-bookworm AS builder
 
 WORKDIR /build
 
@@ -17,7 +17,7 @@ RUN python -m build --wheel --no-isolation
 
 # ── Runtime stage: minimal image with only runtime dependencies ─────────────
 # TD-026: same base image pinning as builder stage above.
-FROM python:3.12-slim-bookworm
+FROM python:3.14-slim-bookworm
 
 ARG VERSION=0.9.0
 
