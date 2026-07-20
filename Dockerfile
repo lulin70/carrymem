@@ -19,7 +19,7 @@ RUN python -m build --wheel --no-isolation
 # TD-026: same base image pinning as builder stage above.
 FROM python:3.12-slim-bookworm
 
-ARG VERSION=0.9.1
+ARG VERSION=0.9.2
 
 LABEL org.opencontainers.image.title="CarryMem MCP Server"
 LABEL org.opencontainers.image.description="Your portable AI memory layer — MCP server for memory classification"
@@ -28,7 +28,8 @@ LABEL org.opencontainers.image.source="https://github.com/lulin70/carrymem"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    CARRYMEM_DATA_PATH=/data
+    CARRYMEM_DATA_PATH=/data \
+    CARRYMEM_JSON_LOG=1
 
 WORKDIR /app
 
@@ -60,7 +61,7 @@ VOLUME ["/data"]
 EXPOSE 8765
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "from carrymem import CarryMem; print('OK')" || exit 1
+    CMD python -c "from carrymem import CarryMem; cm = CarryMem(); cm.close(); print('OK')" || exit 1
 
 # Default: stdio transport (for MCP clients like Claude Code, Cursor, etc.)
 # This mode communicates via stdin/stdout, not HTTP.

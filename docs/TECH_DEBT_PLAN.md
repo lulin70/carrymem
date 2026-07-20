@@ -648,7 +648,7 @@
 | **优先级** | P3 |
 | **位置** | `.github/workflows/nightly.yml` |
 | **修复方案** | 添加与 ci.yml 一致的 concurrency block；`cancel-in-progress: false` |
-| **状态** | ⬜ 待处理 |
+| **状态** | ✅ 已完成 (2026-07-20): nightly.yml L8-10 已有 concurrency block, `cancel-in-progress: false` |
 
 ### TD-029: CHANGELOG.md 版本重置说明已过时
 
@@ -657,7 +657,7 @@
 | **优先级** | P3 |
 | **位置** | `CHANGELOG.md:8-11` |
 | **修复方案** | 移至底部"历史说明"区或删除 |
-| **状态** | ⬜ 待处理 |
+| **状态** | ✅ 已完成 (2026-07-20): 删除顶部重复说明（Pre-Reset History 部分已有相同内容） |
 
 ### TD-030: 评估报告混入 CHANGELOG
 
@@ -666,7 +666,7 @@
 | **优先级** | P3 |
 | **位置** | `CHANGELOG.md:58` |
 | **修复方案** | 将评估内容移至 `docs/archive/` 或独立文件 |
-| **状态** | ⬜ 待处理 |
+| **状态** | ✅ 已满足要求 (2026-07-20): CHANGELOG 仅含简短引用（"See docs/TECH_DEBT_PLAN.md"），详细评估已在独立文档中 |
 
 ### TD-031: Dockerfile HEALTHCHECK 仅验证 import
 
@@ -675,7 +675,7 @@
 | **优先级** | P3 |
 | **位置** | `Dockerfile:52-53` |
 | **修复方案** | 改为 `python -c "from carrymem import CarryMem; cm = CarryMem(); cm.close(); print('OK')"` |
-| **状态** | ⬜ 待处理 |
+| **状态** | ✅ 已完成 (v0.9.2, 2026-07-20): Dockerfile HEALTHCHECK 改为实例化测试 `python -c "from carrymem import CarryMem; cm = CarryMem(); cm.close(); print('OK')"`, 验证完整初始化路径而非仅 import |
 
 ### TD-048: dependabot.yml 缺 docker 生态 (与 TD-026 联动) ⚠️ 新增 (DevOps)
 
@@ -684,7 +684,7 @@
 | **优先级** | P3 |
 | **位置** | `.github/dependabot.yml` |
 | **修复方案** | 补 `package-ecosystem: "docker"` 路径 `/Dockerfile` |
-| **状态** | ⬜ 待处理 |
+| **状态** | ✅ 已完成 (2026-07-20): dependabot.yml L19-27 已有 docker ecosystem 配置 |
 
 ### TD-049: NoEncryption 模式无生产强制警告 ⚠️ 新增 (Security)
 
@@ -693,16 +693,16 @@
 | **优先级** | P3 |
 | **位置** | `security/encryption.py:53-80` |
 | **修复方案** | `NoEncryption` 类初始化时 `warnings.warn(..., SecurityWarning)` |
-| **状态** | ⬜ 待处理 |
+| **状态** | ✅ 已完成 (v0.9.2, 2026-07-20): `NoEncryption.__init__` 添加 `warnings.warn(..., SecurityWarning, stacklevel=2)`, 提醒生产环境不应使用 NoEncryption |
 
 ### TD-050: Dockerfile 无结构化日志配置 ⚠️ 新增 (DevOps)
 
 | 字段 | 值 |
 |------|-----|
 | **优先级** | P3 |
-| **位置** | `Dockerfile` |
-| **修复方案** | 配置 `PYTHONLOGJSON=1` 或类似，便于接入 Loki/ELK |
-| **状态** | ⬜ 待处理 |
+| **位置** | `Dockerfile`, `src/carrymem/utils/logger.py` |
+| **修复方案** | 配置 `CARRYMEM_JSON_LOG=1` 环境变量, logger.py 添加 JsonFormatter 支持, 便于接入 Loki/ELK |
+| **状态** | ✅ 已完成 (v0.9.2, 2026-07-20): Dockerfile ENV 添加 `CARRYMEM_JSON_LOG=1`; logger.py 新增 `JsonFormatter` 类 + `_is_json_log_enabled()` 辅助函数, 当 env var 为 truthy (`1`/`true`/`yes`/`on`) 时 file/console handler 均输出 JSON 格式日志 (stdlib only, 无新依赖) |
 
 ### TD-051: __init__.py 无 __all__ 声明 ⚠️ 新增 (Coder)
 
@@ -711,7 +711,7 @@
 | **优先级** | P3 |
 | **位置** | 多数 `__init__.py` |
 | **修复方案** | 显式 `__all__` 声明（与 TD-017 互补，缓解 pyflakes 噪声） |
-| **状态** | ⬜ 待处理 |
+| **状态** | ✅ 已完成 (v0.9.2, 2026-07-20): 审计 22 个 `__init__.py` 文件, 15 个已有 `__all__`; 6 个为空或仅 docstring (无符号可声明, 添加 `__all__ = []` 是噪声, 违反 Simplicity First); `cli/__init__.py` 为 facade 模式 `from X import *` (TD-017 排除). 唯一需要补充的 `adapters/sqlite/__init__.py` 已添加 `__all__` 列出 `SQLiteAdapter` + 3 capability flags + 3 re-exported base classes |
 
 ### TD-052: 公私命名不一致 ⚠️ 新增 (Coder)
 
@@ -720,7 +720,7 @@
 | **优先级** | P3 |
 | **位置** | `engine.py:135` (`clear_working_memory` 事实私有但命名公共) |
 | **修复方案** | 内部方法一律 `_` 前缀 |
-| **状态** | ⬜ 待处理 |
+| **状态** | ✅ 已完成 (2026-07-20): `clear_working_memory` 已不存在（被重构移除或重命名），全代码库 grep 0 结果 |
 
 ### TD-053: 加密密钥强度未校验 ⚠️ 新增 (Security)
 
@@ -729,7 +729,7 @@
 | **优先级** | P3 |
 | **位置** | `security/encryption.py` |
 | **修复方案** | 对用户传入密钥做最小长度/熵估算 |
-| **状态** | ⬜ 待处理 |
+| **状态** | ✅ 已完成 (v0.9.2, 2026-07-20): `MemoryEncryption.__init__` 在调用 PBKDF2 派生前调用 `_warn_weak_password()`, 当 password 长度 <12 (NIST SP 800-63B 推荐) 时 emit `SecurityWarning` (非 error, 保持向后兼容). 选择 warning 而非 error 因为: (a) 46 个现有测试用短密码 (如 `key="test"`); (b) NIST 2020 修订取消 entropy 强制要求; (c) warning 在生产日志中可见, 测试可用 `simplefilter("ignore")` 屏蔽 |
 
 ### TD-054: VSCode 扩展 i18n 缺失 ⚠️ 新增 (UI)
 
@@ -738,7 +738,7 @@
 | **优先级** | P3 |
 | **位置** | `extensions/vscode-carrymem/package.json` (9 个命令 title 全英文) |
 | **修复方案** | 使用 `package.nls.json` + `package.nls.zh-cn.json` 等 i18n 文件 |
-| **状态** | ⬜ 待处理 |
+| **状态** | ✅ 已完成 (v0.9.2, 2026-07-20): 新建 `package.nls.json` (14 个 English baseline 字符串) + `package.nls.zh-cn.json` (14 个 zh-CN 翻译); `package.json` 中 14 处用户可见字符串 (displayName/description/viewContainer.title/view.name/9 个 command.title/configuration.title/3 个 configuration description) 全部改为 `%key%` 引用. VSCode 根据 display language 自动选择 NLS 文件, 未覆盖语种 fallback 到 English baseline |
 
 ### TD-055: mypy src/ 残留 9 个基线错误 ⚠️ 新增 (Architect + Coder)
 

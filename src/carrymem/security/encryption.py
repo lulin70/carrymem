@@ -28,6 +28,7 @@ import json
 import logging
 import os
 import shutil
+import warnings
 from datetime import datetime, timezone
 from typing import Callable, Optional
 
@@ -40,6 +41,13 @@ _KEY_SIZE = 32
 
 # Internal HMAC key for key-file integrity checks (not secret, deters casual tampering)
 _INTEGRITY_HMAC_KEY = b"carrymem-key-integrity-v1"
+
+# TD-053: minimum recommended password length for user-supplied keys.
+# NIST SP 800-63B recommends ≥12 chars for user-chosen passwords when
+# paired with PBKDF2-HMAC-SHA256 at 600000 iterations. Shorter keys
+# trigger a SecurityWarning (not an error) so existing callers continue
+# to work while production users are alerted to the risk.
+_MIN_PASSWORD_LENGTH = 12
 
 
 class EncryptionError(Exception):
@@ -61,6 +69,22 @@ class NoEncryption:
     """
 
     _security_level = "none"
+
+    def __init__(self) -> None:
+        """Emit a :class:`SecurityWarning` on instantiation.
+
+        TD-049: NoEncryption provides zero confidentiality — any caller
+        instantiating it in production code must be alerted. Tests and
+        explicit opt-out scripts can suppress via
+        ``warnings.simplefilter("ignore", SecurityWarning)``.
+        """
+        warnings.warn(
+            "NoEncryption is active — memory content will be stored in PLAINTEXT. "
+            "This is acceptable for tests/local debugging only; production deployments "
+            "should use MemoryEncryption (Fernet backend) for at-rest encryption.",
+            SecurityWarning,
+            stacklevel=2,
+        )
 
     def encrypt(self, plaintext: str) -> str:
         """Return plaintext unchanged (no-op encryption)."""
@@ -123,6 +147,10 @@ class MemoryEncryption:
             ) from e
 
         if key:
+            # TD-053: validate user-supplied password strength before deriving.
+            # Random key files bypass this path (loaded below), so the check
+            # only applies to human-chosen passwords where weak inputs are a risk.
+            self._warn_weak_password(key)
             raw_key = self._derive_key(key)
             self._raw_key = raw_key
             self._fernet = self._make_fernet(raw_key)
@@ -136,6 +164,32 @@ class MemoryEncryption:
                 self._raw_key = generated
                 self._save_key(generated)
                 self._fernet = self._make_fernet(generated)
+
+    @staticmethod
+    def _warn_weak_password(password: str) -> None:
+        """Emit a :class:`SecurityWarning` when password is below recommendations.
+
+        TD-053: PBKDF2-HMAC-SHA256 at 600000 iterations slows brute force,
+        but a 4-character password can still be cracked in seconds. We emit
+        a warning rather than raising so existing callers (including tests
+        with short fixture passwords) continue to work, while production
+        users are alerted to the risk in their logs.
+
+        Threshold (NIST SP 800-63B):
+        - Length: ≥12 chars recommended for user-chosen passwords
+        """
+        if not isinstance(password, str) or len(password) < _MIN_PASSWORD_LENGTH:
+            actual_len = len(password) if isinstance(password, str) else 0
+            warnings.warn(
+                f"Encryption key is short ({actual_len} chars, "
+                f"recommended ≥{_MIN_PASSWORD_LENGTH} per NIST SP 800-63B). "
+                "Short passphrases are vulnerable to brute force even with "
+                "PBKDF2-HMAC-SHA256 at 600000 iterations. Use a longer "
+                "passphrase or omit the key parameter to let CarryMem "
+                "generate a strong random key automatically.",
+                SecurityWarning,
+                stacklevel=3,
+            )
 
     def _derive_key(self, password: str) -> bytes:
         """Derive a key from password using PBKDF2-HMAC-SHA256.

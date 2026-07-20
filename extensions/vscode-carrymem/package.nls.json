@@ -1,0 +1,19 @@
+{
+  "displayName": "CarryMem - AI Memory & Rules",
+  "description": "Manage AI memory rules with scope-aware context injection for LLM-assisted development",
+  "viewContainer.title": "CarryMem",
+  "view.name": "Rules",
+  "command.refreshRules.title": "CarryMem: Refresh Rules",
+  "command.addRule.title": "CarryMem: Add Rule",
+  "command.editRule.title": "CarryMem: Edit Rule",
+  "command.deleteRule.title": "CarryMem: Delete Rule",
+  "command.toggleRule.title": "CarryMem: Toggle Rule (Pause/Resume)",
+  "command.matchRules.title": "CarryMem: Match Rules for Current File",
+  "command.showEffectivenessReport.title": "CarryMem: Show Effectiveness Report",
+  "command.skillPack.title": "CarryMem: Pack Rules as Skill",
+  "command.skillInstall.title": "CarryMem: Install Skill",
+  "configuration.title": "CarryMem",
+  "configuration.dbPath.description": "Path to CarryMem database (empty = default ~/.carrymem/carrymem.db)",
+  "configuration.autoMatch.description": "Automatically match rules when opening files",
+  "configuration.defaultScope.description": "Default scope for new rules"
+}

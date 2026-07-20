@@ -1243,3 +1243,21 @@ class SQLiteAdapter(StorageAdapter):
     def decrypt_field(self, ciphertext: str) -> str:
         """Decrypt a stored ciphertext field value."""
         return self._security.decrypt_field(ciphertext)
+
+
+# TD-051: explicit __all__ declaration. Keeps `from carrymem.adapters.sqlite
+# import *` deterministic and silences pyflakes "may be undefined" warnings
+# for star-import consumers. The capability flags are part of the public API
+# (tests and external code branch on SQLITE_VEC_AVAILABLE etc.).
+__all__ = [
+    # Main adapter class
+    "SQLiteAdapter",
+    # Capability flags (module-level, queried by tests and CLI doctor)
+    "SQLITE_VEC_AVAILABLE",
+    "PYSQLITE3_AVAILABLE",
+    "SENTENCE_TRANSFORMERS_AVAILABLE",
+    # Re-exported from ..base for convenience (matches adapters/__init__.py)
+    "MemoryEntry",
+    "StorageAdapter",
+    "StoredMemory",
+]

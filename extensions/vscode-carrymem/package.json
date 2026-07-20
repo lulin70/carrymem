@@ -1,7 +1,7 @@
 {
   "name": "vscode-carrymem",
-  "displayName": "CarryMem - AI Memory & Rules",
-  "description": "Manage AI memory rules with scope-aware context injection for LLM-assisted development",
+  "displayName": "%displayName%",
+  "description": "%description%",
   "version": "0.2.0",
   "publisher": "carrymem",
   "license": "MIT",
@@ -29,7 +29,7 @@
       "activitybar": [
         {
           "id": "carrymem",
-          "title": "CarryMem",
+          "title": "%viewContainer.title%",
           "icon": "resources/icon.svg"
         }
       ]
@@ -38,7 +38,7 @@
       "carrymem": [
         {
           "id": "carrymem-rules",
-          "name": "Rules",
+          "name": "%view.name%",
           "icon": "resources/icon.svg"
         }
       ]
@@ -46,44 +46,44 @@
     "commands": [
       {
         "command": "carrymem.refreshRules",
-        "title": "CarryMem: Refresh Rules",
+        "title": "%command.refreshRules.title%",
         "icon": "$(refresh)"
       },
       {
         "command": "carrymem.addRule",
-        "title": "CarryMem: Add Rule",
+        "title": "%command.addRule.title%",
         "icon": "$(add)"
       },
       {
         "command": "carrymem.editRule",
-        "title": "CarryMem: Edit Rule",
+        "title": "%command.editRule.title%",
         "icon": "$(edit)"
       },
       {
         "command": "carrymem.deleteRule",
-        "title": "CarryMem: Delete Rule",
+        "title": "%command.deleteRule.title%",
         "icon": "$(trash)"
       },
       {
         "command": "carrymem.toggleRule",
-        "title": "CarryMem: Toggle Rule (Pause/Resume)",
+        "title": "%command.toggleRule.title%",
         "icon": "$(eye)"
       },
       {
         "command": "carrymem.matchRules",
-        "title": "CarryMem: Match Rules for Current File"
+        "title": "%command.matchRules.title%"
       },
       {
         "command": "carrymem.showEffectivenessReport",
-        "title": "CarryMem: Show Effectiveness Report"
+        "title": "%command.showEffectivenessReport.title%"
       },
       {
         "command": "carrymem.skillPack",
-        "title": "CarryMem: Pack Rules as Skill"
+        "title": "%command.skillPack.title%"
       },
       {
         "command": "carrymem.skillInstall",
-        "title": "CarryMem: Install Skill"
+        "title": "%command.skillInstall.title%"
       }
     ],
     "menus": {
@@ -118,23 +118,23 @@
       ]
     },
     "configuration": {
-      "title": "CarryMem",
+      "title": "%configuration.title%",
       "properties": {
         "carrymem.dbPath": {
           "type": "string",
           "default": "",
-          "description": "Path to CarryMem database (empty = default ~/.carrymem/carrymem.db)"
+          "description": "%configuration.dbPath.description%"
         },
         "carrymem.autoMatch": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically match rules when opening files"
+          "description": "%configuration.autoMatch.description%"
         },
         "carrymem.defaultScope": {
           "type": "string",
           "default": "personal",
           "enum": ["personal", "company", "negotiated"],
-          "description": "Default scope for new rules"
+          "description": "%configuration.defaultScope.description%"
         }
       }
     }
