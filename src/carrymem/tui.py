@@ -545,7 +545,9 @@ else:
             type_counts = sorted(by_type.items(), key=lambda x: -x[1]) if isinstance(by_type, dict) else []
             for t, c in type_counts[:5]:
                 icon = _TYPE_ICONS.get(t, "?")
-                label = _TYPE_LABELS.get(t, t)[:10]
+                # t is Any from by_type.items(); coerce to str for _TYPE_LABELS lookup
+                t_str = t if isinstance(t, str) else str(t)
+                label = _TYPE_LABELS.get(t_str, t_str)[:10]
                 lines.append(f"\u2502  {icon} {label}: {c}")
             self.update("\n".join(lines))
 

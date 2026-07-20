@@ -256,10 +256,12 @@ class ClassificationMixin:
             entry.confidence = DEFAULT_FORCE_TYPE_CONFIDENCE
         if coreference_resolved:
             entry.raw_text = message
-        if session_id and isinstance(entry.metadata, dict):
+        if session_id:
+            # entry.metadata is typed as Dict[str, Any] (non-Optional, default_factory=dict),
+            # so the isinstance check and the empty-dict branch are redundant under mypy 2.x.
+            if not entry.metadata:
+                entry.metadata = {}
             entry.metadata["session_id"] = session_id
-        elif session_id and not entry.metadata:
-            entry.metadata = {"session_id": session_id}
         if entity_meta:
             if not entry.metadata:
                 entry.metadata = {}
