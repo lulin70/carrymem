@@ -7,7 +7,7 @@
 # pip-compile resolves transitive deps and pins exact versions in requirements.lock.
 
 # install_requires (core runtime)
-PyYAML>=5.0
+PyYAML>=6.0.3
 cryptography>=46.0.6
 rich>=13.0
 
