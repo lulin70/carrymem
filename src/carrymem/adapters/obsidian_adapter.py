@@ -177,12 +177,10 @@ class ObsidianAdapter(StorageAdapter):
         if row and "unicode61" in (row["sql"] or ""):
             conn.execute("INSERT INTO notes_fts(notes_fts) VALUES('rebuild')")
             conn.execute("DROP TABLE IF EXISTS notes_fts")
-            conn.execute(
-                """CREATE VIRTUAL TABLE notes_fts USING fts5(
+            conn.execute("""CREATE VIRTUAL TABLE notes_fts USING fts5(
                     title, content,
                     content='notes', content_rowid='rowid', tokenize='trigram'
-                )"""
-            )
+                )""")
             conn.execute("INSERT INTO notes_fts(notes_fts) VALUES('rebuild')")
             conn.commit()
 
@@ -438,18 +436,18 @@ class ObsidianAdapter(StorageAdapter):
 
     def _compute_relevance(self, row: sqlite3.Row, query: str, query_tags: Set[str]) -> float:
         fts_rank = abs(row["fts_rank"]) if row["fts_rank"] is not None else 0.0
-        fts_score = min(1.0 / (1.0 + fts_rank), 1.0)
+        fts_score: float = float(min(1.0 / (1.0 + fts_rank), 1.0))
 
-        tag_score = 0.0
+        tag_score: float = 0.0
         if query_tags:
             note_tags: set[str] = set()
             if row["tags"]:
                 note_tags = set(safe_json_loads(row["tags"], []))
             if note_tags:
                 overlap = len(query_tags & note_tags)
-                tag_score = overlap / max(len(query_tags), 1)
+                tag_score = float(overlap / max(len(query_tags), 1))
 
-        wiki_score = 0.0
+        wiki_score: float = 0.0
         if row["wiki_links"]:
             links: list[str] = safe_json_loads(row["wiki_links"], [])
             if links:
@@ -459,7 +457,7 @@ class ObsidianAdapter(StorageAdapter):
                         wiki_score = 0.3
                         break
 
-        return fts_score * 0.6 + tag_score * 0.25 + wiki_score * 0.15
+        return float(fts_score * 0.6 + tag_score * 0.25 + wiki_score * 0.15)
 
     def _fallback_search(self, query: str, filters: Dict[str, Any], limit: int) -> list:
         conditions = ["(title LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')"]

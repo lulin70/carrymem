@@ -58,7 +58,8 @@ class MCPServer:
         """
         self.config_path = config_path or os.environ.get("CARRYMEM_CONFIG_PATH")
         self.data_path = data_path or os.environ.get("CARRYMEM_DATA_PATH")
-        self.namespace = namespace or os.environ.get("CARRYMEM_NAMESPACE", "default")
+        # namespace is guaranteed non-None via env fallback "default"
+        self.namespace = namespace or os.environ.get("CARRYMEM_NAMESPACE") or "default"
         self.request_timeout = request_timeout or int(
             os.environ.get("CARRYMEM_REQUEST_TIMEOUT", self.DEFAULT_REQUEST_TIMEOUT)
         )

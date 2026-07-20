@@ -138,8 +138,7 @@ class AuditLogger:
         self._db_conn = sqlite3.connect(persist_path, check_same_thread=False)
         self._db_conn.execute("PRAGMA journal_mode=WAL")
         cursor = self._db_conn.cursor()
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS audit_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp TEXT NOT NULL,
@@ -150,8 +149,7 @@ class AuditLogger:
                 details TEXT,
                 ip_address TEXT
             )
-        """
-        )
+        """)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_log(timestamp)")
         self._db_conn.commit()
@@ -459,7 +457,7 @@ class AuditLogger:
             total = len(self._events)
             by_action: Dict[str, int] = {}
             by_result: Dict[str, int] = {}
-            last_event = None
+            last_event: Optional[AuditEvent] = None
 
             for event in self._events:
                 by_action[event.action] = by_action.get(event.action, 0) + 1

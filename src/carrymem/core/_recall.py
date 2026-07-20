@@ -151,10 +151,11 @@ class RecallMixin:
         if not self._adapter:
             raise StorageNotConfiguredError()
 
-        if not hasattr(self._adapter, "recall_aggregated"):
+        method = getattr(self._adapter, "recall_aggregated", None)
+        if method is None or not callable(method):
             raise NotImplementedError("Adapter does not support recall_aggregated")
 
-        result = self._adapter.recall_aggregated(memory_type=memory_type, limit_per_type=limit_per_type)
+        result = method(memory_type=memory_type, limit_per_type=limit_per_type)
         return {k: [r.to_dict() for r in v] for k, v in result.items()}
 
     def recall_timeline(
@@ -166,10 +167,11 @@ class RecallMixin:
         if not self._adapter:
             raise StorageNotConfiguredError()
 
-        if not hasattr(self._adapter, "recall_timeline"):
+        method = getattr(self._adapter, "recall_timeline", None)
+        if method is None or not callable(method):
             raise NotImplementedError("Adapter does not support recall_timeline")
 
-        results = self._adapter.recall_timeline(topic=topic, limit=limit)
+        results = method(topic=topic, limit=limit)
         return [r.to_dict() for r in results]
 
     # ── Knowledge Graph (v0.7.0) ────────────────────────────────

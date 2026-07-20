@@ -21,7 +21,7 @@ class ConfigManager:
     """Load and query configuration from JSON/YAML with env overrides."""
 
     def __init__(self, config_path: Optional[str] = None):
-        self.config_path = config_path or os.environ.get("CARRYMEM_CONFIG_PATH", _DEFAULT_CONFIG_PATH)
+        self.config_path: str = config_path or os.environ.get("CARRYMEM_CONFIG_PATH") or _DEFAULT_CONFIG_PATH
         self.config = self.load_config()
 
     def get(self, key: str, default: object = None) -> object:

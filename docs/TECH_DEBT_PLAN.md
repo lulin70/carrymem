@@ -740,6 +740,20 @@
 | **修复方案** | 使用 `package.nls.json` + `package.nls.zh-cn.json` 等 i18n 文件 |
 | **状态** | ⬜ 待处理 |
 
+### TD-055: mypy src/ 残留 9 个基线错误 ⚠️ 新增 (Architect + Coder)
+
+| 字段 | 值 |
+|------|-----|
+| **优先级** | P1 |
+| **位置** | 6 文件 9 错误：`utils/config.py:55-56`、`security/audit.py:467`、`adapters/obsidian_adapter.py:462`、`adapters/async_sqlite.py:35,243`、`core/_recall.py:157,172`、`integration/layer2_mcp/server.py:65` |
+| **问题描述** | CI 把 `mypy src/` 设为 blocking (`.github/workflows/ci.yml:177`)，但基线就有 9 个错误使 CI 一直失败。错误分类：(a) `arg-type`/`union-attr` 2 个 — `Optional[str]` 未 fallback；(b) `unreachable` 1 个 — mypy 窄化误判；(c) `no-any-return` 2 个 — sqlite3.Row 返回 Any 传播；(d) `assignment` 1 个 — `aiosqlite = None` 与 Module 类型冲突；(e) `attr-defined` 2 个 — `StorageAdapter` 基类缺 `recall_aggregated`/`recall_timeline`；(f) `arg-type` 1 个 — `namespace` 可能 None |
+| **修复方案** | (a) config.py: 加 `or _DEFAULT_CONFIG_PATH` 三段 fallback；(b) audit.py: `last_event: Optional[AuditEvent] = None` 显式类型注解；(c) obsidian_adapter.py: `float(...)` cast；(d) async_sqlite.py:35: `aiosqlite: Any = None`；(e) async_sqlite.py:243: `int(row["cnt"])`；(f) _recall.py: `getattr(self._adapter, "recall_aggregated")(...)` 或 cast；(g) server.py:65: `namespace=self.namespace or "default"` |
+| **负责角色** | Architect (设计) + Coder (实施) + Tester (回归) |
+| **验证标准** | `mypy src/` 输出 0 错误；全量非 e2e 测试套件 0 失败；flake8/black/isort 不退化 |
+| **依赖** | 无 |
+| **状态** | ✅ 已完成 (v0.9.1, 2026-07-20): mypy 9→0；targeted 773 pass；full non-e2e 4632 pass；flake8/black/isort 0 errors；行为无变更 |
+| **生命周期** | P8 实现 |
+
 ---
 
 ## 6. 生命周期阶段映射

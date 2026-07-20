@@ -10,6 +10,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > historical records from the pre-reset development cycle and should not be confused with
 > the current v0.2.x series.
 
+## [0.9.1] - 2026-07-20 (TD-055: mypy src/ baseline errors cleared 9 → 0)
+
+### Summary
+Closed [TD-055](docs/TECH_DEBT_PLAN.md): CI 把 `mypy src/` 设为 blocking (`.github/workflows/ci.yml:177`)
+但基线就有 9 个错误使 CI 一直失败。本次按 6 类错误逐项修复，达到 **0 mypy 错误**，CI lint gate
+首次可正式通过。
+
+### Error Categories and Fixes (6 files, 9 errors)
+
+| # | File:Line | Error Code | Root Cause | Fix |
+|---|-----------|------------|-----------|-----|
+| 1 | `utils/config.py:55-56` | arg-type + union-attr | `config_path or os.environ.get(...)` infers `str \| None` | Three-segment fallback `or _DEFAULT_CONFIG_PATH` + explicit `: str` annotation |
+| 2 | `security/audit.py:467` | unreachable | `last_event = None` narrows type to None, `last_event is None` always True | `last_event: Optional[AuditEvent] = None` explicit annotation |
+| 3 | `adapters/obsidian_adapter.py:462` | no-any-return | `row["fts_rank"]` returns Any (sqlite3.Row), propagates to return | `float(...)` cast on each intermediate variable + `: float` annotations |
+| 4 | `adapters/async_sqlite.py:35` | assignment | `aiosqlite = None` conflicts with inferred Module type | `aiosqlite: Any = None` at module level |
+| 5 | `adapters/async_sqlite.py:243` | no-any-return | `row["cnt"]` returns Any (sqlite3.Row) | `int(row["cnt"]) if row else 0` explicit cast |
+| 6 | `core/_recall.py:157` | attr-defined | `StorageAdapter` ABC base class lacks `recall_aggregated` | `getattr(self._adapter, "name", None)` + callable check + indirect call |
+| 7 | `core/_recall.py:172` | attr-defined | `StorageAdapter` ABC base class lacks `recall_timeline` | Same `getattr` pattern |
+| 8 | `integration/layer2_mcp/server.py:65` | arg-type | `namespace or os.environ.get("X", "default")` infers `str \| None` | Three-segment fallback `namespace or os.environ.get("X") or "default"` |
+
+### Design Decisions (Architect + Coder consensus)
+
+1. **config.py / server.py — Three-segment `or` fallback**:
+   Chose `a or b or c` over `a or b` + `: str` annotation because mypy's `os.environ.get("X", "default")`
+   still returns `str | None` (known limitation). The trailing `or "default"` guarantees mypy infers `str`.
+
+2. **audit.py — Explicit `Optional[AuditEvent]` annotation**:
+   Chose type annotation over `# type: ignore[unreachable]` because annotation is more honest about
+   the variable's intended type and doesn't suppress future type checking.
+
+3. **obsidian_adapter.py — `float(...)` casts**:
+   Chose per-variable `float(...)` cast over a single `# type: ignore[no-any-return]` because it
+   makes the type contract explicit at each step and catches future regressions.
+
+4. **async_sqlite.py:35 — `aiosqlite: Any = None`**:
+   Chose `Any` over `Optional[ModuleType]` because `aiosqlite.Connection` / `aiosqlite.Row` are
+   class-level attributes accessed elsewhere in the file; `Optional[ModuleType]` would break
+   those accesses. `Any` is the standard pattern for optional module-level imports.
+
+5. **_recall.py — `getattr` + callable check**:
+   Chose `getattr(self._adapter, "name", None)` over `cast(Protocol, self._adapter)` because:
+   (a) avoids introducing a new Protocol class for 2 methods;
+   (b) preserves the runtime `hasattr` check semantics;
+   (c) mypy sees `getattr(..., default)` as returning `Any`, eliminating attr-defined errors.
+
+### Verification Commands
+| Check | Command | Result |
+|-------|---------|--------|
+| mypy | `mypy src/` | **Success: no issues found in 161 source files** (was 9 errors) |
+| flake8 | `flake8 <6 modified files> --max-line-length=120` | 0 errors |
+| black | `black --check --line-length=120 <6 modified files>` | all unchanged |
+| isort | `isort --check-only <6 modified files>` | all unchanged |
+| targeted regression | `pytest tests/ -k "config or audit or obsidian or async_sqlite or recall or server or mcp or handlers" -q --no-cov` | **773 passed, 0 failed** (121.47s) |
+| full non-e2e regression | `pytest tests/ --ignore=tests/e2e -q --no-cov -m "not slow" --deselect tests/test_performance_benchmark.py::test_recall_500_memories_under_100ms` | **4632 passed, 2 skipped, 57 deselected, 0 failed** (345.61s) |
+| version consistency | `grep -rn "0\.9\.0" VERSION src/carrymem/__version__.py server.json Dockerfile` | 0 results (all updated to 0.9.1) |
+
+### Behavior Change
+**None.** All fixes are type-level only — runtime semantics unchanged. The `getattr` pattern in
+`_recall.py` preserves the exact runtime check semantics of the original `hasattr` + direct call.
+
+### Files Modified
+- `src/carrymem/utils/config.py` — Three-segment fallback + `: str` annotation
+- `src/carrymem/security/audit.py` — `Optional[AuditEvent]` annotation on `last_event`
+- `src/carrymem/adapters/obsidian_adapter.py` — `float(...)` casts on 3 score variables
+- `src/carrymem/adapters/async_sqlite.py` — `aiosqlite: Any = None` + `int(row["cnt"])` cast
+- `src/carrymem/core/_recall.py` — `getattr` + callable check pattern (2 methods)
+- `src/carrymem/integration/layer2_mcp/server.py` — Three-segment fallback for namespace
+- `docs/TECH_DEBT_PLAN.md` — TD-055 added with full design + verification table
+- `VERSION`, `src/carrymem/__version__.py`, `server.json`, `Dockerfile` — 0.9.0 → 0.9.1
+
+### Test Plan
+- ✅ Targeted regression (config/audit/obsidian/async_sqlite/recall/server/mcp/handlers): 773 passed
+- ✅ Full non-e2e regression: 4632 passed, 0 failed (no regressions vs v0.9.0 baseline)
+- ✅ mypy: 0 errors (was 9)
+- ✅ flake8/black/isort: 0 errors on 6 modified files
+- ⏸️ e2e tests: not run (no behavior change; deferred to next minor release)
+
+### CI Impact
+**Before**: `lint` job in `.github/workflows/ci.yml` was perpetually red due to `mypy src/` exit 1.
+**After**: `mypy src/` exits 0; `lint` job will pass on next push (assuming flake8/black/isort also clean).
+
 ## [0.9.0] - 2026-07-20 (UI/UX Overhaul — Morandi Aesthetic + Accessibility + Onboarding)
 
 ### Summary

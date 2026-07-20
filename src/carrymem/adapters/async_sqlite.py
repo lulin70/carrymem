@@ -29,10 +29,14 @@ from carrymem.adapters.sqlite.schema import _SCHEMA_SQL, _V051_MIGRATION_SQL, _V
 from carrymem.utils.helpers import TIER_TTL, content_hash
 from carrymem.utils.logger import logger
 
+# aiosqlite is an optional dependency. Use Any to avoid mypy name-defined
+# errors for aiosqlite.Connection / aiosqlite.Row when the package is
+# absent at static-analysis time. Runtime import errors are handled below.
+aiosqlite: Any = None
 try:
     import aiosqlite
 except ImportError:
-    aiosqlite = None
+    pass
 
 
 class AsyncSQLiteAdapter:
@@ -240,7 +244,7 @@ class AsyncSQLiteAdapter:
             (ns,),
         )
         row = await cursor.fetchone()
-        return row["cnt"] if row else 0
+        return int(row["cnt"]) if row else 0
 
     async def close(self) -> None:
         """Close the database connection."""
