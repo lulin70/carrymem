@@ -731,7 +731,9 @@ class TestGraphPerformanceBenchmark:
 
         # Verify existing rows got default 'EXTRACTED'
         sample = conn.execute("SELECT confidence FROM memory_relations LIMIT 1").fetchone()
-        assert sample["confidence"] == "EXTRACTED", f"Default confidence should be EXTRACTED, got {sample['confidence']}"
+        assert sample["confidence"] == "EXTRACTED", (
+            f"Default confidence should be EXTRACTED, got {sample['confidence']}"
+        )
 
         print(
             f"\n[schema_migration_1000rel] relations=1000, "

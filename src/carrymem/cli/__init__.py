@@ -1,7 +1,7 @@
 # Re-export everything from submodules for backward compatibility
 from carrymem.cli._backup import *
 from carrymem.cli._base import *
-from carrymem.cli._format import HAS_RICH, OutputFormatter, formatter
+from carrymem.cli._format import formatter
 from carrymem.cli._io import *
 from carrymem.cli._mcp import *
 from carrymem.cli._memory import *

@@ -9,7 +9,7 @@ from __future__ import annotations
 import time
 from typing import Any, Dict
 
-from ._base import _safe_error, _version, mcp_tool_handler
+from ._base import _version, mcp_tool_handler
 
 
 @mcp_tool_handler

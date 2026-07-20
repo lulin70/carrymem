@@ -436,7 +436,9 @@ class TestIsLowInfoAssistantReply(unittest.TestCase):
         ]
         for msg in cases:
             with self.subTest(msg=msg):
-                self.assertIs(ClassificationPipeline._is_low_info_assistant_reply(msg), True, f"'{msg}' should be classified as low info",
+                self.assertIs(
+                    ClassificationPipeline._is_low_info_assistant_reply(msg), True,
+                    f"'{msg}' should be classified as low info"
                 )
 
     def test_that_makes_sense_is_low_info(self):

@@ -255,7 +255,7 @@ class Handlers:
         try:
             return OperationLevel(normalized)
         except ValueError as e:
-            valid = ", ".join(repr(l.value) for l in OperationLevel)
+            valid = ", ".join(repr(op_level.value) for op_level in OperationLevel)
             raise ValueError(
                 f"Unknown operation level: {level!r}. Valid levels: {valid}"
             ) from e

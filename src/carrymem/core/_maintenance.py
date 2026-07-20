@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 from threading import Timer
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from carrymem.adapters.base import EncryptionProvider, RawConnectionProvider
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.constants import (
     BATCH_RECALL_LIMIT,

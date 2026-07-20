@@ -81,7 +81,10 @@ class TestE2ESecurityPipeline(unittest.TestCase):
         msg = "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
         findings = detect_sensitive_content(msg)
         pattern_names = [f[0] for f in findings]
-        self.assertIs(any("bearer" in p or "jwt" in p for p in pattern_names), True, "Bearer/JWT token should be detected")
+        self.assertIs(
+            any("bearer" in p or "jwt" in p for p in pattern_names), True,
+            "Bearer/JWT token should be detected"
+        )
 
     def test_db_connection_string_detected(self):
         """Verify: Database connection strings with credentials are detected."""

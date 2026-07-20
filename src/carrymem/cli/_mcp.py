@@ -13,7 +13,6 @@ from carrymem.cli._base import (
     _dim,
     _green,
     _make_parser,
-    _red,
     _t,
     _yellow,
 )

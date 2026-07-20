@@ -163,7 +163,8 @@ class TestProtocolMethodStability:
         """StorageClient must have exactly these 4 methods."""
         expected = {"store", "store_entry", "delete", "count"}
         actual = {
-            name for name in dir(StorageClient) if not name.startswith("_") and callable(getattr(StorageClient, name, None))
+            name for name in dir(StorageClient)
+            if not name.startswith("_") and callable(getattr(StorageClient, name, None))
         }
         # Protocol classes have some extra attrs; check that expected methods exist
         assert expected.issubset(actual), f"Missing methods: {expected - actual}"
@@ -179,7 +180,8 @@ class TestProtocolMethodStability:
             "recall_multi_mode",
         }
         actual = {
-            name for name in dir(RecallClient) if not name.startswith("_") and callable(getattr(RecallClient, name, None))
+            name for name in dir(RecallClient)
+            if not name.startswith("_") and callable(getattr(RecallClient, name, None))
         }
         assert expected.issubset(actual), f"Missing methods: {expected - actual}"
 
@@ -205,6 +207,7 @@ class TestProtocolMethodStability:
         """VersioningProvider must have these 3 methods."""
         expected = {"update_memory", "rollback_memory", "get_memory_history"}
         actual = {
-            name for name in dir(VersioningProvider) if not name.startswith("_") and callable(getattr(VersioningProvider, name, None))
+            name for name in dir(VersioningProvider)
+            if not name.startswith("_") and callable(getattr(VersioningProvider, name, None))
         }
         assert expected.issubset(actual), f"Missing methods: {expected - actual}"

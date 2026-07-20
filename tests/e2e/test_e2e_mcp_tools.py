@@ -705,7 +705,10 @@ class TestGraphToolsE2E(unittest.TestCase):
         """Verify: Full user flow — create memory → extract entities → add relation → query → path → impact."""
         # Step 1: Create a memory (auto-extracts entities)
         store_result = self.loop.run_until_complete(
-            _call_tool(self.server, "classify_and_remember", {"message": "I prefer PostgreSQL for database development"})
+            _call_tool(
+                self.server, "classify_and_remember",
+                {"message": "I prefer PostgreSQL for database development"}
+            )
         )
         self.assertIs(store_result.get("success"), True, f"Store failed: {store_result}")
         store_data = store_result.get("data", store_result)
@@ -781,13 +784,17 @@ class TestMCPToolsCoverage(unittest.TestCase):
     def test_core_tools_exist(self):
         """Verify all core tools are present in CORE_TOOL_NAMES."""
         expected_core = {"classify_message", "get_classification_schema", "batch_classify"}
-        self.assertIs(expected_core.issubset(CORE_TOOL_NAMES), True, f"Missing core tools: {expected_core - CORE_TOOL_NAMES}"
+        self.assertIs(
+            expected_core.issubset(CORE_TOOL_NAMES), True,
+            f"Missing core tools: {expected_core - CORE_TOOL_NAMES}"
         )
 
     def test_optional_tools_exist(self):
         """Verify optional storage tools are present."""
         expected_optional = {"classify_and_remember", "recall_memories", "forget_memory"}
-        self.assertIs(expected_optional.issubset(OPTIONAL_TOOL_NAMES), True, f"Missing optional tools: {expected_optional - OPTIONAL_TOOL_NAMES}",
+        self.assertIs(
+            expected_optional.issubset(OPTIONAL_TOOL_NAMES), True,
+            f"Missing optional tools: {expected_optional - OPTIONAL_TOOL_NAMES}"
         )
 
     def test_total_tool_count(self):
@@ -929,7 +936,9 @@ class TestMCPAccessControlE2E(unittest.TestCase):
             result = self.loop.run_until_complete(
                 _call_tool(server, "classify_and_remember", {"message": "I prefer dark mode"})
             )
-            self.assertIs(result.get("success", False), True, f"Write should succeed with authorized user_id, got: {result}",
+            self.assertIs(
+                result.get("success", False), True,
+                f"Write should succeed with authorized user_id, got: {result}"
             )
         finally:
             self.loop.run_until_complete(server.cleanup())
@@ -1050,7 +1059,10 @@ class TestMCPConfidenceLabelE2E(unittest.TestCase):
         # Verify the relation has confidence=INFERRED
         relations = query_data.get("relations", [])
         if relations:
-            rust_relations = [r for r in relations if r.get("source_entity") == "Rust" or r.get("entity_text") == "Rust"]
+            rust_relations = [
+                r for r in relations
+                if r.get("source_entity") == "Rust" or r.get("entity_text") == "Rust"
+            ]
             for rel in rust_relations:
                 self.assertIn(
                     rel.get("confidence", rel.get("relation_confidence")),

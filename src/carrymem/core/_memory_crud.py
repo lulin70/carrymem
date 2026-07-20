@@ -53,6 +53,7 @@ class MemoryCRUDMixin:
             force_type: Optional[str],
             session_id: Optional[str],
         ) -> tuple: ...
+
         def _classify_message(
             self,
             resolved_message: str,
@@ -61,6 +62,7 @@ class MemoryCRUDMixin:
             force_type: Optional[str],
             message: str,
         ) -> Any: ...
+
         def _store_entries(
             self,
             classify_result: Dict[str, Any],

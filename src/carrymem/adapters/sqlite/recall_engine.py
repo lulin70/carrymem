@@ -439,7 +439,9 @@ class RecallEngine:
                     batch_updates,
                 )
         else:
-            self._collect_row_access_updates(rows, update_access, now, now_iso, limit, seen_keys, batch_updates, results)
+            self._collect_row_access_updates(
+                rows, update_access, now, now_iso, limit, seen_keys, batch_updates, results
+            )
             if update_access and batch_updates:
                 conn.executemany(
                     "UPDATE memories SET access_count = access_count + 1, "

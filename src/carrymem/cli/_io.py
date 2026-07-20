@@ -21,12 +21,9 @@ from carrymem.cli._base import (
     _dim,
     _get_carrymem,
     _get_rule_engine,
-    _green,
     _make_parser,
-    _red,
     _t,
     _validate_cli_path,
-    _yellow,
 )
 from carrymem.cli._format import formatter
 

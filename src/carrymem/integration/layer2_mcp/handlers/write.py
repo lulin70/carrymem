@@ -9,8 +9,6 @@ from typing import Any, Dict
 
 from ._base import (
     _clamp,
-    _MAX_LIMIT,
-    _safe_error,
     _validate_input,
     mcp_tool_handler,
 )
