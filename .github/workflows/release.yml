@@ -48,15 +48,31 @@ jobs:
 
       - name: Type check — mypy
         run: |
-          mypy src/carrymem/ --ignore-missing-imports
+          # Align with ci.yml L180: `mypy src/` auto-reads pyproject.toml [tool.mypy]
+          # --ignore-missing-imports was removed because pyproject.toml already
+          # configures mypy properly, and the flag would mask real type errors.
+          # Runtime deps (rich/textual/aiosqlite/cryptography) are installed via
+          # the `[dev,async,tui]` extras in the previous step.
+          mypy src/
 
       - name: Security — bandit
         run: |
-          bandit -r src/carrymem/ -ll
+          # -lll = fail only on HIGH severity (aligns with ci.yml L271)
+          # -ll would fail on LOW+ which produces 95 false-positive issues
+          bandit -r src/carrymem/ -lll
 
       - name: Security — pip-audit
         run: |
-          pip-audit
+          # Isolated venv to audit only carrymem's actual dependencies
+          # (aligns with ci.yml L274-283). Running `pip-audit` directly would
+          # audit the runner's pre-installed system packages, producing 50+
+          # false positives unrelated to this project.
+          python -m venv /tmp/audit-venv
+          /tmp/audit-venv/bin/pip install --upgrade pip
+          /tmp/audit-venv/bin/pip install -e .
+          /tmp/audit-venv/bin/pip install pip-audit
+          # --desc: show vulnerability descriptions
+          /tmp/audit-venv/bin/pip-audit --desc
 
       - name: Run tests (gate — must pass before publish)
         run: |
