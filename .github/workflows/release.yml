@@ -34,7 +34,9 @@ jobs:
 
       - name: Lint — flake8
         run: |
-          flake8 src/ tests/ --max-line-length=120 --extend-ignore=E203,W503
+          # Rely on .flake8 config (extend-ignore includes E203/W503/F403/F405/E402/E731/E712/F541/W391 etc.)
+          # --extend-ignore on CLI would OVERWRITE the config file's list, not append.
+          flake8 src/ tests/ --max-line-length=120 --statistics
 
       - name: Lint — black --check
         run: |
