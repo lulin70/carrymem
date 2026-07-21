@@ -375,7 +375,7 @@
 | **负责角色** | DevOps + Security |
 | **验证标准** | 命令 `grep -c "password.*PYPI_API_TOKEN" .github/workflows/release.yml` 返回 0；`gh secret list` 显示无 `PYPI_API_TOKEN`；rc 预发布 tag 成功上传到 PyPI |
 | **依赖** | 无 |
-| **状态** | 🟡 代码部分完成 (release.yml 已加 `environment: pypi` + 分支保护注释；密码行暂留待 OIDC 验证后删除；3 个手动步骤待用户执行: 配置 PyPI Trusted Publisher、用 rc tag 验证、删除 PYPI_API_TOKEN secret) |
+| **状态** | 🟡 代码侧全部完成 (2026-07-21, 将随下次 release 验证) — release.yml 已加 `environment: pypi` + `id-token: write` 权限 + 分支保护注释；**password 行已删除**（因 PyPI API token 在对话渠道暴露 2 次触发强制撤销流程，password 行保留无意义）。**4 个手动步骤待用户执行**：(1) 在 https://pypi.org/manage/account/token/ 撤销暴露的 token；(2) 在 https://pypi.org/manage/project/carrymem/publishing/ 配置 Trusted Publisher（repo=`lulin70/carrymem`、workflow=`release.yml`、environment=`pypi`、tag 正则 `^v\d+\.\d+\.\d+(-rc\d+)?$`）；(3) 推送 `v0.9.3-rc1` tag 验证 OIDC 发布成功；(4) 验证成功后 `gh secret delete PYPI_API_TOKEN -R lulin70/carrymem` + 配置 `new-main` 分支保护（require PR review ≥1 + status checks pre-release-test/e2e-gate + restrict direct push） |
 | **生命周期** | P6 安全审查 → P10 部署发布 |
 
 #### TD-016: 6 个 CI job 缺 timeout-minutes

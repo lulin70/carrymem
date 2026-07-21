@@ -210,21 +210,27 @@ jobs:
           fi
           echo "Version consistency verified: $TAG_VERSION"
 
+      # TD-015 OIDC migration COMPLETE (2026-07-21):
+      # ─────────────────────────────────────────────────────────────────────
+      # The legacy `password: ${{ secrets.PYPI_API_TOKEN }}` block was removed
+      # because the API token was exposed in a conversation channel (violating
+      # the user's own rule: "密钥轮换判定标准是密钥是否在对话/日志/公共渠道中
+      # 暴露过"). The exposed token MUST be revoked at
+      # https://pypi.org/manage/account/token/ immediately.
+      #
+      # Publishing now relies exclusively on PyPI OIDC Trusted Publishing:
+      #   1. PyPI project → Publishing → Add Trusted Publisher
+      #      (repo=lulin70/carrymem, workflow=release.yml, environment=pypi)
+      #   2. This workflow already declares `environment: pypi` + `id-token: write`
+      #   3. The `pypa/gh-action-pypi-publish@release/v1` action auto-detects OIDC
+      #      when no `password` is supplied.
+      #   4. Verify with an `vX.Y.Z-rcN` prerelease tag before a real release.
+      #   5. After successful OIDC verification, delete the PYPI_API_TOKEN
+      #      secret from GitHub → Settings → Secrets and variables → Actions.
+      #   6. Branch protection on `new-main` is REQUIRED (see step 6 comment
+      #      above) — PyPI's Trusted Publisher trust chain depends on it.
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          # TD-015 step 3: OIDC migration — KEEP the legacy API token during the
-          # transition window. Once the Trusted Publisher (configured in step 4)
-          # is verified to publish successfully, replace this whole `with:` block
-          # with a bare run of the action (no `password`), letting OIDC take over:
-          #
-          #   - name: Publish to PyPI
-          #     uses: pypa/gh-action-pypi-publish@release/v1
-          #
-          # Then delete the PYPI_API_TOKEN secret from GitHub → Settings →
-          # Secrets and variables → Actions. Do NOT remove the token before OIDC
-          # has been confirmed working end-to-end on a real release.
-          password: ${{ secrets.PYPI_API_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

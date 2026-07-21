@@ -5,6 +5,79 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - TD-015 OIDC Migration (Code-side)
+
+### Summary
+Completed code-side changes for TD-015 (PyPI OIDC Trusted Publisher migration).
+This is a **release infrastructure change only** — no runtime code modified.
+A PyPI API token was exposed in a conversation channel (twice), which per the
+user's own rule ("密钥轮换判定标准是密钥是否在对话/日志/公共渠道中暴露过")
+mandates immediate revocation. Removing the `password:` line from `release.yml`
+is the natural consequence: publishing now relies exclusively on PyPI OIDC
+Trusted Publishing.
+
+### Changes
+
+| File | Change |
+|------|--------|
+| `.github/workflows/release.yml:213-233` | Removed `password: ${{ secrets.PYPI_API_TOKEN }}` block; added 20-line OIDC migration completion comment with 6-step verification checklist |
+| `docs/TECH_DEBT_PLAN.md` (TD-015 row) | Status updated from "🟡 代码部分完成" to "🟡 代码侧全部完成"; documented 4 remaining manual steps for user |
+
+### Verification
+
+```bash
+# password line must be gone (only comments may mention PYPI_API_TOKEN)
+grep -nE '^\s*password:\s*\$\{\{\s*secrets\.PYPI_API_TOKEN' .github/workflows/release.yml
+# Expected: no matches
+
+# All PYPI_API_TOKEN references must be inside comments
+grep -nE 'PYPI_API_TOKEN' .github/workflows/release.yml
+# Expected: 4 matches, all starting with '#' (comment lines)
+```
+
+### Pending Manual Steps (User Action Required)
+
+1. **Revoke exposed PyPI API token** at https://pypi.org/manage/account/token/
+2. **Configure PyPI Trusted Publisher** at
+   https://pypi.org/manage/project/carrymem/publishing/ with:
+   - PyPI Project Name: `carrymem`
+   - Owner: `lulin70`
+   - Repository: `carrymem`
+   - Workflow filename: `release.yml`
+   - Environment: `pypi`
+   - Tag regex (optional): `^v\d+\.\d+\.\d+(-rc\d+)?$`
+3. **Verify OIDC end-to-end** by pushing tag `v0.9.3-rc1` (after bumping
+   version files). Confirm the GitHub Actions release job succeeds and the
+   `carrymem` package appears on PyPI with the new version.
+4. **Clean up GitHub secret** after successful OIDC verification:
+   ```bash
+   gh secret delete PYPI_API_TOKEN -R lulin70/carrymem
+   gh secret list -R lulin70/carrymem  # confirm PYPI_API_TOKEN is gone
+   ```
+5. **Configure `new-main` branch protection** at
+   https://github.com/lulin70/carrymem/settings/branches:
+   - Require pull request reviews before merging (≥1 reviewer)
+   - Require status checks to pass (pre-release-test, e2e-gate, vscode-e2e)
+   - Require branches to be up to date before merging
+   - Restrict who can push to matching branches (no direct push)
+
+### Security Note
+
+The exposed token had scope `uploaded_to_pypi` for project `carrymem`. Even
+though PyPI tokens are project-scoped (not account-wide), exposure in a
+conversation channel is sufficient grounds for revocation per the user's
+own rule. After revocation, the legacy `PYPI_API_TOKEN` secret in GitHub
+becomes a dead string — step 4 above removes it.
+
+### CI Impact
+
+- `release.yml` continues to trigger on `v*` tags
+- The `release` job now requires the `pypi` environment to exist in GitHub
+  Settings → Environments (recommended: add required reviewer = `lulin70`)
+- Until step 2 (Trusted Publisher config) is complete, any `v*` tag push
+  will fail at the "Publish to PyPI" step with an OIDC error — this is
+  expected and signals that the migration is not yet finished
+
 ## [0.9.2] - 2026-07-20 (P3 Tech Debt Cleanup: TD-031/049/050/051/053/054)
 
 ### Summary
