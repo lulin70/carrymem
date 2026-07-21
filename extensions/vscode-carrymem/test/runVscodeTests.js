@@ -15,7 +15,7 @@
  */
 
 const path = require('path');
-const { downloadAndRunTests } = require('@vscode/test-electron');
+const { runTests } = require('@vscode/test-electron');
 
 async function main() {
     try {
@@ -23,12 +23,14 @@ async function main() {
         const extensionDevelopmentPath = path.resolve(__dirname, '..');
 
         // The path to the test runner script (mocha)
-        const testRunnerPath = path.resolve(__dirname, 'extension.test.js');
+        const testsPath = path.resolve(__dirname, 'extension.test.js');
 
-        // Download VSCode, unzip it, and run the tests
-        await downloadAndRunTests({
+        // Download VSCode, unzip it, and run the tests via the public runTests API.
+        // (Previously used downloadAndRunTests which is not a public export of
+        //  @vscode/test-electron — see node_modules/@vscode/test-electron/out/index.d.ts)
+        await runTests({
             extensionDevelopmentPath,
-            testRunnerPath,
+            testsPath,
             // Use stable VSCode version
             version: 'stable',
             // Additional launch arguments

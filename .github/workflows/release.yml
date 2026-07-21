@@ -122,7 +122,11 @@ jobs:
 
       - name: Run E2E test suite (user journey simulation)
         run: |
+          # --no-cov: e2e tests validate user journeys, not coverage.
+          # pyproject.toml [tool.pytest.ini_options] enables --cov by default,
+          # which would fail with ~40% coverage (only e2e/ subset runs).
           python -m pytest tests/e2e/ \
+            --no-cov \
             --timeout=300 \
             -m "not slow" \
             -v
