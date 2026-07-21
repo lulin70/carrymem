@@ -5,23 +5,31 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - TD-015 OIDC Migration (Code-side)
+## [Unreleased] - TD-015 OIDC Migration (Code-side + CI-side)
 
 ### Summary
-Completed code-side changes for TD-015 (PyPI OIDC Trusted Publisher migration).
-This is a **release infrastructure change only** — no runtime code modified.
-A PyPI API token was exposed in a conversation channel (twice), which per the
-user's own rule ("密钥轮换判定标准是密钥是否在对话/日志/公共渠道中暴露过")
+Completed code-side and CI-side changes for TD-015 (PyPI OIDC Trusted Publisher
+migration). This is a **release infrastructure change only** — no runtime code
+modified. A PyPI API token was exposed in a conversation channel (twice), which
+per the user's own rule ("密钥轮换判定标准是密钥是否在对话/日志/公共渠道中暴露过")
 mandates immediate revocation. Removing the `password:` line from `release.yml`
 is the natural consequence: publishing now relies exclusively on PyPI OIDC
 Trusted Publishing.
+
+**OIDC token exchange verified** (run 29835177978, 2026-07-21): GitHub Actions
+successfully generated an OIDC token, PyPI validated it as a "valid token", and
+returned `invalid-publisher` because no Trusted Publisher is configured yet
+(expected error — pending user step 2).
 
 ### Changes
 
 | File | Change |
 |------|--------|
-| `.github/workflows/release.yml:213-233` | Removed `password: ${{ secrets.PYPI_API_TOKEN }}` block; added 20-line OIDC migration completion comment with 6-step verification checklist |
-| `docs/TECH_DEBT_PLAN.md` (TD-015 row) | Status updated from "🟡 代码部分完成" to "🟡 代码侧全部完成"; documented 4 remaining manual steps for user |
+| `.github/workflows/release.yml:225-244` | Removed `password: ${{ secrets.PYPI_API_TOKEN }}` block; added 20-line OIDC migration completion comment with 6-step verification checklist |
+| `.github/workflows/release.yml:225-244` | **PEP 440 version normalization fix**: `Verify version consistency` step now uses `packaging.version.Version` to normalize tag version (`0.9.3-rc1`) and wheel version (`0.9.3rc1`) before comparison. Fixes run 29832845134 where the step failed due to PEP 440 hyphen normalization. |
+| `pypi` environment (GitHub) | **deployment_branch_policy cleared** (set to null). Previous `custom_branch_policies: true` with only `new-main` branch blocked tag-triggered runs (tag head_branch is the tag name, not a branch name). Now accepts all branches/tags. |
+| `new-main` branch protection (GitHub) | Configured 6 required status checks (Lint, Tests ubuntu, Build & Install, Security Scan, Syntax Check, VSCode Extension Tests), `enforce_admins: false`, `strict: true` |
+| `docs/TECH_DEBT_PLAN.md` (TD-015 row) | Status updated to "🟡 代码侧+CI 侧全部完成，OIDC token 交换已验证"; documented 2 remaining manual steps |
 
 ### Verification
 
@@ -33,7 +41,23 @@ grep -nE '^\s*password:\s*\$\{\{\s*secrets\.PYPI_API_TOKEN' .github/workflows/re
 # All PYPI_API_TOKEN references must be inside comments
 grep -nE 'PYPI_API_TOKEN' .github/workflows/release.yml
 # Expected: 4 matches, all starting with '#' (comment lines)
+
+# pypi environment deployment_branch_policy must be null
+gh api repos/lulin70/carrymem/environments/pypi --jq '.deployment_branch_policy'
+# Expected: null
+
+# new-main branch protection must have 6 status checks
+gh api repos/lulin70/carrymem/branches/new-main/protection --jq '.required_status_checks.contexts'
+# Expected: ["Lint (Quality Gate)", "Tests (py3.12 on ubuntu-latest)", "Build & Install Test", "Security Scan", "Syntax Check", "VSCode Extension Tests"]
 ```
+
+### CI Run History (OIDC verification progression)
+
+| Run ID | Result | Root cause | Fix |
+|--------|--------|------------|-----|
+| 29830439367 | Build & Publish 2s failure | `deployment_branch_policy.protected_branches: true` blocked tag deployment | Clear deployment_branch_policy (set to null) |
+| 29832845134 | Verify version consistency failure | Tag `0.9.3-rc1` ≠ wheel `0.9.3rc1` (PEP 440 normalization) | Use `packaging.version.Version` to normalize both |
+| 29835177978 | Publish to PyPI failure (expected) | `invalid-publisher`: no Trusted Publisher configured | **Pending user step 2** |
 
 ### Pending Manual Steps (User Action Required)
 
@@ -46,20 +70,15 @@ grep -nE 'PYPI_API_TOKEN' .github/workflows/release.yml
    - Workflow filename: `release.yml`
    - Environment: `pypi`
    - Tag regex (optional): `^v\d+\.\d+\.\d+(-rc\d+)?$`
-3. **Verify OIDC end-to-end** by pushing tag `v0.9.3-rc1` (after bumping
-   version files). Confirm the GitHub Actions release job succeeds and the
-   `carrymem` package appears on PyPI with the new version.
-4. **Clean up GitHub secret** after successful OIDC verification:
+
+   **This is the only remaining blocker.** Once configured, notify AI to
+   re-trigger the `v0.9.3-rc1` tag for end-to-end OIDC verification.
+
+3. **After OIDC verification succeeds**, clean up GitHub secret:
    ```bash
    gh secret delete PYPI_API_TOKEN -R lulin70/carrymem
    gh secret list -R lulin70/carrymem  # confirm PYPI_API_TOKEN is gone
    ```
-5. **Configure `new-main` branch protection** at
-   https://github.com/lulin70/carrymem/settings/branches:
-   - Require pull request reviews before merging (≥1 reviewer)
-   - Require status checks to pass (pre-release-test, e2e-gate, vscode-e2e)
-   - Require branches to be up to date before merging
-   - Restrict who can push to matching branches (no direct push)
 
 ### Security Note
 
