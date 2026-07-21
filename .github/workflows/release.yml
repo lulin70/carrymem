@@ -229,13 +229,19 @@ jobs:
           # Extract built wheel version
           WHEEL=$(ls dist/carrymem-*.whl | head -1)
           WHEEL_VERSION=$(echo "$WHEEL" | sed -n 's/.*carrymem-\([^-]*\)-.*/\1/p')
-          echo "Tag version:    $TAG_VERSION"
-          echo "Wheel version:  $WHEEL_VERSION"
-          if [ "$TAG_VERSION" != "$WHEEL_VERSION" ]; then
-            echo "ERROR: Tag version ($TAG_VERSION) does not match built wheel version ($WHEEL_VERSION)"
+          # PEP 440 normalization: tag like "0.9.3-rc1" must match wheel "0.9.3rc1".
+          # `packaging.version.Version` normalizes both to the canonical form,
+          # so "0.9.3-rc1" == "0.9.3rc1" after normalization. (packaging is
+          # already installed because twine depends on it.)
+          TAG_NORMALIZED=$(python -c "from packaging.version import Version; print(Version('$TAG_VERSION'))")
+          WHEEL_NORMALIZED=$(python -c "from packaging.version import Version; print(Version('$WHEEL_VERSION'))")
+          echo "Tag version:    $TAG_VERSION  (normalized: $TAG_NORMALIZED)"
+          echo "Wheel version:  $WHEEL_VERSION  (normalized: $WHEEL_NORMALIZED)"
+          if [ "$TAG_NORMALIZED" != "$WHEEL_NORMALIZED" ]; then
+            echo "ERROR: Tag version ($TAG_VERSION → $TAG_NORMALIZED) does not match built wheel version ($WHEEL_VERSION → $WHEEL_NORMALIZED)"
             exit 1
           fi
-          echo "Version consistency verified: $TAG_VERSION"
+          echo "Version consistency verified: $TAG_VERSION (normalized: $TAG_NORMALIZED)"
 
       # TD-015 OIDC migration COMPLETE (2026-07-21):
       # ─────────────────────────────────────────────────────────────────────
