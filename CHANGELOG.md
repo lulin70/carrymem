@@ -5,97 +5,63 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - TD-015 OIDC Migration (Code-side + CI-side)
+## [0.9.3rc1] - 2026-07-22 — TD-015 Password-based publish restored (OIDC abandoned)
 
 ### Summary
-Completed code-side and CI-side changes for TD-015 (PyPI OIDC Trusted Publisher
-migration). This is a **release infrastructure change only** — no runtime code
-modified. A PyPI API token was exposed in a conversation channel (twice), which
-per the user's own rule ("密钥轮换判定标准是密钥是否在对话/日志/公共渠道中暴露过")
-mandates immediate revocation. Removing the `password:` line from `release.yml`
-is the natural consequence: publishing now relies exclusively on PyPI OIDC
-Trusted Publishing.
+User decided NOT to configure PyPI Trusted Publisher. Reverted to traditional
+API token approach by restoring `password: ${{ secrets.PYPI_API_TOKEN }}` in
+release.yml. **carrymem==0.9.3rc1 successfully published to PyPI** (run 29893374227).
 
-**OIDC token exchange verified** (run 29835177978, 2026-07-21): GitHub Actions
-successfully generated an OIDC token, PyPI validated it as a "valid token", and
-returned `invalid-publisher` because no Trusted Publisher is configured yet
-(expected error — pending user step 2).
+OIDC migration was explored and validated (GitHub OIDC token exchange works,
+PyPI confirmed token validity), but ultimately abandoned per user decision.
+The `environment: pypi` and `id-token: write` declarations are kept (harmless
+with password-based auth) for potential future OIDC migration.
 
 ### Changes
 
 | File | Change |
 |------|--------|
-| `.github/workflows/release.yml:225-244` | Removed `password: ${{ secrets.PYPI_API_TOKEN }}` block; added 20-line OIDC migration completion comment with 6-step verification checklist |
-| `.github/workflows/release.yml:225-244` | **PEP 440 version normalization fix**: `Verify version consistency` step now uses `packaging.version.Version` to normalize tag version (`0.9.3-rc1`) and wheel version (`0.9.3rc1`) before comparison. Fixes run 29832845134 where the step failed due to PEP 440 hyphen normalization. |
-| `pypi` environment (GitHub) | **deployment_branch_policy cleared** (set to null). Previous `custom_branch_policies: true` with only `new-main` branch blocked tag-triggered runs (tag head_branch is the tag name, not a branch name). Now accepts all branches/tags. |
-| `new-main` branch protection (GitHub) | Configured 6 required status checks (Lint, Tests ubuntu, Build & Install, Security Scan, Syntax Check, VSCode Extension Tests), `enforce_admins: false`, `strict: true` |
-| `docs/TECH_DEBT_PLAN.md` (TD-015 row) | Status updated to "🟡 代码侧+CI 侧全部完成，OIDC token 交换已验证"; documented 2 remaining manual steps |
+| `.github/workflows/release.yml:246-263` | Restored `password: ${{ secrets.PYPI_API_TOKEN }}` in Publish step; updated comment to document OIDC revert decision |
+| `.github/workflows/release.yml:225-244` | **PEP 440 version normalization**: `Verify version consistency` step uses `packaging.version.Version` to normalize tag version (`0.9.3-rc1`) and wheel version (`0.9.3rc1`) before comparison |
+| `pypi` environment (GitHub) | `deployment_branch_policy` cleared (null) — accepts all branches/tags (fixes tag-triggered run rejection) |
+| `new-main` branch protection (GitHub) | Configured 6 required status checks, `enforce_admins: false`, `strict: true` |
 
 ### Verification
 
 ```bash
-# password line must be gone (only comments may mention PYPI_API_TOKEN)
+# PyPI release confirmed
+curl -s https://pypi.org/pypi/carrymem/0.9.3rc1/json | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['info']['version'])"
+# Expected: 0.9.3rc1
+
+# password line restored
 grep -nE '^\s*password:\s*\$\{\{\s*secrets\.PYPI_API_TOKEN' .github/workflows/release.yml
-# Expected: no matches
+# Expected: 1 match
 
-# All PYPI_API_TOKEN references must be inside comments
-grep -nE 'PYPI_API_TOKEN' .github/workflows/release.yml
-# Expected: 4 matches, all starting with '#' (comment lines)
-
-# pypi environment deployment_branch_policy must be null
-gh api repos/lulin70/carrymem/environments/pypi --jq '.deployment_branch_policy'
-# Expected: null
-
-# new-main branch protection must have 6 status checks
-gh api repos/lulin70/carrymem/branches/new-main/protection --jq '.required_status_checks.contexts'
-# Expected: ["Lint (Quality Gate)", "Tests (py3.12 on ubuntu-latest)", "Build & Install Test", "Security Scan", "Syntax Check", "VSCode Extension Tests"]
+# PEP 440 normalization in Verify version consistency step
+grep -n "packaging.version.Version" .github/workflows/release.yml
+# Expected: 2 matches (TAG_NORMALIZED + WHEEL_NORMALIZED)
 ```
 
-### CI Run History (OIDC verification progression)
+### CI Run History
 
 | Run ID | Result | Root cause | Fix |
 |--------|--------|------------|-----|
-| 29830439367 | Build & Publish 2s failure | `deployment_branch_policy.protected_branches: true` blocked tag deployment | Clear deployment_branch_policy (set to null) |
-| 29832845134 | Verify version consistency failure | Tag `0.9.3-rc1` ≠ wheel `0.9.3rc1` (PEP 440 normalization) | Use `packaging.version.Version` to normalize both |
-| 29835177978 | Publish to PyPI failure (expected) | `invalid-publisher`: no Trusted Publisher configured | **Pending user step 2** |
+| 29830439367 | Build & Publish 2s failure | `deployment_branch_policy` blocked tag deployment | Clear deployment_branch_policy (null) |
+| 29832845134 | Verify version consistency failure | Tag `0.9.3-rc1` ≠ wheel `0.9.3rc1` (PEP 440) | Use `packaging.version.Version` to normalize |
+| 29835177978 | Publish to PyPI failure (OIDC) | `invalid-publisher`: no Trusted Publisher configured | Reverted to password-based auth |
+| 29893374227 | ✅ **Build & Publish success** | — | carrymem==0.9.3rc1 published to PyPI |
 
-### Pending Manual Steps (User Action Required)
+### ⚠️ Security Note
 
-1. **Revoke exposed PyPI API token** at https://pypi.org/manage/account/token/
-2. **Configure PyPI Trusted Publisher** at
-   https://pypi.org/manage/project/carrymem/publishing/ with:
-   - PyPI Project Name: `carrymem`
-   - Owner: `lulin70`
-   - Repository: `carrymem`
-   - Workflow filename: `release.yml`
-   - Environment: `pypi`
-   - Tag regex (optional): `^v\d+\.\d+\.\d+(-rc\d+)?$`
+The previously exposed PyPI API token (leaked in conversation channel twice)
+was used for this publish because the GitHub secret was not yet rotated. Per
+the user's own rule ("密钥轮换判定标准是密钥是否在对话/日志/公共渠道中暴露过"),
+the token MUST be revoked and rotated:
 
-   **This is the only remaining blocker.** Once configured, notify AI to
-   re-trigger the `v0.9.3-rc1` tag for end-to-end OIDC verification.
-
-3. **After OIDC verification succeeds**, clean up GitHub secret:
-   ```bash
-   gh secret delete PYPI_API_TOKEN -R lulin70/carrymem
-   gh secret list -R lulin70/carrymem  # confirm PYPI_API_TOKEN is gone
-   ```
-
-### Security Note
-
-The exposed token had scope `uploaded_to_pypi` for project `carrymem`. Even
-though PyPI tokens are project-scoped (not account-wide), exposure in a
-conversation channel is sufficient grounds for revocation per the user's
-own rule. After revocation, the legacy `PYPI_API_TOKEN` secret in GitHub
-becomes a dead string — step 4 above removes it.
-
-### CI Impact
-
-- `release.yml` continues to trigger on `v*` tags
-- The `release` job now requires the `pypi` environment to exist in GitHub
-  Settings → Environments (recommended: add required reviewer = `lulin70`)
-- Until step 2 (Trusted Publisher config) is complete, any `v*` tag push
-  will fail at the "Publish to PyPI" step with an OIDC error — this is
-  expected and signals that the migration is not yet finished
+1. Revoke old token at https://pypi.org/manage/account/token/
+2. Create new token at https://pypi.org/manage/account/token/
+3. Update GitHub secret: `gh secret set PYPI_API_TOKEN -R lulin70/carrymem`
+4. Verify: trigger a new release tag and confirm publish succeeds with new token
 
 ## [0.9.2] - 2026-07-20 (P3 Tech Debt Cleanup: TD-031/049/050/051/053/054)
 
