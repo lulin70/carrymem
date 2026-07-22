@@ -243,27 +243,24 @@ jobs:
           fi
           echo "Version consistency verified: $TAG_VERSION (normalized: $TAG_NORMALIZED)"
 
-      # TD-015 OIDC migration COMPLETE (2026-07-21):
+      # TD-015 OIDC migration REVERTED (2026-07-21):
       # ─────────────────────────────────────────────────────────────────────
-      # The legacy `password: ${{ secrets.PYPI_API_TOKEN }}` block was removed
-      # because the API token was exposed in a conversation channel (violating
-      # the user's own rule: "密钥轮换判定标准是密钥是否在对话/日志/公共渠道中
-      # 暴露过"). The exposed token MUST be revoked at
-      # https://pypi.org/manage/account/token/ immediately.
+      # User decided NOT to configure PyPI Trusted Publisher, reverting to
+      # the traditional API token approach. The `password:` line is restored.
       #
-      # Publishing now relies exclusively on PyPI OIDC Trusted Publishing:
-      #   1. PyPI project → Publishing → Add Trusted Publisher
-      #      (repo=lulin70/carrymem, workflow=release.yml, environment=pypi)
-      #   2. This workflow already declares `environment: pypi` + `id-token: write`
-      #   3. The `pypa/gh-action-pypi-publish@release/v1` action auto-detects OIDC
-      #      when no `password` is supplied.
-      #   4. Verify with an `vX.Y.Z-rcN` prerelease tag before a real release.
-      #   5. After successful OIDC verification, delete the PYPI_API_TOKEN
-      #      secret from GitHub → Settings → Secrets and variables → Actions.
-      #   6. Branch protection on `new-main` is REQUIRED (see step 6 comment
-      #      above) — PyPI's Trusted Publisher trust chain depends on it.
+      # Security note: the previously exposed token (leaked in conversation
+      # channel twice) should still be revoked and rotated per the user's
+      # own rule. If the GitHub secret PYPI_API_TOKEN still holds the exposed
+      # token value, it MUST be updated with a freshly generated token from
+      # https://pypi.org/manage/account/token/ before this publish step
+      # can be considered secure.
+      #
+      # The `environment: pypi` and `id-token: write` declarations are kept
+      # (harmless with password-based auth) for potential future OIDC migration.
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
