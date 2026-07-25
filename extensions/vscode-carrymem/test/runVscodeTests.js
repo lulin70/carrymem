@@ -22,22 +22,27 @@ async function main() {
         // The folder containing the Extension Manifest package.json.
         // __dirname is .../extensions/vscode-carrymem/out/test (this file is
         // copied from test/ to out/test/ by the compile script). The extension
-        // root (which contains package.json with "main": "./out/extension.js")
+        // root (which contains package.json with "main": "./out/src/extension.js")
         // is two levels up: out/test -> out -> extensions/vscode-carrymem.
         // Using one level up (out/) is wrong because VSCode would treat out/
-        // as the extension root and fail to resolve ./out/extension.js,
-        // producing "Cannot find module '/undefined'".
+        // as the extension root and fail to resolve ./out/src/extension.js.
         const extensionDevelopmentPath = path.resolve(__dirname, '..', '..');
 
-        // The path to the test runner script (mocha)
-        const testsPath = path.resolve(__dirname, 'extension.test.js');
+        // Absolute path to the test runner module (mocha).
+        // The @vscode/test-electron API requires `extensionTestsPath` (NOT
+        // `testsPath`) — see node_modules/@vscode/test-electron/out/runTest.d.ts.
+        // Passing `testsPath` silently sets `options.extensionTestsPath` to
+        // undefined, which VSCode forwards as `--extensionTestsPath=undefined`,
+        // producing "Cannot find module '/undefined'" in the extension host
+        // ( nightly run 30140373325, job 89637433895).
+        const extensionTestsPath = path.resolve(__dirname, 'extension.test.js');
 
         // Download VSCode, unzip it, and run the tests via the public runTests API.
         // (Previously used downloadAndRunTests which is not a public export of
         //  @vscode/test-electron — see node_modules/@vscode/test-electron/out/index.d.ts)
         await runTests({
             extensionDevelopmentPath,
-            testsPath,
+            extensionTestsPath,
             // Use stable VSCode version
             version: 'stable',
             // Additional launch arguments
