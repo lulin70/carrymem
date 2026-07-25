@@ -478,7 +478,7 @@ class TestSecurityPatternCoverage(unittest.TestCase):
         """Verify: Every pattern in SENSITIVE_PATTERNS compiles as valid regex."""
         import re
 
-        for name, pattern, description in SENSITIVE_PATTERNS:
+        for name, pattern, _description in SENSITIVE_PATTERNS:
             self.assertIsInstance(pattern, re.Pattern, f"Pattern '{name}' should be a compiled regex")
 
     def test_pattern_count_sufficient(self):

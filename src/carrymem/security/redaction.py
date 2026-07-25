@@ -149,7 +149,7 @@ def redact_content(text: str, replacement: str = "[REDACTED]") -> str:
         The text with sensitive content replaced.
     """
     spans = []
-    for name, pattern, description in SENSITIVE_PATTERNS:
+    for _name, pattern, _description in SENSITIVE_PATTERNS:
         for match in pattern.finditer(text):
             spans.append((match.start(), match.end()))
 

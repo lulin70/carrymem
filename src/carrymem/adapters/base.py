@@ -455,7 +455,7 @@ class StorageAdapter(ABC):
         Default implementation is a no-op (adapter has no cache).
         Override in adapters that implement caching.
         """
-        pass
+        return  # No-op by default; override in subclasses that implement caching.
 
     def invalidate_cache(self, keys: Optional[set] = None) -> None:
         """Invalidate cache entries.
@@ -466,7 +466,7 @@ class StorageAdapter(ABC):
         Default implementation is a no-op (adapter has no cache).
         Override in adapters that implement caching.
         """
-        pass
+        return  # No-op by default; override in subclasses that implement caching.
 
     # ── Knowledge Graph (v0.7.0+) ───────────────────────────────────────
 

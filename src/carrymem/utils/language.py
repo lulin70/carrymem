@@ -61,7 +61,6 @@ _STOP_WORDS = frozenset(
         "have",
         "had",
         "will",
-        "would",
     }
 )
 
@@ -619,7 +618,7 @@ class LanguageManager:
         keywords = []
         text_lower = text.lower()
 
-        for memory_type, lang_keywords in self.MULTI_LANG_KEYWORDS.items():
+        for _memory_type, lang_keywords in self.MULTI_LANG_KEYWORDS.items():
             if language in lang_keywords:
                 for keyword in lang_keywords[language]:
                     if keyword in text_lower:

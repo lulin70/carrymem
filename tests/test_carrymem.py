@@ -624,7 +624,7 @@ class TestCarryMemCore(unittest.TestCase):
 
     def test_storage_not_configured_error(self):
         cm = CarryMem(storage=None)
-        with self.assertRaises(Exception):
+        with self.assertRaisesRegex(Exception, "(?i)storage"):
             cm.classify_and_remember("I prefer dark mode")
 
 
@@ -949,12 +949,12 @@ class TestExportImport(unittest.TestCase):
 
     def test_export_no_storage_error(self):
         cm = CarryMem(storage=None)
-        with self.assertRaises(Exception):
+        with self.assertRaisesRegex(Exception, "(?i)storage"):
             cm.export_memories()
 
     def test_import_no_storage_error(self):
         cm = CarryMem(storage=None)
-        with self.assertRaises(Exception):
+        with self.assertRaisesRegex(Exception, "(?i)storage"):
             cm.import_memories(data={"memories": []})
 
     def test_import_no_input_error(self):

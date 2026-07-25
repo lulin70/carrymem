@@ -152,7 +152,7 @@ class JSONAdapter(StorageAdapter):
                 ns_data = self._data.get(ns, {})
                 memories = ns_data.get("memories", {})
 
-                for key, m in memories.items():
+                for _key, m in memories.items():
                     expires_at = m.get("expires_at")
                     if expires_at:
                         try:

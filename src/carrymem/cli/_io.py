@@ -1,7 +1,6 @@
 """CarryMem CLI - Import/export/pack commands: consolidate, export, import, pack, unpack."""
 
 import base64
-import binascii
 import getpass
 import gzip
 import hashlib
@@ -263,7 +262,7 @@ def _collect_config_for_pack():
             return config_data
         formatter.info("No config file found")
         return None
-    except (FileNotFoundError, json.JSONDecodeError, PermissionError, OSError) as e:
+    except (json.JSONDecodeError, OSError) as e:
         formatter.warning(f"Config export skipped: {e}")
         return None
 
@@ -431,7 +430,7 @@ def cmd_pack(args):
         file_size = os.path.getsize(output_path)
         formatter.success(f"Saved to {output_path} ({_format_file_size(file_size)})")
 
-    except (OSError, IOError, ValueError, TypeError) as e:
+    except (OSError, ValueError, TypeError) as e:
         formatter.error("E_PACK_FAILED", f"Pack failed: {e}")
         cm.close()
         return 1
@@ -499,7 +498,7 @@ def _decode_container_payload(container):
         try:
             compressed = base64.b64decode(payload_str)
             payload_json_str = gzip.decompress(compressed).decode("utf-8")
-        except (binascii.Error, ValueError, OSError) as e:
+        except (ValueError, OSError) as e:
             formatter.error("E_UNPACK_DECOMPRESS", f"Payload decompression failed: {e}")
             return None, 1
 
@@ -583,7 +582,7 @@ def _restore_config_from_pack(config_data, merge_mode: bool) -> None:
             with open(config_file, "w", encoding="utf-8") as f:
                 json.dump(config_data, f, indent=2, ensure_ascii=False)
         formatter.success("Config restored")
-    except (OSError, json.JSONDecodeError, PermissionError, ValueError) as e:
+    except (OSError, json.JSONDecodeError, ValueError) as e:
         formatter.warning(f"Config restore skipped: {e}")
 
 
@@ -689,7 +688,7 @@ def cmd_unpack(args):
 
         print(f"\n  \u2192 Run {_cyan('carrymem setup-mcp --all --global')} to reconnect your AI tools")
 
-    except (OSError, IOError, ValueError, TypeError, json.JSONDecodeError) as e:
+    except (OSError, ValueError, TypeError, json.JSONDecodeError) as e:
         formatter.error("E_UNPACK_FAILED", f"Unpack failed: {e}")
         cm.close()
         return 1

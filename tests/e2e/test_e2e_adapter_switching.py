@@ -175,19 +175,14 @@ class TestE2EAdapterFeatureParity:
 
     @pytest.mark.parametrize("storage_type", ["sqlite", "json"])
     def test_both_adapters_support_backup(self, tmp_path, storage_type):
-        """Verify: backup works on SQLite; JSON adapter does not support backup.
+        """Verify: backup behavior is well-defined for every adapter.
 
-        The CarryMem.backup() method is a SQLite-only feature (see BackupMixin).
-        For non-SQLite adapters it returns ``{"error": "Backup only supported with
-        SQLiteAdapter"}`` rather than raising. We therefore skip JSON specifically
-        (via parametrize, so the SQLite case still runs and is verified) and
-        verify SQLite backup returns a dict result.
+        SQLite: backup succeeds and returns ``{"backed_up": True, "path": ...}``.
+        JSON: backup is unsupported; ``backup()`` returns
+        ``{"error": "Backup not supported by this adapter"}`` (see BackupMixin).
+        Both branches must be exercised — skipping JSON would hide regressions
+        in the unsupported-adapter contract.
         """
-        # JSON adapter genuinely does not support backup — skip it specifically
-        # rather than relying on a generic exception handler.
-        if storage_type == "json":
-            pytest.skip("JSON adapter does not support backup (SQLite-only feature)")
-
         ext = ".db" if storage_type == "sqlite" else ".json"
         db_path = str(tmp_path / f"backup_{storage_type}{ext}")
         backup_dir = str(tmp_path / f"backup_{storage_type}_dir")
@@ -198,6 +193,18 @@ class TestE2EAdapterFeatureParity:
             cm.classify_and_remember(f"Backup test {storage_type}")
             backup_result = cm.backup(backup_dir=backup_dir)
             assert isinstance(backup_result, dict), f"{storage_type}: backup should return dict"
+            if storage_type == "json":
+                # JSON adapter must surface the unsupported-backup contract
+                # (error dict), not silently succeed or raise NotImplementedError.
+                assert "error" in backup_result, (
+                    f"JSON adapter should report unsupported backup via error dict, "
+                    f"got: {backup_result}"
+                )
+            else:
+                # SQLite: backup must succeed and report the backup path
+                assert backup_result.get("backed_up") is True or "path" in backup_result, (
+                    f"SQLite backup should succeed with backed_up=True/path, got: {backup_result}"
+                )
         finally:
             cm.close()
 
@@ -292,7 +299,7 @@ class TestE2EAdapterErrorHandling:
                 pass  # Operations on corrupted DB may fail
             finally:
                 cm.close()
-        except (json.JSONDecodeError, ValueError, Exception):
+        except (json.JSONDecodeError, Exception):
             pass  # Expected: reject corrupted file on open
 
     def test_readonly_database_handling(self, tmp_path):
@@ -321,7 +328,7 @@ class TestE2EAdapterErrorHandling:
                     write_result = cm_ro.classify_and_remember("Attempted write")
                     # If no error, implementation handles it somehow
                     assert isinstance(write_result, dict)
-                except (PermissionError, OSError, Exception):
+                except Exception:
                     pass  # Acceptable: writes fail on read-only
             finally:
                 cm_ro.close()

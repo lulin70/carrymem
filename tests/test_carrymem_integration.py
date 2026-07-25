@@ -52,7 +52,7 @@ class TestCarryMemKnowledgeAdapter:
         try:
             result = cm.index_knowledge(str(vault))
             assert result is not None
-        except (TypeError, NotImplementedError, Exception):
+        except Exception:
             pass
 
     def test_recall_from_knowledge(self, cm, tmp_path):
@@ -63,7 +63,7 @@ class TestCarryMemKnowledgeAdapter:
             cm.index_knowledge(str(vault))
             result = cm.recall_from_knowledge("Python")
             assert isinstance(result, list)
-        except (TypeError, NotImplementedError, Exception):
+        except Exception:
             pass
 
 
@@ -73,7 +73,7 @@ class TestCarryMemSystemPromptWithRules:
         try:
             prompt = cm.build_system_prompt(context="security review")
             assert isinstance(prompt, str)
-        except (TypeError, Exception):
+        except Exception:
             pass
 
     def test_build_prompt_with_memories_and_rules(self, cm):
@@ -81,7 +81,7 @@ class TestCarryMemSystemPromptWithRules:
         try:
             prompt = cm.build_system_prompt(context="coding")
             assert isinstance(prompt, str)
-        except (TypeError, Exception):
+        except Exception:
             pass
 
 

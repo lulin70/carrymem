@@ -171,7 +171,7 @@ else:
         def test_no_harsh_green_colors(self):
             """Morandi palette must NOT contain bright green (#00FF00 etc)."""
             harsh_greens = ["#00ff00", "#00FF00", "#00ff00", "#0f0", "#0F0"]
-            for name, color in _MORANDI.items():
+            for _name, color in _MORANDI.items():
                 self.assertNotIn(color.lower(), harsh_greens)
 
     class TestTypeIconsAndLabels(unittest.TestCase):

@@ -70,7 +70,7 @@ class TestSQLInjectionPrevention:
                     cm.classify_and_remember("test content", namespace=ns)
                     results = cm.recall_memories(query="test", namespace=ns, limit=5)
                     assert isinstance(results, list)
-                except (ValueError, Exception) as e:
+                except Exception as e:
                     # Expected: validation should catch this
                     assert "invalid" in str(e).lower() or "namespace" in str(e).lower()
 
@@ -99,7 +99,7 @@ class TestPathTraversalPrevention:
                         assert "/etc/" not in str(actual_path)
                         assert "/root/" not in str(actual_path)
                     cm.close()
-                except (ValueError, PermissionError, OSError):
+                except (ValueError, OSError):
                     # Expected: should prevent dangerous paths
                     pass
 
@@ -253,7 +253,7 @@ class TestPermissionBypass:
                 try:
                     # Should handle invalid IDs safely
                     cm.forget_memory(invalid_id)
-                except (ValueError, KeyError, TypeError, Exception):
+                except Exception:
                     # Expected: should reject or safely handle invalid IDs
                     pass
 

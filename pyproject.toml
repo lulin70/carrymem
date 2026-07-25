@@ -83,6 +83,18 @@ use_parentheses = true
 ensure_newline_before_comments = true
 skip_glob = ["*/build/*", "*/dist/*", "*/.venv/*"]
 
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+# Lock rule set to prevent ruff version upgrades from introducing new default rules.
+# Reference: project_memory lesson "CI must use versions from requirements-dev.txt
+# instead of hard-pinning dependencies like ruff, mypy, and black"
+# E4/E7/E9: pycodestyle errors (syntax, statement, indentation)
+# F: pyflakes (undefined names, unused imports, etc.)
+select = ["E4", "E7", "E9", "F"]
+
 [tool.mypy]
 python_version = "3.12"
 warn_return_any = true

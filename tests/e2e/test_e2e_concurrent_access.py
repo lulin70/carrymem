@@ -124,7 +124,7 @@ class TestE2EMultiThreadedWrites:
                     futures.append(executor.submit(write_operation, i))
 
             # Wait for all operations
-            for future in as_completed(futures, timeout=60):
+            for _future in as_completed(futures, timeout=60):
                 pass  # Exceptions captured in errors list
 
         # Concurrent R/W should not produce errors with proper locking.
@@ -354,14 +354,11 @@ class TestE2EDataConsistencyUnderConcurrency:
             cm_verify.close()
 
 
-class TestE2EProcessIsolation:
-    """Scenario: Multiple processes accessing same database (if supported)."""
-
-    @pytest.mark.skip(reason="Multi-process SQLite requires WAL mode; tested separately if needed")
-    def test_multiprocess_access(self, tmp_path):
-        """Verify: Multiple processes can access the database safely.
-
-        Note: This test requires SQLite WAL mode configuration.
-        Skipping by default as it's environment-dependent.
-        """
-        pass
+# Note: TestE2EProcessIsolation.test_multiprocess_access was removed.
+# It was a placeholder (body was just `pass`) decorated with pytest's
+# unconditional skip marker (reason mentioned WAL mode). Per project rule
+# "skip tests are not reasonable; if a test can be skipped, it shouldn't
+# have been designed", a placeholder with no real assertions has been
+# deleted rather than left as a permanently-skipped stub.
+# Multi-process WAL-mode coverage should be re-added as a real test that
+# enables WAL and verifies cross-process access (see test_concurrent_access.py).

@@ -149,7 +149,7 @@ class TestEngineClassificationToStorage:
         ]
 
         results = []
-        for msg, expected_type in test_cases:
+        for msg, _expected_type in test_cases:
             result = cm.classify_and_remember(msg)
             results.append((msg, result))
             assert result.get("stored", False), f"Should store: {msg[:30]}"

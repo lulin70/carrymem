@@ -21,7 +21,6 @@ Security Levels:
 """
 
 import base64
-import binascii
 import hashlib
 import hmac as hmac_mod
 import json
@@ -210,7 +209,7 @@ class MemoryEncryption:
                 salt = base64.b64decode(meta["salt"])
                 iterations = meta.get("iterations", PBKDF2_ITERATIONS_LEGACY)
                 self._current_iterations = iterations
-            except (json.JSONDecodeError, KeyError, binascii.Error, ValueError):
+            except (json.JSONDecodeError, KeyError, ValueError):
                 # Legacy salt file: raw bytes, no metadata
                 salt = raw
                 iterations = PBKDF2_ITERATIONS_LEGACY
@@ -258,7 +257,7 @@ class MemoryEncryption:
             # Verify integrity
             self._verify_digest(key_path, key_data)
             return key_data
-        except (IOError, OSError) as e:
+        except OSError as e:
             raise EncryptionError(f"Failed to load key from {key_path}: {e}") from e
 
     def _save_key(self, key: bytes) -> None:
@@ -299,7 +298,7 @@ class MemoryEncryption:
                     "The key file may have been tampered with or corrupted. "
                     "Refusing to load."
                 )
-        except (IOError, OSError) as e:
+        except OSError as e:
             raise EncryptionError(f"Failed to verify key integrity from {digest_path}: {e}") from e
 
     @staticmethod
@@ -328,7 +327,7 @@ class MemoryEncryption:
             assert self._fernet is not None
             encrypted = self._fernet.encrypt(plaintext.encode("utf-8"))
             return encrypted.decode("ascii")  # type: ignore[no-any-return]
-        except (TypeError, ValueError, AttributeError, binascii.Error) as e:
+        except (TypeError, ValueError, AttributeError) as e:
             raise EncryptionError(f"Fernet encryption failed: {e}") from e
 
     def _decrypt_fernet(self, ciphertext: str) -> str:
@@ -338,7 +337,7 @@ class MemoryEncryption:
             assert self._fernet is not None
             decrypted = self._fernet.decrypt(ciphertext.encode("ascii"))
             return decrypted.decode("utf-8")  # type: ignore[no-any-return]
-        except (TypeError, ValueError, binascii.Error, InvalidToken) as e:
+        except (TypeError, ValueError, InvalidToken) as e:
             raise EncryptionError(f"Fernet decryption failed: {e}") from e
 
     def rotate_key(self, new_password: Optional[str] = None) -> Callable[[str], str]:
@@ -417,7 +416,7 @@ class MemoryEncryption:
             try:
                 old_f = self._make_fernet(old_key)
                 plaintext = old_f.decrypt(old_ciphertext.encode("ascii")).decode("utf-8")
-            except (TypeError, ValueError, binascii.Error) as e:
+            except (TypeError, ValueError) as e:
                 raise EncryptionError(f"Key rotation decryption failed: {e}") from e
 
             # Encrypt with new key

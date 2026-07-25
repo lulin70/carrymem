@@ -70,7 +70,7 @@ class ConfigManager:
         # NOTE: Broad exception for config loading is intentional to handle
         # unexpected file system errors, encoding issues, or corrupted config files.
         # All errors are logged and gracefully degraded to empty config.
-        except (OSError, ValueError, TypeError) as e:
+        except (OSError, TypeError) as e:
             _logger.warning("Config file load error: %s: %s", self.config_path, e)
             return {}
 
@@ -93,7 +93,7 @@ class ConfigManager:
                 if YAML_AVAILABLE:
                     return yaml.safe_load(f) or {}
                 return json.load(f) or {}
-        except (FileNotFoundError, json.JSONDecodeError, PermissionError, OSError, ValueError):
+        except (json.JSONDecodeError, OSError, ValueError):
             _logger.debug("Rules file not found: %s", rules_path)
             return {}
 

@@ -18,7 +18,7 @@ async def _wait_for_server(host: str, port: int, timeout: float = 5.0) -> None:
             writer.close()
             await writer.wait_closed()
             return
-        except (ConnectionRefusedError, OSError) as e:
+        except OSError as e:
             last_err = e
             await asyncio.sleep(0.1)
     raise RuntimeError(f"Server at {host}:{port} did not start within {timeout}s: {last_err}")

@@ -31,13 +31,16 @@ class CarryMemError(Exception):
         self.message = message
         self.hint = hint
         self.cause = cause
-        super().__init__(self._format())
+        super().__init__(code, message, hint, cause)
 
     def _format(self) -> str:
         parts = [f"[{self.code}] {self.message}"]
         if self.hint:
             parts.append(f"💡 {self.hint}")
         return "\n  ".join(parts)
+
+    def __str__(self) -> str:
+        return self._format()
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(code={self.code!r}, message={self.message!r})"
@@ -131,12 +134,11 @@ class StorageError(CarryMemError):
     def __init__(
         self,
         message: str = "A storage operation error occurred.",
-        *,
         code: str = "CM-120",
         hint: str = "",
         cause: Optional[Exception] = None,
     ) -> None:
-        super().__init__(code=code, message=message, hint=hint, cause=cause)
+        super().__init__(code, message, hint, cause)
 
 
 class StorageNotConfiguredError(StorageError):
@@ -145,12 +147,11 @@ class StorageNotConfiguredError(StorageError):
     def __init__(
         self,
         message: str = "Storage adapter is not configured.",
-        *,
         code: str = "CM-100",
         hint: str = "",
         cause: Optional[Exception] = None,
     ) -> None:
-        super().__init__(message=message, code=code, hint=hint, cause=cause)
+        super().__init__(message, code, hint, cause)
 
 
 class DatabaseError(StorageError):
@@ -159,12 +160,11 @@ class DatabaseError(StorageError):
     def __init__(
         self,
         message: str = "Database operation failed.",
-        *,
         code: str = "CM-101",
         hint: str = "",
         cause: Optional[Exception] = None,
     ) -> None:
-        super().__init__(message=message, code=code, hint=hint, cause=cause)
+        super().__init__(message, code, hint, cause)
 
 
 class DBConnectionError(DatabaseError):
@@ -173,12 +173,11 @@ class DBConnectionError(DatabaseError):
     def __init__(
         self,
         message: str = "Unable to connect to the database.",
-        *,
         code: str = "CM-111",
         hint: str = "",
         cause: Optional[Exception] = None,
     ) -> None:
-        super().__init__(message=message, code=code, hint=hint, cause=cause)
+        super().__init__(message, code, hint, cause)
 
 
 class QueryError(DatabaseError):
@@ -187,12 +186,11 @@ class QueryError(DatabaseError):
     def __init__(
         self,
         message: str = "Database query execution failed.",
-        *,
         code: str = "CM-112",
         hint: str = "",
         cause: Optional[Exception] = None,
     ) -> None:
-        super().__init__(message=message, code=code, hint=hint, cause=cause)
+        super().__init__(message, code, hint, cause)
 
 
 class ValidationError(CarryMemError, ValueError):
@@ -201,12 +199,11 @@ class ValidationError(CarryMemError, ValueError):
     def __init__(
         self,
         message: str = "Input validation failed.",
-        *,
         code: str = "CM-201",
         hint: str = "",
         cause: Optional[Exception] = None,
     ) -> None:
-        super().__init__(code=code, message=message, hint=hint, cause=cause)
+        super().__init__(code, message, hint, cause)
 
 
 class KnowledgeError(CarryMemError):
@@ -215,12 +212,11 @@ class KnowledgeError(CarryMemError):
     def __init__(
         self,
         message: str = "Knowledge base operation failed.",
-        *,
         code: str = "CM-110",
         hint: str = "",
         cause: Optional[Exception] = None,
     ) -> None:
-        super().__init__(code=code, message=message, hint=hint, cause=cause)
+        super().__init__(code, message, hint, cause)
 
 
 class KnowledgeNotConfiguredError(KnowledgeError):
@@ -229,12 +225,11 @@ class KnowledgeNotConfiguredError(KnowledgeError):
     def __init__(
         self,
         message: str = "Knowledge base adapter is not configured.",
-        *,
         code: str = "CM-110",
         hint: str = "",
         cause: Optional[Exception] = None,
     ) -> None:
-        super().__init__(message=message, code=code, hint=hint, cause=cause)
+        super().__init__(message, code, hint, cause)
 
 
 class ClassificationError(CarryMemError):
@@ -243,12 +238,11 @@ class ClassificationError(CarryMemError):
     def __init__(
         self,
         message: str = "Memory classification failed.",
-        *,
         code: str = "CM-301",
         hint: str = "",
         cause: Optional[Exception] = None,
     ) -> None:
-        super().__init__(code=code, message=message, hint=hint, cause=cause)
+        super().__init__(code, message, hint, cause)
 
 
 # ── Internal mapping helpers ───────────────────────────────────────

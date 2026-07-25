@@ -163,7 +163,7 @@ class TestEncryptionErrorHandling:
                 assert isinstance(recalled, list), "Should return list even on wrong key"
             finally:
                 cm2.close()
-        except (Exception,) as e:
+        except Exception as e:
             # Also acceptable: fails to open entirely
             assert isinstance(
                 e, (CarryMemError, RuntimeError, Exception)
@@ -464,7 +464,7 @@ class TestEdgeCaseErrorScenarios:
                 pass
             finally:
                 cm.close()
-        except (CarryMemError, sqlite3.DatabaseError, ValueError, Exception) as e:
+        except (CarryMemError, sqlite3.DatabaseError, Exception) as e:
             # Also acceptable: fails to open
             assert isinstance(
                 e, (CarryMemError, sqlite3.DatabaseError, ValueError, Exception)
@@ -508,7 +508,7 @@ class TestErrorContextPreservation:
         try:
             # This will fail due to no storage
             cm.declare("This requires storage")
-            assert False, "Should have raised StorageNotConfiguredError"
+            raise AssertionError("Should have raised StorageNotConfiguredError")
         except StorageNotConfiguredError as e:
             # Error should indicate storage is needed
             error_str = str(e).lower()

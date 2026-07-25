@@ -437,7 +437,7 @@ def cmd_clean(args):
 
     removed = 0
     errors = 0
-    for reason, item in to_remove:
+    for _reason, item in to_remove:
         key = item.get("storage_key", "")
         if cm.forget_memory(key):
             removed += 1

@@ -295,7 +295,7 @@ class TestAuditLoggerClear:
 
     def test_clear_all(self, logger):
         """Test clearing all events."""
-        for i in range(5):
+        for _i in range(5):
             logger.log(AuditEvent())
         assert logger.event_count == 5
         removed = logger.clear()
@@ -359,7 +359,7 @@ class TestAuditLoggerStats:
     def test_stats_utilization(self, logger):
         """Test utilization percentage calculation."""
         small_logger = AuditLogger(max_events=100)
-        for i in range(25):
+        for _i in range(25):
             small_logger.log(AuditEvent())
         stats = small_logger.get_stats()
         assert stats["max_capacity"] == 100

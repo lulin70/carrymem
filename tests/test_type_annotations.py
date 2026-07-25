@@ -141,7 +141,7 @@ class TestTypedDictDefinitions:
 
     def test_memory_entry_dict_exists(self, types_module):
         assert hasattr(types_module, "MemoryEntryDict")
-        assert isinstance(getattr(types_module, "MemoryEntryDict"), type)
+        assert isinstance(types_module.MemoryEntryDict, type)
 
     def test_stored_memory_dict_exists(self, types_module):
         assert hasattr(types_module, "StoredMemoryDict")
@@ -605,7 +605,7 @@ class TestAnnotationCoverage:
             else:
                 continue
 
-            for method_name, param_count in methods:
+            for method_name, _param_count in methods:
                 total_methods += 1
                 if _has_return_annotation(cls, method_name):
                     fully_annotated += 1

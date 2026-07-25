@@ -270,7 +270,7 @@ class PromotionPipeline:
                 source_memories=entry.source_memory_ids,
                 confidence=entry.confidence,
             )
-        except (ValueError, Exception):
+        except Exception:
             return None
 
         now = datetime.now(timezone.utc).isoformat()

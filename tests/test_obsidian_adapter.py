@@ -57,7 +57,7 @@ class TestObsidianAdapter:
         try:
             result = adapter.store("test_key", {"content": "test content"})
             assert result is not None
-        except (TypeError, NotImplementedError, Exception):
+        except Exception:
             pass
 
     def test_close(self, adapter):

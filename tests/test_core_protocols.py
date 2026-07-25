@@ -213,10 +213,9 @@ class TestStructuralConformance:
 
     def test_lifecycle_mixin_satisfies_lifecycle_ops_via_carrymem(self):
         """LifecycleMixin can only be tested via full CarryMem composition."""
-        try:
-            from carrymem import CarryMem
-        except Exception:
-            pytest.skip("Cannot import CarryMem (missing dependencies)")
+        # CarryMem is the project under test — import failure must FAIL the
+        # test (not skip), per project rule "skip tests are not reasonable".
+        from carrymem import CarryMem
         proto_members = _protocol_members(LifecycleOps)
         instance = CarryMem()
         for name in proto_members:
@@ -224,10 +223,9 @@ class TestStructuralConformance:
 
     def test_classification_mixin_satisfies_classification_ops_via_carrymem(self):
         """ClassificationMixin can only be tested via full CarryMem composition."""
-        try:
-            from carrymem import CarryMem
-        except Exception:
-            pytest.skip("Cannot import CarryMem (missing dependencies)")
+        # CarryMem is the project under test — import failure must FAIL the
+        # test (not skip), per project rule "skip tests are not reasonable".
+        from carrymem import CarryMem
         proto_members = _protocol_members(ClassificationOps)
         instance = CarryMem()
         for name in proto_members:
@@ -264,10 +262,9 @@ class TestCompositeProtocol:
 
     def test_carrymem_satisfies_carrymem_ops(self):
         """Full CarryMem instance must satisfy composite CarryMemOps."""
-        try:
-            from carrymem import CarryMem
-        except Exception:
-            pytest.skip("Cannot import CarryMem (missing dependencies)")
+        # CarryMem is the project under test — import failure must FAIL the
+        # test (not skip), per project rule "skip tests are not reasonable".
+        from carrymem import CarryMem
         # Verify every method from all sub-Protocols exists on CarryMem
         instance = CarryMem()
         for sub_proto in CarryMemOps.__bases__:
@@ -287,10 +284,9 @@ class TestMROValidation:
 
     def test_mro_has_correct_base_order(self):
         """When CarryMem can be imported, verify MRO order."""
-        try:
-            from carrymem import CarryMem
-        except Exception:
-            pytest.skip("Cannot import CarryMem (missing dependencies)")
+        # CarryMem is the project under test — import failure must FAIL the
+        # test (not skip), per project rule "skip tests are not reasonable".
+        from carrymem import CarryMem
 
         mro_names = [c.__name__ for c in CarryMem.__mro__]
 
@@ -304,10 +300,9 @@ class TestMROValidation:
 
     def test_no_duplicate_class_names_in_mro(self):
         """No Mixin name should appear twice in MRO."""
-        try:
-            from carrymem import CarryMem
-        except Exception:
-            pytest.skip("Cannot import CarryMem")
+        # CarryMem is the project under test — import failure must FAIL the
+        # test (not skip), per project rule "skip tests are not reasonable".
+        from carrymem import CarryMem
 
         mro_names = [c.__name__ for c in CarryMem.__mro__]
         seen: set[str] = set()

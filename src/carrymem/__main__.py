@@ -95,7 +95,7 @@ def _run_demo():
     ]
 
     print("--- Classify + Store ---")
-    for msg, expected in test_messages:
+    for msg, _expected in test_messages:
         result = cm.classify_and_remember(msg)
         status = "OK" if result["stored"] else "SKIP"
         print(f"  [{status}] {msg[:40]}")

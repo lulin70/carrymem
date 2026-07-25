@@ -364,7 +364,7 @@ def _verify_mcp_server():
             formatter.success("MCP server: ready")
         else:
             formatter.warning("MCP server: could not verify (non-critical)")
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+    except (subprocess.TimeoutExpired, OSError):
         formatter.warning("MCP server: could not verify (non-critical)")
 
 

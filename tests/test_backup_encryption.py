@@ -61,5 +61,5 @@ class TestEncryption:
 
             em = EncryptionManager()
             assert em is not None
-        except (ImportError, TypeError, Exception):
+        except Exception:
             pass

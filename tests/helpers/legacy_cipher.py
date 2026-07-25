@@ -93,7 +93,7 @@ def decrypt_stream(key: bytes, ciphertext: str) -> str:
     """
     try:
         payload = base64.b64decode(ciphertext)
-    except (binascii.Error, ValueError) as e:
+    except ValueError as e:
         raise LegacyCipherError(f"Invalid ciphertext format: {e}") from e
 
     min_len = _NONCE_SIZE + _AUTH_TAG_SIZE

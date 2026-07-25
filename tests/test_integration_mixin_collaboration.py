@@ -102,7 +102,7 @@ class TestLifecycleAndCRUDCollaboration:
 
             # After close, adapter may still exist but connection is closed
             # Subsequent operations should fail gracefully or raise StorageNotConfiguredError
-            with pytest.raises((Exception)):
+            with pytest.raises(Exception, match="(?i)storage|closed|connection"):
                 cm.classify_and_remember("This should fail after close")
         except Exception:
             pass  # Expected: operations after close may fail
@@ -126,7 +126,7 @@ class TestClassificationAndRecallCollaboration:
         ]
 
         storage_keys = []
-        for msg, mem_type in memories:
+        for msg, _mem_type in memories:
             result = cm.classify_and_remember(msg)
             assert result.get("stored", False), f"Should store: {msg[:30]}"
             storage_keys.extend(result.get("storage_keys", []))

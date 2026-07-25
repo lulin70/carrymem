@@ -285,7 +285,7 @@ class TestComputeRecalcScores:
         scores = pb._compute_recalc_scores(all_mems)
         # At least one memory should have a recalc score
         assert len(scores) >= 1
-        for key, (conf, imp) in scores.items():
+        for _key, (conf, imp) in scores.items():
             assert conf >= 0
             assert imp >= 0
 
@@ -319,7 +319,7 @@ class TestComputeRecalcScores:
         _set_field(cm, "Python", "importance_score", 0.5)
         all_mems, _ = pb._recall_base_memories("Python", limit=30)
         scores = pb._compute_recalc_scores(all_mems)
-        for key, (new_conf, new_imp) in scores.items():
+        for _key, (_new_conf, new_imp) in scores.items():
             # new_imp should be recalculated based on confidence ratio
             assert isinstance(new_imp, float)
 

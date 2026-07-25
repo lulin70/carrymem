@@ -443,7 +443,7 @@ class TestExceptionSwallowing:
                 # 注意：当前实现可能会捕获异常并返回空列表
                 # 这是一种有效的错误处理策略，但测试应记录这种行为
                 assert isinstance(results, list), "Even on error, should return consistent type (list)"
-            except (IOError, Exception):
+            except Exception:
                 # 异常传播也是可接受的行为
                 pass
 
@@ -573,7 +573,7 @@ class TestLogicalOperatorReplacement:
             validate_query(invalid_chars_query)
             # 如果没有抛异常，检查是否真的安全
             # （某些实现可能只是 sanitize 而非 reject）
-        except (ValueError, Exception) as e:
+        except Exception as e:
             # 抛出异常是预期行为
             assert len(str(e)) > 0, "Validation error should have descriptive message"
 
@@ -636,7 +636,7 @@ class TestCombinedMutationScenarios:
             ]
 
             storage_keys = []
-            for content, confidence, mem_type in test_data:
+            for content, _confidence, mem_type in test_data:
                 result = cm.classify_and_remember(content, force_type=mem_type)
                 if result.get("stored"):
                     keys = result.get("storage_keys", [])

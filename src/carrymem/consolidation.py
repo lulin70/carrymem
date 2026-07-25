@@ -154,7 +154,7 @@ def find_superseded_pairs(
         by_key_prefix.setdefault(prefix, []).append(m)
 
     pairs = []
-    for prefix, group in by_key_prefix.items():
+    for _prefix, group in by_key_prefix.items():
         if len(group) < 2:
             continue
         sorted_group = sorted(group, key=lambda m: m.get("created_at", ""))
@@ -305,7 +305,7 @@ def consolidate_p1(
             auto_accept=auto_accept,
         )
         result.update(p1_result)
-    except (ValueError, TypeError, RuntimeError, Exception) as e:
+    except Exception as e:
         result["p1_error"] = str(e)
         logger.warning("P1 consolidation failed: %s", e)
 
@@ -503,7 +503,7 @@ def _find_semantic_clusters(
 
     all_clusters = []
 
-    for mtype, group in by_type.items():
+    for _mtype, group in by_type.items():
         if len(group) < min_cluster_size:
             continue
 

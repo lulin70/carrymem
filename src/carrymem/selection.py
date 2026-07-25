@@ -443,7 +443,7 @@ def select_knowledge(
 
     selected: List[Dict[str, Any]] = []
     total_tokens = 0
-    for score, k in scored:
+    for _score, k in scored:
         if len(selected) >= max_count:
             break
         content = k.get("content", "")[:300]

@@ -258,7 +258,7 @@ class TestCacheConsistencyUserJourney(unittest.TestCase):
         keys = [s.storage_key for s in stored_list]
 
         # Prime cache with 3 type-filtered queries
-        for i, t in enumerate([TYPE_A, TYPE_B, "decision"]):
+        for _i, t in enumerate([TYPE_A, TYPE_B, "decision"]):
             results = self.adapter.recall("", filters={"type": t}, limit=10)
             self.assertEqual(len(results), 1)
         self.assertEqual(self.adapter._cache.stats["size"], 3)

@@ -204,7 +204,7 @@ class TestConnectionCleanup(unittest.TestCase):
         self.mgr.get_connection()  # Create a connection
         self.mgr.close()
 
-        with self.assertRaises(Exception):  # DBConnectionError
+        with self.assertRaisesRegex(Exception, "(?i)closed|connection|database"):
             self.mgr.get_connection()
 
     def test_context_manager_cleanup(self):

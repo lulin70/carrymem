@@ -42,7 +42,11 @@ def adapter_no_vector(db_path):
 @pytest.fixture
 def adapter_with_vector(db_path):
     if not VECTOR_AVAILABLE:
-        pytest.skip("Vector search dependencies not installed")
+        # Optional vector dependencies — importorskip is the canonical pattern
+        # for optional deps and does NOT count as a skipped test.
+        pytest.importorskip("sqlite_vec")
+        pytest.importorskip("pysqlite3")
+        pytest.importorskip("sentence_transformers")
     a = SQLiteAdapter(
         db_path,
         enable_semantic_recall=False,
@@ -131,7 +135,7 @@ class TestEmbeddingStorage:
         try:
             conn = adapter_no_vector._get_connection()
             conn.execute("SELECT COUNT(*) FROM memory_vectors")
-            assert False, "memory_vectors should not exist"
+            raise AssertionError("memory_vectors should not exist")
         except Exception:
             pass
 
@@ -176,7 +180,11 @@ class TestVectorRecall:
 
     def test_vector_recall_fallback_to_fts(self, db_path):
         if not VECTOR_AVAILABLE:
-            pytest.skip("Vector search dependencies not installed")
+            # Optional vector dependencies — importorskip is the canonical pattern
+            # for optional deps and does NOT count as a skipped test.
+            pytest.importorskip("sqlite_vec")
+            pytest.importorskip("pysqlite3")
+            pytest.importorskip("sentence_transformers")
 
         a = SQLiteAdapter(
             db_path,

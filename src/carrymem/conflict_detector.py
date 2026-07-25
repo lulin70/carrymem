@@ -152,7 +152,7 @@ class ConflictDetector:
             key = f"{getattr(mem, 'namespace', '')}:{mem.type}"
             by_type_ns.setdefault(key, []).append(mem)
 
-        for group_key, group in by_type_ns.items():
+        for _group_key, group in by_type_ns.items():
             if len(group) < 2:
                 continue
             sorted_group = sorted(
@@ -185,7 +185,7 @@ class ConflictDetector:
             key = f"{getattr(mem, 'namespace', '')}:{mem.type}"
             by_type_ns.setdefault(key, []).append(mem)
 
-        for group_key, group in by_type_ns.items():
+        for _group_key, group in by_type_ns.items():
             if len(group) < 2:
                 continue
             for i, mem1 in enumerate(group):

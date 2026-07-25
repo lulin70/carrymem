@@ -235,8 +235,9 @@ class TestCRUDOperations:
         original = adapter_with_data.get_by_key(
             adapter_with_data.store_entry(MemoryEntry(content="original", type="user_preference")).storage_key
         )
-        if original is None:
-            pytest.skip("Setup failed")
+        assert original is not None, (
+            "Setup failed: get_by_key returned None for an entry just stored"
+        )
         updated = adapter_with_data.update_memory(original.storage_key, "updated content", reason="test")
         assert updated is not None
         assert "updated" in updated.content
@@ -296,8 +297,10 @@ class TestRecallEngine:
         """recall with update_access=True increments access_count."""
         # First, find a memory to recall
         results = adapter_with_data.recall("dark mode", limit=1, update_access=False)
-        if not results:
-            pytest.skip("No recall results")
+        assert results, (
+            "Setup precondition failed: recall('dark mode') returned no results; "
+            "adapter_with_data fixture must populate dark mode memories"
+        )
         key = results[0].storage_key
         original_count = results[0].access_count
         # Recall again with update_access=True
@@ -307,6 +310,11 @@ class TestRecallEngine:
             if r.storage_key == key:
                 assert r.access_count >= original_count
                 break
+        else:
+            pytest.fail(
+                f"recall(update_access=True) did not return the previously recalled memory {key}; "
+                f"got keys: {[r.storage_key for r in results2]}"
+            )
 
     def test_recall_aggregated_returns_dict(self, adapter_with_data):
         """recall_aggregated returns dict mapping type → list."""

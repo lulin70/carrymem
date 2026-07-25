@@ -186,24 +186,18 @@ class TestE2EEncryptedExportImport:
         finally:
             cm.close()
 
-    def test_pack_with_encryption_roundtrip(self, tmp_path):
-        """Verify: pack() with encryption creates valid encrypted archive."""
-        db_path = str(tmp_path / "pack_enc.db")
-        carry_path = str(tmp_path / "encrypted.carry")
-        key = "pack-encrypt-key-xyz"
-
-        cm = CarryMem(db_path=db_path, encryption_key=key)
-        try:
-            cm.classify_and_remember("Pack this secret securely")
-
-            try:
-                pack_result = cm.pack(output_path=carry_path, encrypt=True, password="pack-pw-123")
-                # Should either return success dict or create file
-                assert isinstance(pack_result, dict) or os.path.exists(carry_path), "Pack should produce output"
-            except (AttributeError, TypeError):
-                pytest.skip("pack() may not support all parameters in this version")
-        finally:
-            cm.close()
+    # Note: test_pack_with_encryption_roundtrip was removed.
+    # The previous version was decorated with a try/except that silently
+    # skipped via pytest's unconditional skip marker (reason mentioned
+    # pack() not supporting all parameters in this version). Investigation
+    # shows CarryMem has NO pack() method at all — the test was masking a
+    # non-existent API rather than testing real functionality. Per project
+    # rule "if a test can be skipped, it shouldn't have been designed", the
+    # placeholder has been deleted. Encryption roundtrip coverage is
+    # already provided by the backup tests above (test_backup_under_encryption)
+    # and the broader encrypted export/import scenarios in this class.
+    # A real pack() test should be re-added only if/when CarryMem introduces
+    # a pack() API.
 
 
 class TestE2EDegradedKeyScenarios:

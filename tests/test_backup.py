@@ -272,7 +272,7 @@ class TestCleanup:
         backup_dir = str(tmp_path / "backups")
         manager = BackupManager(temp_db, backup_dir, max_backups=3)
 
-        for i in range(5):
+        for _i in range(5):
             manager.create_backup()
             time.sleep(1.01)
 
@@ -413,7 +413,7 @@ class TestIntegration:
         """Automatic cleanup after creating backup."""
         manager = BackupManager(temp_db, str(tmp_path / "backups"), max_backups=3)
 
-        for i in range(5):
+        for _i in range(5):
             manager.create_backup()
 
         backups = manager.list_backups()

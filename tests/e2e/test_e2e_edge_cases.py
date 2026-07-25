@@ -207,9 +207,16 @@ class TestE2EPathBoundaryConditions:
 class TestE2EPermissionScenarios:
     """Scenario: Filesystem permission issues."""
 
-    @pytest.mark.skipif(os.getuid() == 0, reason="Test meaningless when running as root")
     def test_readonly_parent_directory(self, tmp_path):
-        """Verify: Graceful handling when parent directory is read-only."""
+        """Verify: Graceful handling when parent directory is read-only.
+
+        Behavior is environment-dependent:
+          - Non-root: opening a db in a read-only directory must fail with
+            PermissionError/OSError/DBConnectionError.
+          - Root: root bypasses filesystem permissions, so the operation
+            succeeds. The test verifies root can still open the db (no
+            crash) instead of asserting the (impossible) permission error.
+        """
         readonly_dir = tmp_path / "readonly_parent"
         readonly_dir.mkdir()
 
@@ -219,15 +226,19 @@ class TestE2EPermissionScenarios:
         readonly_dir.chmod(0o555)
 
         try:
-            # Should fail when parent directory is read-only
-            with pytest.raises((PermissionError, OSError, DBConnectionError)):
+            if os.getuid() == 0:
+                # Root bypasses filesystem permissions — operation succeeds.
                 cm = CarryMem(db_path=db_path)
                 cm.close()
+            else:
+                # Non-root: opening a db in a read-only directory must fail.
+                with pytest.raises((PermissionError, OSError, DBConnectionError)):
+                    cm = CarryMem(db_path=db_path)
+                    cm.close()
         finally:
             # Restore permissions for cleanup
             readonly_dir.chmod(0o755)
 
-    @pytest.mark.skipif(os.getuid() == 0, reason="Test meaningless when running as root")
     def test_no_write_permission_on_file(self, tmp_path):
         """Verify: Cannot write to read-only database file."""
         db_path = str(tmp_path / "readonly_file.db")
@@ -255,13 +266,11 @@ class TestE2EPermissionScenarios:
                 # On some systems (e.g., Ubuntu CI), SQLite WAL mode may create
                 # new sidecar files in the writable parent directory, allowing
                 # writes to succeed despite the .db file being read-only.
-                # Skip if the read-only precondition cannot be established.
+                # Root also bypasses chmod. Either case is acceptable as long
+                # as the cause is identifiable; otherwise the test FAILS so
+                # the regression is surfaced (no silent skip).
                 try:
                     cm_ro.classify_and_remember("Attempted write to read-only")
-                    pytest.skip(
-                        "Write succeeded despite read-only chmod — "
-                        "WAL mode creates new sidecar files (environment-specific)"
-                    )
                 except Exception as e:
                     # On Linux: "attempt to write a readonly database"
                     # On macOS: "disk I/O error" (WAL file read-only triggers
@@ -269,6 +278,21 @@ class TestE2EPermissionScenarios:
                     assert re.search(
                         r"readonly|read-only|permission|disk I/O", str(e), re.IGNORECASE
                     ), f"Unexpected exception: {e}"
+                else:
+                    # Write succeeded despite read-only chmod. Acceptable only
+                    # when root bypasses chmod OR SQLite WAL mode recreated
+                    # sidecar files in the writable parent directory.
+                    root_bypass = os.getuid() == 0
+                    wal_sidecar_recreated = (
+                        os.path.exists(db_path + "-wal")
+                        or os.path.exists(db_path + "-shm")
+                    )
+                    assert root_bypass or wal_sidecar_recreated, (
+                        "Write succeeded despite read-only chmod and not running "
+                        "as root; this indicates the read-only precondition was "
+                        "not enforced — investigate SQLite WAL behavior or "
+                        "filesystem semantics"
+                    )
             finally:
                 cm_ro.close()
         finally:
@@ -286,7 +310,7 @@ class TestE2EPermissionScenarios:
                 assert isinstance(result, dict), "Should work if auto-creating dirs"
             finally:
                 cm.close()
-        except (FileNotFoundError, OSError, Exception):
+        except Exception:
             pass  # Acceptable: requires pre-existing directory
 
 
@@ -424,7 +448,7 @@ class TestE2EAPIBoundaryConditions:
         try:
             result = cm.recall_memories(limit=0)
             assert isinstance(result, list), "Limit=0 should return list"
-        except (ValueError, Exception):
+        except Exception:
             pass  # Also acceptable
 
     def test_empty_query_recall(self, standard_carrymem):
