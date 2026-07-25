@@ -115,7 +115,7 @@ jobs:
 
       - name: Upload benchmark results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-results-py${{ matrix.python-version }}
           path: |
@@ -125,7 +125,7 @@ jobs:
 
       - name: Upload benchmark summary
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-summary-py${{ matrix.python-version }}
           path: ${{ github.workspace }}/benchmark_results/  # Created by benchmark run
@@ -202,7 +202,7 @@ jobs:
 
       - name: Upload memory test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: memory-test-results-py${{ matrix.python-version }}
           path: /tmp/memory_test_output.txt
