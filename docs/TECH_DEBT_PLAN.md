@@ -838,6 +838,20 @@
 | **状态** | ✅ 已完成 (2026-07-25): package.json main 修正 + runVscodeTests.js 路径修正 |
 | **生命周期** | P9 测试执行 |
 
+### TD-062: Docker smoke test 失败 - torch CUDA 库缺失未被 except 捕获 ⚠️ 新增 (Coder)
+
+| 字段 | 值 |
+|------|-----|
+| **优先级** | P1 |
+| **位置** | `src/carrymem/adapters/sqlite/__init__.py:54` (模块级) + `:436` (`enable_vector_search` 方法) |
+| **问题描述** | `adapters/sqlite/__init__.py` 顶层 `from sentence_transformers import SentenceTransformer` 在 `try/except ImportError` 块中。但 torch 在无 CUDA 环境（如 Docker `python:3.12-slim-bookworm`）下导入时抛 `OSError: libcudart.so.13: cannot open shared object file` 和 `ValueError: libcublasLt.so.*[0-9] not found`，不是 `ImportError`，所以未被捕获，导致 `from carrymem import CarryMem` 崩溃。CI run 30140058170 docker-build job smoke test 失败。 |
+| **修复方案** | 将两处 `except ImportError` 扩大为 `except (ImportError, OSError, ValueError)`。OSError 覆盖 CUDA 共享库加载失败，ValueError 覆盖 CUDA 库路径查找失败。向量搜索在无 CUDA 环境下被正确禁用（`SENTENCE_TRANSFORMERS_AVAILABLE=False`），核心功能不受影响。 |
+| **负责角色** | Coder |
+| **验证标准** | CI docker-build job smoke test 成功；`python -c "from carrymem import CarryMem; cm = CarryMem(); cm.close(); print('OK')"` 在无 CUDA 环境下成功；本地 13 个 vector_search 测试通过 |
+| **依赖** | TD-057 (Docker CI job) + TD-060 (Dockerfile bin/) |
+| **状态** | ✅ 已完成 (2026-07-25): except 子句扩大为 (ImportError, OSError, ValueError) |
+| **生命周期** | P9 测试执行 |
+
 ---
 
 ## 6. 生命周期阶段映射

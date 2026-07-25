@@ -5,7 +5,7 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — TD-056/TD-057/TD-058/TD-059/TD-060/TD-061: P2 magic numbers + Docker CI + nightly vector-tests fix + dependabot config + Dockerfile bin/ fix + VSCode E2E path fix
+## [Unreleased] — TD-056/TD-057/TD-058/TD-059/TD-060/TD-061/TD-062: P2 magic numbers + Docker CI + nightly vector-tests fix + dependabot config + Dockerfile bin/ fix + VSCode E2E path fix + torch CUDA except fix
 
 ### Summary
 DevSquad 7-role consensus evaluation of P0-P2 issues. P0-2 (Vector/Semantic Tests)
@@ -22,6 +22,10 @@ P1-5 fixed Dockerfile missing `bin/` directory — `setup.py scripts=["bin/carry
 P2-5 fixed VSCode E2E `Cannot find module '/undefined'` — `package.json` main field
       and `runVscodeTests.js` extensionDevelopmentPath were inconsistent with
       `tsconfig.json rootDir: "."` (outputs to `out/src/`, not `out/`).
+P1-6 fixed Docker smoke test crash — `except ImportError` did not catch torch's
+      `OSError`/`ValueError` when CUDA libs missing in slim Docker image. Widened
+      to `except (ImportError, OSError, ValueError)` so vector search is cleanly
+      disabled in CPU-only environments instead of crashing on import.
 
 ### Changes
 
@@ -39,7 +43,8 @@ P2-5 fixed VSCode E2E `Cannot find module '/undefined'` — `package.json` main 
 | `.github/dependabot.yml` | Changed schedule weekly→daily; added `groups` for pip dev-deps and github-actions (project_memory convention) |
 | `extensions/vscode-carrymem/package.json` | **TD-061**: `main` field `./out/extension.js` → `./out/src/extension.js` (aligns with `tsconfig.json rootDir: "."` which outputs to `out/src/`) |
 | `extensions/vscode-carrymem/test/runVscodeTests.js` | **TD-061**: `extensionDevelopmentPath` from `path.resolve(__dirname, '..')` (resolves to `out/`) to `path.resolve(__dirname, '..', '..')` (resolves to extension root `extensions/vscode-carrymem/`) |
-| `docs/TECH_DEBT_PLAN.md` | Added TD-056 (magic numbers) + TD-057 (Docker CI) + TD-058 (vector-tests model cache) + TD-059 (dependabot config) + TD-060 (Dockerfile bin/) + TD-061 (VSCode E2E path), all marked ✅ |
+| `src/carrymem/adapters/sqlite/__init__.py` | **TD-062**: Widened `except ImportError` to `except (ImportError, OSError, ValueError)` in 2 places (module-level import + `enable_vector_search` method) — torch raises OSError/ValueError (not ImportError) when CUDA libs missing in CPU-only Docker image |
+| `docs/TECH_DEBT_PLAN.md` | Added TD-056 (magic numbers) + TD-057 (Docker CI) + TD-058 (vector-tests model cache) + TD-059 (dependabot config) + TD-060 (Dockerfile bin/) + TD-061 (VSCode E2E path) + TD-062 (torch CUDA except fix), all marked ✅ |
 
 ### Verification
 

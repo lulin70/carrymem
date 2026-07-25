@@ -51,7 +51,12 @@ try:
     from sentence_transformers import SentenceTransformer
 
     SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError, ValueError):
+    # ImportError: sentence_transformers not installed
+    # OSError: torch cannot load CUDA shared libs (e.g. libcudart.so.13 not
+    #   found in CPU-only environments like Docker slim images)
+    # ValueError: torch cannot find CUDA libs in system path
+    # All three mean vector search is unavailable in this environment.
     SENTENCE_TRANSFORMERS_AVAILABLE = False
 
 _EMBEDDING_MODEL_CACHE: Dict[str, Any] = {}
@@ -428,7 +433,8 @@ class SQLiteAdapter(StorageAdapter):
             from sentence_transformers import SentenceTransformer  # noqa: F401, F811
 
             deps_ok = True
-        except ImportError:
+        except (ImportError, OSError, ValueError):
+            # See module-level import for rationale on OSError/ValueError.
             deps_ok = False
         if enabled and not (deps_ok and self._embedding_model is not None):
             from ...utils.logger import logger
