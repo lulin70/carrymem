@@ -36,7 +36,7 @@ P1-6 fixed Docker smoke test crash — `except ImportError` did not catch torch'
 | `src/carrymem/rules/storage.py` | Imported + replaced 2× `timeout=30.0` with `SQLITE_DB_TIMEOUT_SECONDS` |
 | `src/carrymem/llm/__init__.py` | Added `DEFAULT_LLM_MAX_TOKENS = 500` + `DEFAULT_LLM_TIMEOUT_SECONDS = 30`; replaced 4 usages |
 | `src/carrymem/integration/layer2_mcp/http_server.py` | Added `_SSE_KEEPALIVE_TIMEOUT_SECONDS = 30`; replaced 1 usage |
-| `.github/workflows/ci.yml` | Added `docker-build` job (needs test+build, Buildx+GHA cache, smoke test, image size); fixed YAML syntax in `Show image size` step (block scalar `|`) |
+| `.github/workflows/ci.yml` | Added `docker-build` job (needs test+build, Buildx+GHA cache, smoke test, image size); fixed YAML syntax in `Show image size` step (block scalar `|`); **TD-062**: simplified smoke test to import-only (was `CarryMem()` instantiation which hung in CI) + added `timeout 60` to prevent job cancellation |
 | `.github/workflows/nightly.yml` | Added HuggingFace cache + pre-download step for `all-MiniLM-L6-v2` in `vector-tests` job (TD-058); added `--no-cov` flag to pytest (pyproject.toml `fail_under=80` caused false failure when running single test file) |
 | `Dockerfile` | Builder stage: added `setuptools wheel setuptools_scm[toml]` to pip install (pyproject.toml build-system requires these for `--no-isolation` mode); **TD-060**: added `COPY bin/ ./bin/` (setup.py `scripts=["bin/carrymem"]` requires the source file) |
 | `src/carrymem/llm/__init__.py` | Fixed flake8 E501 (144>120) by breaking `self._resolve(...)` call across multiple lines |
