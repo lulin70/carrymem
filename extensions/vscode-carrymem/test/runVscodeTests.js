@@ -19,8 +19,15 @@ const { runTests } = require('@vscode/test-electron');
 
 async function main() {
     try {
-        // The folder containing the Extension Manifest package.json
-        const extensionDevelopmentPath = path.resolve(__dirname, '..');
+        // The folder containing the Extension Manifest package.json.
+        // __dirname is .../extensions/vscode-carrymem/out/test (this file is
+        // copied from test/ to out/test/ by the compile script). The extension
+        // root (which contains package.json with "main": "./out/extension.js")
+        // is two levels up: out/test -> out -> extensions/vscode-carrymem.
+        // Using one level up (out/) is wrong because VSCode would treat out/
+        // as the extension root and fail to resolve ./out/extension.js,
+        // producing "Cannot find module '/undefined'".
+        const extensionDevelopmentPath = path.resolve(__dirname, '..', '..');
 
         // The path to the test runner script (mocha)
         const testsPath = path.resolve(__dirname, 'extension.test.js');

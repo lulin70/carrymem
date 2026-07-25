@@ -5,14 +5,23 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — TD-056/TD-057/TD-058: P2 magic numbers + Docker CI + nightly vector-tests fix
+## [Unreleased] — TD-056/TD-057/TD-058/TD-059/TD-060/TD-061: P2 magic numbers + Docker CI + nightly vector-tests fix + dependabot config + Dockerfile bin/ fix + VSCode E2E path fix
 
 ### Summary
 DevSquad 7-role consensus evaluation of P0-P2 issues. P0-2 (Vector/Semantic Tests)
 root cause identified and fixed (model weights not pre-cached, not just missing deps).
 P2-1 extracted 4 configuration magic numbers to named constants across 4 files.
 P2-2 added `docker-build` CI job to validate Dockerfile buildability + smoke test.
-P2-3 fixed nightly vector-tests by adding HuggingFace model cache + pre-download step.
+P2-3 fixed nightly vector-tests by adding HuggingFace model cache + pre-download step
+      + `--no-cov` flag (pyproject.toml `fail_under=80` caused false failure).
+P2-4 fixed Dockerfile builder stage missing `setuptools`/`wheel`/`setuptools_scm`
+      for `python -m build --no-isolation`.
+P3-1 fixed dependabot.yml config (weekly→daily + groups for dev-deps and github-actions).
+P1-5 fixed Dockerfile missing `bin/` directory — `setup.py scripts=["bin/carrymem"]`
+      requires `COPY bin/ ./bin/` in builder stage (was causing `build_wheel` failure).
+P2-5 fixed VSCode E2E `Cannot find module '/undefined'` — `package.json` main field
+      and `runVscodeTests.js` extensionDevelopmentPath were inconsistent with
+      `tsconfig.json rootDir: "."` (outputs to `out/src/`, not `out/`).
 
 ### Changes
 
@@ -24,10 +33,13 @@ P2-3 fixed nightly vector-tests by adding HuggingFace model cache + pre-download
 | `src/carrymem/llm/__init__.py` | Added `DEFAULT_LLM_MAX_TOKENS = 500` + `DEFAULT_LLM_TIMEOUT_SECONDS = 30`; replaced 4 usages |
 | `src/carrymem/integration/layer2_mcp/http_server.py` | Added `_SSE_KEEPALIVE_TIMEOUT_SECONDS = 30`; replaced 1 usage |
 | `.github/workflows/ci.yml` | Added `docker-build` job (needs test+build, Buildx+GHA cache, smoke test, image size); fixed YAML syntax in `Show image size` step (block scalar `|`) |
-| `.github/workflows/nightly.yml` | Added HuggingFace cache + pre-download step for `all-MiniLM-L6-v2` in `vector-tests` job (TD-058) |
+| `.github/workflows/nightly.yml` | Added HuggingFace cache + pre-download step for `all-MiniLM-L6-v2` in `vector-tests` job (TD-058); added `--no-cov` flag to pytest (pyproject.toml `fail_under=80` caused false failure when running single test file) |
+| `Dockerfile` | Builder stage: added `setuptools wheel setuptools_scm[toml]` to pip install (pyproject.toml build-system requires these for `--no-isolation` mode); **TD-060**: added `COPY bin/ ./bin/` (setup.py `scripts=["bin/carrymem"]` requires the source file) |
 | `src/carrymem/llm/__init__.py` | Fixed flake8 E501 (144>120) by breaking `self._resolve(...)` call across multiple lines |
 | `.github/dependabot.yml` | Changed schedule weekly→daily; added `groups` for pip dev-deps and github-actions (project_memory convention) |
-| `docs/TECH_DEBT_PLAN.md` | Added TD-056 (magic numbers) + TD-057 (Docker CI) + TD-058 (vector-tests model cache), all marked ✅ |
+| `extensions/vscode-carrymem/package.json` | **TD-061**: `main` field `./out/extension.js` → `./out/src/extension.js` (aligns with `tsconfig.json rootDir: "."` which outputs to `out/src/`) |
+| `extensions/vscode-carrymem/test/runVscodeTests.js` | **TD-061**: `extensionDevelopmentPath` from `path.resolve(__dirname, '..')` (resolves to `out/`) to `path.resolve(__dirname, '..', '..')` (resolves to extension root `extensions/vscode-carrymem/`) |
+| `docs/TECH_DEBT_PLAN.md` | Added TD-056 (magic numbers) + TD-057 (Docker CI) + TD-058 (vector-tests model cache) + TD-059 (dependabot config) + TD-060 (Dockerfile bin/) + TD-061 (VSCode E2E path), all marked ✅ |
 
 ### Verification
 

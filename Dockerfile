@@ -11,6 +11,7 @@ RUN pip install --no-cache-dir --upgrade "pip>=26.1.2" build setuptools wheel se
 # Copy only files needed for building the wheel
 COPY setup.py pyproject.toml MANIFEST.in ./
 COPY src/ ./src/
+COPY bin/ ./bin/
 COPY README.md ./
 
 RUN python -m build --wheel --no-isolation

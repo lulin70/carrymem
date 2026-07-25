@@ -810,6 +810,34 @@
 | **状态** | ✅ 已完成 (2026-07-25): dependabot.yml 已更新 (weekly→daily + groups for pip/github-actions)；ignore 配置暂缓待用户确认 |
 | **生命周期** | P10 部署发布 |
 
+### TD-060: Dockerfile 缺少 bin/ 目录导致 build_wheel 失败 ⚠️ 新增 (DevOps)
+
+| 字段 | 值 |
+|------|-----|
+| **优先级** | P1 |
+| **位置** | `Dockerfile:12-15` builder stage |
+| **问题描述** | Dockerfile builder stage COPY 了 `setup.py`、`src/`、`README.md`，但漏掉了 `bin/` 目录。`setup.py:91` 声明 `scripts=["bin/carrymem"]`，`python -m build --wheel --no-isolation` 时 setuptools 尝试创建 `build/scripts-3.12/bin/carrymem` 但找不到源文件 `bin/carrymem`，报错 `error: [Errno 2] No such file or directory: 'bin/carrymem'`。CI run 30139360129 docker-build job 失败。 |
+| **修复方案** | Dockerfile builder stage 添加 `COPY bin/ ./bin/` |
+| **负责角色** | DevOps |
+| **验证标准** | CI docker-build job 成功；本地 `docker build -t carrymem:test .` 成功 |
+| **依赖** | TD-057 (Docker CI job) |
+| **状态** | ✅ 已完成 (2026-07-25): Dockerfile 添加 `COPY bin/ ./bin/` |
+| **生命周期** | P10 部署发布 |
+
+### TD-061: VSCode E2E extensionDevelopmentPath 与 tsconfig rootDir 不一致 ⚠️ 新增 (Coder + DevOps)
+
+| 字段 | 值 |
+|------|-----|
+| **优先级** | P2 |
+| **位置** | `extensions/vscode-carrymem/test/runVscodeTests.js:23`、`extensions/vscode-carrymem/package.json:26` |
+| **问题描述** | tsconfig.json `rootDir: "."` + `include: ["src/**/*.ts", "test/**/*.ts"]`，编译输出结构为 `out/src/extension.js` 和 `out/test/extension.test.js`。但：(1) `package.json` 的 `main` 字段是 `./out/extension.js`（指向不存在的路径，应为 `./out/src/extension.js`）；(2) `runVscodeTests.js` 的 `extensionDevelopmentPath = path.resolve(__dirname, '..')` 解析为 `out/`（应为 `extensions/vscode-carrymem/`，即上两级）。VSCode 在 `out/` 找不到正确的扩展清单，`./out/extension.js` 解析失败，产生 `Cannot find module '/undefined'` 错误。nightly run 30139363841 VSCode Tier 2 UI E2E job 失败。 |
+| **修复方案** | (1) `package.json` main 字段改为 `./out/src/extension.js`；(2) `runVscodeTests.js` extensionDevelopmentPath 改为 `path.resolve(__dirname, '..', '..')`（从 `out/test/` 上两级到扩展根目录） |
+| **负责角色** | Coder (代码修复) + DevOps (CI 验证) |
+| **验证标准** | nightly VSCode Tier 2 UI E2E job 成功；本地 `npm run test:e2e` 通过 |
+| **依赖** | 无 |
+| **状态** | ✅ 已完成 (2026-07-25): package.json main 修正 + runVscodeTests.js 路径修正 |
+| **生命周期** | P9 测试执行 |
+
 ---
 
 ## 6. 生命周期阶段映射
