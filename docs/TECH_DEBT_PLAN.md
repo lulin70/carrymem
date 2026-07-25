@@ -782,6 +782,34 @@
 | **状态** | ✅ 已完成 (2026-07-24): docker-build job 已添加到 ci.yml (L371-426)；含 Buildx + GHA cache + 烟雾测试 + 镜像大小报告 |
 | **生命周期** | P10 部署发布 |
 
+### TD-058: Nightly vector-tests 未预缓存 embedding 模型权重 ⚠️ 新增 (DevOps)
+
+| 字段 | 值 |
+|------|-----|
+| **优先级** | P2 |
+| **位置** | `.github/workflows/nightly.yml` vector-tests job；根因在 `src/carrymem/adapters/sqlite/__init__.py:72` (`os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")`) |
+| **问题描述** | nightly vector-tests job 安装 `.[dev,async,semantic]` 后，`sentence-transformers` 模块可导入 (`SENTENCE_TRANSFORMERS_AVAILABLE=True`)，但 `all-MiniLM-L6-v2` 模型权重未预缓存。代码中 `TRANSFORMERS_OFFLINE=1` 阻止在线下载，导致 `SentenceTransformer("all-MiniLM-L6-v2")` 抛 `OSError`，被 `_setup_vector_search()` 捕获后静默 `enable_vector=False`。测试中 `VECTOR_AVAILABLE` 只检查模块导入不检查模型权重，所以测试不 skip 但断言 `capabilities["vector_search"] is True` 失败。7 个测试失败：3 个 `assert False is True` + 4 个 `no such table: memory_vectors` |
+| **修复方案** | 在 nightly.yml vector-tests job 添加：(1) HuggingFace 缓存 (`actions/cache@v4`，key 含 `all-MiniLM-L6-v2-v1`)；(2) 预下载步骤 `python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"`（在安装依赖后、运行测试前） |
+| **负责角色** | DevOps (实施) + Tester (验证) |
+| **验证标准** | nightly vector-tests job 7 个测试全部通过；HuggingFace cache 命中时预下载步骤 <5s |
+| **依赖** | 无 |
+| **状态** | ✅ 已完成 (2026-07-25): nightly.yml vector-tests job 添加 HuggingFace cache + pre-download step (commit 8232684) |
+| **生命周期** | P7 测试规划 → P9 测试执行 |
+
+### TD-059: dependabot.yml 配置违反 project_memory 约定 ⚠️ 新增 (DevOps)
+
+| 字段 | 值 |
+|------|-----|
+| **优先级** | P3 |
+| **位置** | `.github/dependabot.yml` |
+| **问题描述** | dependabot.yml 配置违反 3 条 project_memory 约定：(1) `interval: weekly` 应为 `daily`（安全更新需每日检查）；(2) 无 `groups` 配置，dev 依赖更新各自独立 PR 造成 noise；(3) 无 `ignore` 配置（project_memory 要求 ignore dev deps 的 patch/minor 更新，但 radon 6.0→6.0.1 案例表明此约定需重新评估） |
+| **修复方案** | (1) 所有 ecosystem `weekly`→`daily`；(2) pip ecosystem 添加 `groups.dev-dependencies`（`dependency-type: development`，minor+patch）；(3) github-actions ecosystem 添加 `groups.github-actions`（`patterns: ["*"]`）；(4) ignore 配置暂不添加（radon patch 案例证明有用，需用户确认约定是否调整） |
+| **负责角色** | DevOps |
+| **验证标准** | `grep "interval:" .github/dependabot.yml` 全部输出 `daily`；`grep "groups:" .github/dependabot.yml` 输出 2 行（pip + github-actions） |
+| **依赖** | 无 |
+| **状态** | ✅ 已完成 (2026-07-25): dependabot.yml 已更新 (weekly→daily + groups for pip/github-actions)；ignore 配置暂缓待用户确认 |
+| **生命周期** | P10 部署发布 |
+
 ---
 
 ## 6. 生命周期阶段映射

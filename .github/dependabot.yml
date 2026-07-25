@@ -3,24 +3,37 @@ updates:
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
       - "python"
+    # Group dev dependencies into a single PR to reduce noise (project_memory convention).
+    # Runtime dependencies stay as individual PRs because major bumps need isolated testing.
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     open-pull-requests-limit: 3
     labels:
       - "dependencies"
       - "github-actions"
+    # Group all github-actions updates into a single PR (they're low-risk and tend to bump together)
+    groups:
+      github-actions:
+        patterns:
+          - "*"
   # TD-026: docker ecosystem — auto-pin Dockerfile base image to @sha256 digest
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     open-pull-requests-limit: 3
     labels:
       - "dependencies"

@@ -5,13 +5,14 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — TD-056/TD-057: P2 magic numbers + Docker CI
+## [Unreleased] — TD-056/TD-057/TD-058: P2 magic numbers + Docker CI + nightly vector-tests fix
 
 ### Summary
 DevSquad 7-role consensus evaluation of P0-P2 issues. P0-2 (Vector/Semantic Tests)
-confirmed already fixed (nightly.yml correctly installs `.[dev,async,semantic]`).
+root cause identified and fixed (model weights not pre-cached, not just missing deps).
 P2-1 extracted 4 configuration magic numbers to named constants across 4 files.
 P2-2 added `docker-build` CI job to validate Dockerfile buildability + smoke test.
+P2-3 fixed nightly vector-tests by adding HuggingFace model cache + pre-download step.
 
 ### Changes
 
@@ -22,8 +23,11 @@ P2-2 added `docker-build` CI job to validate Dockerfile buildability + smoke tes
 | `src/carrymem/rules/storage.py` | Imported + replaced 2× `timeout=30.0` with `SQLITE_DB_TIMEOUT_SECONDS` |
 | `src/carrymem/llm/__init__.py` | Added `DEFAULT_LLM_MAX_TOKENS = 500` + `DEFAULT_LLM_TIMEOUT_SECONDS = 30`; replaced 4 usages |
 | `src/carrymem/integration/layer2_mcp/http_server.py` | Added `_SSE_KEEPALIVE_TIMEOUT_SECONDS = 30`; replaced 1 usage |
-| `.github/workflows/ci.yml` | Added `docker-build` job (needs test+build, Buildx+GHA cache, smoke test, image size) |
-| `docs/TECH_DEBT_PLAN.md` | Added TD-056 (magic numbers) + TD-057 (Docker CI), both marked ✅ |
+| `.github/workflows/ci.yml` | Added `docker-build` job (needs test+build, Buildx+GHA cache, smoke test, image size); fixed YAML syntax in `Show image size` step (block scalar `|`) |
+| `.github/workflows/nightly.yml` | Added HuggingFace cache + pre-download step for `all-MiniLM-L6-v2` in `vector-tests` job (TD-058) |
+| `src/carrymem/llm/__init__.py` | Fixed flake8 E501 (144>120) by breaking `self._resolve(...)` call across multiple lines |
+| `.github/dependabot.yml` | Changed schedule weekly→daily; added `groups` for pip dev-deps and github-actions (project_memory convention) |
+| `docs/TECH_DEBT_PLAN.md` | Added TD-056 (magic numbers) + TD-057 (Docker CI) + TD-058 (vector-tests model cache), all marked ✅ |
 
 ### Verification
 
@@ -39,7 +43,15 @@ python -m pytest tests/test_sqlite_connection_pool.py tests/test_sqlite_adapter.
   --timeout=60 -q
 # Expected: 262 passed
 
+# flake8/black/isort local check (lint fix verification)
+flake8 src/carrymem/llm/__init__.py --count --max-line-length=120 --statistics
+# Expected: 0
+
+black --check --line-length=120 src/carrymem/llm/__init__.py
+# Expected: All done! 1 file would be left unchanged.
+
 # Docker build job will run on next push to new-main or tag v*
+# Nightly vector-tests will run on next schedule or manual trigger
 ```
 
 ### Notes
