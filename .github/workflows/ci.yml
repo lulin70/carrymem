@@ -423,4 +423,5 @@ jobs:
           docker volume rm carrymem-smoke-data || true
 
       - name: Show image size
-        run: docker images carrymem:ci-${{ github.sha }} --format "Image: {{.Repository}}:{{.Tag}} Size: {{.Size}}"
+        run: |
+          docker images carrymem:ci-${{ github.sha }} --format 'Image: {{.Repository}}:{{.Tag}} Size: {{.Size}}'
