@@ -28,14 +28,19 @@ async function main() {
         // as the extension root and fail to resolve ./out/src/extension.js.
         const extensionDevelopmentPath = path.resolve(__dirname, '..', '..');
 
-        // Absolute path to the test runner module (mocha).
+        // Absolute path to the test runner module.
         // The @vscode/test-electron API requires `extensionTestsPath` (NOT
         // `testsPath`) — see node_modules/@vscode/test-electron/out/runTest.d.ts.
         // Passing `testsPath` silently sets `options.extensionTestsPath` to
         // undefined, which VSCode forwards as `--extensionTestsPath=undefined`,
         // producing "Cannot find module '/undefined'" in the extension host
         // ( nightly run 30140373325, job 89637433895).
-        const extensionTestsPath = path.resolve(__dirname, 'extension.test.js');
+        // We point to runTests.js (not extension.test.js) because VSCode's
+        // extension host does NOT set up mocha automatically — runTests.js
+        // creates a Mocha instance, loads the test files, runs them, and exits.
+        // Pointing directly to extension.test.js produces "describe is not
+        // defined" (nightly run 30143639995, job 89642688616).
+        const extensionTestsPath = path.resolve(__dirname, 'runTests.js');
 
         // Download VSCode, unzip it, and run the tests via the public runTests API.
         // (Previously used downloadAndRunTests which is not a public export of

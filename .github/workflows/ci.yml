@@ -360,9 +360,7 @@ jobs:
 
       - name: Copy runner scripts to out/
         working-directory: extensions/vscode-carrymem
-        run: |
-          cp test/runUnitTests.js out/test/
-          cp test/runVscodeTests.js out/test/
+        run: cp test/*.js out/test/
 
       - name: Run Tier 1 integration tests
         working-directory: extensions/vscode-carrymem
