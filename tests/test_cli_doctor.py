@@ -132,9 +132,10 @@ class TestDoctorCheckStatuses:
         # Per project rule "skip tests are not reasonable": if the runtime
         # is below 3.12 the test must FAIL (not skip) so the environment
         # mismatch is surfaced explicitly.
-        assert sys.version_info >= (3, 12), (
-            f"CI requires Python 3.12+; current: {sys.version_info.major}.{sys.version_info.minor}"
-        )
+        assert sys.version_info >= (
+            3,
+            12,
+        ), f"CI requires Python 3.12+; current: {sys.version_info.major}.{sys.version_info.minor}"
         cmd_doctor(["--db", isolated_db, "--json"])
         data = json.loads(capsys.readouterr().out)
         py_check = next(c for c in data["checks"] if c["name"] == "python_version")

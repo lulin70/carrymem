@@ -283,10 +283,7 @@ class TestE2EPermissionScenarios:
                     # when root bypasses chmod OR SQLite WAL mode recreated
                     # sidecar files in the writable parent directory.
                     root_bypass = os.getuid() == 0
-                    wal_sidecar_recreated = (
-                        os.path.exists(db_path + "-wal")
-                        or os.path.exists(db_path + "-shm")
-                    )
+                    wal_sidecar_recreated = os.path.exists(db_path + "-wal") or os.path.exists(db_path + "-shm")
                     assert root_bypass or wal_sidecar_recreated, (
                         "Write succeeded despite read-only chmod and not running "
                         "as root; this indicates the read-only precondition was "
