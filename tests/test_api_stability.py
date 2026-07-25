@@ -188,7 +188,7 @@ class TestProtocolMethodStability:
         assert expected.issubset(actual), f"Missing methods: {expected - actual}"
 
     def test_graph_client_methods(self):
-        """GraphClient must have these 9 methods."""
+        """GraphClient must have these 8 methods."""
         expected = {
             "store_graph_entities",
             "recall_by_entity",
@@ -198,7 +198,6 @@ class TestProtocolMethodStability:
             "get_memory_impact",
             "add_graph_relation",
             "list_graph_entities",
-            "list_graph_relations",
         }
         actual = {
             name for name in dir(GraphClient) if not name.startswith("_") and callable(getattr(GraphClient, name, None))

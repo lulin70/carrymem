@@ -754,6 +754,34 @@
 | **状态** | ✅ 已完成 (v0.9.1, 2026-07-20): mypy 9→0；targeted 773 pass；full non-e2e 4632 pass；flake8/black/isort 0 errors；行为无变更 |
 | **生命周期** | P8 实现 |
 
+### TD-056: 配置性魔法数字未提取为命名常量 ⚠️ 新增 (Coder)
+
+| 字段 | 值 |
+|------|-----|
+| **优先级** | P2 |
+| **位置** | 4 文件 7 处：`adapters/sqlite/connection.py:128,131` (timeout=30.0)、`rules/storage.py:58,70` (timeout=30.0)、`llm/__init__.py:86,92` (max_tokens=500, timeout=30)、`integration/layer2_mcp/http_server.py:296` (timeout=30) |
+| **问题描述** | 多处 `timeout=30`、`max_tokens=500` 等配置性魔法数字散落在业务代码中，含义不直观，调整时需逐处搜索修改。`limit=1000/10000` 等查询限制因含义上下文相关（"获取所有" vs "获取活跃"）未提取以避免引入 bug。算法因子（如 0.1/0.01 衰减率）不提取以保持算法可读性 |
+| **修复方案** | 提取 4 个跨文件复用或语义明确的配置性常量：(1) `SQLITE_DB_TIMEOUT_SECONDS = 30.0` 放 `adapters/sqlite/constants.py`，connection.py + storage.py 复用；(2) `DEFAULT_LLM_MAX_TOKENS = 500` + (3) `DEFAULT_LLM_TIMEOUT_SECONDS = 30` 放 `llm/__init__.py`；(4) `_SSE_KEEPALIVE_TIMEOUT_SECONDS = 30` 放 `http_server.py` |
+| **负责角色** | Coder (实施) + Tester (回归) |
+| **验证标准** | `mypy src/` 0 错误；受影响模块测试 0 失败；flake8/black/isort 不退化 |
+| **依赖** | 无 |
+| **状态** | ✅ 已完成 (2026-07-24): mypy 0 issues (161 files)；262 受影响测试通过 (51s)；7 处魔法数字替换为 4 个命名常量 |
+| **生命周期** | P8 实现 |
+
+### TD-057: CI 无 Docker 构建 job ⚠️ 新增 (DevOps)
+
+| 字段 | 值 |
+|------|-----|
+| **优先级** | P2 |
+| **位置** | `.github/workflows/ci.yml` — 无 docker-build job |
+| **问题描述** | Dockerfile/.dockerignore 已就绪（多阶段构建、非 root 用户、HEALTHCHECK），但 CI 不验证 Dockerfile 可构建性。Dockerfile 损坏（如依赖变更、基础镜像升级、COPY 路径错误）只能在发布时被发现，阻塞发布流程 |
+| **修复方案** | 在 ci.yml 新增 `docker-build` job，依赖 `[test, build]` 通过后执行：(1) Docker Buildx + GHA cache；(2) 烟雾测试（容器启动 + import 验证 + stdio CMD 启动验证）；(3) 镜像大小报告。不 push 到 registry（push 是 release 职责）。不加 trivy 扫描（已有 pip-audit，避免 CI 膨胀） |
+| **负责角色** | DevOps (实施) + Tester (烟雾测试) |
+| **验证标准** | `docker build .` 成功；容器能启动并 `from carrymem import CarryMem` 成功；stdio MCP 模式能启动（EOF 退出为预期行为） |
+| **依赖** | 无 |
+| **状态** | ✅ 已完成 (2026-07-24): docker-build job 已添加到 ci.yml (L371-426)；含 Buildx + GHA cache + 烟雾测试 + 镜像大小报告 |
+| **生命周期** | P10 部署发布 |
+
 ---
 
 ## 6. 生命周期阶段映射

@@ -17,7 +17,6 @@ Public API is fully backward compatible with the monolithic sqlite_adapter.
 
 import os
 import sqlite3
-import warnings
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -972,32 +971,6 @@ class SQLiteAdapter(StorageAdapter):
         """List entities in the knowledge graph (v0.7.0)."""
         ns = namespace or self.namespace
         return list(self._get_knowledge_graph().list_entities(ns, entity_type, limit))
-
-    def list_graph_relations(
-        self, namespace: Optional[str] = None, relation_type: Optional[str] = None, limit: int = 100
-    ) -> list:
-        """List relations in the knowledge graph (v0.7.0)."""
-        # TODO(v0.9.0): remove
-        warnings.warn(
-            "list_graph_relations() is deprecated and will be removed in v0.9.0. "
-            "Use recall_graph() with relation filters instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        ns = namespace or self.namespace
-        return list(self._get_knowledge_graph().list_relations(ns, relation_type, limit))
-
-    def get_graph_stats(self, namespace: Optional[str] = None) -> Dict[str, Any]:
-        """Get knowledge graph statistics (v0.7.0)."""
-        # TODO(v0.9.0): remove
-        warnings.warn(
-            "get_graph_stats() is deprecated and will be removed in v0.9.0. "
-            "Use stats() with namespace filter instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        ns = namespace or self.namespace
-        return dict(self._get_knowledge_graph().get_stats(ns))
 
     def store_graph_entities(self, storage_key: str, text: str, namespace: Optional[str] = None) -> int:
         """Extract entities from text and store them in the knowledge graph (v0.7.0).

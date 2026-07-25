@@ -170,11 +170,11 @@ jobs:
 
   release:
     name: Build & Publish
-    # TD-055 (NEW): vscode-e2e has pre-existing module resolution issues
+    # VSCode E2E has pre-existing module resolution issues
     # (Cannot find module '/undefined', out/src/package.json missing).
-    # Temporarily removed from needs to unblock OIDC verification (TD-015).
+    # Temporarily removed from needs until tsc output structure is fixed.
     # VSCode E2E job still runs in parallel for visibility but is non-blocking.
-    # TODO: fix vscode-e2e tsc output structure + runTests testsPath, re-add to needs.
+    # TODO: fix vscode-e2e compile script to copy package.json to out/, re-add to needs.
     needs: [pre-release-test, e2e-gate]
     runs-on: ubuntu-latest
     timeout-minutes: 30

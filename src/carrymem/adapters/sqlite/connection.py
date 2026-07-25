@@ -5,12 +5,11 @@ import os
 import sqlite3
 import threading
 import time
-import warnings
 from contextlib import contextmanager
 from typing import Dict, Optional
 
 from ...exceptions import DBConnectionError
-from .constants import SQLITE_BUSY_TIMEOUT_MS, SQLITE_CACHE_SIZE_KIB
+from .constants import SQLITE_BUSY_TIMEOUT_MS, SQLITE_CACHE_SIZE_KIB, SQLITE_DB_TIMEOUT_SECONDS
 
 logger = logging.getLogger(__name__)
 
@@ -126,10 +125,10 @@ class ConnectionManager:
                     try:
                         use_pysqlite3 = self._enable_vector and PYSQLITE3_AVAILABLE
                         if use_pysqlite3:
-                            conn = _pysqlite3.connect(self._db_path, timeout=30.0)
+                            conn = _pysqlite3.connect(self._db_path, timeout=SQLITE_DB_TIMEOUT_SECONDS)
                             conn.row_factory = _pysqlite3.Row
                         else:
-                            conn = sqlite3.connect(self._db_path, timeout=30.0)
+                            conn = sqlite3.connect(self._db_path, timeout=SQLITE_DB_TIMEOUT_SECONDS)
                             conn.row_factory = sqlite3.Row
                         self._apply_pragmas(conn)
                         if use_pysqlite3 and SQLITE_VEC_AVAILABLE:
@@ -215,37 +214,6 @@ class ConnectionManager:
         conn.execute(f"PRAGMA cache_size=-{SQLITE_CACHE_SIZE_KIB}")
         conn.execute("PRAGMA foreign_keys=ON")
         conn.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")
-
-    def release_connection(self) -> None:
-        """Mark the current thread's connection as releasable.
-
-        The connection is not actually closed; it remains in the thread-local
-        storage for reuse by subsequent get_connection() calls in the same thread.
-        This method exists for API symmetry and future pool management extensions.
-        """
-        # TODO(v0.9.0): remove
-        warnings.warn(
-            "release_connection() is deprecated and will be removed in v0.9.0. "
-            "Thread-local connections are inherently reusable; this method is a no-op.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        pass  # Thread-local connections are inherently reusable
-
-    def close_all_connections(self) -> None:
-        """Close all tracked connections across all threads.
-
-        This method is intended for cleanup scenarios (e.g., shutdown,
-        testing teardown). It closes all connections that were created through
-        this ConnectionManager instance.
-        """
-        # TODO(v0.9.0): remove
-        warnings.warn(
-            "close_all_connections() is deprecated and will be removed in v0.9.0. " "Use close() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.close()
 
     @contextmanager
     def timed_query(self, sql: Optional[str] = None):

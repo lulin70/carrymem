@@ -16,7 +16,7 @@ import threading
 from pathlib import Path
 from typing import Any, List, Optional
 
-from carrymem.adapters.sqlite.constants import SQLITE_BUSY_TIMEOUT_MS
+from carrymem.adapters.sqlite.constants import SQLITE_BUSY_TIMEOUT_MS, SQLITE_DB_TIMEOUT_SECONDS
 from carrymem.utils.language import has_cjk
 
 _logger = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ class RuleStorage:
 
     def _get_connection(self) -> sqlite3.Connection:
         if not hasattr(self._local, "conn") or self._local.conn is None:
-            conn = sqlite3.connect(self.db_path, timeout=30.0)
+            conn = sqlite3.connect(self.db_path, timeout=SQLITE_DB_TIMEOUT_SECONDS)
             conn.row_factory = sqlite3.Row
             # Set busy_timeout FIRST so subsequent PRAGMAs respect it
             conn.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")
@@ -67,7 +67,7 @@ class RuleStorage:
                 self._local.conn.execute("SELECT 1")
             except (sqlite3.OperationalError, sqlite3.ProgrammingError) as e:
                 _logger.debug("[RuleStorage] Connection health check failed, reconnecting: %s", e)
-                conn = sqlite3.connect(self.db_path, timeout=30.0)
+                conn = sqlite3.connect(self.db_path, timeout=SQLITE_DB_TIMEOUT_SECONDS)
                 conn.row_factory = sqlite3.Row
                 # Set busy_timeout FIRST so subsequent PRAGMAs respect it
                 conn.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")

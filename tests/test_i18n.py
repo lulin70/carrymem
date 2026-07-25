@@ -40,15 +40,6 @@ class TestRegistration:
         I18nManager.register("ja", {"greeting": "こんにちは"})
         assert "ja" in I18nManager.available_locales()
 
-    def test_unregister_removes_locale(self):
-        """注销后语言不再可用。"""
-        import warnings
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", DeprecationWarning)
-            I18nManager.unregister("zh-CN")
-        assert "zh-CN" not in I18nManager.available_locales()
-
     def test_available_locales_sorted(self):
         """available_locales 返回排序后的列表。"""
         locales = I18nManager.available_locales()

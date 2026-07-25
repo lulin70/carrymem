@@ -141,7 +141,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./ && cp test/runUnitTests.js out/test/ && cp test/runVscodeTests.js out/test/",
+    "compile": "tsc -p ./ && cp package.json out/ && cp test/runUnitTests.js out/test/ && cp test/runVscodeTests.js out/test/",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",
     "test:unit": "node ./out/test/runUnitTests.js",

@@ -38,6 +38,9 @@ logger = logging.getLogger(__name__)
 
 _MAX_REQUEST_SIZE = 10 * 1024 * 1024
 _MAX_SSE_CLIENTS = 100
+# SSE keepalive interval: if no message arrives within this timeout (seconds),
+# server sends a `: keepalive` comment to keep the connection alive.
+_SSE_KEEPALIVE_TIMEOUT_SECONDS = 30
 
 
 class SSEClient:
@@ -293,7 +296,7 @@ class MCPHTTPServer:
         try:
             while not client.closed:
                 try:
-                    data = await asyncio.wait_for(client.queue.get(), timeout=30)
+                    data = await asyncio.wait_for(client.queue.get(), timeout=_SSE_KEEPALIVE_TIMEOUT_SECONDS)
                     writer.write(f"data: {data}\n\n".encode())
                     await writer.drain()
                 except asyncio.TimeoutError:

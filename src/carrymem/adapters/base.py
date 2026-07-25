@@ -20,7 +20,6 @@ Available official adapters (planned):
 Community adapters are welcome!
 """
 
-import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -917,29 +916,6 @@ class StorageAdapter(ABC):
         """
         raise NotImplementedError(f"{self.__class__.__name__} does not implement import_data()")
 
-    def search_fulltext(self, query: str) -> list[dict]:
-        """Full-text search across all stored entries.
-
-        This is a convenience wrapper around :meth:`recall` with
-        ``update_access=False``. Results are ranked by the adapter's
-        recall ranking mechanism. Override for adapter-specific raw search.
-
-        Args:
-            query: Free-text search query string.
-
-        Returns:
-            List of matching entry dicts.
-        """
-        # TODO(v0.9.0): remove
-        warnings.warn(
-            "search_fulltext() is deprecated and will be removed in v0.9.0. "
-            "Use recall(query, update_access=False) instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        results: List[StoredMemory] = self.recall(query, update_access=False)
-        return [r.to_dict() for r in results]
-
     def log_audit(
         self,
         operation: str,
@@ -1472,14 +1448,6 @@ class GraphClient(Protocol):
         limit: int = 100,
     ) -> List[Dict[str, Any]]:
         """List all entities in the graph."""
-        ...
-
-    def list_graph_relations(
-        self,
-        namespace: str,
-        limit: int = 100,
-    ) -> List[Dict[str, Any]]:
-        """List all relations in the graph."""
         ...
 
 

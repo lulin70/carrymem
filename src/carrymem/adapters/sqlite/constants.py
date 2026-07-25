@@ -15,3 +15,9 @@ SQLITE_BUSY_TIMEOUT_MS = 10000
 # 20000 KiB ≈ 20 MB, which improves query performance on large datasets.
 # Used in: PRAGMA cache_size=-N
 SQLITE_CACHE_SIZE_KIB = 20000
+
+# Default connection timeout in seconds for sqlite3.connect(timeout=N).
+# How long sqlite3 waits when acquiring a write lock before raising
+# sqlite3.OperationalError. Distinct from SQLITE_BUSY_TIMEOUT_MS (PRAGMA-level)
+# because sqlite3.connect(timeout=N) operates at the Python driver level.
+SQLITE_DB_TIMEOUT_SECONDS = 30.0

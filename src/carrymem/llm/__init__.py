@@ -22,6 +22,11 @@ from typing import Any, Dict, Optional, Union
 
 from carrymem.utils.logger import logger
 
+# Default LLM configuration constants.
+# Used as fallbacks when config/env vars are not set or invalid.
+DEFAULT_LLM_MAX_TOKENS = 500
+DEFAULT_LLM_TIMEOUT_SECONDS = 30
+
 _OPENAI_CLIENT = None
 _ZHIPUAI_CLIENT = None
 _BACKEND = None
@@ -79,17 +84,17 @@ class LLMClient:
         try:
             self._max_tokens = int(
                 self._resolve(  # type: ignore[arg-type]
-                    "llm.max_tokens", "CARRYMEM_LLM_MAX_TOKENS", config, default="500"
+                    "llm.max_tokens", "CARRYMEM_LLM_MAX_TOKENS", config, default=str(DEFAULT_LLM_MAX_TOKENS)
                 )
             )
         except (ValueError, TypeError):
-            self._max_tokens = 500
+            self._max_tokens = DEFAULT_LLM_MAX_TOKENS
         try:
             self._timeout = int(
-                self._resolve("llm.timeout", "CARRYMEM_LLM_TIMEOUT", config, default="30")  # type: ignore[arg-type]
+                self._resolve("llm.timeout", "CARRYMEM_LLM_TIMEOUT", config, default=str(DEFAULT_LLM_TIMEOUT_SECONDS))  # type: ignore[arg-type]
             )
         except (ValueError, TypeError):
-            self._timeout = 30
+            self._timeout = DEFAULT_LLM_TIMEOUT_SECONDS
         self._client = self._init_client()
 
     def _resolve_enabled(self, config: Optional[Dict[str, Any]] = None) -> bool:

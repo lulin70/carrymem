@@ -15,7 +15,6 @@ import tempfile
 import threading
 import time
 import unittest
-import warnings
 
 from carrymem.adapters.sqlite.connection import _SLOW_QUERY_THRESHOLD_MS, ConnectionManager
 
@@ -200,18 +199,6 @@ class TestConnectionCleanup(unittest.TestCase):
         if os.path.exists(self.db_file):
             os.unlink(self.db_file)
 
-    def test_close_all_connections_clears_tracked(self):
-        """close_all_connections should clear all tracked connections."""
-        conn = self.mgr.get_connection()
-        self.assertGreater(len(self.mgr._all_connections), 0, "Should have tracked connections")
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", DeprecationWarning)
-            self.mgr.close_all_connections()
-        self.assertEqual(
-            len(self.mgr._all_connections) > 0, False, "All connections should be cleared after close_all_connections"
-        )
-
     def test_close_prevents_new_connections(self):
         """After close(), get_connection() should raise an error."""
         self.mgr.get_connection()  # Create a connection
@@ -219,15 +206,6 @@ class TestConnectionCleanup(unittest.TestCase):
 
         with self.assertRaises(Exception):  # DBConnectionError
             self.mgr.get_connection()
-
-    def test_release_connection_is_noop(self):
-        """release_connection() should not raise errors and allow continued use."""
-        conn1 = self.mgr.get_connection()
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", DeprecationWarning)
-            self.mgr.release_connection()
-        conn2 = self.mgr.get_connection()
-        self.assertIs(conn1, conn2, "Connection should still be reusable after release")
 
     def test_context_manager_cleanup(self):
         """Context manager should properly cleanup on exit."""

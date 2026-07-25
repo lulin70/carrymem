@@ -5,6 +5,51 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — TD-056/TD-057: P2 magic numbers + Docker CI
+
+### Summary
+DevSquad 7-role consensus evaluation of P0-P2 issues. P0-2 (Vector/Semantic Tests)
+confirmed already fixed (nightly.yml correctly installs `.[dev,async,semantic]`).
+P2-1 extracted 4 configuration magic numbers to named constants across 4 files.
+P2-2 added `docker-build` CI job to validate Dockerfile buildability + smoke test.
+
+### Changes
+
+| File | Change |
+|------|--------|
+| `src/carrymem/adapters/sqlite/constants.py` | Added `SQLITE_DB_TIMEOUT_SECONDS = 30.0` |
+| `src/carrymem/adapters/sqlite/connection.py` | Replaced 2× `timeout=30.0` with `SQLITE_DB_TIMEOUT_SECONDS` |
+| `src/carrymem/rules/storage.py` | Imported + replaced 2× `timeout=30.0` with `SQLITE_DB_TIMEOUT_SECONDS` |
+| `src/carrymem/llm/__init__.py` | Added `DEFAULT_LLM_MAX_TOKENS = 500` + `DEFAULT_LLM_TIMEOUT_SECONDS = 30`; replaced 4 usages |
+| `src/carrymem/integration/layer2_mcp/http_server.py` | Added `_SSE_KEEPALIVE_TIMEOUT_SECONDS = 30`; replaced 1 usage |
+| `.github/workflows/ci.yml` | Added `docker-build` job (needs test+build, Buildx+GHA cache, smoke test, image size) |
+| `docs/TECH_DEBT_PLAN.md` | Added TD-056 (magic numbers) + TD-057 (Docker CI), both marked ✅ |
+
+### Verification
+
+```bash
+# mypy: 0 issues
+mypy src/
+# Expected: Success: no issues found in 161 source files
+
+# targeted regression: 262 passed
+python -m pytest tests/test_sqlite_connection_pool.py tests/test_sqlite_adapter.py \
+  tests/test_sqlite_adapter_ext.py tests/test_rules/test_storage.py \
+  tests/test_mcp_server.py tests/test_mcp_json_async.py tests/test_phase4.py \
+  --timeout=60 -q
+# Expected: 262 passed
+
+# Docker build job will run on next push to new-main or tag v*
+```
+
+### Notes
+- `limit=1000/10000` magic numbers intentionally NOT extracted: context-dependent
+  semantics ("get all" vs "get active") would risk bugs if unified.
+- Algorithm factors (e.g., 0.1/0.01 decay rates) NOT extracted: would reduce
+  algorithm readability.
+- Docker smoke test overrides CMD to verify import works (stdio mode exits
+  immediately on stdin EOF, which is expected behavior).
+
 ## [0.9.3rc1] - 2026-07-22 — TD-015 Password-based publish restored (OIDC abandoned)
 
 ### Summary
