@@ -91,7 +91,12 @@ class LLMClient:
             self._max_tokens = DEFAULT_LLM_MAX_TOKENS
         try:
             self._timeout = int(
-                self._resolve("llm.timeout", "CARRYMEM_LLM_TIMEOUT", config, default=str(DEFAULT_LLM_TIMEOUT_SECONDS))  # type: ignore[arg-type]
+                self._resolve(  # type: ignore[arg-type]
+                    "llm.timeout",
+                    "CARRYMEM_LLM_TIMEOUT",
+                    config,
+                    default=str(DEFAULT_LLM_TIMEOUT_SECONDS),
+                )
             )
         except (ValueError, TypeError):
             self._timeout = DEFAULT_LLM_TIMEOUT_SECONDS

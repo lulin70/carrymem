@@ -103,10 +103,28 @@ jobs:
         with:
           python-version: '3.12'
 
+      # Cache HuggingFace model weights to avoid re-downloading all-MiniLM-L6-v2 (~90MB)
+      # on every nightly run. Without this, SentenceTransformer("all-MiniLM-L6-v2")
+      # fails because the code sets TRANSFORMERS_OFFLINE=1 (see sqlite/__init__.py:72),
+      # which blocks online downloads — so the model must be pre-cached.
+      - name: Cache HuggingFace models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: ${{ runner.os }}-huggingface-all-MiniLM-L6-v2-v1
+
       - name: Install dependencies with [semantic] extra
         run: |
           python -m pip install --upgrade "pip>=26.1.2"
           pip install -e ".[dev,async,semantic]"
+
+      # Pre-download the embedding model weights so TRANSFORMERS_OFFLINE=1 in
+      # _get_or_load_embedding_model() finds the cached weights. Without this,
+      # _setup_vector_search() catches the OSError and silently disables vector
+      # search, causing all vector tests to fail with "assert False is True".
+      - name: Pre-download embedding model
+        run: |
+          python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 
       - name: Run vector search tests
         env:
