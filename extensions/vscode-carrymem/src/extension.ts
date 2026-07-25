@@ -176,6 +176,9 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     checkAvailability(client);
+
+    // Export extension API for testing and programmatic access
+    return { client, treeProvider };
 }
 
 async function checkAvailability(client: CarryMemClient) {

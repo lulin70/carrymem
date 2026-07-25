@@ -132,6 +132,7 @@ describe('VSCode Extension — UI E2E User Journeys', () => {
 
         it('all commands have title and are well-formed', () => {
             const packageJson = require('../../package.json');
+            const nls = require('../../package.nls.json');
             const commands = packageJson.contributes.commands;
             assert.ok(commands, 'Should have commands');
             assert.ok(commands.length >= 9, `Should have at least 9 commands, got ${commands.length}`);
@@ -139,9 +140,14 @@ describe('VSCode Extension — UI E2E User Journeys', () => {
             commands.forEach((cmd: any) => {
                 assert.ok(cmd.command, 'Each command should have a command id');
                 assert.ok(cmd.title, `Command ${cmd.command} should have a title`);
+                // package.json uses i18n placeholders like "%command.refreshRules.title%"
+                // Resolve them via package.nls.json before checking the prefix.
+                const resolvedTitle = cmd.title.startsWith('%') && cmd.title.endsWith('%')
+                    ? nls[cmd.title.slice(1, -1)] || cmd.title
+                    : cmd.title;
                 assert.ok(
-                    cmd.title.startsWith('CarryMem: '),
-                    `Command ${cmd.command} title should start with "CarryMem: "`,
+                    resolvedTitle.startsWith('CarryMem: '),
+                    `Command ${cmd.command} title should start with "CarryMem: " (got: "${resolvedTitle}")`,
                 );
             });
         });
