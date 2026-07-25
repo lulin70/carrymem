@@ -401,23 +401,20 @@ jobs:
         run: |
           # Verify the image can import carrymem — validates: (1) wheel installed,
           # (2) deps installed, (3) import works, (4) torch CUDA OSError is caught.
-          # We use `timeout 60` to prevent hangs (CarryMem() instantiation can be
-          # slow in resource-constrained CI runners due to SQLite init + encryption
-          # setup; import-only check is sufficient for smoke test).
-          timeout 60 docker run --rm \
+          # --kill-after=5: send SIGKILL 5s after SIGTERM. Without this, `timeout`
+          #   hangs forever because `docker run` does NOT propagate SIGTERM to the
+          #   container (confirmed in CI run 30142136016: smoke test ran 9+ min
+          #   with `timeout 60` and never exited).
+          # --init: use tini as PID 1 inside the container for proper signal
+          #   forwarding to the python process.
+          # 120s timeout: torch import in CPU-only slim image can take 30-60s
+          #   (tries multiple CUDA lib paths before raising OSError, which is
+          #   caught by the widened `except (ImportError, OSError, ValueError)`).
+          timeout --kill-after=5 120 docker run --rm --init \
             -v carrymem-smoke-data:/data \
             -e CARRYMEM_DATA_PATH=/data \
             carrymem:ci-${{ github.sha }} \
             python -c "import carrymem; print('OK: version=' + carrymem.__version__)"
-
-          # Verify the default CMD (stdio MCP mode) at least starts without import errors.
-          # It will exit immediately due to EOF on stdin — that's expected.
-          timeout 10 docker run --rm \
-            -v carrymem-smoke-data:/data \
-            -e CARRYMEM_DATA_PATH=/data \
-            carrymem:ci-${{ github.sha }} \
-            < /dev/null || \
-            echo "OK: stdio MCP mode started (exited on stdin EOF as expected)"
 
           # Cleanup
           docker volume rm carrymem-smoke-data || true
