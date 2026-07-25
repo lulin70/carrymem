@@ -131,6 +131,7 @@ jobs:
           CI: "true"
         run: |
           python -m pytest tests/test_vector_search.py \
+            --no-cov \
             --tb=long \
             --timeout=600 \
             -v

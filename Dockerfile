@@ -6,7 +6,7 @@ FROM python:3.12-slim-bookworm AS builder
 
 WORKDIR /build
 
-RUN pip install --no-cache-dir --upgrade "pip>=26.1.2" build
+RUN pip install --no-cache-dir --upgrade "pip>=26.1.2" build setuptools wheel setuptools_scm[toml]
 
 # Copy only files needed for building the wheel
 COPY setup.py pyproject.toml MANIFEST.in ./
