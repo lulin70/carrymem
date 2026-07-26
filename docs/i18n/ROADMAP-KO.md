@@ -740,5 +740,7 @@ carrymem unpack team-identity.carry
 
 ---
 
-**Next Milestone**: v0.9.0 (next minor — planning TBD)
+**Next Milestone**: v0.10.0 (next minor — planning TBD)
+
+Note: v0.9.0 ~ v0.9.7 series completed (2026-07-20 ~ 2026-07-26). See CHANGELOG.md for details.
 **Status**: ✅ **v0.8.0 complete (4334+ tests, 80%+ coverage, Memory + Rules + Knowledge + Enterprise)**

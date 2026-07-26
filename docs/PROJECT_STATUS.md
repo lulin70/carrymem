@@ -1,12 +1,37 @@
 # CarryMem — Project Status
 
-**Version**: v0.8.0
-**Last Updated**: 2026-07-17
+**Version**: v0.9.7
+**Last Updated**: 2026-07-26
 **Maintainer**: CarryMem Team
 
 ---
 
-## v0.8.0 Project Assessment (2026-07-17)
+## v0.9.7 Project Status (2026-07-26)
+
+**Current State**: Production-ready beta. Tech debt cleanup ongoing via DevSquad 7-role methodology.
+
+### Recent Releases (v0.9.x series)
+
+| Version | Date | Key Changes |
+|---------|------|-------------|
+| v0.9.7 | 2026-07-26 | Tech debt cleanup: TD-003b/009/011b/002 follow-ups (deleted cli.py facade, added TUI fallback tests, downgraded SQLITE_SCHEMA to P3) |
+| v0.9.6 | 2026-07-26 | Nightly slow test threshold fix (store_messages batch API) + release.yml cp consistency |
+| v0.9.5 | 2026-07-26 | Nightly slow test fix + release.yml cp consistency |
+| v0.9.4 | 2026-07-25 | TD-063/TD-064/TD-065: test skip cleanup + flake8 bugbear fix + ruff config |
+| v0.9.3rc1 | 2026-07-22 | TD-015 Password-based publish restored (OIDC abandoned) |
+| v0.9.2 | 2026-07-20 | P3 Tech Debt Cleanup: TD-031/049/050/051/053/054 |
+| v0.9.1 | 2026-07-20 | TD-055: mypy src/ baseline errors cleared 9 → 0 |
+| v0.9.0 | 2026-07-20 | UI/UX Overhaul — Morandi Aesthetic + Accessibility + Onboarding |
+
+### Test & Quality Metrics (v0.9.7)
+
+- **Non-e2e tests**: 4666 passed, 0 failed, 4 skipped (vector/semantic optional deps)
+- **TUI tests**: 97 passed (including 3 new TD-011b fallback tests)
+- **Lint**: flake8 bugbear 0 errors, black clean, isort clean, mypy 0 errors
+- **Complexity**: radon 0 D/E/F functions
+- **Coverage**: ≥80% on core modules
+
+### v0.8.0 Project Assessment (2026-07-17, archived)
 
 **7-Dimension Maturity Score**: B+ (77/100)
 
@@ -392,9 +417,11 @@ each py3.11 + py3.12).
 
 ## Next Milestone
 
-**v0.9.0** (next MINOR — TBD based on user feedback and architecture evolution plan)
+**v0.10.0** (next MINOR — TBD based on user feedback and architecture evolution plan)
 
-Potential areas (per CARRYMEM_ARCHITECTURE_EVOLUTION_PLAN.md):
+Note: v0.9.0 ~ v0.9.7 series completed (2026-07-20 ~ 2026-07-26). The original "v0.9.0 next milestone" plan items below have been addressed or superseded:
+
+Potential areas for v0.10.0+ (per CARRYMEM_ARCHITECTURE_EVOLUTION_PLAN.md):
 - Vector search enhancements (HNSW indexing, approximate nearest neighbor)
 - Cross-namespace knowledge transfer
 - LLM-assisted entity extraction (optional, capability-gated)

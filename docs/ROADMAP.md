@@ -919,5 +919,7 @@ carrymem unpack team-identity.carry
 
 ---
 
-**Next Milestone**: v0.9.0 (semantic embeddings integration + cloud MCP server + Smithery marketplace)
-**Status**: ✅ **v0.8.0 complete (4334+ tests, 80.88% coverage, Memory + Rules + Knowledge + Enterprise + Knowledge Graph + Multi-Mode Retrieval + Memify + Async I/O + Security Hardening + Graphify)**
+**Next Milestone**: v0.10.0 (semantic embeddings integration + cloud MCP server + Smithery marketplace)
+
+Note: v0.9.0 ~ v0.9.7 series completed (2026-07-20 ~ 2026-07-26). See CHANGELOG.md for details.
+**Status**: ✅ **v0.9.7 complete (4666+ non-e2e tests, 97 TUI tests, radon 0 D/E/F, mypy 0 errors, flake8/black/isort clean)**
