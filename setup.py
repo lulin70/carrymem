@@ -102,7 +102,7 @@ setup(
         "semantic": [
             "sqlite-vec>=0.1.0",
             "pysqlite3>=0.6.0",
-            "sentence-transformers>=2.2.2",
+            "sentence-transformers>=5.6.0",
         ],
         "async": [
             "aiosqlite>=0.19",
@@ -130,15 +130,15 @@ setup(
             "zhipuai>=2.0",
         ],
         "tui": [
-            "textual>=0.40",
+            "textual>=8.2.8",
         ],
         "full": [
             "pycld2>=0.41",
             "langdetect>=1.0.9",
-            "textual>=0.40",
+            "textual>=8.2.8",
             "sqlite-vec>=0.1.0",
             "pysqlite3>=0.6.0",
-            "sentence-transformers>=2.2.2",
+            "sentence-transformers>=5.6.0",
             "openai>=1.0",
             "zhipuai>=2.0",
             "aiosqlite>=0.19",
