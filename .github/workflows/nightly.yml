@@ -43,6 +43,7 @@ jobs:
         run: |
           python -m pytest tests/ \
             -m "slow" \
+            --no-cov \
             --tb=long \
             --timeout=1800 \
             -q

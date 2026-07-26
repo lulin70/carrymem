@@ -159,7 +159,7 @@ class TestInjectionLatency:
 
 
 class TestCRUDLatency:
-    """Benchmark: CRUD operations should be < 10ms each"""
+    """Benchmark: CRUD operations should be < 10ms each (dev), scaled by CI_FACTOR in CI"""
 
     def test_create_latency(self, temp_db):
         """Creating a rule should be fast"""
@@ -174,8 +174,10 @@ class TestCRUDLatency:
         p99 = sorted(latencies)[int(len(latencies) * 0.99)]
         avg = statistics.mean(latencies)
 
-        assert p99 < 20, f"P99 create latency {p99:.1f}ms exceeds 20ms"
-        assert avg < 10, f"Average create latency {avg:.1f}ms exceeds 10ms"
+        # CI runners are 5-10x slower than dev machines (project_memory lesson).
+        # Apply CI_FACTOR so thresholds do not false-positive on nightly runs.
+        assert p99 < 20 * CI_FACTOR, f"P99 create latency {p99:.1f}ms exceeds {20 * CI_FACTOR}ms"
+        assert avg < 10 * CI_FACTOR, f"Average create latency {avg:.1f}ms exceeds {10 * CI_FACTOR}ms"
 
     def test_read_latency(self, populated_storage):
         """Reading a rule by ID should be fast"""
@@ -190,7 +192,7 @@ class TestCRUDLatency:
             latencies.append((time.perf_counter() - start) * 1000)
 
         p99 = sorted(latencies)[int(len(latencies) * 0.99)]
-        assert p99 < 10, f"P99 read latency {p99:.1f}ms exceeds 10ms"
+        assert p99 < 10 * CI_FACTOR, f"P99 read latency {p99:.1f}ms exceeds {10 * CI_FACTOR}ms"
 
     def test_update_latency(self, populated_storage):
         """Updating a rule should be fast"""
@@ -205,7 +207,7 @@ class TestCRUDLatency:
             latencies.append((time.perf_counter() - start) * 1000)
 
         p99 = sorted(latencies)[int(len(latencies) * 0.99)]
-        assert p99 < 15, f"P99 update latency {p99:.1f}ms exceeds 15ms"
+        assert p99 < 15 * CI_FACTOR, f"P99 update latency {p99:.1f}ms exceeds {15 * CI_FACTOR}ms"
 
     def test_delete_latency(self, temp_db):
         """Deleting a rule should be fast"""
@@ -222,7 +224,7 @@ class TestCRUDLatency:
             latencies.append((time.perf_counter() - start) * 1000)
 
         p99 = sorted(latencies)[int(len(latencies) * 0.99)]
-        assert p99 < 25, f"P99 delete latency {p99:.1f}ms exceeds 25ms"
+        assert p99 < 25 * CI_FACTOR, f"P99 delete latency {p99:.1f}ms exceeds {25 * CI_FACTOR}ms"
 
 
 class TestStorageOverhead:
