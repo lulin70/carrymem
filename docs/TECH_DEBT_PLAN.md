@@ -378,6 +378,7 @@
 | **验证标准** | 命令 `grep -c "password.*PYPI_API_TOKEN" .github/workflows/release.yml` 返回 0；`gh secret list` 显示无 `PYPI_API_TOKEN`；rc 预发布 tag 成功上传到 PyPI |
 | **依赖** | 无 |
 | **状态** | ✅ 已完成 (2026-07-22, password-based 发布恢复) — 用户决定不配置 PyPI Trusted Publisher，OIDC 迁移方案放弃。release.yml 恢复 `password: ${{ secrets.PYPI_API_TOKEN }}` 行，保留 `environment: pypi` + `id-token: write` 声明（harmless，为未来 OIDC 迁移预留）。**carrymem==0.9.3rc1 已成功发布到 PyPI**（run 29893374227, HTTP 200 确认 whl+tar.gz 文件在 PyPI CDN 上）。**PEP 440 version normalization 修复保留**（`packaging.version.Version` 规范化 tag 与 wheel 版本号，修复 `0.9.3-rc1` vs `0.9.3rc1` 不匹配问题）。**new-main 分支保护已配置**（6 个 status checks）。**⚠️ 安全提醒**：之前暴露的 PyPI API token 仍然有效（用于本次发布），应尽快在 https://pypi.org/manage/account/token/ 撤销旧 token 并创建新 token，然后用 `gh secret set PYPI_API_TOKEN -R lulin70/carrymem` 更新 GitHub secret |
+| **后续决策** | 🟡 暂缓轮换 (2026-07-26 用户决策): 用户决定暂缓轮换 PyPI token，下次发布时再处理。风险记录: 旧 token 暴露期间可能被滥用，但仅用于发布且权限受限。DevSquad Security 角色保留一票否决权，如发现异常使用立即触发轮换 |
 | **生命周期** | P6 安全审查 → P10 部署发布 |
 
 #### TD-016: 6 个 CI job 缺 timeout-minutes
@@ -810,6 +811,7 @@
 | **验证标准** | `grep "interval:" .github/dependabot.yml` 全部输出 `daily`；`grep "groups:" .github/dependabot.yml` 输出 2 行（pip + github-actions） |
 | **依赖** | 无 |
 | **状态** | ✅ 已完成 (2026-07-25): dependabot.yml 已更新 (weekly→daily + groups for pip/github-actions)；ignore 配置暂缓待用户确认 |
+| **后续决策** | ✅ 已完成 (2026-07-26 用户决策): 用户确认调整 project_memory 约定 — 删除 "ignore dev deps patch/minor" 要求，允许 dependabot 为 dev 依赖的 patch/minor 更新创建 PR。理由: radon 6.0→6.0.1 案例证明 patch 更新有用，保持依赖最新可避免安全漏洞积累。当前 dependabot.yml 已无 ignore 配置，符合新约定。project_memory.md 已同步更新 |
 | **生命周期** | P10 部署发布 |
 
 ### TD-060: Dockerfile 缺少 bin/ 目录导致 build_wheel 失败 ⚠️ 新增 (DevOps)
