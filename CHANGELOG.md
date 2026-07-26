@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.7] - 2026-07-26 — tech debt cleanup (TD-003b/009/011b/002 follow-ups)
+
+### Summary
+DevSquad 7-role consensus pushed 4 pending tech debt follow-ups from
+TECH_DEBT_PLAN.md. Verification revealed TD-003b's 8 public APIs had
+already been fully removed (not just deprecated) by subsequent refactors,
+so the "TODO(v0.9): remove" trigger condition is moot — the documentation
+was simply stale. Deleted the `cli.py` shim shadowed by the `cli/` package
+directory (zero callers via `grep`). Added 3 TUI fallback tests covering
+the `HAS_TEXTUAL=False` install-hint path (TD-011b ⑩, the only uncovered
+path of the 10 interaction paths). Downgraded TD-002 SQLITE_SCHEMA race
+diagnosis to P3 observation after confirming `_init_rule_engine_eager()` +
+`_prime_fts5_vtable()` + WAL mode already mitigate the risk.
+
+### Changes
+
+| File | Change |
+|------|--------|
+| `src/carrymem/cli.py` | **Deleted** (TD-009 follow-up). 16-line `from carrymem.cli import *` facade shadowed by `cli/__init__.py`. Python import resolution prefers the package directory over the module file, so `setup.py`'s `carrymem = carrymem.cli:main` entry point actually points to `cli/__init__.py:main`. `grep -rn "from carrymem.cli.py\|import carrymem.cli.py" src/ tests/` returned 0 callers. Safe removal; reduces import ambiguity. |
+| `tests/test_tui.py` | **Added 3 tests** in new `TestRunTuiFallbackHint` class (TD-011b ⑩). Tests verify `run_tui()` with `HAS_TEXTUAL=False` (mocked via `@patch`): (1) prints 3-line install hint mentioning "Textual is not installed." + "pip install textual" + "carrymem tui"; (2) accepts ignored `(db_path, namespace, theme_name)` args without error; (3) returns `None` to signal TUI did not launch. All 3 tests mock `CarryMemTUI` to assert it is NOT instantiated in fallback mode. Full TUI suite: 97 passed. |
+| `docs/TECH_DEBT_PLAN.md` | **Updated 4 sections**: (1) TD-002 added "后续诊断" note downgrading SQLITE_SCHEMA race to P3 observation with protection mechanism summary; (2) TD-003b state updated to reflect 8 APIs already fully deleted (not just deprecated); (3) TD-009 added "后续处理" note recording `cli.py` deletion; (4) TD-011b marked as covered (9/10 paths via MagicMock + ⑩ fallback via patch). |
+
+### Verification
+
+```bash
+# 4666 non-e2e tests pass (0 failed)
+pytest tests/ --ignore=tests/e2e --ignore=tests/test_performance_benchmark.py --no-cov -q
+# → 4666 passed, 4 skipped, 242 warnings in 560.12s
+
+# TD-011b ⑩ fallback tests
+pytest tests/test_tui.py::TestRunTuiFallbackHint -v
+# → 3 passed
+
+# Full TUI suite
+pytest tests/test_tui.py --no-cov -q
+# → 97 passed
+
+# TD-003b verification: 8 public APIs already deleted
+grep -rn "def search_fulltext\|def release_connection\|def close_all_connections\|def list_graph_relations\|def get_graph_stats\|def unregister\|def remove_rule" src/
+# → (no matches)
+
+# TD-009 verification: cli.py deleted
+test ! -f src/carrymem/cli.py && echo "cli.py removed"
+# → cli.py removed
+```
+
 ## [0.9.6] - 2026-07-26 — nightly slow test threshold fix + coverage + dependabot
 
 ### Summary

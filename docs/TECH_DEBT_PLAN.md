@@ -74,6 +74,7 @@
 | **验证标准** | 命令 `grep -n "except Exception: pass" src/carrymem/core/_lifecycle.py` 返回 0 行；单元测试模拟 rule_engine 初始化抛异常时产生 warning 日志（`caplog` 断言） |
 | **依赖** | 无 |
 | **状态** | ✅ 已完成 (logger.warning 已添加 + 2 个单元测试 TestRuleEngineInitFailure 通过) |
+| **后续诊断** | 🟡 降级为 P3 观察项 (2026-07-26 DevSquad 7 角色共识)。已有保护机制: (1) `_init_rule_engine_eager()` 在 `__init__` 中急切初始化 rule_engine，确保所有 schema 变更在 worker 线程访问前完成；(2) `_prime_fts5_vtable()` 在 `get_connection()` 中为每个新连接预热 FTS5 vtable，避免并发 vtable 构造竞争；(3) WAL journal_mode + busy_timeout 配置缓解锁竞争。根因: FTS5 vtable 构造在多连接并发时 increment schema cookie，导致其他连接的 `memories_fts` vtable 失效。影响概率低（仅并发首写入时触发），不影响数据安全（已有 warning 日志 + 重试机制）。推荐长期观察方向: 添加 SQL trace 日志 + 并发复现测试。不阻塞发布 |
 | **生命周期** | P6 安全审查 → P8 实现 → P9 测试 |
 
 ### TD-003a: 2 项可立即删除的死代码 ⚠️ 修正后
@@ -101,7 +102,7 @@
 | **负责角色** | Coder |
 | **验证标准** | 8 项均含 `DeprecationWarning`；`pytest -W error::DeprecationWarning` 测试不破坏 |
 | **依赖** | 无 |
-| **状态** | ✅ 已完成 (8 项公共 API 全部加 `DeprecationWarning` + `# TODO(v0.9): remove` 注释；6 个测试文件用 `warnings.catch_warnings()` 包装避免 DeprecationWarning 触发失败) |
+| **状态** | ✅ 已完成 (v0.9.6 核实: 8 项公共 API **已被完全删除**，非仅加 deprecation。`grep -rn "def search_fulltext\|def release_connection\|def close_all_connections\|def list_graph_relations\|def get_graph_stats\|def unregister\|def remove_rule" src/` 返回 0 结果。`grep -rn "TODO\(v0\.9\)" src/` 返回 0 结果。代码演进已超出文档记录，符号已被后续重构完全移除。TD-003b 待后续处理事项关闭) |
 | **生命周期** | P8 实现 |
 
 ### TD-004: benchmark.yml matrix 含 Python 3.11 (CI 配置错误)
@@ -152,6 +153,7 @@
 | **验证标准** | 命令 `pytest --cov=carrymem.__main__ --cov=carrymem.adapters.async_sqlite --cov-report=term` 4 个模块覆盖率 >50% |
 | **依赖** | TD-012 (CI 安装可选依赖) |
 | **状态** | ✅ 已完成 (3/4 模标达标: `__main__.py` 92.62%, `integration/layer2_mcp/__main__.py` 100%, `adapters/async_sqlite.py` 81.48%; `cli.py` 0% 因被 `cli/` 包目录遮蔽为死代码，单独处理) |
+| **后续处理** | ✅ 已完成 (2026-07-26): `src/carrymem/cli.py` 已删除。该文件是 16 行 facade `from carrymem.cli import *`，被 `cli/` 包目录遮蔽（Python 导入机制优先使用包目录），`setup.py` 的 `console_scripts` 入口 `carrymem = carrymem.cli:main` 实际指向 `cli/__init__.py:main`。`grep -rn "from carrymem.cli.py\|import carrymem.cli.py" src/ tests/` 返回 0 结果，零调用者，安全删除 |
 | **生命周期** | P7 测试规划 → P9 测试执行 |
 
 #### TD-010: SQLiteAdapter 主实现 71.46% 覆盖

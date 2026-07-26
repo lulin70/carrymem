@@ -1590,3 +1590,73 @@ else:
         def test_run_tui_default_theme_is_morandi_dark(self, MockApp):
             run_tui()
             MockApp.assert_called_once_with(db_path=None, namespace="default", theme_name="morandi-dark")
+
+    # ══════════════════════════════════════════════════════════════════
+    # Test Group 22: TD-011b ⑩ HAS_TEXTUAL=False fallback hint
+    # Verifies user-friendly install hint when textual is not installed.
+    # ══════════════════════════════════════════════════════════════════
+
+    class TestRunTuiFallbackHint(unittest.TestCase):
+        """When textual is unavailable, run_tui() must print install hint and skip app launch."""
+
+        @patch("carrymem.tui.HAS_TEXTUAL", False)
+        @patch("carrymem.tui.CarryMemTUI")
+        def test_fallback_prints_install_hint(self, MockApp):
+            """Verify: run_tui() with HAS_TEXTUAL=False prints friendly install instructions.
+
+            Scenario: textual package is not installed (HAS_TEXTUAL=False).
+            Expected: run_tui() prints 3-line install hint and does NOT instantiate CarryMemTUI.
+            """
+            import contextlib
+            import io
+
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                run_tui()
+            output = buf.getvalue()
+
+            # Friendly hint must mention textual and install command.
+            self.assertIn("Textual is not installed.", output, "must report textual absence")
+            self.assertIn("pip install textual", output, "must provide install command")
+            self.assertIn("carrymem tui", output, "must provide rerun command")
+
+            # Must NOT instantiate the textual app.
+            MockApp.assert_not_called()
+
+        @patch("carrymem.tui.HAS_TEXTUAL", False)
+        @patch("carrymem.tui.CarryMemTUI")
+        def test_fallback_accepts_ignored_args(self, MockApp):
+            """Verify: fallback run_tui() accepts (db_path, namespace, theme_name) without error.
+
+            Scenario: HAS_TEXTUAL=False but caller passes arguments.
+            Expected: arguments are silently ignored, fallback hint still prints, no exception.
+            """
+            import contextlib
+            import io
+
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                # Should not raise even with full arg set.
+                run_tui(db_path="/tmp/test.db", namespace="test", theme_name="high-contrast")
+            output = buf.getvalue()
+
+            self.assertIn("Textual is not installed.", output)
+            MockApp.assert_not_called()
+
+        @patch("carrymem.tui.HAS_TEXTUAL", False)
+        @patch("carrymem.tui.CarryMemTUI")
+        def test_fallback_returns_none(self, MockApp):
+            """Verify: fallback run_tui() returns None (not an app instance).
+
+            Scenario: HAS_TEXTUAL=False.
+            Expected: return value is None to signal callers that TUI did not launch.
+            """
+            import contextlib
+            import io
+
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                result = run_tui()
+
+            self.assertIsNone(result, "fallback run_tui() must return None")
+            MockApp.assert_not_called()

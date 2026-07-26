@@ -20,7 +20,7 @@ RUN python -m build --wheel --no-isolation
 # TD-026: same base image pinning as builder stage above.
 FROM python:3.12-slim-bookworm
 
-ARG VERSION=0.9.6
+ARG VERSION=0.9.7
 
 LABEL org.opencontainers.image.title="CarryMem MCP Server"
 LABEL org.opencontainers.image.description="Your portable AI memory layer — MCP server for memory classification"
