@@ -91,13 +91,13 @@ class TestForgetSmoke:
         """Forget operation must complete < FORGET_SMOKE_S."""
         cm = smoke_db
         store_result = cm.classify_and_remember("I prefer Vim over Emacs")
-        assert isinstance(store_result, dict), (
-            f"store_result should return dict, got {type(store_result)}: {store_result}"
-        )
+        assert isinstance(
+            store_result, dict
+        ), f"store_result should return dict, got {type(store_result)}: {store_result}"
         storage_keys = store_result.get("storage_keys", [])
-        assert storage_keys, (
-            f"store_result must return non-empty storage_keys for forget smoke test, got: {store_result}"
-        )
+        assert (
+            storage_keys
+        ), f"store_result must return non-empty storage_keys for forget smoke test, got: {store_result}"
 
         memory_id = storage_keys[0]
         start = time.perf_counter()

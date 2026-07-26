@@ -197,14 +197,13 @@ class TestE2EAdapterFeatureParity:
                 # JSON adapter must surface the unsupported-backup contract
                 # (error dict), not silently succeed or raise NotImplementedError.
                 assert "error" in backup_result, (
-                    f"JSON adapter should report unsupported backup via error dict, "
-                    f"got: {backup_result}"
+                    f"JSON adapter should report unsupported backup via error dict, " f"got: {backup_result}"
                 )
             else:
                 # SQLite: backup must succeed and report the backup path
-                assert backup_result.get("backed_up") is True or "path" in backup_result, (
-                    f"SQLite backup should succeed with backed_up=True/path, got: {backup_result}"
-                )
+                assert (
+                    backup_result.get("backed_up") is True or "path" in backup_result
+                ), f"SQLite backup should succeed with backed_up=True/path, got: {backup_result}"
         finally:
             cm.close()
 

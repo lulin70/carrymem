@@ -235,9 +235,7 @@ class TestCRUDOperations:
         original = adapter_with_data.get_by_key(
             adapter_with_data.store_entry(MemoryEntry(content="original", type="user_preference")).storage_key
         )
-        assert original is not None, (
-            "Setup failed: get_by_key returned None for an entry just stored"
-        )
+        assert original is not None, "Setup failed: get_by_key returned None for an entry just stored"
         updated = adapter_with_data.update_memory(original.storage_key, "updated content", reason="test")
         assert updated is not None
         assert "updated" in updated.content

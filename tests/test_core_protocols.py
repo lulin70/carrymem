@@ -216,6 +216,7 @@ class TestStructuralConformance:
         # CarryMem is the project under test — import failure must FAIL the
         # test (not skip), per project rule "skip tests are not reasonable".
         from carrymem import CarryMem
+
         proto_members = _protocol_members(LifecycleOps)
         instance = CarryMem()
         for name in proto_members:
@@ -226,6 +227,7 @@ class TestStructuralConformance:
         # CarryMem is the project under test — import failure must FAIL the
         # test (not skip), per project rule "skip tests are not reasonable".
         from carrymem import CarryMem
+
         proto_members = _protocol_members(ClassificationOps)
         instance = CarryMem()
         for name in proto_members:
@@ -265,6 +267,7 @@ class TestCompositeProtocol:
         # CarryMem is the project under test — import failure must FAIL the
         # test (not skip), per project rule "skip tests are not reasonable".
         from carrymem import CarryMem
+
         # Verify every method from all sub-Protocols exists on CarryMem
         instance = CarryMem()
         for sub_proto in CarryMemOps.__bases__:
