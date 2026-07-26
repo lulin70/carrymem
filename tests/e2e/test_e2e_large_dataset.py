@@ -6,10 +6,17 @@ Validates performance and behavior under large data volumes:
 2. Recall performance under load (<5s threshold)
 3. Consolidation behavior with large datasets
 4. Memory usage monitoring (tracemalloc)
+
+Implementation note:
+Tests use ``CarryMem.store_messages(messages, force_type=...)`` (fast batch
+path) instead of looping ``classify_and_remember``. The fast path skips
+per-message LLM/embedding inference and is 20-50x faster, which keeps nightly
+CI runs under the 90-minute job timeout. Test objectives (volume, recall
+performance, consolidation behaviour) are unchanged — they validate storage
+and recall layers, not the classification layer (covered elsewhere).
 """
 
 import os
-import tempfile
 import time
 import tracemalloc
 
@@ -20,14 +27,15 @@ from carrymem import CarryMem
 # Mark all tests in this file as slow (skipped in CI, run locally/nightly)
 pytestmark = [pytest.mark.slow]
 
-# CI VMs are 20-50x slower than dev machines; apply CI_FACTOR to time-based
+# CI VMs are slower than dev machines; apply CI_FACTOR to time-based
 # assertions so nightly benchmarks catch real regressions without spuriously
-# failing on shared runners.
+# failing on shared runners. With the store_messages fast path, 10x is
+# sufficient (previously 50x was needed for the classify_and_remember loop).
 _CI_ENV = bool(os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"))
-CI_FACTOR = 50 if _CI_ENV else 1
+CI_FACTOR = 10 if _CI_ENV else 1
 
-INSERT_1000_S = 120 * CI_FACTOR  # 1000 inserts: 2min local, ~100min CI (timeout-bound)
-INSERT_5000_S = 600 * CI_FACTOR  # 5000 inserts: 10min local, CI nightly upper bound
+INSERT_1000_S = 60 * CI_FACTOR  # 1000 inserts via fast path: 1min local, ~10min CI
+INSERT_5000_S = 300 * CI_FACTOR  # 5000 inserts via fast path: 5min local, ~50min CI
 RECALL_AVG_S = 5.0 * CI_FACTOR  # recall on 1000 records
 RECALL_MAX_S = 10.0 * CI_FACTOR  # recall on 5000 records
 
@@ -67,9 +75,6 @@ class TestE2EBatchInsert:
         cm = CarryMem(db_path=db_path)
 
         try:
-            start_time = time.time()
-            errors = []
-
             topics = [
                 "Python programming",
                 "Database design",
@@ -81,19 +86,19 @@ class TestE2EBatchInsert:
                 "Performance optimization",
             ]
 
-            for i in range(1000):
-                try:
-                    topic = topics[i % len(topics)]
-                    memory = f"[{i}] Stress test entry about {topic} - iteration {i}"
-                    cm.classify_and_remember(memory)
-                except Exception as e:
-                    errors.append(f"{i}: {e}")
-                    if len(errors) > 10:  # Stop early if too many errors
-                        break
+            # Build all 1000 messages up front, then batch-store via the fast
+            # path (force_type skips per-message classification).
+            messages = [f"[{i}] Stress test entry about {topics[i % len(topics)]} - iteration {i}" for i in range(1000)]
 
+            start_time = time.time()
+            result = cm.store_messages(messages, force_type="fact")
             elapsed = time.time() - start_time
 
-            assert len(errors) == 0, f"All 1000 inserts should succeed, got {len(errors)} errors. Sample: {errors[:5]}"
+            assert not result["errors"], (
+                f"All 1000 inserts should succeed, got {len(result['errors'])} errors. "
+                f"Sample: {result['errors'][:5]}"
+            )
+            assert result["stored_count"] == 1000, f"Expected 1000 inserts, got {result['stored_count']}"
             assert elapsed < INSERT_1000_S, f"1000 inserts took too long: {elapsed:.1f}s, threshold={INSERT_1000_S}s"
 
             # Verify at least some were stored
@@ -110,47 +115,40 @@ class TestE2EBatchInsert:
         try:
             tracemalloc.start()
 
-            start_time = time.time()
-            errors = []
-            success_count = 0
-
             categories = [
                 ("preference", "I prefer {}"),
                 ("fact", "We use {} at work"),
                 ("correction", "Do NOT use {}"),
                 ("session_summary", "Discussed {} in meeting"),
             ]
+            fillers = ["approach A", "method B", "tool C", "pattern D", "strategy E"]
 
-            for i in range(5000):
-                try:
-                    cat_type, template = categories[i % len(categories)]
-                    fillers = ["approach A", "method B", "tool C", "pattern D", "strategy E"]
-                    filler = fillers[i % len(fillers)]
-                    memory = template.format(filler)
+            # Build messages per category, then batch-store each category with
+            # force_type. This exercises store_messages' fast path while still
+            # mixing 4 memory types across the 5000-entry dataset.
+            start_time = time.time()
+            total_errors = []
+            total_stored = 0
 
-                    result = cm.classify_and_remember(memory, force_type=cat_type)
-                    if isinstance(result, dict):
-                        success_count += 1
-                except Exception as e:
-                    errors.append(f"{i}: {str(e)[:50]}")
-                    if len(errors) > 100:
-                        break
-
-                # Progress logging every 1000
-                if (i + 1) % 1000 == 0:
-                    pass  # Silent progress
+            for cat_idx, (cat_type, template) in enumerate(categories):
+                # 1250 messages per category (4 * 1250 = 5000)
+                cat_messages = [template.format(fillers[(cat_idx * 1250 + i) % len(fillers)]) for i in range(1250)]
+                result = cm.store_messages(cat_messages, force_type=cat_type)
+                total_stored += result["stored_count"]
+                total_errors.extend(result["errors"])
 
             elapsed = time.time() - start_time
-            current, peak = tracemalloc.get_traced_memory()
+            _, peak = tracemalloc.get_traced_memory()
             tracemalloc.stop()
 
             print(
                 f"\n[Stress Test] 5000 inserts: {elapsed:.2f}s, "
-                f"success={success_count}, errors={len(errors)}, "
+                f"stored={total_stored}, errors={len(total_errors)}, "
                 f"peak_memory={peak / 1024 / 1024:.1f}MB"
             )
 
-            assert success_count == 5000, f"Expected all 5000 inserts to succeed, got {success_count}/5000"
+            assert total_stored == 5000, f"Expected all 5000 inserts to succeed, got {total_stored}/5000"
+            assert not total_errors, f"Errors during 5000 inserts: {total_errors[:3]}"
             assert (
                 elapsed < INSERT_5000_S
             ), f"5000 inserts exceeded time limit: {elapsed:.1f}s, threshold={INSERT_5000_S}s"
@@ -163,17 +161,25 @@ class TestE2ERecallUnderLoad:
     """Scenario: Recall performance with large datasets."""
 
     def setup_large_dataset(self, cm, count=1000):
-        """Helper to populate dataset for recall tests."""
+        """Helper to populate dataset for recall tests.
+
+        Uses store_messages(force_type=...) fast path to avoid the
+        classify_and_remember slow path that exceeds CI timeouts.
+        """
         topics = {
             "python": ["Django", "Flask", "FastAPI", "NumPy", "Pandas"],
             "database": ["PostgreSQL", "MySQL", "Redis", "MongoDB", "SQLite"],
             "devops": ["Docker", "Kubernetes", "CI/CD", "Terraform", "AWS"],
         }
 
+        # Build all messages up front, then batch-store.
+        messages = []
         for i in range(count):
             area = list(topics.keys())[i % len(topics)]
             tool = topics[area][i % len(topics[area])]
-            cm.classify_and_remember(f"Entry {i}: Using {tool} for {area} development")
+            messages.append(f"Entry {i}: Using {tool} for {area} development")
+
+        cm.store_messages(messages, force_type="fact")
 
     def test_recall_speed_with_1000_records(self, tmp_path):
         """Verify: Recall on 1000-record dataset completes within threshold (<5s)."""
@@ -284,11 +290,10 @@ class TestE2EConsolidationUnderLoad:
                 "Deploy everything to Docker containers",
             ]
 
-            # Each base memory inserted multiple times with slight variations
-            for i in range(170):  # ~510 entries total
-                base = base_memories[i % len(base_memories)]
-                variation = f"{base} (version {i})"
-                cm.classify_and_remember(variation)
+            # Each base memory inserted multiple times with slight variations.
+            # Use store_messages fast path to avoid per-message classification.
+            messages = [f"{base_memories[i % len(base_memories)]} (version {i})" for i in range(170)]
+            cm.store_messages(messages, force_type="preference")
 
             # Run consolidation (dry run first)
             dry_run_result = cm.consolidate(dry_run=True)
@@ -315,13 +320,9 @@ class TestE2EConsolidationUnderLoad:
                 "UNIQUE-GAMMA: This is completely unique content C",
             ]
 
-            # Store unique memories
-            for mem in unique_memories:
-                cm.classify_and_remember(mem)
-
-            # Also store some duplicates
-            for _ in range(20):
-                cm.classify_and_remember("Duplicate entry about preferences")
+            # Store unique memories + duplicates via fast path.
+            all_messages = unique_memories + ["Duplicate entry about preferences"] * 20
+            cm.store_messages(all_messages, force_type="fact")
 
             # Record what we have before consolidation
             before_recall = cm.recall_memories(limit=100)
@@ -358,13 +359,13 @@ class TestE2EMemoryUsageMonitoring:
         try:
             tracemalloc.start()
 
-            # Baseline measurement
+            # Baseline measurement (single insert is fine for baseline).
             cm.classify_and_remember("Baseline memory")
             _, baseline_peak = tracemalloc.get_traced_memory()
 
-            # Bulk operation
-            for i in range(500):
-                cm.classify_and_remember(f"Memory usage test entry number {i}")
+            # Bulk operation via fast path.
+            messages = [f"Memory usage test entry number {i}" for i in range(500)]
+            cm.store_messages(messages, force_type="fact")
 
             _, current_peak = tracemalloc.get_traced_memory()
             tracemalloc.stop()
@@ -388,9 +389,9 @@ class TestE2EMemoryUsageMonitoring:
         cm = CarryMem(db_path=db_path)
 
         try:
-            # Pre-populate
-            for i in range(200):
-                cm.classify_and_remember(f"Memory leak test entry {i}")
+            # Pre-populate via fast path.
+            messages = [f"Memory leak test entry {i}" for i in range(200)]
+            cm.store_messages(messages, force_type="fact")
 
             tracemalloc.start()
 
@@ -430,11 +431,13 @@ class TestE2ELargeDatasetEdgeCases:
         """Verify: Single very long memory can be stored and recalled (within max length)."""
         cm = carrymem_for_stress
 
-        # Use content within max message length limit (10000 chars)
+        # Use content within max message length limit (10000 chars).
+        # Use store_messages fast path — this test validates storage of a long
+        # message, not classification of long-form content.
         long_content = "Word " * 2000  # ~14KB, within limit
 
-        result = cm.classify_and_remember(long_content)
-        assert isinstance(result, dict), "Long memory storage should succeed"
+        result = cm.store_messages([long_content], force_type="fact")
+        assert result["stored_count"] == 1, "Long memory storage should succeed"
 
         recalled = cm.recall_memories(query="Word", limit=5)
         assert isinstance(recalled, list), "Should be able to recall long memory"
@@ -446,10 +449,9 @@ class TestE2ELargeDatasetEdgeCases:
 
         try:
             base = "I prefer using Python for software development"
-            for i in range(300):
-                # Slight variations
-                variation = f"{base}" + (f" (note {i})" if i % 10 == 0 else "")
-                cm.classify_and_remember(variation)
+            # Build all variations up front, then batch-store via fast path.
+            messages = [f"{base}" + (f" (note {i})" if i % 10 == 0 else "") for i in range(300)]
+            cm.store_messages(messages, force_type="preference")
 
             # Should be able to recall without error
             results = cm.recall_memories(query="Python", limit=50)
@@ -464,6 +466,8 @@ class TestE2ELargeDatasetEdgeCases:
         for cycle in range(20):
             cm = CarryMem(db_path=db_path)
             try:
+                # Single insert per cycle — use classify_and_remember to also
+                # exercise the standard write path on a fresh instance.
                 cm.classify_and_remember(f"Cycle {cycle} data")
             finally:
                 cm.close()

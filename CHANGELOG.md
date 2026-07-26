@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.5] - 2026-07-26 — nightly slow test fix + release.yml cp consistency
+
+### Summary
+Nightly run 30163189275 (and 4 prior runs) were cancelled at the 90-minute
+timeout because `tests/e2e/test_e2e_large_dataset.py` looped
+`classify_and_remember` 1000-5000 times, exercising the slow per-message
+classification path. CarryMem already exposes `store_messages(messages,
+force_type=...)` (20-50x faster batch path that skips classification), but
+the tests were not using it. This release rewrites all bulk-insert loops in
+`test_e2e_large_dataset.py` to use the fast path. Test objectives (volume,
+recall performance, consolidation behaviour, memory usage) are unchanged —
+they validate the storage and recall layers, not the classification layer
+(covered elsewhere). Also fixed a `cp` command inconsistency in `release.yml`
+that would fail if `runTests.js` exists (it does, added in TD-061c).
+
+### Changes
+
+| File | Change |
+|------|--------|
+| `tests/e2e/test_e2e_large_dataset.py` | Replaced 8 `classify_and_remember` loops with `store_messages(force_type=...)` fast path (test_insert_1000/5000, setup_large_dataset, test_consolidate_with_500_duplicates, test_consolidate_does_not_lose_data, test_memory_usage_during_bulk_operations, test_recall_memory_efficiency, test_very_long_single_memory, test_many_similar_memories). CI_FACTOR reduced from 50x to 10x (fast path needs less headroom). INSERT_5000_S: 600s×50=30000s → 300s×10=3000s. Local runtime: 88min+ → 135s (37x faster). 13/13 tests pass. |
+| `.github/workflows/release.yml` | `cp test/runUnitTests.js out/test/` + `cp test/runVscodeTests.js out/test/` → `cp test/*.js out/test/` (matches ci.yml + nightly.yml; picks up runTests.js added in TD-061c) |
+
+### Verification
+
+```bash
+# Local: 13/13 slow tests pass in 135s (was 88min+ in CI)
+python -m pytest tests/e2e/test_e2e_large_dataset.py -v --timeout=600 --no-cov
+# → 13 passed in 135.17s
+
+# Performance: 5000 inserts via fast path
+# [Stress Test] 5000 inserts: 10.42s, stored=5000, errors=0, peak_memory=3.6MB
+# [Recall Speed 5000] Python: 0.084s, Docker: 0.060s, Generic: 0.031s, Max: 0.084s
+
+# Lint
+black --check --line-length=120 tests/e2e/test_e2e_large_dataset.py
+isort --check-only tests/e2e/test_e2e_large_dataset.py
+flake8 tests/e2e/test_e2e_large_dataset.py --max-line-length=120
+
+# Regression: 4848 non-slow tests pass
+python -m pytest tests/ -m "not slow" --timeout=120 --no-cov -q
+# → 4848 passed, 1 skipped, 77 deselected in 346.36s
+```
+
 ## [0.9.4] - 2026-07-25 — TD-063/TD-064/TD-065: test skip cleanup + flake8 bugbear fix + ruff config
 
 ### Summary
