@@ -1,6 +1,6 @@
 # CarryMem Troubleshooting Guide
 
-**Version**: v0.8.0
+**Version**: v0.9.7
 
 ---
 
@@ -41,6 +41,12 @@
   - [24. Large Database Optimization](#24-large-database-optimization)
 - [Upgrade & Migration](#upgrade--migration)
   - [25. Upgrade Breaking Changes](#25-upgrade-breaking-changes)
+- [Common Runtime Errors](#common-runtime-errors)
+  - [26. Permission Denied](#26-permission-denied)
+  - [27. Encrypted Data Password Lost](#27-encrypted-data-password-lost)
+  - [28. Python Version Incompatibility](#28-python-version-incompatibility)
+  - [29. Dependency Conflict at Runtime](#29-dependency-conflict-at-runtime)
+  - [30. Environment Variable Not Loaded](#30-environment-variable-not-loaded)
 - [Getting Help](#getting-help)
 
 ---
@@ -97,6 +103,11 @@ Run `carrymem doctor` for a full health check. Use `--fix` to auto-repair where 
 | `RuntimeError: Cannot be used across threads` | [#21](#21-async-api-issues) |
 | `Connection refused (MCP)` | [#14](#14-mcp-integration-not-working) |
 | `FTS5 module not found` | [#6](#6-recall-returns-no-results) |
+| `PermissionError: [Errno 13] Permission denied` | [#26](#26-permission-denied) |
+| `ValueError: Invalid password` / `cryptography.fernet.InvalidToken` | [#27](#27-encrypted-data-password-lost) |
+| `TypeError: unsupported operand type(s)` after upgrade | [#28](#28-python-version-incompatibility) |
+| `pkg_resources.VersionConflict` / `ImportError: cannot import name` | [#29](#29-dependency-conflict-at-runtime) |
+| `KeyError: 'CARRYMEM_*'` / env var not taking effect | [#30](#30-environment-variable-not-loaded) |
 
 ---
 
@@ -1542,6 +1553,382 @@ See [API_STABILITY.md](API_STABILITY.md) for a complete list of stable, experime
 ```bash
 carrymem doctor
 # All checks should show: ok
+```
+
+---
+
+## Common Runtime Errors
+
+### 26. Permission Denied
+
+**Severity**: 🔴 Critical
+**Doctor check**: `db_permissions`, `write_permissions`
+
+**Problem**: `PermissionError: [Errno 13] Permission denied` when running `carrymem add`, `pack`, `backup`, or `import`.
+
+**Error example**:
+```
+PermissionError: [Errno 13] Permission denied: '/home/user/.carrymem/memories.db'
+```
+
+**Root Cause**: CarryMem's data directory (`~/.carrymem/`) or its files are owned by another user (often caused by running with `sudo` once, or copying files between users).
+
+**Quick Fix**:
+```bash
+# Take ownership of the CarryMem data directory
+sudo chown -R $USER:$USER ~/.carrymem
+```
+
+**Standard Fix**:
+
+1. Check current ownership and permissions:
+   ```bash
+   ls -la ~/.carrymem/
+   ```
+
+2. Fix ownership recursively:
+   ```bash
+   sudo chown -R $USER:$USER ~/.carrymem
+   ```
+
+3. Fix permissions (read/write for owner, nothing for others):
+   ```bash
+   chmod -R u+rwX,go-rwx ~/.carrymem
+   ```
+
+4. Verify the database file is writable:
+   ```bash
+   test -w ~/.carrymem/memories.db && echo "writable" || echo "read-only"
+   ```
+
+**Deep Fix** — SELinux or container context:
+
+On SELinux-enabled systems (Fedora, RHEL) or inside containers:
+```bash
+# Check SELinux context
+ls -Z ~/.carrymem/memories.db
+
+# Restore default context (if moved from another location)
+restorecon -Rv ~/.carrymem/
+
+# In containers, ensure the volume mount is writable
+docker run --user $(id -u):$(id -g) -v ~/.carrymem:/home/user/.carrymem ...
+```
+
+**Verification**:
+```bash
+carrymem doctor
+# db_permissions and write_permissions should show: ok
+carrymem add "test permission fix"  # should succeed
+```
+
+---
+
+### 27. Encrypted Data Password Lost
+
+**Severity**: 🔴 Critical (data unrecoverable)
+**Doctor check**: `security`
+
+**Problem**: Cannot unpack an encrypted `.carry` file because the password is forgotten.
+
+**Error example**:
+```
+ValueError: Invalid password
+cryptography.fernet.InvalidToken
+```
+
+**Root Cause**: CarryMem uses PBKDF2-HMAC-SHA256 (260,000 iterations) to derive the encryption key from your password. The password is never stored anywhere — if lost, the encrypted data cannot be decrypted.
+
+**Quick Fix**: None. The password cannot be recovered.
+
+**Standard Fix** — restore from an unencrypted backup:
+
+If you have an unencrypted JSON export or a previous unencrypted `.carry` file:
+```bash
+# Restore from JSON export
+carrymem import ~/carrymem_backup.json
+
+# Or restore from an unencrypted .carry file
+carrymem unpack ~/old_memories.carry
+```
+
+**Deep Fix** — prevention strategy:
+
+1. **Always create an unencrypted backup before encrypting**:
+   ```bash
+   # Keep an unencrypted JSON export as a safety net
+   carrymem export ~/carrymem_safety_backup.json
+   # Store it in a secure location (password manager, encrypted volume)
+   ```
+
+2. **Test the password immediately after packing**:
+   ```bash
+   carrymem pack -o my_memories.carry --encrypt
+   # Test unpack on the same machine
+   carrymem unpack my_memories.carry --dry-run
+   ```
+
+3. **Use a password manager** to store the encryption password.
+
+4. **Document your recovery procedure** — there is no backdoor.
+
+**Important**: This is by design. CarryMem cannot decrypt your data without the password. There is no master key, no recovery tool, and no way to bypass the encryption. If anyone claims to offer such a tool, it is a scam.
+
+**Verification**:
+```bash
+# If you have the password, verify the file is intact
+carrymem unpack my_memories.carry  # enter password
+carrymem doctor
+```
+
+---
+
+### 28. Python Version Incompatibility
+
+**Severity**: 🔴 Critical
+**Doctor check**: `python_version`
+
+**Problem**: CarryMem fails to install or crashes at runtime with Python version errors.
+
+**Error examples**:
+```
+TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'
+SyntaxError: invalid syntax (at type hints like `str | None`)
+ModuleNotFoundError: No module named 'tomllib'
+```
+
+**Root Cause**: CarryMem requires Python ≥ 3.12. It uses:
+- PEP 604 union syntax (`str | None`) — requires Python 3.10+
+- `tomllib` standard library — requires Python 3.11+
+- `typing.Self` — requires Python 3.11+
+- Some dependencies require Python 3.12+
+
+**Quick Fix**:
+```bash
+# Check your Python version
+python3 --version
+# If < 3.12, install a newer version
+```
+
+**Standard Fix**:
+
+1. Install Python 3.12+ using pyenv (recommended):
+   ```bash
+   curl https://pyenv.run | bash
+   pyenv install 3.12
+   pyenv global 3.12
+   python3 --version  # should show 3.12.x
+   ```
+
+2. Or use your OS package manager:
+   ```bash
+   # macOS (Homebrew)
+   brew install python@3.12
+
+   # Ubuntu 24.04+ (already has 3.12)
+   sudo apt install python3 python3-pip python3-venv
+
+   # Fedora 40+
+   sudo dnf install python3 python3-pip
+   ```
+
+3. Reinstall CarryMem with the correct Python:
+   ```bash
+   python3.12 -m pip install carrymem
+   python3.12 -m carrymem.cli version
+   ```
+
+**Deep Fix** — multiple Python versions conflict:
+
+```bash
+# List all Python versions installed
+ls /usr/bin/python3* /usr/local/bin/python3* 2>/dev/null
+
+# Use update-alternatives (Linux)
+sudo update-alternatives --config python3
+
+# Or always use explicit version
+python3.12 -m pip install carrymem
+python3.12 -m carrymem.cli doctor
+```
+
+**Verification**:
+```bash
+python3 --version  # ≥ 3.12
+carrymem doctor
+# python_version should show: ok
+```
+
+---
+
+### 29. Dependency Conflict at Runtime
+
+**Severity**: 🟡 Warning
+**Doctor check**: `carrymem_import`, `optional_deps`
+
+**Problem**: CarryMem imports fail at runtime with version conflict errors.
+
+**Error examples**:
+```
+pkg_resources.VersionConflict: (cryptography 40.0.0 (installed), Requirement.parse('cryptography>=46.0.6'))
+ImportError: cannot import name 'Fernet' from 'cryptography'
+AttributeError: module 'pycld2' has no attribute 'detect'
+```
+
+**Root Cause**: Another package on the system requires an older version of a shared dependency, causing a conflict.
+
+**Quick Fix**:
+```bash
+# Upgrade the conflicting dependency
+pip install --upgrade cryptography
+```
+
+**Standard Fix**:
+
+1. Identify the conflicting package:
+   ```bash
+   pip check
+   # Lists all dependency conflicts
+   ```
+
+2. Upgrade CarryMem's dependencies:
+   ```bash
+   pip install --upgrade carrymem
+   pip install --upgrade cryptography pycld2 langdetect
+   ```
+
+3. If the conflict persists, use a virtual environment:
+   ```bash
+   python3 -m venv ~/carrymem-env
+   source ~/carrymem-env/bin/activate
+   pip install carrymem
+   ```
+
+**Deep Fix** — pinned dependency hell:
+
+If a system package pins an old version (e.g., `cryptography<40`):
+```bash
+# Option A: Use pipx for an isolated install (recommended)
+pipx install carrymem
+
+# Option B: Force-reinstall the correct version
+pip install --force-reinstall --no-deps cryptography>=46.0.6
+
+# Option C: Use --no-deps to skip dependency resolution
+pip install carrymem --no-deps
+pip install cryptography>=46.0.6 PyYAML>=5.0  # install required deps manually
+```
+
+**Optional dependency matrix** (if a feature fails):
+
+| Feature | Required Package | Install Command |
+|---------|------------------|-----------------|
+| Encryption (required) | `cryptography>=46.0.6` | `pip install carrymem` (included) |
+| Multi-language | `pycld2`, `langdetect` | `pip install carrymem[language]` |
+| Semantic search | `sqlite-vec`, `sentence-transformers` | `pip install carrymem[semantic]` |
+| TUI | `textual` | `pip install textual` |
+| All features | all above | `pip install carrymem[full]` |
+
+**Verification**:
+```bash
+pip check  # should show no conflicts
+carrymem doctor
+# carrymem_import and optional_deps should show: ok
+```
+
+---
+
+### 30. Environment Variable Not Loaded
+
+**Severity**: 🟡 Warning
+**Doctor check**: `auto_inject`, `rules_engine`
+
+**Problem**: Environment variables like `CARRYMEM_AUTO_INJECT` are set in `.zshrc`/`.bashrc` but not effective in the current shell or in AI tools (Cursor, Claude Code).
+
+**Error example**:
+```bash
+# In .zshrc:
+export CARRYMEM_AUTO_INJECT=true
+
+# But in Cursor's terminal or MCP server:
+echo $CARRYMEM_AUTO_INJECT  # (empty)
+```
+
+**Root Cause**: GUI applications (Cursor, VS Code, Claude Code desktop) on macOS/Linux do **not** source `.zshrc`/`.bashrc` by default. They inherit the environment from the login shell or launchd, which doesn't run interactive shell startup files.
+
+**Quick Fix**:
+```bash
+# Export in the current shell before launching the AI tool
+export CARRYMEM_AUTO_INJECT=true
+cursor  # or: claude-code
+```
+
+**Standard Fix**:
+
+1. Set environment variables in `~/.zshenv` (not `.zshrc`):
+   ```bash
+   # ~/.zshenv is sourced for ALL shells (login, non-interactive, non-login)
+   echo 'export CARRYMEM_AUTO_INJECT=true' >> ~/.zshenv
+   ```
+
+2. On macOS, also set via `launchctl` for GUI apps:
+   ```bash
+   launchctl setenv CARRYMEM_AUTO_INJECT true
+   ```
+
+3. Restart the AI tool completely (Cmd+Q, then reopen).
+
+4. Verify the variable is visible to the AI tool's terminal:
+   ```bash
+   # In Cursor's integrated terminal:
+   echo $CARRYMEM_AUTO_INJECT  # should show: true
+   ```
+
+**Deep Fix** — MCP server doesn't see env vars:
+
+The MCP server spawned by Cursor/Claude Code inherits the environment from the parent process. If the parent doesn't have the variable, neither will the MCP server.
+
+```bash
+# Option A: Hardcode in MCP config (works but less flexible)
+# Edit .cursor/mcp.json or .claude/mcp.json:
+{
+  "mcpServers": {
+    "carrymem": {
+      "command": "python3",
+      "args": ["-m", "carrymem.integration.layer2_mcp"],
+      "env": {
+        "CARRYMEM_AUTO_INJECT": "true"
+      }
+    }
+  }
+}
+
+# Option B: Use a wrapper script
+cat > ~/.carrymem/run-mcp.sh << 'EOF'
+#!/bin/bash
+export CARRYMEM_AUTO_INJECT=true
+exec python3 -m carrymem.integration.layer2_mcp
+EOF
+chmod +x ~/.carrymem/run-mcp.sh
+
+# Then in mcp.json, set "command" to "/Users/YOU/.carrymem/run-mcp.sh"
+```
+
+**Common CarryMem environment variables**:
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `CARRYMEM_AUTO_INJECT` | Enable auto rule injection into prompts | `false` |
+| `CARRYMEM_DB_PATH` | Custom database file location | `~/.carrymem/memories.db` |
+| `CARRYMEM_CONFIG_DIR` | Custom config directory | `~/.carrymem/` |
+| `CARRYMEM_LOG_LEVEL` | Log verbosity (`DEBUG`/`INFO`/`WARNING`/`ERROR`) | `WARNING` |
+
+**Verification**:
+```bash
+# In the AI tool's terminal (not your regular terminal):
+echo $CARRYMEM_AUTO_INJECT  # should show: true
+carrymem doctor
+# auto_inject should show: ok (enabled)
 ```
 
 ---

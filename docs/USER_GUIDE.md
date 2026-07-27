@@ -3,21 +3,22 @@
 ## Table of Contents
 
 1. [Getting Started](#getting-started)
-2. [Memory System](#memory-system)
-3. [知识图谱](#知识图谱)
-4. [多模式检索](#多模式检索)
-5. [Memify 动态精炼](#memify-动态精炼)
-6. [图查询 MCP 工具](#图查询-mcp-工具)
-7. [Rule Engine](#rule-engine)
-8. [Rule Scopes](#rule-scopes)
-9. [Skill Format](#skill-format)
-10. [Merge Protocol](#merge-protocol)
-11. [Memory Consolidation](#memory-consolidation)
-12. [Auto-Backup](#auto-backup)
-13. [Pack/Unpack with Encryption](#packunpack-with-encryption)
-14. [USB Carry Scenario](#usb-carry-scenario)
-15. [VS Code Extension](#vs-code-extension)
-16. [CLI Reference](#cli-reference)
+2. [Common Use Cases](#common-use-cases)
+3. [Memory System](#memory-system)
+4. [知识图谱](#知识图谱)
+5. [多模式检索](#多模式检索)
+6. [Memify 动态精炼](#memify-动态精炼)
+7. [图查询 MCP 工具](#图查询-mcp-工具)
+8. [Rule Engine](#rule-engine)
+9. [Rule Scopes](#rule-scopes)
+10. [Skill Format](#skill-format)
+11. [Merge Protocol](#merge-protocol)
+12. [Memory Consolidation](#memory-consolidation)
+13. [Auto-Backup](#auto-backup)
+14. [Pack/Unpack with Encryption](#packunpack-with-encryption)
+15. [USB Carry Scenario](#usb-carry-scenario)
+16. [VS Code Extension](#vs-code-extension)
+17. [CLI Reference](#cli-reference)
 
 ---
 
@@ -31,6 +32,165 @@ cm.classify_and_remember("I prefer dark mode")
 memories = cm.recall_memories("theme")
 print(cm.build_system_prompt())
 cm.close()
+```
+
+---
+
+## Common Use Cases
+
+Practical recipes for the most frequent CarryMem workflows. All examples assume `from carrymem import CarryMem` and `cm = CarryMem()`.
+
+### 1. Store a Preference with Context
+
+```python
+# Auto-classification handles the type for you; use context for richer metadata
+result = cm.classify_and_remember(
+    "I prefer PostgreSQL over MySQL for production databases",
+    context={"source": "team-meeting", "priority": "high"},
+)
+print(result["should_remember"])  # True
+print(result["memory_type"])      # "user_preference" (auto-classified)
+```
+
+### 2. Recall with Filters
+
+```python
+# Recall only preferences from a specific session
+memories = cm.recall_memories(
+    "database",
+    filters={"session_id": "sess_2026_07"},
+    limit=10,
+)
+
+# Recall by memory type
+memories = cm.recall_memories(
+    "python",
+    filters={"memory_type": "correction"},
+)
+```
+
+### 3. Build an AI System Prompt
+
+```python
+# Generate a structured system prompt for any LLM
+prompt = cm.build_system_prompt(
+    context="database design session",  # scene description for rule matching
+    max_tokens=2000,  # token budget
+    max_memories=10,
+    max_rules=5,
+    language="en",
+)
+# Pass `prompt` to Cursor, Claude Code, ChatGPT, etc.
+```
+
+### 4. Cross-Language Recall
+
+```python
+cm.classify_and_remember("我偏好使用PostgreSQL")  # Chinese
+
+# All of these find the same memory
+cm.recall_memories("PostgreSQL")     # exact match
+cm.recall_memories("数据库")          # synonym (Chinese)
+cm.recall_memories("Postgres")       # spell correction
+cm.recall_memories("データベース")    # cross-language (Japanese)
+```
+
+### 5. Session-Aware Memory
+
+```python
+# Store memories scoped to a session
+cm.classify_and_remember(
+    "Let's use React for this project",
+    session_id="project_alpha",
+)
+
+# Recall only memories from that session
+project_memories = cm.recall_memories(
+    "frontend",
+    filters={"session_id": "project_alpha"},
+)
+```
+
+### 6. Identity Portrait (whoami)
+
+```python
+identity = cm.whoami()
+print(identity["preferences"])  # ["I prefer dark mode", ...]
+print(identity["decisions"])    # ["Let's use React", ...]
+print(identity["corrections"])  # ["The port should be 5432", ...]
+```
+
+### 7. Memory Versioning & Rollback
+
+```python
+# Update creates a new version (old version archived, not deleted)
+cm.update_memory(key, "Updated content")
+history = cm.get_memory_history(key)  # [v1, v2]
+
+# Restore previous version
+cm.rollback_memory(key, version=1)
+```
+
+### 8. Export/Import Identity
+
+```python
+# Export your AI identity to a portable JSON file
+cm.export_profile(output_path="my_identity.json")
+
+# On another device or after reinstall
+cm.import_memories(input_path="my_identity.json")
+```
+
+### 9. Error Handling with CarryMemError
+
+```python
+from carrymem.errors import CarryMemError
+
+try:
+    cm.classify_and_remember("test")
+except CarryMemError as e:
+    print(f"Code: {e.code}")      # e.g., "CM-200"
+    print(f"Message: {e.message}")  # bilingual message
+    print(f"Hint: {e.hint}")        # actionable hint
+```
+
+### 10. Context-Scoped Rule Injection
+
+```python
+from carrymem.rules import RuleEngine
+
+engine = RuleEngine()
+engine.add_rule("database", "Always use SSL", scope="company", override=True)
+engine.add_rule("database", "Prefer PostgreSQL", scope="personal")
+
+# Only inject rules matching current context
+injection = engine.inject("database design session", format="structured")
+# Pass `injection` to your AI tool's system prompt
+```
+
+### 11. Async API (for async frameworks)
+
+```python
+import asyncio
+from carrymem import AsyncCarryMem
+
+async def main():
+    async with AsyncCarryMem() as cm:
+        await cm.classify_and_remember("I prefer dark mode")
+        memories = await cm.recall_memories("theme")
+        print(memories)
+
+asyncio.run(main())
+```
+
+### 12. Scheduled Consolidation
+
+```python
+# Run consolidation every hour in background (dedup + decay + pattern promotion)
+cm.schedule_consolidation(interval_hours=1.0)
+
+# Stop scheduled consolidation
+cm.stop_consolidation()
 ```
 
 ---

@@ -14,6 +14,40 @@ CarryMem fixes this. It's a lightweight, zero-dependency memory system that stor
 
 ---
 
+## Table of Contents
+
+- [The 30-Second Version](#-the-30-second-version)
+- [What CarryMem Does](#what-carrymem-does)
+- [Real User Scenarios](#-real-user-scenarios)
+- [Get Started](#get-started-pick-your-path)
+- [4 Reasons to Choose CarryMem](#4-reasons-to-choose-carrymem)
+- [How It Works](#how-it-works)
+- [Quick Start](#quick-start)
+  - [Install](#install)
+  - [System Requirements](#system-requirements)
+  - [Dependencies](#dependencies)
+  - [5 Lines of Code](#5-lines-of-code)
+  - [CLI (50+ commands)](#cli-50-commands)
+- [Core Features](#core-features-powering-the-3-advantages)
+  - [Memory That Understands You](#memory-that-understands-you)
+  - [Preference Injection](#preference-injection-advantage-1)
+  - [Memory Lifecycle](#memory-lifecycle-advantage-2)
+  - [Security & Portability](#security--portability-advantage-3)
+- [Supporting Features](#supporting-features)
+- [Comparison](#comparison)
+- [PrefEval Benchmark](#-prefeval--preference-adherence-benchmark)
+- [Architecture](#architecture)
+- [Module Overview](#module-overview)
+- [Advanced Usage](#advanced-usage)
+- [Who Is This For?](#who-is-this-for)
+- [Documentation](#documentation)
+- [Project Status](#project-status)
+- [Contributing](#contributing)
+- [Citation](#citation)
+- [License](#license)
+
+---
+
 ## 🌟 The 30-Second Version
 
 > **你每天见客户、开会、聊天，AI 问你一句你答一句，下次对话它又忘了你是谁。**
@@ -29,7 +63,7 @@ CarryMem fixes this. It's a lightweight, zero-dependency memory system that stor
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-4334-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-4666-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="Coverage">
   <img src="https://img.shields.io/badge/mypy-0%20errors-brightgreen" alt="mypy">
   <img src="https://img.shields.io/badge/security-bandit%2Bpip--audit-blue" alt="Security">
@@ -177,8 +211,8 @@ These are what make CarryMem different from every other memory solution:
 - Single .db file — carry your identity anywhere
 - Works with Cursor, Claude Code, ChatGPT, any MCP client
 
-### 4. Industrial-Grade Engineering — 4334+ Tests / mypy 0 / flake8 0
-- **4334+ tests passing** with 80%+ coverage (tested: 7 memory types × 4 tiers × lifecycle)
+### 4. Industrial-Grade Engineering — 4666+ Tests / mypy 0 / flake8 0
+- **4666+ non-e2e tests passing** with 80%+ coverage (tested: 7 memory types × 4 tiers × lifecycle)
 - **mypy 0 errors** across 150+ source files — fully type-safe (CI blocking gate)
 - **flake8 0 errors** — clean codebase, no lint violations (black + isort formatted)
 - **24 sensitive-pattern redaction** — auto-detects API keys, passwords, tokens before storage
@@ -969,14 +1003,22 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 
 ## Project Status
 
-**Current Version**: v0.8.0
-**Tests**: 4334+ tests passing, 0 failed, 17 skipped (performance tests excluded)
+**Current Version**: v0.9.7
+**Tests**: 4666+ non-e2e tests passing, 0 failed, 4 skipped (vector/semantic optional deps); 97 TUI tests passing
 **Coverage**: 80%+
 **mypy**: 0 errors (150+ source files, CI blocking gate)
 **flake8**: 0 errors (black + isort formatted)
+**radon**: 0 D/E/F functions (CI blocking gate)
 **Maturity**: 80/100 (B) per 7-dimension DevSquad evaluation
 
 **Changelog**:
+- **v0.9.7**: Tech debt cleanup — TD-003b/009/011b/002 follow-ups (deleted cli.py facade, added TUI fallback tests, downgraded SQLITE_SCHEMA to P3 observation).
+- **v0.9.6**: Nightly slow test threshold fix (store_messages batch API) + release.yml cp consistency.
+- **v0.9.4**: TD-063/TD-064/TD-065: test skip cleanup + flake8 bugbear fix + ruff config lock.
+- **v0.9.3rc1**: TD-015 Password-based publish restored (OIDC abandoned).
+- **v0.9.2**: P3 Tech Debt Cleanup — TD-031/049/050/051/053/054.
+- **v0.9.1**: TD-055 — mypy src/ baseline errors cleared 9 → 0.
+- **v0.9.0**: UI/UX Overhaul — Morandi Aesthetic + Accessibility + Onboarding.
 - **v0.8.0**: Graphify — 3 new MCP graph tools (query_graph, shortest_path, get_memory_impact), edge confidence labels (EXTRACTED/INFERRED/AMBIGUOUS) on memory_relations, schema migration v100.
 - **v0.7.3**: Security hardening — removed HMAC-CTR stream cipher fallback (cryptography is now a hard dependency), Fernet-only encryption, migration script for pre-v0.7.3 databases. Input validator defense-in-depth, batched LIKE queries, WAL throttle for recall access updates.
 - **v0.7.2**: Native Async I/O — async_sqlite adapter (aiosqlite), async recall/store APIs, Memify enhancement. P0 security fixes (fail-closed access control, MCP dispatcher injection), CI/CD hardening (bandit blocking, pip-audit, Docker non-root, pre-release test gate).
