@@ -1,5 +1,9 @@
 version: 2
 updates:
+  # TD-059 (2026-07-27 user decision): Only patch updates allowed for all ecosystems.
+  # Rationale: minor/major upgrades introduce breaking changes (e.g., ruff/mypy version drift
+  # caused 4 consecutive CI failures per project_memory lessons learned).
+  # Security fixes still flow through dependabot's daily security advisory channel.
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
@@ -14,8 +18,12 @@ updates:
       dev-dependencies:
         dependency-type: "development"
         update-types:
-          - "minor"
           - "patch"
+    ignore:
+      - dependency-type: "all"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -29,6 +37,13 @@ updates:
       github-actions:
         patterns:
           - "*"
+        update-types:
+          - "patch"
+    ignore:
+      - dependency-type: "all"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
   # TD-026: docker ecosystem — auto-pin Dockerfile base image to @sha256 digest
   - package-ecosystem: "docker"
     directory: "/"
@@ -38,3 +53,8 @@ updates:
     labels:
       - "dependencies"
       - "docker"
+    ignore:
+      - dependency-type: "all"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
