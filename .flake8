@@ -14,6 +14,8 @@ extend-ignore =
     E201,
     F541,
     W391,
+    E226,
+    E704,
 
 per-file-ignores =
     src/carrymem/cli/_base.py:F403,F405
