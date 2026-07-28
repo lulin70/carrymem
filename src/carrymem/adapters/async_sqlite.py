@@ -34,7 +34,7 @@ from carrymem.utils.logger import logger
 # absent at static-analysis time. Runtime import errors are handled below.
 aiosqlite: Any = None
 try:
-    import aiosqlite  # type: ignore[no-redef]
+    import aiosqlite
 except ImportError:
     pass
 
