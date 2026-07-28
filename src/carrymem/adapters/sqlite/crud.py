@@ -370,9 +370,7 @@ class CRUDOperations:
                 (storage_key, namespace),
             )
         except sqlite3.Error as e:
-            logger.warning(
-                "Failed to clean graph data for memory %s: %s", storage_key, e
-            )
+            logger.warning("Failed to clean graph data for memory %s: %s", storage_key, e)
 
     def forget_expired(self) -> int:
         """Delete expired memories and return the count removed."""
