@@ -288,6 +288,7 @@ class CRUDOperations:
             ).fetchone()
             if row:
                 memory_id = row["id"]
+            entity_ids = self._collect_entity_ids(conn, storage_key)
             cursor = conn.execute(
                 "DELETE FROM memories WHERE storage_key = ? AND namespace = ?",
                 (storage_key, self._adapter.namespace),
@@ -300,6 +301,7 @@ class CRUDOperations:
                     )
                 except sqlite3.Error as e:
                     logger.warning("Failed to delete vector for memory %s: %s", memory_id, e)
+            self._cleanup_graph_data(conn, storage_key, entity_ids)
             conn.commit()
             result = cursor.rowcount > 0
         if self._adapter.enable_cache and self._cache and result:
@@ -310,7 +312,67 @@ class CRUDOperations:
                 storage_key=storage_key,
                 success=result,
             )
-        return result  # type: ignore[no-any-return]
+        return bool(result)
+
+    def _collect_entity_ids(self, conn: sqlite3.Connection, storage_key: str) -> list:
+        """Collect entity IDs associated with a memory BEFORE deletion.
+
+        Must be called before DELETE FROM memories, because the FK
+        ON DELETE SET NULL will nullify memory_key, making later
+        lookups by memory_key return empty.
+        """
+        try:
+            rows = conn.execute(
+                "SELECT id FROM memory_entities WHERE memory_key = ? AND namespace = ?",
+                (storage_key, self._adapter.namespace),
+            ).fetchall()
+            return [r["id"] for r in rows]
+        except sqlite3.Error:
+            return []
+
+    def _cleanup_graph_data(
+        self,
+        conn: sqlite3.Connection,
+        storage_key: str,
+        entity_ids: list,
+    ) -> None:
+        """Clean up knowledge graph entities and relations for a deleted memory.
+
+        When a memory is forgotten, its associated graph entities (rows in
+        memory_entities with memory_key = storage_key) and any relations
+        involving those entities must also be removed. Without this cleanup,
+        deleted memories leave orphan entities and stale relations in the
+        knowledge graph — the "deletion completeness" problem highlighted in
+        Oracle Agent Memory report (arXiv:2607.13157).
+
+        Each memory owns its own entity rows (distinct entity_text + memory_key
+        pairs), so deleting rows for one memory does not affect entities
+        belonging to other memories that reference the same entity text.
+        """
+        namespace = self._adapter.namespace
+        try:
+            if entity_ids:
+                placeholders = ",".join("?" * len(entity_ids))
+                params = entity_ids + entity_ids
+                conn.execute(
+                    f"DELETE FROM memory_relations "
+                    f"WHERE src_entity_id IN ({placeholders}) "
+                    f"OR dst_entity_id IN ({placeholders})",
+                    params,
+                )
+                conn.execute(
+                    f"DELETE FROM memory_entities WHERE id IN ({placeholders})",
+                    entity_ids,
+                )
+
+            conn.execute(
+                "DELETE FROM memory_relations WHERE source_memory_key = ? AND namespace = ?",
+                (storage_key, namespace),
+            )
+        except sqlite3.Error as e:
+            logger.warning(
+                "Failed to clean graph data for memory %s: %s", storage_key, e
+            )
 
     def forget_expired(self) -> int:
         """Delete expired memories and return the count removed."""

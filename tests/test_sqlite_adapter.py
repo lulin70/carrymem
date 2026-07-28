@@ -251,6 +251,62 @@ class TestCRUDOperations:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# 2b. Forget Graph Cleanup (TD-060, v0.9.8)
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class TestForgetGraphCleanup:
+    """Verify forget() cleans up knowledge graph entities and relations.
+
+    Bug: ON DELETE SET NULL left orphan entities and stale relations after
+    forget(). Fixed in v0.9.8 by _cleanup_graph_data() in CRUDOperations.
+    """
+
+    def test_forget_cleans_up_entities(self, adapter):
+        """forget() removes entities associated with the deleted memory."""
+        stored = adapter.store_entry(MemoryEntry(content="I prefer Python", type="user_preference"))
+        adapter.store_graph_entities(stored.storage_key, "I prefer Python")
+        entities_before = adapter.list_graph_entities()
+        assert len(entities_before) > 0
+
+        assert adapter.delete(stored.storage_key) is True
+
+        entities_after = adapter.list_graph_entities()
+        assert len(entities_after) == 0
+
+    def test_forget_cleans_up_relations(self, adapter):
+        """forget() removes relations whose endpoints belong to the deleted memory."""
+        stored = adapter.store_entry(MemoryEntry(content="I prefer Python for backend", type="user_preference"))
+        adapter.store_graph_entities(stored.storage_key, "I prefer Python for backend")
+        adapter.add_graph_relation("Python", "backend", "used_for", source_memory_key=stored.storage_key)
+        relations_before = adapter.recall_by_relation("Python")
+        assert len(relations_before) > 0
+
+        assert adapter.delete(stored.storage_key) is True
+
+        relations_after = adapter.recall_by_relation("Python")
+        assert len(relations_after) == 0
+
+    def test_forget_preserves_shared_entities(self, adapter):
+        """forget() of memory A does not delete entities owned by memory B."""
+        s1 = adapter.store_entry(MemoryEntry(content="I prefer Python", type="user_preference"))
+        s2 = adapter.store_entry(MemoryEntry(content="Python is great for scripting", type="user_preference"))
+        adapter.store_graph_entities(s1.storage_key, "I prefer Python")
+        adapter.store_graph_entities(s2.storage_key, "Python is great for scripting")
+
+        assert adapter.delete(s1.storage_key) is True
+
+        entities = adapter.list_graph_entities()
+        entity_texts = [e.get("entity_text", "") for e in entities]
+        assert any("Python" in t for t in entity_texts)
+
+    def test_forget_nonexistent_no_graph_error(self, adapter):
+        """forget() on non-existent key does not raise even with graph tables present."""
+        result = adapter.delete("cm_nonexistent_graph_test")
+        assert result is False
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # 3. Recall Engine
 # ──────────────────────────────────────────────────────────────────────────────
 

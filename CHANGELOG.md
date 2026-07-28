@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.8] - 2026-07-27 — knowledge graph deletion completeness (TD-066)
+
+### Summary
+Oracle Agent Memory 技术报告 (arXiv:2607.13157) 启发：删除原始信息后，相关
+摘要、Embedding 和推导结论也应同步清理。CarryMem 的 `forget()` 之前仅删除
+`memories` 主表 + `memory_vectors` 向量表，遗留 `memory_entities` 孤儿实体
+和 `memory_relations` 残留关系。v0.9.8 新增 `_cleanup_graph_data()` 方法，在
+删除 memory 前**先捕获 entity_ids**（绕过 FK ON DELETE SET NULL 的副作用），
+然后级联删除 entity 记录及其关联 relations。
+
+### Changes
+
+| File | Change |
+|------|--------|
+| `src/carrymem/adapters/sqlite/crud.py` | **新增 `_collect_entity_ids()`**: 在 DELETE FROM memories 之前查询 `memory_entities WHERE memory_key = ?`，避免 FK ON DELETE SET NULL 副作用导致查询落空。**新增 `_cleanup_graph_data()`**: 用预捕获的 entity_ids 删除 `memory_relations` (src/dst IN entity_ids) + `memory_entities` (id IN entity_ids) + `memory_relations` (source_memory_key = ?)。`forget()` 在 DELETE 后调用清理。 |
+| `tests/test_sqlite_adapter.py` | **新增 `TestForgetGraphCleanup` 类** (4 tests): (1) `test_forget_cleans_up_entities` — forget 后 `list_graph_entities()` 返回空; (2) `test_forget_cleans_up_relations` — forget 后 `recall_by_relation()` 返回空; (3) `test_forget_preserves_shared_entities` — forget memory A 后 memory B 的 entity 仍存在; (4) `test_forget_nonexistent_no_graph_error` — forget 不存在的 key 不报错。 |
+
+### Verification
+- 4651 passed, 14 skipped (pre-existing), 0 failed
+- 4 new tests all pass
+- No regression in existing forget/CRUD tests
+
 ## [0.9.7] - 2026-07-26 — tech debt cleanup (TD-003b/009/011b/002 follow-ups)
 
 ### Summary

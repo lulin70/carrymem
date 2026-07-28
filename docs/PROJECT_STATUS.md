@@ -1,12 +1,12 @@
 # CarryMem — Project Status
 
-**Version**: v0.9.7
-**Last Updated**: 2026-07-26
+**Version**: v0.9.8
+**Last Updated**: 2026-07-27
 **Maintainer**: CarryMem Team
 
 ---
 
-## v0.9.7 Project Status (2026-07-26)
+## v0.9.8 Project Status (2026-07-27)
 
 **Current State**: Production-ready beta. Tech debt cleanup ongoing via DevSquad 7-role methodology.
 
@@ -14,6 +14,7 @@
 
 | Version | Date | Key Changes |
 |---------|------|-------------|
+| v0.9.8 | 2026-07-27 | Knowledge graph deletion completeness: `forget()` cascades to `memory_entities` + `memory_relations` (TD-066). 4 new tests. Oracle Agent Memory report启发. |
 | v0.9.7 | 2026-07-26 | Tech debt cleanup: TD-003b/009/011b/002 follow-ups (deleted cli.py facade, added TUI fallback tests, downgraded SQLITE_SCHEMA to P3) |
 | v0.9.6 | 2026-07-26 | Nightly slow test threshold fix (store_messages batch API) + release.yml cp consistency |
 | v0.9.5 | 2026-07-26 | Nightly slow test fix + release.yml cp consistency |
@@ -23,7 +24,7 @@
 | v0.9.1 | 2026-07-20 | TD-055: mypy src/ baseline errors cleared 9 → 0 |
 | v0.9.0 | 2026-07-20 | UI/UX Overhaul — Morandi Aesthetic + Accessibility + Onboarding |
 
-### Test & Quality Metrics (v0.9.7)
+### Test & Quality Metrics (v0.9.8)
 
 - **Non-e2e tests**: 4666 passed, 0 failed, 4 skipped (vector/semantic optional deps)
 - **TUI tests**: 97 passed (including 3 new TD-011b fallback tests)

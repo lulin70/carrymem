@@ -1003,7 +1003,7 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 
 ## Project Status
 
-**Current Version**: v0.9.7
+**Current Version**: v0.9.8
 **Tests**: 4666+ non-e2e tests passing, 0 failed, 4 skipped (vector/semantic optional deps); 97 TUI tests passing
 **Coverage**: 80%+
 **mypy**: 0 errors (150+ source files, CI blocking gate)
@@ -1012,6 +1012,7 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 **Maturity**: 80/100 (B) per 7-dimension DevSquad evaluation
 
 **Changelog**:
+- **v0.9.8**: Knowledge graph deletion completeness — `forget()` now cascades to `memory_entities` + `memory_relations` (TD-066, Oracle Agent Memory report启发). 4 new tests.
 - **v0.9.7**: Tech debt cleanup — TD-003b/009/011b/002 follow-ups (deleted cli.py facade, added TUI fallback tests, downgraded SQLITE_SCHEMA to P3 observation).
 - **v0.9.6**: Nightly slow test threshold fix (store_messages batch API) + release.yml cp consistency.
 - **v0.9.4**: TD-063/TD-064/TD-065: test skip cleanup + flake8 bugbear fix + ruff config lock.
