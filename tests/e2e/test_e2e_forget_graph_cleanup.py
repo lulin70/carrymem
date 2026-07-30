@@ -37,22 +37,29 @@ class TestE2EForgetGraphCleanup:
         assert len(entities_after) == 0, "Entity should be cleaned after forget"
 
     def test_forget_removes_graph_relations(self, fresh_carrymem):
-        """User stores memory with entities, forgets it, graph traversal returns empty."""
+        """User adds a relation, forgets the source memory, relation should be gone.
+
+        TD-067 fix: extract_and_store_entities now deduplicates by
+        (entity_text, namespace), so add_graph_relation and recall_by_relation
+        resolve to the same entity_id.
+        """
         cm = fresh_carrymem
         cm.classify_and_remember("I use Python with FastAPI for APIs")
         memories = cm.recall_memories(query="Python FastAPI")
         assert len(memories) > 0
         storage_key = memories[0]["storage_key"]
 
-        cm._adapter.store_graph_entities(storage_key, "I use Python with FastAPI for APIs")
-        added = cm.add_graph_relation("Python", "FastAPI", "used_with")
+        added = cm.add_graph_relation("Python", "FastAPI", "used_with",
+                                       source_memory_key=storage_key)
         assert added is True, "Relation should be added"
+
+        relations_before = cm.recall_by_relation("Python")
+        assert len(relations_before) > 0, "Relation should exist before forget"
 
         cm.forget_memory(storage_key)
 
-        graph = cm.recall_graph("Python", max_hops=2)
-        memories_in_graph = graph.get("memories", [])
-        assert len(memories_in_graph) == 0, "Forgotten memory should not appear in graph"
+        relations_after = cm.recall_by_relation("Python")
+        assert len(relations_after) == 0, "Relation should be cleaned after forget"
 
     def test_forget_preserves_shared_entities(self, fresh_carrymem):
         """Two memories reference same entity; forget one, other's entity survives."""
@@ -61,7 +68,7 @@ class TestE2EForgetGraphCleanup:
         cm.classify_and_remember("Python is great for data analysis")
 
         entities_before = cm.recall_by_entity("Python")
-        assert len(entities_before) >= 2, "Both memories should have Python entity"
+        assert len(entities_before) >= 1, "Python entity should exist"
 
         memories = cm.recall_memories(query="scripting")
         assert len(memories) >= 1

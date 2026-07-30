@@ -55,15 +55,20 @@ class TestE2EMCPWorkflow:
             "Recalled data should match stored content"
 
     def test_preference_to_system_prompt_workflow(self, mcp_server):
-        """declare_preference → get_system_prompt returns valid prompt."""
-        _call(mcp_server, "declare_preference",
-              preference="Always use type hints in Python code")
+        """declare_preference → get_system_prompt data flow.
 
-        result = _call(mcp_server, "get_system_prompt", query="Python code style")
+        MCP handler accepts 'message' parameter for declare_preference
+        and 'context' parameter for get_system_prompt.
+        """
+        _call(mcp_server, "declare_preference",
+              message="Always use type hints in Python code")
+
+        result = _call(mcp_server, "get_system_prompt", context="Python code style")
         assert result is not None
         assert result.get("success") is True
-        prompt_text = result.get("data", {}).get("system_prompt", "")
-        assert len(prompt_text) > 50, "System prompt should be non-empty"
+        prompt_text = result.get("data", {}).get("system_prompt", "").lower()
+        assert "type hint" in prompt_text, \
+            "Declared preference should appear in system prompt"
 
     def test_batch_classify_workflow(self, mcp_server):
         """batch_classify processes multiple messages correctly."""
