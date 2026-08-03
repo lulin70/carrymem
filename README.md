@@ -777,33 +777,61 @@ Rule management directly in your editor:
 
 ### By Scenario
 
-| Scenario | Mem0 | ima | CarryMem |
-|----------|------|-----|----------|
-| AI remembers what I said | ✅ | ⚠️ Manual | ✅ Automatic |
-| Switch AI tools, still remembers | ❌ | ❌ | ✅ One file follows you |
-| Don't want AI to remember something | ❌ | ⚠️ Limited | ✅ Delete anytime, separate zones |
-| Remember without spending tokens | ❌ | ❌ | ✅ 88% zero-cost |
-| Own your own data | ⚠️ Self-host only | ❌ Cloud | ✅ Local file |
+| Scenario | Mem0 | Memobase | User as Code | CarryMem |
+|----------|------|----------|-------------|----------|
+| AI remembers what I said | ✅ | ✅ Profile | ✅ | ✅ Automatic |
+| Switch AI tools, still remembers | ❌ | ❌ | ❌ Code-only | ✅ One file follows you |
+| Don't want AI to remember something | ❌ | ⚠️ Limited | ⚠️ Delete code | ✅ Delete anytime, separate zones |
+| Remember without spending tokens | ❌ | ⚠️ LLM extract | ❌ LLM exec | ✅ 88% zero-cost |
+| Own your own data | ⚠️ Self-host only | ⚠️ Self-host | ✅ Local | ✅ Local file |
+| **Execute user-defined rules** | ❌ | ❌ | ✅ Python | ✅ Rule Engine |
 
 ### Feature Matrix
 
-|  | CarryMem | Mem0 | OpenChronicle | ima |
-|--|----------|------|---------------|-----|
-| **Key Differentiator** | **Zero-LLM + Rule Engine** | Vector DB + Cloud | Local-first | Cloud notes |
-| **Zero Dependencies** | ✅ SQLite only | ⚠️ Vector DB optional | ✅ | ❌ Cloud |
-| **Auto-Classification** | ✅ 7 types | ❌ | ❌ Manual | ❌ |
-| **Identity Portrait** | ✅ whoami | ❌ | ❌ | ❌ |
-| **Rule Engine** | ✅ Scopes + Skills | ❌ | ❌ | ❌ |
-| **Pack / Unpack** | ✅ One file | ❌ | ❌ | ❌ |
-| **Encrypted Carry** | ✅ --encrypt | ❌ | ❌ | ❌ |
-| **Auto-Backup** | ✅ Every 20 writes | ❌ | ❌ | ❌ |
-| **Cross-Language Recall** | ✅ EN/CN/JP | ❌ | ❌ | ❌ |
-| **Encryption** | ✅ Built-in | ❌ | ❌ | ❌ |
-| **Data Ownership** | ✅ Local files | ⚠️ Self-hostable | ✅ Local | ❌ Cloud |
+|  | CarryMem | Mem0 | Memobase | User as Code | OpenChronicle | ima |
+|--|----------|------|----------|-------------|---------------|-----|
+| **Key Differentiator** | **Zero-LLM + Rule Engine** | Vector DB + Cloud | User Profile + Events | Executable Python | Local-first | Cloud notes |
+| **Zero Dependencies** | ✅ SQLite only | ⚠️ Vector DB optional | ⚠️ External | ⚠️ Python runtime | ✅ | ❌ Cloud |
+| **Auto-Classification** | ✅ 7 types | ❌ | ⚠️ Profile slots | ❌ | ❌ Manual | ❌ |
+| **Identity Portrait** | ✅ whoami | ❌ | ✅ Profile | ❌ | ❌ | ❌ |
+| **Rule Engine** | ✅ Scopes + Skills | ❌ | ❌ | ✅ Python functions | ❌ | ❌ |
+| **Pack / Unpack** | ✅ One file | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Encrypted Carry** | ✅ --encrypt | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Auto-Backup** | ✅ Every 20 writes | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Cross-Language Recall** | ✅ EN/CN/JP | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Encryption** | ✅ Built-in | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Data Ownership** | ✅ Local files | ⚠️ Self-hostable | ⚠️ Self-host | ✅ Local | ✅ Local | ❌ Cloud |
 
 > **Note**: Comparison based on publicly available information. Products evolve rapidly — please verify latest features.
+> See [docs/design/METHODOLOGY.md](docs/design/METHODOLOGY.md) for the full design space positioning diagram and orthogonal classification table.
 
 **Key Difference**: Other products store *what you read*. CarryMem stores *who you are*.
+
+---
+
+### Design Space Positioning
+
+CarryMem occupies a unique position at the intersection of three axes:
+
+```
+Portable ←————————————————————————————————→ Team-shareable
+   |          CarryMem ⭐                  Memobase
+   |                                    (team, retrieval, external)
+   |     Mem0
+   |   (solo, retrieval, vector)
+   |————————————————————————————————————————————→ Executable
+   |                                    User as Code
+   |                                    (solo, executable, Python)
+```
+
+| Axis | CarryMem | Mem0 | Memobase | User as Code |
+|------|---------|------|----------|-------------|
+| **Portable** | ✅ .carry file | ❌ | ❌ | ❌ code-only |
+| **Team-shareable** | ✅ | ❌ | ⚠️ profiles | ❌ |
+| **Executable rules** | ✅ Rule Engine | ❌ | ❌ | ✅ Python |
+| **Zero dependencies** | ✅ SQLite only | ⚠️ Vector DB | ⚠️ External | ⚠️ Python runtime |
+
+**CarryMem is the only framework at the intersection of team sharing, executable rules, and zero dependencies.**
 
 ---
 
@@ -1003,7 +1031,7 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 
 ## Project Status
 
-**Current Version**: v0.9.8
+**Current Version**: v0.9.9
 **Tests**: 4666+ non-e2e tests passing, 0 failed, 4 skipped (vector/semantic optional deps); 97 TUI tests passing
 **Coverage**: 80%+
 **mypy**: 0 errors (150+ source files, CI blocking gate)
@@ -1012,6 +1040,7 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 **Maturity**: 80/100 (B) per 7-dimension DevSquad evaluation
 
 **Changelog**:
+- **v0.9.9**: Methodology: orthogonal classification table (docs/design/METHODOLOGY.md) + design space positioning (README Comparison + COMPETITIVE_ANALYSIS). See [docs/design/METHODOLOGY.md](docs/design/METHODOLOGY.md).
 - **v0.9.8**: Knowledge graph deletion completeness — `forget()` now cascades to `memory_entities` + `memory_relations` (TD-066, Oracle Agent Memory report启发). 4 new tests.
 - **v0.9.7**: Tech debt cleanup — TD-003b/009/011b/002 follow-ups (deleted cli.py facade, added TUI fallback tests, downgraded SQLITE_SCHEMA to P3 observation).
 - **v0.9.6**: Nightly slow test threshold fix (store_messages batch API) + release.yml cp consistency.

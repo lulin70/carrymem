@@ -1,12 +1,22 @@
 # CarryMem — Project Status
 
-**Version**: v0.9.8
-**Last Updated**: 2026-07-27
+**Version**: v0.9.9
+**Last Updated**: 2026-08-03
 **Maintainer**: CarryMem Team
 
 ---
 
-## v0.9.8 Project Status (2026-07-27)
+## v0.9.9 Project Status (2026-08-03)
+
+**Current State**: 方法论文档更新。P0 正交分类表（docs/design/METHODOLOGY.md）+ P1 设计空间定位图（README.md + COMPETITIVE_ANALYSIS_MEMORY_GRAPH.md）建立完成。
+
+### v0.9.9 Changes
+
+- **P0** `docs/design/METHODOLOGY.md`（新建）：三轴正交分类表（记忆类型 × 存储格式 × 生命周期）+ 设计空间定位图 + 认知科学框架映射
+- **P1** `README.md` Comparison：新增 Memobase + User as Code 列，Feature Matrix 扩展至 6 列，新增 Design Space Positioning 小节
+- **P1** `COMPETITIVE_ANALYSIS_MEMORY_GRAPH.md`：新增第六节"补充竞品：Mem0 v3 / Memobase / User as Code"，文档标题更新为"记忆框架设计空间定位"
+
+### v0.9.8 Project Status (2026-07-27)
 
 **Current State**: Production-ready beta. Tech debt cleanup ongoing via DevSquad 7-role methodology.
 
@@ -14,6 +24,7 @@
 
 | Version | Date | Key Changes |
 |---------|------|-------------|
+| v0.9.9 | 2026-08-03 | Methodology: orthogonal classification table (METHODOLOGY.md) + design space positioning (README + COMPETITIVE_ANALYSIS). |
 | v0.9.8 | 2026-07-27 | Knowledge graph deletion completeness: `forget()` cascades to `memory_entities` + `memory_relations` (TD-066). 4 new tests. Oracle Agent Memory report启发. |
 | v0.9.7 | 2026-07-26 | Tech debt cleanup: TD-003b/009/011b/002 follow-ups (deleted cli.py facade, added TUI fallback tests, downgraded SQLITE_SCHEMA to P3) |
 | v0.9.6 | 2026-07-26 | Nightly slow test threshold fix (store_messages batch API) + release.yml cp consistency |

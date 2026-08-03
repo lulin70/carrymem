@@ -1,9 +1,14 @@
-# 竞品借鉴分析：记忆从存储 → 关系图谱与压缩效率
+# 竞品借鉴分析：记忆框架设计空间定位
 
-> **分析日期**: 2026-07-01
-> **分析对象**: [cognee](https://github.com/topoteretes/cognee) (12k+ stars, 270k pipeline runs/mo) + [codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp) (1k+ stars, 66 languages)
-> **分析目的**: 评估"记忆从扁平存储 → 关系图谱 + 压缩效率"演进方向对 CarryMem 的借鉴意义
-> **CarryMem 当前版本**: v0.8.0
+> **分析日期**: 2026-07-01 (Cognee/Codebase-Memory) + 2026-08-03 (Mem0/Memobase/User as Code)
+> **分析对象**:
+> - [cognee](https://github.com/topoteretes/cognee) (12k+ stars) — 图向量混合记忆引擎
+> - [codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp) (1k+ stars) — 代码知识图谱 MCP
+> - Mem0 v3 — 追加日志型记忆系统
+> - Memobase — 用户画像+事件型记忆系统
+> - User as Code — 可执行代码型记忆系统
+> **分析目的**: 评估各竞品对 CarryMem 的借鉴意义，建立完整的设计空间定位图
+> **CarryMem 当前版本**: v0.9.9
 
 ---
 
@@ -202,10 +207,68 @@
 
 ---
 
-## 六、参考资料
+## 六、补充竞品：Mem0 v3 / Memobase / User as Code
+
+### 6.1 设计空间定位总结
+
+| 框架 | 便携性 | 可执行性 | 零依赖 | 定位 |
+|------|-------|---------|--------|------|
+| **CarryMem** | ✅ .carry 文件 | ✅ Rules Engine | ✅ SQLite only | **唯一三者交汇点** |
+| **Mem0 v3** | ❌ | ❌ 纯检索 | ⚠️ 向量库可选 | 检索优先，无规则引擎 |
+| **Memobase** | ❌ | ❌ 纯检索 | ⚠️ 外部服务 | 用户画像+事件，无规则引擎 |
+| **User as Code** | ❌ | ✅ Python 代码 | ⚠️ Python runtime | 可执行性最强，不可移植 |
+
+### 6.2 Mem0 v3（追加日志型）
+
+**定位**: 追加事实日志 + 检索时推理（v3 重大变更）
+
+**v2 vs v3 核心变化**:
+- **v2**：提取时消歧（写入阶段 LLM 判断 ADD/UPDATE/DELETE），记忆库始终整洁但有历史丢失风险
+- **v3**：仅追加写入（不消歧，"住北京"和"搬到上海"并存），检索时融合多信号（语义相似度 + BM25 + 实体匹配 + 时间排序），结合时间信息推断当前事实
+
+**对 CarryMem 的借鉴**: Mem0 v3 的"仅追加 + 检索时消歧"与 CarryMem 的 `consolidate_memories` 思路相通——但 CarryMem 的 correction 类型已有主动更新能力，无需在检索时才推断。
+
+### 6.3 Memobase（用户画像+事件型）
+
+**定位**: 聚焦"用户画像"具体形态，Profile + Event Memory 双层
+
+**核心设计**:
+- **Profile**: 开发者配置的槽位（basic_info/interest/work 等），精确控制粒度
+- **Event Memory**: 时间线记录用户经历的事件，用于回答"上次讨论是什么时候"
+
+**对 CarryMem 的借鉴**: Memobase 的 Profile 槽位与 CarryMem 的 7 类记忆分类功能相近；Event Memory 与 CarryMem 的时间戳 TTL 机制对应。CarryMem 更灵活（无固定槽位限制），Memobase 更结构化（适合强规范场景）。
+
+### 6.4 User as Code（可执行代码型）
+
+**定位**: 把用户记忆变成可执行 Python 工程（arXiv:2606.16707）
+
+**核心设计**:
+- 记忆阶段：LLM 将对话事实追加到只增不删的事实日志
+- 结构化阶段：周期性地用带类型的 Python dataclass 重新生成状态
+
+**三强场景**（vs 纯文本检索）:
+1. **聚合统计**：直接 `sum(trip.days for trip in trips if ...)` 正确率 99%（文本检索仅 6-43%）
+2. **冲突发现**：函数自动交叉比对不同类别状态，揪出隐含矛盾
+3. **约束执行**：确定性检查函数在状态更新时自动触发
+
+**对 CarryMem 的借鉴**: CarryMem 的 `rules` 系统已实现可执行约束（inject_rules/match_rules），与 User as Code 方向一致但更轻量。CarryMem 的 correction 类型（"纠正：端口号应为 5432"）天然适合升级为可验证约束——无需变成完整 Python 工程，但可以在 recall/inject 时验证约束违反。
+
+### 6.5 CarryMem 的差异化边界（不做什么）
+
+基于设计空间分析，CarryMem 明确不做：
+- **向量检索**：引入 embedding 依赖，违反零依赖核心
+- **参数内化（LoRA/Engram）**：与便携性冲突，用户记忆必须在模型外可审查、可迁移
+- **多模态感知记忆**：超出当前产品定位
+
+---
+
+## 七、参考资料
 
 - [Cognee — How Cognee Builds AI Memory](https://www.cognee.ai/blog/fundamentals/how-cognee-builds-ai-memory)
 - [Cognee — Grounding AI Memory with Ontologies](https://www.cognee.ai/blog/deep-dives/grounding-ai-memory)
 - [Cognee — Best AI Memory Systems 2026](https://www.cognee.ai/blog/guides/ai-memory-systems-persist-across-sessions)
 - [Codebase-Memory — arXiv Paper](https://arxiv.org/pdf/2603.27277)
 - [Codebase-Memory-MCP — GitHub](https://github.com/DeusData/codebase-memory-mcp)
+- [User as Code — Li, Bojie. arXiv:2606.16707](https://arxiv.org/abs/2606.16707)
+- [Mem0 OSS v2 to v3 Migration Guide](https://docs.mem0.ai/migration/oss-v2-to-v3)
+- [Memobase — GitHub](https://github.com/memodb-io/memobase)

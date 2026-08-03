@@ -7,7 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.9.8] - 2026-07-27 — knowledge graph deletion completeness (TD-066)
+## [0.9.9] - 2026-08-03 — methodology: orthogonal classification + design space positioning
+
+### Summary
+
+基于 ai-agent-book (bojieli) 第 3 章方法论，建立 CarryMem 可传播的设计空间方法论，占领心智优势（issue #42）。
+
+### Added
+
+- **docs/design/METHODOLOGY.md** (P0): 三轴正交分类表（记忆类型 × 存储格式 × 生命周期）+ 设计空间定位图 + 认知科学框架映射。参考 ai-agent-book 表 3-1 方法论，厘清 CarryMem 设计空间，提供记忆工程垂直领域深度手册锚点。
+- **README.md Comparison** (P1): 新增 Memobase + User as Code 竞品列；Feature Matrix 扩展为 6 列；新增 "Design Space Positioning" 小节，包含 ASCII 图示和三轴定位表。
+- **docs/COMPETITIVE_ANALYSIS_MEMORY_GRAPH.md** (P1): 文档标题更新为"记忆框架设计空间定位"；新增第六节"补充竞品：Mem0 v3 / Memobase / User as Code"（含 v3 vs v2 对比、Profile+Event 设计、User as Code 三强场景）；新增 User as Code / Mem0 v3 / Memobase 参考链接。
+
+### Changed
+
+- **VERSION** / **src/carrymem/__version__.py**: v0.9.8 → v0.9.9
+- **README.md Comparison**: By Scenario 表新增 Memobase + User as Code 列；Feature Matrix 从 4 列扩展为 6 列
+- **docs/PROJECT_STATUS.md**: 版本从 v0.9.8 更新为 v0.9.9
+
+### Documentation
+
+- **docs/design/METHODOLOGY.md**: 新建方法论文档，作为记忆工程设计空间的权威参考
+- **README.md**: Comparison 章节扩展至 6 个竞品，新增 Design Space Positioning 小节
+
+### Notes
+
+- 件套 2（自有评估 Benchmark）：评估为 P2，需新建基准测试代码，延期到 v0.10.x
+- Non-feature 文档/方法论变更为 PATCH 版本递增（SemVer 合规）
 
 ### Summary
 Oracle Agent Memory 技术报告 (arXiv:2607.13157) 启发：删除原始信息后，相关
