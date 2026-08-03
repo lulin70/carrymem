@@ -14,7 +14,7 @@ rich>=13.0
 # [full] extras — matches setup.py extras_require["full"]
 aiosqlite>=0.19
 langdetect>=1.0.9
-openai>=1.0
+openai>=2.51.0
 pycld2>=0.42
 pysqlite3>=0.6.0
 sentence-transformers>=5.6.0
