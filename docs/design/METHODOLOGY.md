@@ -125,6 +125,28 @@ CarryMem **不做**：
 | 冲突检测 | 多条记忆矛盾时识别率 | LongMemEval Knowledge Updates 维度 | ✅ |
 | 聚合能力 | 跨记忆统计类问题正确率 | 参考 User as Code 论文（6-43% vs 99%） | 📋 规划 |
 
+### 3.3 P2 Benchmark 实施规划（v0.10.x）
+
+件套 2 延期到 v0.10.x（MINOR），实施路径：
+
+| 阶段 | 交付物 | 评估维度 | 依赖 |
+|------|--------|---------|------|
+| v0.10.0 | `benchmarks/carrymem_eval/` 评估框架骨架 | 偏好 adherence（复用 PrefEval 200 样本） | 无 |
+| v0.10.1 | 决策一致性评估集（100 样本） | 决策不被重复质疑率 | LLM judge 或规则匹配 |
+| v0.10.2 | 纠正有效性评估集（100 样本） | 纠正不被重复犯错率 | 历史纠正记录 + 重放 |
+| v0.10.3 | 聚合能力评估集（50 样本） | 跨记忆统计类问题正确率 | 参考 User as Code 方法 |
+
+**设计原则**：
+- 评估集必须可离线运行（零依赖核心原则）
+- LLM judge 作为可选依赖（`pip install carrymem[eval]`）
+- 评估结果输出 JSON + Markdown 双格式，支持 CI 集成
+- 基准数据集版本化（`benchmarks/data/v1/`），支持回归对比
+
+**与竞品 benchmark 的关系**：
+- PrefEval（ICLR 2025）：偏好遵循——CarryMem 已有 83%，作为基线
+- LongMemEval（ICLR 2025）：5 维度——复用 Knowledge Updates 维度
+- User as Code 聚合测试：6-43% → 99%——CarryMem 目标 >80%（规则引擎 + 图谱聚合）
+
 ---
 
 ## 4. 与 ai-agent-book 第 3 章的关系
