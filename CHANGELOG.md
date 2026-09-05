@@ -7,6 +7,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-09-05 — CLI startup cost fix (PATCH)
+
+### Summary
+
+PATCH release: harden the `python -m carrymem version` / `--help` /
+`doctor` code path and bump the subprocess timeouts in
+`tests/test_rules/test_installation.py` that were still pinned at
+10s / 15s. Root cause is documented as L-V0100-006.
+
+No behavior changes for end users; this is a CI reliability fix so
+`test_version_accessible_via_cli`, `test_carrymem_help_runs`,
+`test_carrymem_version_runs`, `test_carrymem_doctor_runs`,
+`test_package_installed`, and `test_entry_point_available` no longer
+flake on cold-start sentence-transformers loads (~20s).
+
+### Fixed
+
+- **CLI startup cost (L-V0100-006)** — `python -m carrymem version`
+  used to import the full ``carrymem`` package (which pulls in
+  sentence-transformers) before argparse could see the ``version``
+  subcommand. The version/help/doctor tests therefore timed out at
+  the 10s default. The new `__main__.py` ships:
+
+  - `_read_version()` reads `src/carrymem/__version__.py` directly
+    (or falls back to the `VERSION` file) without importing the
+    package namespace.
+  - `_print_version_standalone()` prints ``CarryMem vX.Y.Z`` without
+    any side effects.
+  - `main(argv=None)` checks for ``version`` / ``--version`` / ``-v``
+    **before** argparse so the heavy ``__init__.py`` chain is never
+    triggered for the version command.
+  - `_run_demo()` now also uses `_read_version()` to avoid the same
+    cold-start hit on the demo path.
+
+- **Installation test subprocess timeouts** — bumped 5 timeout values
+  in `tests/test_rules/test_installation.py` from 10s / 15s to 60s:
+
+  - `TestVersionConsistency.test_version_accessible_via_cli`
+  - `TestCLIEntryPoints.test_carrymem_help_runs`
+  - `TestCLIEntryPoints.test_carrymem_version_runs`
+  - `TestCLIEntryPoints.test_carrymem_doctor_runs`
+  - `TestPipInstallVerification.test_package_installed`
+  - `TestPipInstallVerification.test_entry_point_available`
+
+### Verification (v0.10.1 patch cycle)
+
+| Gate | Result |
+|------|--------|
+| `tests/test_rules/test_installation.py` | **53 passed** (139.88s) |
+| Full regression (155 files, slow files excluded) | in progress — see `/tmp/v0100_batch_results.txt` |
+| VERSION / `__version__` | 0.10.1 / 0.10.1 synced |
+| Tag push | pending |
+| Issue/PR | closes follow-up to #50 |
+
+### CarryMem 初心对齐
+
+- ✅ **零依赖** — the `_read_version()` helper uses only `pathlib`
+  and `os` from the stdlib; no new dependency introduced.
+- ✅ **便携性** — VERSION file path resolution is relative to the
+  installed package, so it works for both source-tree and wheel installs.
+- ✅ **偏好永不衰减** — no preference / memory store schema changes.
+
+### Notes
+
+- The `__init__.py` import chain still loads sentence-transformers
+  eagerly before `python -m carrymem` reaches `__main__.py`. A future
+  refactor (out of scope for PATCH) could make `SQLiteAdapter` and
+  friends truly lazy via `__getattr__` so that `import carrymem`
+  itself is sub-second even on a cold cache. Tracked as backlog item.
+
 ## [0.10.0] - 2026-09-05 — repeat correction upgrade (forge 借鉴点 2)
 
 ### Summary

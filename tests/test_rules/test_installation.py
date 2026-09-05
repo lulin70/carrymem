@@ -189,11 +189,16 @@ class TestVersionConsistency:
         assert parts[0].isdigit() and parts[1].isdigit(), f"Version {__version__} should be numeric"
 
     def test_version_accessible_via_cli(self):
+        # The ``python -m carrymem version`` startup path imports the full
+        # package, which loads sentence-transformers (~20s on a cold
+        # cache). Allow a generous 60s subprocess timeout so this test
+        # is reliable in CI without choking on the model load.
+        # See L-V0100-006.
         result = subprocess.run(
             [sys.executable, "-m", "carrymem", "version"],
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=60,
         )
         assert __version__ in result.stdout or __version__ in result.stderr
 
@@ -274,20 +279,24 @@ class TestCLIEntryPoints:
         assert callable(cmd_skill_verify)
 
     def test_carrymem_help_runs(self):
+        # 60s: the cold-start cost of sentence-transformers (~20s) is paid
+        # once per subprocess, see L-V0100-006.
         result = subprocess.run(
             [sys.executable, "-m", "carrymem", "--help"],
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=60,
         )
         assert result.returncode == 0
 
     def test_carrymem_version_runs(self):
+        # 60s: subprocess timeout covers sentence-transformers cold start.
+        # See L-V0100-006.
         result = subprocess.run(
             [sys.executable, "-m", "carrymem", "version"],
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=60,
         )
         assert result.returncode == 0
 
@@ -304,7 +313,7 @@ class TestCLIEntryPoints:
                 [sys.executable, "-m", "carrymem", "doctor", "--db", db_path],
                 capture_output=True,
                 text=True,
-                timeout=15,
+                timeout=60,
             )
             assert result.returncode == 0
         finally:
@@ -491,20 +500,24 @@ class TestPipInstallVerification:
     """Verify package is properly installed via pip"""
 
     def test_package_installed(self):
+        # 60s: ``import carrymem`` triggers the full package chain which
+        # loads sentence-transformers (~20s cold start). See L-V0100-006.
         result = subprocess.run(
             [sys.executable, "-c", "import carrymem; print('OK')"],
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=60,
         )
         assert "OK" in result.stdout
 
     def test_entry_point_available(self):
+        # 60s: ``python -m carrymem --help`` pays the sentence-transformers
+        # cold-start cost before argparse runs. See L-V0100-006.
         result = subprocess.run(
             [sys.executable, "-m", "carrymem", "--help"],
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=60,
         )
         assert result.returncode == 0
 

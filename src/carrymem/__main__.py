@@ -1,10 +1,66 @@
 import argparse
+import os as _os
+import pathlib
 import sys
 
 
-def main():
+def _read_version() -> str:
+    """Read the CarryMem package version without triggering the heavy
+    ``carrymem`` namespace import (which pulls in sentence-transformers
+    and other embedding backends). This keeps ``python -m carrymem
+    version`` well under the CI subprocess timeout (default 10s).
+
+    See L-V0100-006 for the failure history: the previous implementation
+    relied on ``from carrymem import __version__`` in argparse handlers,
+    but the module-level imports in ``carrymem/__init__.py`` already
+    exceeded the timeout before argparse was reached.
+    """
+    _os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+    _os.environ.setdefault("HF_HUB_OFFLINE", "1")
+    here = pathlib.Path(__file__).resolve().parent
+    version_py = here / "__version__.py"
+    if version_py.exists():
+        text = version_py.read_text(encoding="utf-8", errors="replace")
+        for line in text.splitlines():
+            line = line.strip()
+            if line.startswith("__version__"):
+                # Accept ``__version__ = "0.10.0"`` or ``__version__: str = "0.10.0"``.
+                if "=" in line:
+                    value = line.split("=", 1)[1].strip()
+                else:
+                    continue
+                value = value.split("#", 1)[0].strip()
+                if value.startswith(('"', "'")) and value.endswith(value[0]):
+                    value = value[1:-1]
+                if value:
+                    return value
+    # Fallback: the VERSION file shipped with the source tree (not
+    # always present in installed wheels).
+    version_file = here.parent / "VERSION"
+    if version_file.exists():
+        return version_file.read_text(encoding="utf-8", errors="replace").strip()
+    return "unknown"
+
+
+def _print_version_standalone() -> None:
+    print(f"CarryMem v{_read_version()}")
+
+
+def main(argv=None):
     """Entry point for ``python -m carrymem`` that dispatches subcommands."""
-    parser = argparse.ArgumentParser(description="CarryMem — Your portable AI memory layer", prog="python -m carrymem")
+    # Fast path: ``python -m carrymem version`` / ``--version`` / ``-v``
+    # must not import the full package (would exceed CI subprocess
+    # timeouts while loading sentence-transformers). Detect before
+    # argparse to avoid the heavy chain in __init__.py.
+    raw_args = argv if argv is not None else sys.argv[1:]
+    if raw_args and raw_args[0] in ("version", "--version", "-v"):
+        _print_version_standalone()
+        return 0
+
+    parser = argparse.ArgumentParser(
+        description="CarryMem — Your portable AI memory layer",
+        prog="python -m carrymem",
+    )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
@@ -12,7 +68,7 @@ def main():
     mcp_parser.add_argument("--config", help="Path to configuration file")
     mcp_parser.add_argument("--data-path", help="Path to data directory")
 
-    version_parser = subparsers.add_parser("version", help="Show version")  # noqa: F841
+    subparsers.add_parser("version", help="Show version")
 
     demo_parser = subparsers.add_parser("demo", help="Run interactive demo")  # noqa: F841
 
@@ -24,7 +80,7 @@ def main():
     cli_parser = subparsers.add_parser("cli", help="Full CLI (pass remaining args)")
     cli_parser.add_argument("cli_args", nargs=argparse.REMAINDER, help="CLI arguments")
 
-    args = parser.parse_args()
+    args = parser.parse_args(raw_args)
 
     if args.command == "mcp":
         import asyncio
@@ -41,9 +97,7 @@ def main():
         asyncio.run(server.start())
 
     elif args.command == "version":
-        from carrymem import __version__
-
-        print(f"CarryMem v{__version__}")
+        _print_version_standalone()
 
     elif args.command == "demo":
         _run_demo()
@@ -74,9 +128,7 @@ def _run_demo():
     from carrymem import CarryMem
 
     print("=" * 60)
-    from carrymem import __version__
-
-    print(f"  CarryMem v{__version__} — Interactive Demo")
+    print(f"  CarryMem v{_read_version()} — Interactive Demo")
     print("=" * 60)
     print()
 
