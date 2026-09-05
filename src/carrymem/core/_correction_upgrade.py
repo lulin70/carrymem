@@ -14,7 +14,7 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, FrozenSet, List, Optional, Tuple
+from typing import Any, Dict, FrozenSet, List, Optional
 
 
 # ---- Configuration ----------------------------------------------------
@@ -316,6 +316,141 @@ def _build_suggested_action(content: str) -> str:
     return cleaned[:200]
 
 
+def is_upgrade_enabled() -> bool:
+    """Read the rollback flag at call time so operators can change it safely."""
+    return os.environ.get("CORRECTION_UPGRADE_ENABLED", "1") == "1"
+
+
+def upgrade_to_rule(
+    analysis: CorrectionAnalysis,
+    rule_engine: Any,
+    category: str = "general",
+    user_id: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    """Apply the upgrade decision to a RuleEngine.
+
+    Translates the analysis result into a RuleEngine.add_rule() call with
+    the appropriate scope and override flag. Returns the upgrade record
+    (or None when nothing to do, or when ``UPGRADE_ENABLED`` is False).
+
+    Args:
+        analysis: The result from detect_repeat_correction().
+        rule_engine: An object exposing add_rule(trigger, action, **kwargs).
+            Typically the CarryMem.rule_engine.
+        category: Short noun used as the rule trigger prefix
+            (e.g. "database", "security"). Becomes the rule's trigger.
+        user_id: Optional user ID (recorded in metadata, no behavior change
+            in v0.10.0; reserved for v0.10.1 per-user rule scoping).
+
+    Returns:
+        A dict describing the upgrade action actually taken, or None when:
+          - UPGRADE_ENABLED is False (emergency rollback)
+          - analysis.upgrade_level == "none"
+          - rule_engine.add_rule raised (caught and logged below)
+    """
+    if not is_upgrade_enabled():
+        return None
+    if analysis.upgrade_level == "none":
+        return None
+
+    # Map analysis.upgrade_level to RuleEngine parameters.
+    if analysis.upgrade_level == "soft":
+        scope = "personal"
+        override = False
+        rule_type = "prefer"
+    elif analysis.upgrade_level == "hard":
+        scope = "company"
+        override = True
+        rule_type = "always"
+    else:
+        # Unknown level (future-proof guard) — skip.
+        return None
+
+    trigger = category
+    action = analysis.suggested_action or analysis.new_correction
+    if not action:
+        return None
+
+    try:
+        existing = None
+        other_scope_old = None
+        try:
+            for r in rule_engine.list_rules(status="active", scope=scope, limit=500):
+                if getattr(r, "trigger", None) == trigger and getattr(r, "derived_from", None) == "auto_promotion":
+                    existing = r
+                    break
+            if existing is None and analysis.upgrade_level == "hard":
+                # Escalating to hard: look for a weaker auto_promotion
+                # rule under a different scope and retire it.
+                for r in rule_engine.list_rules(status="active", limit=500):
+                    if (
+                        getattr(r, "trigger", None) == trigger
+                        and getattr(r, "derived_from", None) == "auto_promotion"
+                        and getattr(r, "scope", None) != scope
+                    ):
+                        other_scope_old = r
+                        break
+        except (ValueError, TypeError, AttributeError):
+            existing = None
+
+        if existing is not None:
+            try:
+                rule_engine.update_rule(
+                    existing.id,
+                    action=action,
+                    rule_type=rule_type,
+                    override=override,
+                )
+                rule = rule_engine.get_rule(existing.id) or existing
+            except (ValueError, TypeError, AttributeError):
+                rule = rule_engine.add_rule(
+                    trigger=trigger,
+                    action=action,
+                    rule_type=rule_type,
+                    override=override,
+                    derived_from="auto_promotion",
+                    scope=scope,
+                )
+        else:
+            rule = rule_engine.add_rule(
+                trigger=trigger,
+                action=action,
+                rule_type=rule_type,
+                override=override,
+                derived_from="auto_promotion",
+                scope=scope,
+            )
+
+        # Escalation hygiene: deprecate the weaker predecessor so the
+        # rule set does not accumulate stale duplicates.
+        if other_scope_old is not None and other_scope_old.id != getattr(rule, "id", None):
+            try:
+                rule_engine.update_rule(other_scope_old.id, status="deprecated")
+            except (ValueError, TypeError, AttributeError):
+                pass
+    except (ValueError, TypeError, RuntimeError) as exc:
+        # Surface but don't crash the caller — degradation contract.
+        import logging
+
+        logging.getLogger(__name__).warning(
+            "upgrade_to_rule failed for category=%s level=%s: %s",
+            category,
+            analysis.upgrade_level,
+            exc,
+        )
+        return None
+
+    return {
+        "level": analysis.upgrade_level,
+        "scope": scope,
+        "override": override,
+        "rule_type": rule_type,
+        "trigger": trigger,
+        "rule_id": getattr(rule, "id", None),
+        "user_id": user_id,
+    }
+
+
 __all__ = [
     "CorrectionAnalysis",
     "SECURITY_KEYWORDS",
@@ -325,5 +460,7 @@ __all__ = [
     "DEFAULT_HARD_THRESHOLD",
     "detect_repeat_correction",
     "should_auto_upgrade",
+    "upgrade_to_rule",
+    "is_upgrade_enabled",
     "_are_corrections_similar",
 ]

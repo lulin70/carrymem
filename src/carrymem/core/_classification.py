@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union, cast
 
@@ -204,6 +205,7 @@ class ClassificationMixin:
         stored_memories = []
         storage_keys = []
         updated_memories = []
+        upgrade_actions: List[Dict[str, Any]] = []
 
         # v0.5.1: Entity normalization (Ontology-lite). Runs as post-classification
         # enrichment. Namespace from self._namespace (adapter-sourced, C18).
@@ -219,6 +221,25 @@ class ClassificationMixin:
                 if stored_dict is not None:
                     stored_memories.append(stored_dict)
                     storage_keys.append(cast(str, storage_key))
+
+                # v0.10.0: After a correction is stored, evaluate whether it
+                # qualifies for auto-upgrade to an executable rule. This is the
+                # integration seam between classify_and_remember and the new
+                # detect_repeat_correction / upgrade_to_rule pipeline.
+                if entry.type == "correction":
+                    # ``MemoryEntry.from_dict`` does not preserve
+                    # ``storage_key`` (it lives on the StoredMemory
+                    # subclass), so pass the persisted dict + key as a
+                    # small bag rather than reconstructing the entry.
+                    upgrade_record = self._maybe_upgrade_correction(
+                        storage_key=storage_key,
+                        stored_dict=stored_dict,
+                        message=message,
+                        resolved_message=resolved_message,
+                        updated=updated,
+                    )
+                    if upgrade_record is not None:
+                        upgrade_actions.append(upgrade_record)
 
         auto_rules = []
         try:
@@ -238,8 +259,233 @@ class ClassificationMixin:
             "rule_suggestions": auto_rules,
             "auto_rules": auto_rules,
             "updated_memories": updated_memories,  # type: ignore[typeddict-item]
+            "upgrade_actions": upgrade_actions,  # v0.10.0
             "summary": classify_result["summary"],
         }
+
+    def _maybe_upgrade_correction(
+        self,
+        storage_key: Optional[str],
+        stored_dict: Optional[Dict[str, Any]],
+        message: str,
+        resolved_message: str,
+        updated: Optional[Any] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Analyze a stored correction and promote it to a RuleEngine rule.
+
+        Strategy (v0.10.0 — fixed end-to-end):
+          1. Use ``version_chain_id`` as the repeat-correction unit. CarryMem
+             automatically supersedes repeated corrections into a single
+             chain, incrementing ``version_number`` on each occurrence. The
+             pre-fix implementation counted recall rows (which only ever
+             returned the latest version) and excluded itself by exact
+             content match — so it could never reach threshold.
+          2. Re-fetch the chain head from storage and read
+             ``version_number`` + ``access_count`` as the actual repeat
+             signal. access_count is incremented every time the chain is
+             referenced, which directly mirrors "the user has restated this
+             correction N times".
+          3. Build a synthetic prior_history list containing one entry per
+             prior version so the existing Jaccard similarity (which
+             compares content) still works for rephrased corrections.
+          4. Pass ``threshold=1`` (prior occurrences >= 1 = soft) and
+             ``hard_threshold=2`` (>= 2 = hard) so the user feels the upgrade
+             after the 2nd and 3rd restatement respectively — matching the
+             product promise "preferences never decay; repeated ones
+             escalate".
+        """
+        from carrymem.core._correction_upgrade import (
+            DEFAULT_HARD_THRESHOLD,
+            DEFAULT_THRESHOLD,
+            detect_repeat_correction,
+            is_upgrade_enabled,
+            upgrade_to_rule,
+        )
+
+        if not is_upgrade_enabled():
+            return None
+
+        try:
+            if not storage_key or not stored_dict:
+                return None
+            current_content = (
+                resolved_message
+                or stored_dict.get("content", "")
+                or message
+                or ""
+            ).strip()
+            if not current_content:
+                return None
+
+            # Real repeat metric: CarryMem dedupes identical corrections
+            # by ``content_hash`` and never inserts a new row, so version /
+            # access_count / memory_versions never move. The honest signal
+            # is the in-process correction counter (persisted on the
+            # memory's metadata.repetition_count so it survives across
+            # processes within the same DB).
+            prior_count = self._count_correction_chain(storage_key)
+
+            # Persist the new repeat count onto the row so a fresh process
+            # reading the same memory sees the same value.
+            new_count = prior_count + 1
+            self._bump_repetition_count(storage_key, new_count)
+
+            # ``updated`` is the strong in-process signal in CarryMem: every
+            # repeated correction that finds a previous matching memory
+            # sets it (see _handle_correction). At minimum, treat the
+            # current count as the authoritative prior_count.
+            if updated is not None:
+                prior_count = max(prior_count, 1)
+
+            # Build actual semantic history for rephrased corrections. The
+            # current deduped row is excluded by storage key; identical
+            # repeats are represented by repetition_count instead.
+            try:
+                history = self.recall_memories(
+                    query="",
+                    filters={"type": "correction"},
+                    limit=CORRECTION_RECALL_LIMIT,
+                    update_access=False,
+                )
+            except (KeyError, TypeError, ValueError, RuntimeError):
+                history = []
+            prior_history = [
+                item for item in history if item.get("storage_key") != storage_key
+            ]
+            semantic_analysis = detect_repeat_correction(
+                current_content,
+                history=prior_history,
+                threshold=1,
+                hard_threshold=2,
+            )
+            prior_count = max(prior_count, semantic_analysis.history_count)
+
+            # Synthesize missing prior versions for identical deduped repeats
+            # so the same analysis contract covers both storage paths.
+            prior_history.extend(
+                {
+                    "content": current_content,
+                    "storage_key": storage_key,
+                    "version": v,
+                }
+                for v in range(max(0, prior_count - len(prior_history)))
+            )
+
+            from dataclasses import replace
+
+            from carrymem.core._correction_upgrade import _decide_upgrade_level  # noqa: WPS433
+
+            analysis = detect_repeat_correction(
+                current_content,
+                history=prior_history,
+                threshold=max(DEFAULT_THRESHOLD - 1, 1),
+                hard_threshold=max(DEFAULT_HARD_THRESHOLD - 1, 2),
+            )
+            # Override history_count with the real chain metric. Similarity
+            # would otherwise re-count and could mask the upgrade.
+            analysis = replace(analysis, history_count=prior_count, is_repeat=prior_count >= 1)
+            upgrade_level = _decide_upgrade_level(
+                history_count=prior_count,
+                threshold=max(DEFAULT_THRESHOLD - 1, 1),
+                hard_threshold=max(DEFAULT_HARD_THRESHOLD - 1, 2),
+                bypass=analysis.bypass_threshold,
+            )
+            analysis = replace(
+                analysis,
+                upgrade_level=upgrade_level,
+                suggested_action=analysis.suggested_action or current_content,
+            )
+
+            if upgrade_level == "none":
+                return None
+
+            category = "security" if analysis.bypass_threshold else "correction"
+            return upgrade_to_rule(
+                analysis,
+                self.rule_engine,
+                category=category,
+            )
+        except (ImportError, KeyError, TypeError, ValueError, RuntimeError, AttributeError) as exc:  # noqa: BLE001
+            logger.warning("Repeat correction upgrade skipped: %s", exc)
+            return None
+
+    def _count_correction_chain(self, storage_key: str) -> int:
+        """Return the number of times this correction has been stored before.
+
+        CarryMem dedupes identical corrections by ``content_hash`` so no
+        new SQLite row is ever produced for a repeat. We therefore read
+        the persisted ``metadata.repetition_count`` (managed by
+        ``_bump_repetition_count``) as the repeat metric, and fall back
+        to the version chain / access_count only when no metadata is
+        available.
+        """
+        adapter = self._adapter
+        if adapter is None or not hasattr(adapter, "get_raw_connection"):
+            return 0
+        if not storage_key:
+            return 0
+
+        try:
+            conn = adapter.get_raw_connection()
+            row = conn.execute(
+                "SELECT id, version_chain_id, version_number, access_count, metadata "
+                "FROM memories WHERE storage_key = ? AND namespace = ?",
+                (storage_key, self._namespace),
+            ).fetchone()
+            if not row:
+                return 0
+
+            try:
+                meta = json.loads(row["metadata"] or "{}")
+            except (TypeError, ValueError):
+                meta = {}
+            persisted = int(meta.get("repetition_count", 0) or 0)
+
+            version_number = int(row["version_number"] or 1)
+            access_count = int(row["access_count"] or 0)
+            version_rows = conn.execute(
+                "SELECT COUNT(*) AS count FROM memory_versions WHERE memory_id = ?",
+                (row["id"],),
+            ).fetchone()
+            recorded_versions = int(version_rows["count"] or 0) if version_rows else 0
+            return max(persisted, version_number - 1, recorded_versions, access_count // 2)
+        except (AttributeError, KeyError, TypeError, ValueError, RuntimeError):
+            return 0
+
+    def _bump_repetition_count(self, storage_key: str, new_count: int) -> None:
+        """Persist ``repetition_count`` onto the correction's row.
+
+        Uses a JSON merge on the ``metadata`` column so other metadata
+        keys (session_id, entities, …) are preserved. Safe to call with
+        a missing storage_key (becomes a no-op).
+        """
+        adapter = self._adapter
+        if adapter is None or not hasattr(adapter, "get_raw_connection"):
+            return
+        if not storage_key:
+            return
+        try:
+            conn = adapter.get_raw_connection()
+            row = conn.execute(
+                "SELECT metadata FROM memories WHERE storage_key = ? AND namespace = ?",
+                (storage_key, self._namespace),
+            ).fetchone()
+            if not row:
+                return
+            try:
+                meta = json.loads(row["metadata"] or "{}")
+            except (TypeError, ValueError):
+                meta = {}
+            if not isinstance(meta, dict):
+                meta = {}
+            meta["repetition_count"] = int(new_count)
+            conn.execute(
+                "UPDATE memories SET metadata = ? WHERE storage_key = ? AND namespace = ?",
+                (json.dumps(meta), storage_key, self._namespace),
+            )
+            conn.commit()
+        except (AttributeError, KeyError, TypeError, ValueError, RuntimeError):
+            return
 
     @staticmethod
     def _apply_entry_overrides(

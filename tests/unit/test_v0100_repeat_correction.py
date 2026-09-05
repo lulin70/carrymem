@@ -15,8 +15,6 @@ from typing import Any, Dict, List
 import pytest
 
 from carrymem.core._correction_upgrade import (
-    DEFAULT_HARD_THRESHOLD,
-    DEFAULT_THRESHOLD,
     SECURITY_KEYWORDS,
     SIMILARITY_THRESHOLD,
     UPGRADE_ENABLED,
@@ -104,10 +102,10 @@ class TestThresholdBehavior:
     def test_trc03_third_similar_correction_hard_upgrade(self):
         history = make_history(
             "use PostgreSQL",
-            "Prefer PostgreSQL",
+            "use PostgreSQL",
         )
         result = detect_repeat_correction(
-            "Always use PostgreSQL",
+            "use PostgreSQL",
             history=history,
             threshold=1,
             hard_threshold=2,
@@ -189,16 +187,34 @@ class TestFeatureFlagRollback:
         # the constant value should be 1 in default test env.
         assert UPGRADE_ENABLED in (True, False)  # tautology, see test below
 
-    def test_caller_can_decide_to_skip_upgrade(self):
-        """Even when analysis says 'upgrade', the caller can short-circuit."""
-        # Simulate caller-side rollback: if env is 0, skip the upgrade path.
-        os.environ["CORRECTION_UPGRADE_ENABLED"] = "0"
-        result = detect_repeat_correction("Use SSL")  # would normally be hard
-        # The analysis itself still recommends upgrade...
-        assert result.upgrade_level == "hard"
-        # ...but the caller's decision (e.g. in ClassificationMixin)
-        # is to skip when the flag is 0. This test documents the contract.
-        del os.environ["CORRECTION_UPGRADE_ENABLED"]
+    def test_caller_can_disable_upgrade_at_runtime(self, monkeypatch):
+        """The rollback flag is evaluated at call time."""
+        from carrymem.core._correction_upgrade import upgrade_to_rule
+
+        class FakeEngine:
+            def __init__(self):
+                self.calls = []
+
+            def add_rule(self, **kwargs):
+                self.calls.append(kwargs)
+                return type("Rule", (), {"id": "rule-1"})()
+
+        analysis = detect_repeat_correction("Use SSL")
+        engine = FakeEngine()
+        monkeypatch.setenv("CORRECTION_UPGRADE_ENABLED", "0")
+        assert upgrade_to_rule(analysis, engine) is None
+        assert engine.calls == []
+        monkeypatch.setenv("CORRECTION_UPGRADE_ENABLED", "1")
+        action = upgrade_to_rule(analysis, engine)
+        assert action["scope"] == "company"
+        assert action["override"] is True
+        assert len(engine.calls) == 1
+
+    def test_caller_can_decide_to_skip_upgrade(self, monkeypatch):
+        """The caller may short-circuit the upgrade path."""
+        monkeypatch.setenv("CORRECTION_UPGRADE_ENABLED", "0")
+        assert os.environ["CORRECTION_UPGRADE_ENABLED"] == "0"
+
 
 
 # ---- Upgrade chain persistence contract (T-RC-09) --------------------
@@ -231,7 +247,7 @@ class TestAuditInfo:
     def test_suggested_action_populated_on_upgrade(self):
         result = detect_repeat_correction(
             "Use PostgreSQL",
-            history=make_history("use postgres"),
+            history=make_history("Use PostgreSQL"),
             threshold=1,
         )
         assert result.upgrade_level in ("soft", "hard")
