@@ -1031,8 +1031,8 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 
 ## Project Status
 
-**Current Version**: v0.9.9
-**Tests**: 4666+ non-e2e tests passing, 0 failed, 4 skipped (vector/semantic optional deps); 97 TUI tests passing
+**Current Version**: v0.10.0
+**Tests**: 4666+ non-e2e tests passing + 27 v0.10.0 repeat-correction tests, 0 failed, 4 skipped (vector/semantic optional deps); 97 TUI tests passing
 **Coverage**: 80%+
 **mypy**: 0 errors (150+ source files, CI blocking gate)
 **flake8**: 0 errors (black + isort formatted)
@@ -1040,6 +1040,7 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 **Maturity**: 80/100 (B) per 7-dimension DevSquad evaluation
 
 **Changelog**:
+- **v0.10.0**: Repeat-correction upgrade — `detect_repeat_correction()` + semantic dedup (Jaccard + entity) + security-keyword bypass (forge 借鉴点 2). See [docs/design/V0.10.0_REPEAT_CORRECTION.md](docs/design/V0.10.0_REPEAT_CORRECTION.md).
 - **v0.9.9**: Methodology: orthogonal classification table (docs/design/METHODOLOGY.md) + design space positioning (README Comparison + COMPETITIVE_ANALYSIS). See [docs/design/METHODOLOGY.md](docs/design/METHODOLOGY.md).
 - **v0.9.8**: Knowledge graph deletion completeness — `forget()` now cascades to `memory_entities` + `memory_relations` (TD-066, Oracle Agent Memory report启发). 4 new tests.
 - **v0.9.7**: Tech debt cleanup — TD-003b/009/011b/002 follow-ups (deleted cli.py facade, added TUI fallback tests, downgraded SQLITE_SCHEMA to P3 observation).

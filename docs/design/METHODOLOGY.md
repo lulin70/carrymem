@@ -131,10 +131,12 @@ CarryMem **不做**：
 
 | 阶段 | 交付物 | 评估维度 | 依赖 |
 |------|--------|---------|------|
-| v0.10.0 | `benchmarks/carrymem_eval/` 评估框架骨架 | 偏好 adherence（复用 PrefEval 200 样本） | 无 |
-| v0.10.1 | 决策一致性评估集（100 样本） | 决策不被重复质疑率 | LLM judge 或规则匹配 |
+| v0.10.0 | `core/_correction_upgrade.py` + 重复纠正升级阈值 | 纠错有效性 baseline（27 单测） | 无 |
+| v0.10.1 | `benchmarks/carrymem_eval/` 评估框架骨架 + 决策一致性（100 样本） | 决策不被重复质疑率 | LLM judge 或规则匹配 |
 | v0.10.2 | 纠正有效性评估集（100 样本） | 纠正不被重复犯错率 | 历史纠正记录 + 重放 |
 | v0.10.3 | 聚合能力评估集（50 样本） | 跨记忆统计类问题正确率 | 参考 User as Code 方法 |
+
+**v0.10.0 实际交付**：新增 `detect_repeat_correction()` 主入口 + `CorrectionAnalysis` 数据类 + 安全关键词白名单绕过 + 环境变量阈值参数化 + 27 个 pytest 单测。详见 `docs/design/V0.10.0_REPEAT_CORRECTION.md`。
 
 **设计原则**：
 - 评估集必须可离线运行（零依赖核心原则）

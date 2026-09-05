@@ -1,6 +1,6 @@
 # CarryMem — Project Status
 
-**Version**: v0.9.9
+**Version**: v0.10.0
 **Last Updated**: 2026-08-03
 **Maintainer**: CarryMem Team
 
@@ -25,6 +25,7 @@
 | Version | Date | Key Changes |
 |---------|------|-------------|
 | v0.9.9 | 2026-08-03 | Methodology: orthogonal classification table (METHODOLOGY.md) + design space positioning (README + COMPETITIVE_ANALYSIS). |
+| v0.10.0 | 2026-09-05 | Repeat-correction upgrade: detect_repeat_correction() + semantic dedup (Jaccard + entity) + security-keyword bypass (forge 借鉴点 2). |
 | v0.9.8 | 2026-07-27 | Knowledge graph deletion completeness: `forget()` cascades to `memory_entities` + `memory_relations` (TD-066). 4 new tests. Oracle Agent Memory report启发. |
 | v0.9.7 | 2026-07-26 | Tech debt cleanup: TD-003b/009/011b/002 follow-ups (deleted cli.py facade, added TUI fallback tests, downgraded SQLITE_SCHEMA to P3) |
 | v0.9.6 | 2026-07-26 | Nightly slow test threshold fix (store_messages batch API) + release.yml cp consistency |

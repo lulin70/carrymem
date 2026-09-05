@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-09-05 — repeat correction upgrade (forge 借鉴点 2)
+
+### Summary
+
+实现 memory-skill-forge 借鉴提案「借鉴点 2：重复纠正升级阈值」。核心思路：同一主题纠正被反复触发时，自动从普通偏好升级为可执行硬约束，避免 AI "同一错误重复犯"。
+
+Closes #49.
+
+### Added
+
+- **New module `src/carrymem/core/_correction_upgrade.py`**:
+  - `detect_repeat_correction(content, history, threshold, hard_threshold)` 主入口
+  - `CorrectionAnalysis` dataclass 返回值（含 upgrade_level/similar_history/suggested_action）
+  - `should_auto_upgrade()` 快路径谓词
+  - `_are_corrections_similar()` Jaccard + 数字/实体匹配（零依赖，纯标准库 `re` + `set`）
+  - `SECURITY_KEYWORDS` 白名单绕过阈值（DR-V10-003）
+  - 环境变量：`CORRECTION_THRESHOLD` / `CORRECTION_HARD_THRESHOLD` / `CORRECTION_UPGRADE_ENABLED`
+- **New test file `tests/unit/test_v0100_repeat_correction.py`**: 27 个 pytest 测试用例，覆盖 T-RC-01..T-RC-15 全部门禁
+- **New design doc `docs/design/V0.10.0_REPEAT_CORRECTION.md`**: 11 章完整设计（动机/架构/API/数据模型/状态机/测试/AC/风险/回滚/路径/决策记录）
+
+### Decision Records
+
+- **DR-V10-001**: 阈值选 2/3 而非 1/2 — 避免单次误纠正升格
+- **DR-V10-002**: 语义去重用 Jaccard 而非向量检索 — 零依赖核心原则
+- **DR-V10-003**: 安全关键词白名单绕过阈值 — 安全相关纠正不容容忍
+- **DR-V10-004**: 升级只升 scope 不改 TTL — 与"偏好永不衰减"初心对齐
+- **DR-V10-005**: 阈值通过环境变量配置 — 支持灰度发布与回滚
+
+### CarryMem 初心对齐
+
+- ✅ **零依赖**：纯标准库 `re` + `set`，不引入 sklearn/numpy/spaCy
+- ✅ **便携性**：阈值状态存 SQLite 主库，伴随 .carry 文件迁移
+- ✅ **偏好永不衰减**：升级只升 scope，不改 TTL
+- ✅ **可执行规则**：升级产物直接是 RuleEngine 可执行 rule
+
+### Notes
+
+- 本版本仅交付 `detect_repeat_correction()` 核心逻辑 + 27 单测；`classify_and_remember` 集成钩子在 v0.10.1（下一迭代）
+- 数据库 schema 迁移（v100 → v101，correction_count/upgrade_chain/related_corrections 字段）也在 v0.10.1，避免一次性改动过大
+- bench 评估集（决策一致性/纠正有效性/聚合能力）按 METHODOLOGY.md §3.3 路径在 v0.10.1~v0.10.3 推进
+
 ## [0.9.9] - 2026-08-03 — methodology: orthogonal classification + design space positioning
 
 ### Summary
