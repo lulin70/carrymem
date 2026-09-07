@@ -10,21 +10,26 @@ Real-user-flow simulation:
     7. Persistence: a freshly opened CarryMem against the same DB must
        read the persisted repetition_count and the existing auto_promotion rules
 """
+
 from __future__ import annotations
 
 from carrymem import CarryMem
 
 
 def _corrections(cm):
-    return [r for r in cm.rule_engine.list_rules(limit=500)
-            if getattr(r, "derived_from", "") == "auto_promotion"
-            and getattr(r, "trigger", "") == "correction"]
+    return [
+        r
+        for r in cm.rule_engine.list_rules(limit=500)
+        if getattr(r, "derived_from", "") == "auto_promotion" and getattr(r, "trigger", "") == "correction"
+    ]
 
 
 def _security(cm):
-    return [r for r in cm.rule_engine.list_rules(limit=500)
-            if getattr(r, "derived_from", "") == "auto_promotion"
-            and getattr(r, "trigger", "") == "security"]
+    return [
+        r
+        for r in cm.rule_engine.list_rules(limit=500)
+        if getattr(r, "derived_from", "") == "auto_promotion" and getattr(r, "trigger", "") == "security"
+    ]
 
 
 class TestE2ERepeatCorrectionUpgrade:
@@ -70,9 +75,7 @@ class TestE2ERepeatCorrectionUpgrade:
         db_path = str(tmp_path / "v0100_e2e_sec.db")
         cm = CarryMem(storage="sqlite", db_path=db_path)
         try:
-            r = cm.classify_and_remember(
-                "Use SSL for api_key encryption", force_type="correction"
-            )
+            r = cm.classify_and_remember("Use SSL for api_key encryption", force_type="correction")
             assert r["upgrade_actions"]
             up = r["upgrade_actions"][0]
             assert up["level"] == "hard"
@@ -115,8 +118,7 @@ class TestE2ERepeatCorrectionUpgrade:
             assert cm2._count_correction_chain(stored_key) >= 2
 
             # And the auto-promoted hard rule is still present.
-            active_hard = [r for r in _corrections(cm2)
-                           if r.status == "active" and r.scope == "company"]
+            active_hard = [r for r in _corrections(cm2) if r.status == "active" and r.scope == "company"]
             assert len(active_hard) == 1
         finally:
             cm2.close()

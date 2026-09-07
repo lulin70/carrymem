@@ -24,8 +24,10 @@ from carrymem.integration.layer2_mcp.server import MCPServer
 
 def _call(server, tool_name, **kwargs):
     """Call an MCP tool through the handlers layer."""
+
     async def _do_call():
         return await server.handlers.handle_tool(tool_name, kwargs)
+
     return asyncio.run(_do_call())
 
 
@@ -43,16 +45,14 @@ class TestE2EMCPWorkflow:
 
     def test_store_recall_workflow(self, mcp_server):
         """classify_and_remember → recall_memories data flow."""
-        _call(mcp_server, "classify_and_remember",
-              message="I prefer Python for data science projects")
+        _call(mcp_server, "classify_and_remember", message="I prefer Python for data science projects")
 
         result = _call(mcp_server, "recall_memories", query="Python data science")
         assert result is not None
         assert result.get("success") is True
         data = result.get("data", {})
         text = str(data).lower()
-        assert "python" in text or "data science" in text, \
-            "Recalled data should match stored content"
+        assert "python" in text or "data science" in text, "Recalled data should match stored content"
 
     def test_preference_to_system_prompt_workflow(self, mcp_server):
         """declare_preference → get_system_prompt data flow.
@@ -60,15 +60,13 @@ class TestE2EMCPWorkflow:
         MCP handler accepts 'message' parameter for declare_preference
         and 'context' parameter for get_system_prompt.
         """
-        _call(mcp_server, "declare_preference",
-              message="Always use type hints in Python code")
+        _call(mcp_server, "declare_preference", message="Always use type hints in Python code")
 
         result = _call(mcp_server, "get_system_prompt", context="Python code style")
         assert result is not None
         assert result.get("success") is True
         prompt_text = result.get("data", {}).get("system_prompt", "").lower()
-        assert "type hint" in prompt_text, \
-            "Declared preference should appear in system prompt"
+        assert "type hint" in prompt_text, "Declared preference should appear in system prompt"
 
     def test_batch_classify_workflow(self, mcp_server):
         """batch_classify processes multiple messages correctly."""
@@ -98,8 +96,7 @@ class TestE2EMCPWorkflow:
 
     def test_forget_workflow(self, mcp_server):
         """classify_and_remember → recall → forget → recall empty workflow."""
-        store_result = _call(mcp_server, "classify_and_remember",
-              message="Temporary note for deletion test")
+        store_result = _call(mcp_server, "classify_and_remember", message="Temporary note for deletion test")
         assert store_result.get("success") is True
         storage_keys = store_result.get("data", {}).get("storage_keys", [])
         assert len(storage_keys) > 0, "Should have storage key"
@@ -112,5 +109,4 @@ class TestE2EMCPWorkflow:
         _call(mcp_server, "forget_memory", memory_id=storage_key)
 
         recall_after = _call(mcp_server, "recall_memories", query="deletion test")
-        assert "temporary" not in str(recall_after).lower(), \
-            "Forgotten memory should not appear in recall"
+        assert "temporary" not in str(recall_after).lower(), "Forgotten memory should not appear in recall"

@@ -49,8 +49,7 @@ class TestE2EForgetGraphCleanup:
         assert len(memories) > 0
         storage_key = memories[0]["storage_key"]
 
-        added = cm.add_graph_relation("Python", "FastAPI", "used_with",
-                                       source_memory_key=storage_key)
+        added = cm.add_graph_relation("Python", "FastAPI", "used_with", source_memory_key=storage_key)
         assert added is True, "Relation should be added"
 
         relations_before = cm.recall_by_relation("Python")

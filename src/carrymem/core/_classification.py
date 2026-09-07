@@ -308,12 +308,7 @@ class ClassificationMixin:
         try:
             if not storage_key or not stored_dict:
                 return None
-            current_content = (
-                resolved_message
-                or stored_dict.get("content", "")
-                or message
-                or ""
-            ).strip()
+            current_content = (resolved_message or stored_dict.get("content", "") or message or "").strip()
             if not current_content:
                 return None
 
@@ -349,9 +344,7 @@ class ClassificationMixin:
                 )
             except (KeyError, TypeError, ValueError, RuntimeError):
                 history = []
-            prior_history = [
-                item for item in history if item.get("storage_key") != storage_key
-            ]
+            prior_history = [item for item in history if item.get("storage_key") != storage_key]
             semantic_analysis = detect_repeat_correction(
                 current_content,
                 history=prior_history,

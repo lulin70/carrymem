@@ -44,13 +44,15 @@ class TestE2ESupersedePreference:
         superseded = [r for r in results if r.get("superseded_at") is not None]
 
         assert len(active) >= 1, "Latest preference should be active"
-        assert "dislike" in " ".join(r["content"].lower() for r in active), \
-            "Active preference should be the latest (dislike)"
+        assert "dislike" in " ".join(
+            r["content"].lower() for r in active
+        ), "Active preference should be the latest (dislike)"
         # Old preference should be superseded
         if len(results) > 1:
             assert len(superseded) >= 1, "Old contradictory preference should be superseded"
-            assert "like dark mode" in " ".join(r["content"].lower() for r in superseded), \
-                "Superseded preference should be the old one (like)"
+            assert "like dark mode" in " ".join(
+                r["content"].lower() for r in superseded
+            ), "Superseded preference should be the old one (like)"
 
     def test_update_marker_triggers_supersede(self, fresh_carrymem):
         """User uses contradiction pair; old preference should be superseded."""
@@ -63,8 +65,9 @@ class TestE2ESupersedePreference:
         superseded = [r for r in results if r.get("superseded_at") is not None]
 
         assert len(active) >= 1, "Latest preference should be active"
-        assert "dislike" in " ".join(r["content"].lower() for r in active), \
-            "Active preference should be the latest (dislike)"
+        assert "dislike" in " ".join(
+            r["content"].lower() for r in active
+        ), "Active preference should be the latest (dislike)"
         if len(results) > 1:
             assert len(superseded) >= 1, "Old preference should be superseded"
 
@@ -74,8 +77,7 @@ class TestE2ESupersedePreference:
         cm.declare_preference("Always use type hints in Python code")
 
         prompt = cm.build_system_prompt(context="Python code style")
-        assert "type hint" in prompt.lower(), \
-            "Declared preference should appear in system prompt"
+        assert "type hint" in prompt.lower(), "Declared preference should appear in system prompt"
 
     def test_independent_preferences_coexist(self, fresh_carrymem):
         """Two independent preferences (not contradictory) should coexist."""
@@ -87,5 +89,6 @@ class TestE2ESupersedePreference:
         active = [r for r in results if r.get("superseded_at") is None]
         # Both should be active — user may like both morning and evening
         assert len(active) >= 1, "At least one preference should be active"
-        assert len(superseded := [r for r in results if r.get("superseded_at")]) == 0, \
-            "Independent preferences should not be superseded"
+        assert (
+            len(superseded := [r for r in results if r.get("superseded_at")]) == 0
+        ), "Independent preferences should not be superseded"

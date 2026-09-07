@@ -179,16 +179,18 @@ jobs:
       - name: mypy
         run: mypy src/
 
-      - name: "radon cc check (advisory — target: blocking for complexity >=21)"
-        continue-on-error: true
+      - name: "radon cc check (blocking for complexity >=21)"
+        continue-on-error: false
         run: |
-          # Per project constraint: blocking for complexity >=21 (D+ level)
-          # Currently advisory — 10+ functions exceed threshold, refactoring in progress
-          OUTPUT=$(radon cc -s -n E src/ 2>&1)
+          # Project constraint: blocking for complexity >=21 (D+ level).
+          # Promoted from advisory on 2026-09-07: the last >=21 function
+          # (upgrade_to_rule, cc=24) was refactored to cc=10, so the whole
+          # src/ tree is now D+-free and the gate must stay honest.
+          OUTPUT=$(radon cc -s -n D src/ 2>&1)
           if [ -n "$OUTPUT" ]; then
-            echo "WARNING: Functions with complexity >=21 (grade E/F) found:"
+            echo "FAIL: Functions with complexity >=21 (grade D+) found:"
             echo "$OUTPUT"
-            echo "Target: make blocking after refactoring these functions"
+            exit 1
           else
             echo "OK: No functions with complexity >=21"
           fi

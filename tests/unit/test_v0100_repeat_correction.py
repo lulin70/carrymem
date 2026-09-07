@@ -24,15 +24,13 @@ from carrymem.core._correction_upgrade import (
     should_auto_upgrade,
 )
 
-
 # ---- Helpers ----------------------------------------------------------
 
 
 def make_history(*contents: str) -> List[Dict[str, Any]]:
     """Build a history list from raw content strings."""
     return [
-        {"content": c, "storage_key": f"cm_hist_{i}", "created_at": f"2026-09-0{i+1}"}
-        for i, c in enumerate(contents)
+        {"content": c, "storage_key": f"cm_hist_{i}", "created_at": f"2026-09-0{i+1}"} for i, c in enumerate(contents)
     ]
 
 
@@ -157,6 +155,7 @@ class TestThresholdParameterization:
         monkeypatch.delenv("CORRECTION_HARD_THRESHOLD", raising=False)
         # Re-import to pick up env var re-read.
         import importlib
+
         import carrymem.core._correction_upgrade as mod
 
         importlib.reload(mod)
@@ -167,6 +166,7 @@ class TestThresholdParameterization:
         monkeypatch.setenv("CORRECTION_THRESHOLD", "1")
         monkeypatch.setenv("CORRECTION_HARD_THRESHOLD", "2")
         import importlib
+
         import carrymem.core._correction_upgrade as mod
 
         importlib.reload(mod)
@@ -214,7 +214,6 @@ class TestFeatureFlagRollback:
         """The caller may short-circuit the upgrade path."""
         monkeypatch.setenv("CORRECTION_UPGRADE_ENABLED", "0")
         assert os.environ["CORRECTION_UPGRADE_ENABLED"] == "0"
-
 
 
 # ---- Upgrade chain persistence contract (T-RC-09) --------------------

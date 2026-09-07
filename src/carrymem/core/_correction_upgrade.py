@@ -16,7 +16,6 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, FrozenSet, List, Optional
 
-
 # ---- Configuration ----------------------------------------------------
 
 # Default thresholds. Override via environment variables for staged rollout.
@@ -321,6 +320,80 @@ def is_upgrade_enabled() -> bool:
     return os.environ.get("CORRECTION_UPGRADE_ENABLED", "1") == "1"
 
 
+def _map_level_params(level: str) -> Optional[Dict[str, Any]]:
+    """Map ``analysis.upgrade_level`` to RuleEngine add/update parameters.
+
+    Returns ``None`` for unknown levels (future-proof guard — skip upgrade).
+    """
+    if level == "soft":
+        return {"scope": "personal", "override": False, "rule_type": "prefer"}
+    if level == "hard":
+        return {"scope": "company", "override": True, "rule_type": "always"}
+    return None
+
+
+def _find_existing_auto_rule(
+    rule_engine: Any,
+    trigger: str,
+    scope: str,
+    escalate: bool,
+) -> tuple:
+    """Find the existing auto_promotion rule for ``(trigger, scope)``.
+
+    When ``escalate`` is True and no same-scope rule exists, also look for a
+    weaker auto_promotion rule under a different scope (the hard-escalation
+    predecessor to retire). Lookup failures degrade to ``(None, None)``.
+    """
+    existing = None
+    other_scope_old = None
+    try:
+        for r in rule_engine.list_rules(status="active", scope=scope, limit=500):
+            if getattr(r, "trigger", None) == trigger and getattr(r, "derived_from", None) == "auto_promotion":
+                existing = r
+                break
+        if existing is None and escalate:
+            for r in rule_engine.list_rules(status="active", limit=500):
+                if (
+                    getattr(r, "trigger", None) == trigger
+                    and getattr(r, "derived_from", None) == "auto_promotion"
+                    and getattr(r, "scope", None) != scope
+                ):
+                    other_scope_old = r
+                    break
+    except (ValueError, TypeError, AttributeError):
+        return None, None
+    return existing, other_scope_old
+
+
+def _upsert_auto_rule(
+    rule_engine: Any,
+    trigger: str,
+    action: str,
+    params: Dict[str, Any],
+    existing: Optional[Any],
+) -> Any:
+    """Update the existing auto_promotion rule; fall back to add on failure."""
+    if existing is not None:
+        try:
+            rule_engine.update_rule(
+                existing.id,
+                action=action,
+                rule_type=params["rule_type"],
+                override=params["override"],
+            )
+            return rule_engine.get_rule(existing.id) or existing
+        except (ValueError, TypeError, AttributeError):
+            pass
+    return rule_engine.add_rule(
+        trigger=trigger,
+        action=action,
+        rule_type=params["rule_type"],
+        override=params["override"],
+        derived_from="auto_promotion",
+        scope=params["scope"],
+    )
+
+
 def upgrade_to_rule(
     analysis: CorrectionAnalysis,
     rule_engine: Any,
@@ -353,16 +426,8 @@ def upgrade_to_rule(
     if analysis.upgrade_level == "none":
         return None
 
-    # Map analysis.upgrade_level to RuleEngine parameters.
-    if analysis.upgrade_level == "soft":
-        scope = "personal"
-        override = False
-        rule_type = "prefer"
-    elif analysis.upgrade_level == "hard":
-        scope = "company"
-        override = True
-        rule_type = "always"
-    else:
+    params = _map_level_params(analysis.upgrade_level)
+    if params is None:
         # Unknown level (future-proof guard) — skip.
         return None
 
@@ -372,54 +437,10 @@ def upgrade_to_rule(
         return None
 
     try:
-        existing = None
-        other_scope_old = None
-        try:
-            for r in rule_engine.list_rules(status="active", scope=scope, limit=500):
-                if getattr(r, "trigger", None) == trigger and getattr(r, "derived_from", None) == "auto_promotion":
-                    existing = r
-                    break
-            if existing is None and analysis.upgrade_level == "hard":
-                # Escalating to hard: look for a weaker auto_promotion
-                # rule under a different scope and retire it.
-                for r in rule_engine.list_rules(status="active", limit=500):
-                    if (
-                        getattr(r, "trigger", None) == trigger
-                        and getattr(r, "derived_from", None) == "auto_promotion"
-                        and getattr(r, "scope", None) != scope
-                    ):
-                        other_scope_old = r
-                        break
-        except (ValueError, TypeError, AttributeError):
-            existing = None
-
-        if existing is not None:
-            try:
-                rule_engine.update_rule(
-                    existing.id,
-                    action=action,
-                    rule_type=rule_type,
-                    override=override,
-                )
-                rule = rule_engine.get_rule(existing.id) or existing
-            except (ValueError, TypeError, AttributeError):
-                rule = rule_engine.add_rule(
-                    trigger=trigger,
-                    action=action,
-                    rule_type=rule_type,
-                    override=override,
-                    derived_from="auto_promotion",
-                    scope=scope,
-                )
-        else:
-            rule = rule_engine.add_rule(
-                trigger=trigger,
-                action=action,
-                rule_type=rule_type,
-                override=override,
-                derived_from="auto_promotion",
-                scope=scope,
-            )
+        existing, other_scope_old = _find_existing_auto_rule(
+            rule_engine, trigger, params["scope"], escalate=analysis.upgrade_level == "hard"
+        )
+        rule = _upsert_auto_rule(rule_engine, trigger, action, params, existing)
 
         # Escalation hygiene: deprecate the weaker predecessor so the
         # rule set does not accumulate stale duplicates.
@@ -442,9 +463,9 @@ def upgrade_to_rule(
 
     return {
         "level": analysis.upgrade_level,
-        "scope": scope,
-        "override": override,
-        "rule_type": rule_type,
+        "scope": params["scope"],
+        "override": params["override"],
+        "rule_type": params["rule_type"],
         "trigger": trigger,
         "rule_id": getattr(rule, "id", None),
         "user_id": user_id,
