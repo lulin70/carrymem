@@ -410,6 +410,58 @@ class TestHandlersClass:
         handlers.cleanup()
 
     @pytest.mark.asyncio
+    async def test_init_config_path_threaded(self, temp_db, tmp_path, monkeypatch):
+        """P0-3: explicitly-provided config_path must reach the engine's
+        ConfigManager instead of being silently dropped."""
+        monkeypatch.delenv("CARRYMEM_CONFIG_PATH", raising=False)
+        monkeypatch.delenv("CARRYMEM_STORAGE_MAX_WORK_MEMORY_SIZE", raising=False)
+        config_file = tmp_path / "carrymem.yaml"
+        config_file.write_text("storage:\n  max_work_memory_size: 7\n", encoding="utf-8")
+        handlers = Handlers(
+            config_path=str(config_file),
+            storage="sqlite",
+            data_path=temp_db,
+            namespace="default",
+        )
+        try:
+            assert handlers._engine.config.config_path == str(config_file)
+            # Value-level proof: the config file content was actually loaded.
+            assert handlers._engine.config.get("storage.max_work_memory_size") == 7
+        finally:
+            handlers.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_init_config_path_none_keeps_env_fallback(self, temp_db, monkeypatch):
+        """P0-3: no config_path → engine keeps the CARRYMEM_CONFIG_PATH env
+        fallback / default path behavior (backward compatibility)."""
+        monkeypatch.delenv("CARRYMEM_CONFIG_PATH", raising=False)
+        handlers = Handlers(
+            storage="sqlite",
+            data_path=temp_db,
+            namespace="default",
+        )
+        try:
+            from carrymem.constants import CONFIG_FILE
+
+            assert handlers._engine.config.config_path == str(CONFIG_FILE)
+        finally:
+            handlers.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_init_rule_engine_consolidated(self, temp_db):
+        """P1: handlers must reuse the facade's canonical RuleEngine instead
+        of constructing a second instance over the same SQLite DB."""
+        handlers = Handlers(
+            storage="sqlite",
+            data_path=temp_db,
+            namespace="default",
+        )
+        try:
+            assert handlers._rule_engine is handlers._carrymem.rule_engine
+        finally:
+            handlers.cleanup()
+
+    @pytest.mark.asyncio
     async def test_handle_tool_classify(self, temp_db):
         handlers = Handlers(
             storage="sqlite",

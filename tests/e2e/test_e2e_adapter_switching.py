@@ -61,70 +61,53 @@ class TestE2ESQLiteToJSONSwitch:
             cm.close()
 
     def test_adapter_switch_data_migration(self, tmp_path):
-        """Verify: Data can be migrated when switching adapters.
-
-        Simulates the pattern:
-        1. Store data with SQLite adapter
-        2. Export data
-        3. Create new instance with JSON adapter
-        4. Import/verify data accessible
-        """
+        """Verify: Data migrates between adapters via the portable
+        export_memories → import_memories pipeline (real migration, not
+        re-storing the same messages into the target instance)."""
         sqlite_db = str(tmp_path / "migrate_source.db")
+        export_file = str(tmp_path / "migrate_export.json")
         json_db = str(tmp_path / "migrate_target.json")
 
-        # Phase 1: Populate SQLite
+        original_memories = [
+            "Migration test: Memory A about Python",
+            "Migration test: Memory B about databases",
+            "Migration test: Memory C about DevOps",
+        ]
+
+        # Phase 1: Populate SQLite and export to the portable format
         cm_sqlite = CarryMem(storage="sqlite", db_path=sqlite_db)
         try:
-            original_memories = [
-                "Migration test: Memory A about Python",
-                "Migration test: Memory B about databases",
-                "Migration test: Memory C about DevOps",
-            ]
             for mem in original_memories:
-                cm_sqlite.classify_and_remember(mem)
+                result = cm_sqlite.classify_and_remember(mem)
+                assert result.get("stored") is True, f"premise: {mem!r} must store: {result}"
 
-            # Verify SQLite has data
             sqlite_recall = cm_sqlite.recall_memories(limit=10)
             assert isinstance(sqlite_recall, list) and len(sqlite_recall) == len(
                 original_memories
             ), "SQLite should have stored all data before migration"
+
+            export_result = cm_sqlite.export_memories(output_path=export_file)
+            assert export_result is not None
         finally:
             cm_sqlite.close()
 
-        # Phase 2: Create JSON adapter instance
-        # (In real scenario, there would be explicit migration; here we verify
-        #  that JSON adapter works independently and could receive migrated data)
+        assert os.path.exists(export_file), "export_memories must produce a portable file"
+
+        # Phase 2: Import the exported file into a JSON-adapter instance
         cm_json = CarryMem(storage="json", db_path=json_db)
         try:
-            # Store same data in JSON to simulate migration target
-            for mem in original_memories:
-                cm_json.classify_and_remember(mem)
+            import_result = cm_json.import_memories(input_path=export_file)
+            assert import_result is not None
 
-            # Verify JSON has data
             json_recall = cm_json.recall_memories(limit=10)
             assert isinstance(json_recall, list), "JSON recall should return list"
-            # TODO: JSON adapter may share underlying storage with other instances,
-            # so exact count cannot be asserted. Verify all original memories are present instead.
             json_contents = [m.get("content", "") for m in json_recall if isinstance(m, dict)]
-            found_in_json = sum(
-                1
+            missing = [
+                orig
                 for orig in original_memories
-                if any(orig.lower() in jc.lower() or jc.lower() in orig.lower() for jc in json_contents)
-            )
-            assert found_in_json == len(
-                original_memories
-            ), f"JSON should contain all migrated data. Found {found_in_json}/{len(original_memories)}"
-
-            # Verify content matches
-            json_contents = [m.get("content", "") for m in json_recall if isinstance(m, dict)]
-            found_count = sum(
-                1
-                for orig in original_memories
-                if any(orig.lower() in jc.lower() or jc.lower() in orig.lower() for jc in json_contents)
-            )
-            assert found_count == len(
-                original_memories
-            ), f"Migrated data should be intact in JSON. Found {found_count}/{len(original_memories)}"
+                if not any(orig.lower() in jc.lower() or jc.lower() in orig.lower() for jc in json_contents)
+            ]
+            assert not missing, f"Imported JSON adapter must contain all migrated memories, missing: {missing}"
         finally:
             cm_json.close()
 

@@ -144,6 +144,18 @@
     {
       "name": "health_check",
       "description": "Check CarryMem system health. Returns adapter health, audit logger stats, memory count, and uptime. Lightweight check that does not start any HTTP service — use this from MCP clients to verify CarryMem is operational. Read-only and idempotent."
+    },
+    {
+      "name": "query_graph",
+      "description": "Multi-hop graph traversal from an entity. Performs BFS traversal of the knowledge graph starting from the given entity, collecting all connected entities and memories within max_hops hops. Requires storage adapter with graph capability."
+    },
+    {
+      "name": "shortest_path",
+      "description": "Find the shortest path between two entities in the knowledge graph using bidirectional BFS. Returns the path as a list of entity texts from source to destination. Useful for understanding how concepts are connected. Requires storage adapter with graph capability."
+    },
+    {
+      "name": "get_memory_impact",
+      "description": "Compute the graph impact of a memory. Returns the number of entities linked to the memory, the number of relations it evidences, whether it spans multiple namespaces, and an impact_score. Requires storage adapter with graph capability."
     }
   ],
   "author": {
@@ -151,7 +163,7 @@
     "email": "lulin70@gmail.com"
   },
   "license": "MIT",
-  "version": "0.9.8",
+  "version": "0.10.1",
   "repository": {
     "url": "https://github.com/lulin70/carrymem",
     "source": "github"

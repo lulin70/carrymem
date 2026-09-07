@@ -28,7 +28,7 @@ class PostInstallCommand(install):
             print("    # Add to ~/.bashrc for persistence")
         else:
             print("    # Add Python Scripts directory to your PATH")
-        print("\n  Or use: python3 -m carrymem.cli version")
+        print("\n  Or use: python3 -m carrymem version")
         print("\n  Quick start: carrymem tutorial")
         print("=" * 60 + "\n")
 

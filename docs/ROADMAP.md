@@ -46,7 +46,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 - Second digit changes for GA milestones (API stability guarantee)
 - No "v1.0.0 jump" — earn it through proven production usage
 
-> **Note**: The v0.3.0–v0.8.0 versions listed above represent the project's development history. **Current version is v0.8.0**, including: v0.5.x (Entity Normalizer, Summary Layer, store_entry/store_batch core APIs), v0.6.x (deprecated API removal, architecture cleanup decoupling core from SQLiteAdapter, CVE-2026-34073 security fix, recency decay weighting), v0.7.0 (SQLite-native Knowledge Graph + Session dual-layer O(1) recall), v0.7.1 (multi-mode retrieval: recall_by_time/recall_semantic/recall_hybrid/recall_multi_mode), v0.7.2 (MemifyEngine three-phase dynamic refinement + AsyncSQLiteAdapter native async I/O), v0.7.3 (HMAC-CTR fallback removed, cryptography hard dependency, WAL throttle, input validator defense-in-depth, batched LIKE queries), v0.8.0 (3 MCP graph tools: query_graph/shortest_path/get_memory_impact, edge confidence labels EXTRACTED/INFERRED/AMBIGUOUS, schema migration v100). **4334+ tests passing, 80%+ coverage, mypy 0 errors.** Next milestone: v0.9.0 (worked examples + incremental cache).
+> **Note**: The v0.3.0–v0.8.0 versions listed above represent the project's development history through v0.8.0. **Current version is v0.10.1**: v0.5.x (Entity Normalizer, Summary Layer, store_entry/store_batch core APIs), v0.6.x (deprecated API removal, architecture cleanup decoupling core from SQLiteAdapter, CVE-2026-34073 security fix, recency decay weighting), v0.7.0 (SQLite-native Knowledge Graph + Session dual-layer O(1) recall), v0.7.1 (multi-mode retrieval: recall_by_time/recall_semantic/recall_hybrid/recall_multi_mode), v0.7.2 (MemifyEngine three-phase dynamic refinement + AsyncSQLiteAdapter native async I/O), v0.7.3 (HMAC-CTR fallback removed, cryptography hard dependency, WAL throttle, input validator defense-in-depth, batched LIKE queries), v0.8.0 (3 MCP graph tools: query_graph/shortest_path/get_memory_impact, edge confidence labels EXTRACTED/INFERRED/AMBIGUOUS, schema migration v100), v0.9.x (UI/UX Overhaul + Morandi Aesthetic, mypy 0 baseline, tech debt cleanup TD series, OIDC→token publish decision), v0.9.9 (methodology docs: orthogonal classification table + design space positioning), v0.10.0 (repeat-correction upgrade: detect_repeat_correction() + semantic dedup + security-keyword bypass), v0.10.1 (CLI startup cost fix, L-V0100-006). **4878 tests collected (incl. 263 E2E), 80%+ coverage, mypy 0 errors.** Next milestone: v0.11.0 (TBD based on user feedback and architecture evolution plan).
 
 ---
 
@@ -841,7 +841,9 @@ carrymem unpack team-identity.carry
 | v0.7.1 | 4325 | 80%+ | +Multi-mode retrieval (40 tests) |
 | v0.7.2 | 4330 tests | 80%+ | +MemifyEngine (32 tests) + AsyncSQLiteAdapter (26 tests) |
 | v0.7.3 | 4331+ tests | 80%+ | +Fernet-only encryption + WAL throttle + InputValidator |
-| **v0.8.0 (current)** | **4334+ tests** | **80.88%** | **+MCP graph tools (3) + edge confidence labels** |
+| v0.8.0 | 4334+ tests | 80.88% | +MCP graph tools (3) + edge confidence labels |
+| v0.9.8 | 4666 non-e2e | 80%+ | +Knowledge graph deletion completeness (TD-066) |
+| **v0.10.1 (current)** | **4878 collected (incl. 263 E2E)** | **80%+** | **+Repeat-correction upgrade (v0.10.0) + CLI startup fix (L-V0100-006)** |
 
 ---
 

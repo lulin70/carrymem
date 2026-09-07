@@ -7,7 +7,7 @@
 ## 项目概述
 
 - **CarryMem** 是一个可移植的 AI 记忆层：让 AI 自动记住用户的偏好、决策与纠正，跨模型 / 工具 / 设备复用，无需每次重复自我介绍。
-- **当前版本**：`0.8.0`（来源：`src/carrymem/__version__.py`）
+- **当前版本**：`0.10.1`（来源：`src/carrymem/__version__.py`）
 - **核心技术栈**：
   - Python 3.12+（`setup.py` 中 `python_requires=">=3.12"`）
   - SQLite + FTS5（默认存储与全文检索）
@@ -55,8 +55,8 @@ pytest tests/
 # 排除慢测试（CI 主 gate 使用，附加 --timeout=120）
 pytest tests/ -m "not slow" -q
 
-# 仅 E2E 测试（tests/test_e2e_*.py，共 12 个场景文件）
-pytest tests/test_e2e_*.py
+# 仅 E2E 测试（tests/e2e/，共 18 个场景文件）
+pytest tests/e2e/
 
 # 带覆盖率（默认即开启，显式写法）
 pytest tests/ --cov=carrymem --cov-report=term-missing
@@ -142,10 +142,10 @@ src/carrymem/
 │   ├── conflict_detector.py / merge_protocol.py
 │   ├── failure_experience.py / experience_bridge.py
 │   ├── pattern_detector.py / skill.py / templates.py / models.py / storage.py
-├── integration/layer2_mcp/  # MCP 服务器（共 28 个工具，分 8 类）
+├── integration/layer2_mcp/  # MCP 服务器（共 31 个工具，分 9 类）
 │   ├── server.py / http_server.py / __main__.py
-│   ├── tools.py             #   工具定义（CORE/OPTIONAL/KNOWLEDGE/PROFILE/PROMPT/CONSOLIDATION/RULE/HEALTH_CHECK）
-│   └── handlers.py          #   工具分发处理
+│   ├── tools.py             #   工具定义（CORE/OPTIONAL/KNOWLEDGE/PROFILE/PROMPT/CONSOLIDATION/RULE/HEALTH_CHECK/GRAPH）
+│   └── handlers/            #   工具分发处理（TD-039 拆分的域子包：_base/read/write/graph/rule/system）
 ├── security/                # 加密 + 权限 + 审计 + 输入校验 + 脱敏
 │   ├── encryption.py        #   AES 加密
 │   ├── permissions.py       #   AccessPolicy 访问策略
@@ -167,15 +167,16 @@ src/carrymem/
 └── __version__.py           # 版本号唯一来源
 ```
 
-**MCP 28 工具清单**（`src/carrymem/integration/layer2_mcp/tools.py`）：
-- CORE(6)：classify_message、get_classification_schema、batch_classify、classify_and_remember、recall_memories、forget_memory
-- OPTIONAL(3)：index_knowledge、recall_from_knowledge、recall_all
-- KNOWLEDGE(1)：declare_preference
-- PROFILE(1)：get_memory_profile
+**MCP 31 工具清单**（`src/carrymem/integration/layer2_mcp/tools.py`）：
+- CORE(3)：classify_message、get_classification_schema、batch_classify
+- OPTIONAL(3)：classify_and_remember、recall_memories、forget_memory
+- KNOWLEDGE(3)：index_knowledge、recall_from_knowledge、recall_all
+- PROFILE(2)：declare_preference、get_memory_profile
 - PROMPT(2)：get_system_prompt、summarize_and_store
 - CONSOLIDATION(3)：consolidate_memories、schedule_consolidation、stop_consolidation
-- RULE(9)：add_rule、list_rules、match_rules、inject_rules、my_rules、delete_rule、suggest_rules、promote_rules、update_rule
-- HEALTH_CHECK(3)：my_profile、onboard、health_check
+- RULE(11)：add_rule、list_rules、match_rules、inject_rules、my_rules、delete_rule、suggest_rules、promote_rules、update_rule、my_profile、onboard
+- HEALTH_CHECK(1)：health_check
+- GRAPH(3)：query_graph、shortest_path、get_memory_impact
 
 ---
 
@@ -214,7 +215,7 @@ src/carrymem/
 | 安全策略 | `SECURITY.md` |
 | 路线图 | `docs/ROADMAP.md` |
 | CI 流水线 | `.github/workflows/ci.yml`、`nightly.yml`、`release.yml`、`benchmark.yml` |
-| 测试套件 | `tests/`（含 12 个 `test_e2e_*.py`） |
+| 测试套件 | `tests/`（E2E 位于 `tests/e2e/`，18 个 `test_e2e_*.py`） |
 | Lint / 类型配置 | `.flake8`、`pyproject.toml [tool.mypy]`、`.pre-commit-config.yaml` |
 | 国际化文案 | `src/carrymem/i18n/en.py`、`zh_CN.py` 等 |
 

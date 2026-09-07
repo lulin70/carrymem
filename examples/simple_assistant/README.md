@@ -57,7 +57,7 @@ results = memory.recall_memories("dark mode")
 ### Change Database Location
 
 ```python
-memory = CarryMem(storage_path="/path/to/database.db")
+memory = CarryMem(db_path="/path/to/database.db")
 ```
 
 ### Use Namespace

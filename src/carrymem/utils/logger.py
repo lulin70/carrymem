@@ -61,7 +61,10 @@ class Logger:
 
         if not self.logger.handlers:
             use_json = _is_json_log_enabled()
-            logs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
+            # Logs belong to the user's data home, never inside the package
+            # tree (writing next to the module pollutes source checkouts and
+            # installed site-packages alike). Override with CARRYMEM_LOG_DIR.
+            logs_dir = os.environ.get("CARRYMEM_LOG_DIR") or os.path.join(os.path.expanduser("~"), ".carrymem", "logs")
             try:
                 os.makedirs(logs_dir, exist_ok=True)
                 log_file = os.path.join(logs_dir, f"{datetime.now().strftime('%Y-%m-%d')}.log")

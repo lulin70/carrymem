@@ -1,6 +1,6 @@
 name: carrymem
 description: "Your portable AI memory layer. Classify, store, and recall what matters across models, tools, and devices."
-version: 0.8.0
+version: 0.10.1
 author: lulin70
 license: MIT
 repository: https://github.com/lulin70/carrymem
@@ -101,3 +101,9 @@ tools:
     description: "Start onboarding flow for new users"
   - name: health_check
     description: "Check CarryMem system health (adapter, audit, memory count, uptime)"
+  - name: query_graph
+    description: "Multi-hop knowledge graph traversal from an entity (BFS, requires graph-capable storage)"
+  - name: shortest_path
+    description: "Find the shortest path between two entities in the knowledge graph (bidirectional BFS)"
+  - name: get_memory_impact
+    description: "Compute the graph impact score of a memory (linked entities, relations, namespaces)"

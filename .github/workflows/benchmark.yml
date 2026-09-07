@@ -72,14 +72,17 @@ jobs:
       - name: Run performance benchmarks
         id: benchmark
         run: |
+          set -o pipefail
           python -m pytest tests/test_performance_benchmark.py \
             -v \
             --tb=short \
-            --benchmark-json=benchmark_results.json \
             --durations=20 \
-            2>&1 | tee /tmp/benchmark_output.txt
+            2>&1 | tee /tmp/benchmark_output.txt || true
 
-          echo "BENCHMARK_EXIT_CODE=$?" >> $GITHUB_OUTPUT
+          # Real pytest exit code (tee masks it without pipefail). The job
+          # stays advisory: threshold violations are reported as warnings by
+          # the "Check threshold violations" step below.
+          echo "BENCHMARK_EXIT_CODE=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
 
           # Extract key metrics from output
           echo "## Benchmark Results" >> $GITHUB_STEP_SUMMARY
@@ -118,17 +121,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: benchmark-results-py${{ matrix.python-version }}
-          path: |
-            ./benchmark_results.json
-            /tmp/benchmark_output.txt
-          if-no-files-found: ignore
-
-      - name: Upload benchmark summary
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: benchmark-summary-py${{ matrix.python-version }}
-          path: ${{ github.workspace }}/benchmark_results/  # Created by benchmark run
+          path: /tmp/benchmark_output.txt
           if-no-files-found: ignore
 
   # ═══════════════════════════════════════

@@ -198,8 +198,10 @@ class TestE2ESecurityPipeline(unittest.TestCase):
         enc1 = MemoryEncryption(key="correct-password-123")
         enc2 = MemoryEncryption(key="wrong-password-456")
         ciphertext = enc1.encrypt("secret data")
-        with self.assertRaises((EncryptionError, Exception)):
-            # Fernet raises InvalidToken, which may be wrapped or not
+        with self.assertRaises(EncryptionError):
+            # MemoryEncryption.decrypt wraps Fernet InvalidToken as
+            # EncryptionError — assert the exact contract, not bare Exception
+            # (which would swallow any unrelated bug).
             enc2.decrypt(ciphertext)
 
     def test_encryption_empty_string(self):

@@ -309,6 +309,9 @@ class TestCLIEntryPoints:
             engine = RuleEngine(db_path)
             del engine
 
+            # Subprocess spawn pays the full carrymem package import
+            # (sentence-transformers ~20s cold start when semantic extras
+            # are installed). See L-V0100-006.
             result = subprocess.run(
                 [sys.executable, "-m", "carrymem", "doctor", "--db", db_path],
                 capture_output=True,

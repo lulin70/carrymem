@@ -85,9 +85,15 @@ class TestE2EMultiSessionUser:
         cm.classify_and_remember("I prefer FastAPI over Flask", force_type="user_preference")
 
         ctx = cm.build_context(context="How do I add authentication to my API?")
-        # TODO: session_summary is not injected into build_context memory_count.
-        # Once fixed, this assertion should be == 2.
+        # Design contract: generic recall/build_context exclude session_summary
+        # (opt-in via filters.include_session_summary — session summaries are
+        # contextual, not general memories). The summary must still be
+        # retrievable via the opt-in filter.
         assert ctx["memory_count"] == 1
+        base = cm.recall_memories(limit=20)
+        assert all(m.get("type") != "session_summary" for m in base)
+        opt_in = cm.recall_memories(limit=20, filters={"include_session_summary": True})
+        assert len(opt_in) == 2, f"opt-in recall must return both memories, got {len(opt_in)}"
 
     def test_correction_overrides_preference(self, tmp_path):
         cm = _cm(tmp_path)

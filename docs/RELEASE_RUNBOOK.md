@@ -56,12 +56,18 @@
 
 - [ ] PyPI 账号 `lulin70` 可登录
 - [ ] GitHub 仓库 `lulin70/carrymem` 有 `contents: write` 权限
-- [ ] GitHub Secrets 中 `PYPI_API_TOKEN` 有效（TD-015 完成后改为 OIDC Trusted Publisher）
+- [ ] GitHub Secrets 中 `PYPI_API_TOKEN` 有效（TD-015 OIDC 迁移已于 2026-07-21 回退，当前维持 token 发布，见 2.5 节说明）
 - [ ] `new-main` 分支已 protected（禁止 force push）
 
-### 2.5 OIDC Trusted Publisher 迁移清单 (TD-015)
+### 2.5 OIDC Trusted Publisher 迁移清单 (TD-015) — ⛔ 已回退
 
-> **背景**: PyPI 已推出 OIDC Trusted Publisher，可让 GitHub Actions 不再依赖长期 API Token，从 OIDC 短期令牌直接发布。详细原理见 https://docs.pypi.org/trusted-publishers/。
+> **状态（2026-07-21 更新）**：OIDC 迁移已**回退**，发布恢复为传统 API Token 方式。
+> 详见 `.github/workflows/release.yml` 中 "TD-015 OIDC migration REVERTED (2026-07-21)" 注释：
+> `PYPI_API_TOKEN` secret 继续作为发布凭据；`environment: pypi` 与 `id-token: write`
+> 声明保留（对 password 发布无害），供未来潜在重试。v0.9.3rc1 起按 token 方式发布。
+> 以下原始迁移清单仅作历史存档，**不要再执行**步骤 1/4/5 的手动操作。
+
+> **原始背景**: PyPI 已推出 OIDC Trusted Publisher，可让 GitHub Actions 不再依赖长期 API Token，从 OIDC 短期令牌直接发布。详细原理见 https://docs.pypi.org/trusted-publishers/。
 
 迁移共 6 步，其中 **步骤 2/3/6 已由代码完成**（见 `.github/workflows/release.yml`），**步骤 1/4/5 需要仓库管理员在 PyPI / GitHub Web UI 手动操作**。
 
@@ -118,16 +124,16 @@
 - Require status checks to pass (pre-release-test, e2e-gate)
 - Restrict who can push to matching branches（禁止直接 push）
 
-#### OIDC 迁移进度跟踪
+#### OIDC 迁移进度跟踪（已回退，存档）
 
 | 步骤 | 类型 | 状态 | 责任人 |
 |------|------|------|--------|
-| 1. 添加 PyPI Trusted Publisher | 手动 (PyPI Web UI) | ⏳ 待办 | Release Manager |
-| 2. release.yml 加 environment: pypi | 代码 | ✅ 完成 (DevSquad DevOps) | DevOps |
-| 3. 保留 PYPI_API_TOKEN + 注释 | 代码 | ✅ 完成 (DevSquad DevOps) | DevOps |
-| 4. 创建 GitHub `pypi` Environment | 手动 (GitHub Web UI) | ⏳ 待办 | Release Manager |
-| 5. 验证 OIDC + 删除 PYPI_API_TOKEN | 手动 (PyPI + GitHub) | ⏳ 待办 (在 v0.8.0 验证后) | Release Manager |
-| 6. main 分支保护注释 | 代码 | ✅ 完成 (DevSquad DevOps) | DevOps |
+| 1. 添加 PyPI Trusted Publisher | 手动 (PyPI Web UI) | ⛔ 随迁移回退作废 | Release Manager |
+| 2. release.yml 加 environment: pypi | 代码 | ✅ 完成（回退后保留，无害） | DevOps |
+| 3. 保留 PYPI_API_TOKEN + 注释 | 代码 | ✅ 完成（现为正式发布方式） | DevOps |
+| 4. 创建 GitHub `pypi` Environment | 手动 (GitHub Web UI) | ⛔ 随迁移回退作废 | Release Manager |
+| 5. 验证 OIDC + 删除 PYPI_API_TOKEN | 手动 (PyPI + GitHub) | ⛔ 已回退 — 不删除 token | Release Manager |
+| 6. main 分支保护注释 | 代码 | ✅ 完成 | DevOps |
 
 ---
 
@@ -140,10 +146,12 @@ release.yml 工作流包含 4 个 job，按依赖顺序执行：
 ```
 pre-release-test (lint+test+coverage)
         ├── e2e-gate (E2E 用户旅程测试)
-        ├── vscode-e2e (VSCode Tier 2 UI E2E)
         └── release (build + PyPI publish + GitHub Release)
-              [needs: pre-release-test, e2e-gate, vscode-e2e]
+              [needs: pre-release-test, e2e-gate]
 ```
+
+> 注：`vscode-e2e` job 存在但**未纳入 needs 阻塞链**（编译脚本待修，
+> 见 release.yml 中 TODO 注释），不阻塞发布。
 
 **操作步骤**:
 
@@ -158,7 +166,7 @@ pre-release-test (lint+test+coverage)
 2. **监控工作流**:
    - 访问 `https://github.com/lulin70/carrymem/actions`
    - 确认 "Release" 工作流已触发
-   - 等待 `pre-release-test` → `e2e-gate` → `vscode-e2e` → `release` 依次通过
+   - 等待 `pre-release-test` → `e2e-gate` → `release` 依次通过（`vscode-e2e` 独立运行，不阻塞）
 
 3. **验证发布结果**:
    ```bash

@@ -30,7 +30,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 - 두 번째 자리: GA 마일스톤 (API 안정성 보장)
 - "v1.0.0 점프" 없음 — 실제 프로덕션 사용으로 획득
 
-> **참고**: 위에 나열된 v0.3.0–v0.4.1 버전은 프로젝트의 개발 이력을 나타냅니다. 현재 버전은 v0.8.0이며, 자동 백업, 암호화 .carry 파일, 동시성 안전, E2E 테스트, **PrefEval 83.0%** (200샘플, 3조건 정식), 상태/이벤트 버전 체인, 보안 강화, 선호 주입 최적화, context.py 모듈화, 통합 스케줄링 등을 포함하며, P0/P1/P2 성숙도 수정(RecallCache 세분화 무효화, PBKDF2 600k, 다단계 Dockerfile, release.yml 버전 일관성 게이트)도 포함합니다.
+> **참고**: 위에 나열된 v0.3.0–v0.4.1 버전은 프로젝트의 개발 이력을 나타냅니다. 현재 버전은 v0.10.1이며, 자동 백업, 암호화 .carry 파일, 동시성 안전, E2E 테스트, **PrefEval 83.0%** (200샘플, 3조건 정식), 상태/이벤트 버전 체인, 보안 강화, 선호 주입 최적화, context.py 모듈화, 통합 스케줄링 등을 포함하며, P0/P1/P2 성숙도 수정(RecallCache 세분화 무효화, PBKDF2 600k, 다단계 Dockerfile, release.yml 버전 일관성 게이트)도 포함합니다.
 
 ---
 
@@ -60,7 +60,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 │  │  • Cross-language semantic recall (FTS5)          │    │
 │  │  • Session-aware storage + knowledge supersession (v0.1.7)   │    │
 │  │  • Time reasoning + structured prompt injection (v0.1.7)     │    │
-│  │|  •  4198 tests passing, 80%+ coverage           ││    │
+│  │|  •  4878 tests passing, 80%+ coverage           ││    │
 │  └──────────────────────────────────────────────────┘    │
 │              ↑ reads from          ↑ injects into         │
 │  Layer 1: Knowledge (WHAT you know) ← v0.3.0 계획         │
@@ -662,7 +662,7 @@ carrymem unpack team-identity.carry
 | v0.3.0 (pre-reset) | 1900+ | ~85% | +Knowledge CJK +relevance scoring |
 | v0.4.0 (pre-reset) | 1814 | ~77% | +Rule Scopes +Skill Format +VS Code Extension |
 | v0.4.1 (pre-reset) | 2056 | 79% | +Core Loop Fix +Auto Rule Suggestion +Security |
-| **v0.4.0 (current)** | **4198 tests** | **79%+** | **+Recall Purity +Scope Injection +PrefEval **83.0%** +8-client MCP** |
+| **v0.4.0** | **4878 tests** | **79%+** | **+Recall Purity +Scope Injection +PrefEval **83.0%** +8-client MCP** |
 
 ---
 
@@ -743,4 +743,4 @@ carrymem unpack team-identity.carry
 **Next Milestone**: v0.10.0 (next minor — planning TBD)
 
 Note: v0.9.0 ~ v0.9.7 series completed (2026-07-20 ~ 2026-07-26). See CHANGELOG.md for details.
-**Status**: ✅ **v0.8.0 complete (4334+ tests, 80%+ coverage, Memory + Rules + Knowledge + Enterprise)**
+**Status**: ✅ **v0.8.0 complete (4334+ tests, 80%+ coverage, Memory + Rules + Knowledge + Enterprise)** — current: v0.10.1 (4878 collected)

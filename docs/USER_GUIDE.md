@@ -49,7 +49,7 @@ result = cm.classify_and_remember(
     context={"source": "team-meeting", "priority": "high"},
 )
 print(result["should_remember"])  # True
-print(result["memory_type"])      # "user_preference" (auto-classified)
+print(result["type"])             # "user_preference" (auto-classified)
 ```
 
 ### 2. Recall with Filters

@@ -102,18 +102,12 @@ class TestE2EEncryptionLifecycle:
         finally:
             cm1.close()
 
-        # Try to open with wrong key - should fail gracefully
+        # Try to open with wrong key - recall must fail closed:
+        # MemoryEncryption.decrypt wraps Fernet InvalidToken as EncryptionError.
         cm2 = CarryMem(db_path=db_path, encryption_key=wrong_key)
         try:
-            # Either raises error or returns empty/corrupted results
-            recalled = cm2.recall_memories(limit=10)
-            if isinstance(recalled, list) and len(recalled) > 0:
-                # If it returns data, it should be garbled/empty, not plaintext
-                contents = [m.get("content", "") for m in recalled]
-                has_plaintext = any("Secret data" in c for c in contents)
-                assert not has_plaintext, "Wrong key should NOT be able to decrypt to plaintext"
-        except (EncryptionError, Exception):
-            pass  # Expected: decryption failure
+            with pytest.raises(EncryptionError):
+                cm2.recall_memories(limit=10)
         finally:
             cm2.close()
 
@@ -132,15 +126,13 @@ class TestE2EEncryptionLifecycle:
         # Try opening without encryption key
         cm2 = CarryMem(db_path=db_path)  # No encryption_key
         try:
-            # Should either work in degraded mode or fail gracefully
+            # Actual behavior: opens in degraded mode; encrypted rows come back
+            # as ciphertext blobs (gAAAA...), never as plaintext.
             result = cm2.recall_memories(limit=5)
-            # If it works, encrypted data should not be readable as plaintext
-            if isinstance(result, list) and len(result) > 0:
-                contents = [m.get("content", "") for m in result]
-                has_readable = any("Encrypted memory" in c for c in contents)
-                assert not has_readable, "Encrypted data should not be readable without key"
-        except Exception:
-            pass  # Acceptable: cannot open without key
+            assert isinstance(result, list)
+            contents = [m.get("content", "") for m in result]
+            has_readable = any("Encrypted memory" in c for c in contents)
+            assert not has_readable, "Encrypted data should not be readable without key"
         finally:
             cm2.close()
 

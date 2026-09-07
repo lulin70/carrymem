@@ -51,7 +51,7 @@ carrymem version
 
 **Alternative (works everywhere)**:
 ```bash
-python3 -m carrymem.cli version
+python3 -m carrymem version
 ```
 
 > ⚠️ **Package vs Import Name**: Install with `pip install carrymem`, import as `from carrymem import CarryMem` or `from carrymem.core import CarryMem`.

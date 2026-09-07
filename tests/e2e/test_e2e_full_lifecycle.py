@@ -139,12 +139,14 @@ class TestE2EBulkMemoryStorage:
         cm.classify_and_remember("Do NOT use Java", force_type="correction")
         cm.classify_and_remember("We discussed migration to Kubernetes", force_type="session_summary")
 
-        # All should be recallable
+        # Design contract: generic recall excludes session_summary (opt-in via
+        # filters.include_session_summary); the other 3 types are recallable.
         all_memories = cm.recall_memories(limit=20)
         assert isinstance(all_memories, list)
-        # TODO: session_summary is not returned by generic recall_memories(limit=20).
-        # Once fixed, this assertion should be == 4 (all 4 stored types recalled).
         assert len(all_memories) == 3, f"Should have all recallable memories, got {len(all_memories)}"
+        assert all(m.get("type") != "session_summary" for m in all_memories)
+        opt_in = cm.recall_memories(limit=20, filters={"include_session_summary": True})
+        assert len(opt_in) == 4, f"opt-in recall must return all 4 stored types, got {len(opt_in)}"
 
 
 class TestE2EExportProfile:

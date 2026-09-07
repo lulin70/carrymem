@@ -266,11 +266,18 @@ class TestTuiIntegration(unittest.TestCase):
     """
 
     def test_tui_module_morandi_matches_theme(self):
-        from carrymem.tui import _MORANDI
+        # _MORANDI is defined only in the HAS_TEXTUAL branch of tui.py
+        # (the stub path has no palette). Mirror the skip contract used by
+        # the other TUI tests in this file instead of failing on envs
+        # without textual.
+        import carrymem.tui as tui_module
 
-        self.assertEqual(_MORANDI, MorandiDarkTheme.colors)
+        if not getattr(tui_module, "HAS_TEXTUAL", False):
+            self.skipTest("textual not installed — _MORANDI exists only in the HAS_TEXTUAL branch")
+
+        self.assertEqual(tui_module._MORANDI, MorandiDarkTheme.colors)
         for key in REQUIRED_COLOR_KEYS:
-            self.assertIn(key, _MORANDI)
+            self.assertIn(key, tui_module._MORANDI)
 
 
 # ════════════════════════════════════════════════════════════════════

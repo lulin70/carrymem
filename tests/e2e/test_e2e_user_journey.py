@@ -8,7 +8,7 @@ Covers the complete workflow from initialization to daily usage:
 5. Backup cycle
 6. Multi-namespace isolation
 7. Forget memory
-8. Pack with encryption
+8. Backup → restore roundtrip
 """
 
 import os
@@ -52,34 +52,48 @@ class TestBackupRestore:
         cm = fresh_carrymem
         tmp = tempfile.mkdtemp()
         try:
-            cm.classify_and_remember("Important memory to preserve")
+            result = cm.classify_and_remember("I prefer dark mode for coding")
+            assert result.get("stored") is True, f"premise: memory must be stored: {result}"
 
             backup_dir = os.path.join(tmp, "backups")
             os.makedirs(backup_dir, exist_ok=True)
             backup_result = cm.backup(backup_dir=backup_dir)
-            assert isinstance(backup_result, dict)
-            assert "backup_path" in backup_result or "path" in backup_result or "error" not in backup_result
+            assert backup_result.get("backed_up") is True, backup_result
+            assert os.path.exists(backup_result["path"])
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
 
-class TestEncryptedCarry:
-    def test_pack_with_encryption(self, fresh_carrymem):
+class TestBackupRestoreRoundtrip:
+    def test_backup_restore_roundtrip(self, fresh_carrymem):
+        """E2E journey: store → backup → fresh instance → restore → recall.
+
+        Replaces the former ``test_pack_with_encryption`` which called a
+        non-existent ``cm.pack()`` API inside ``except (AttributeError,
+        TypeError): pass`` — a guaranteed vacuous pass (ghost test).
+        """
         cm = fresh_carrymem
         tmp = tempfile.mkdtemp()
         try:
-            cm.classify_and_remember("Secret project details")
+            result = cm.classify_and_remember("I prefer dark mode for coding")
+            assert result.get("stored") is True, f"premise: memory must be stored: {result}"
+            source_recall = cm.recall_memories("dark mode")
+            assert len(source_recall) > 0, "just-stored memory must be recallable"
 
-            carry_path = os.path.join(tmp, "test.carry")
+            backup_result = cm.backup(backup_dir=tmp)
+            assert backup_result.get("backed_up") is True, backup_result
+            backup_path = backup_result["path"]
+            assert os.path.exists(backup_path)
+
+            # Restore into a fresh instance pointed at a new (empty) DB.
+            restored_db = os.path.join(tmp, "restored.db")
+            shutil.copyfile(backup_path, restored_db)
+            cm2 = CarryMem(db_path=restored_db)
             try:
-                pack_result = cm.pack(
-                    output_path=carry_path,
-                    encrypt=True,
-                    password="test-password-123",
-                )
-                assert isinstance(pack_result, dict) or os.path.exists(carry_path)
-            except (AttributeError, TypeError):
-                pass
+                results = cm2.recall_memories("dark mode")
+                assert len(results) > 0, "memory must survive backup→restore"
+            finally:
+                cm2.close()
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 

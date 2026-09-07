@@ -155,6 +155,7 @@ class Handlers:
     ):
         from carrymem.adapters.obsidian_adapter import ObsidianAdapter
         from carrymem.carrymem import CarryMem
+        from carrymem.engine import MemoryClassificationEngine
 
         knowledge_adapter = None
         if vault_path:
@@ -164,20 +165,27 @@ class Handlers:
         if db_path and os.path.isdir(db_path):
             db_path = os.path.join(db_path, "carrymem.db")
 
+        # P0-3 fix: config_path was accepted but silently dropped. Thread it
+        # into MemoryClassificationEngine (ConfigManager) so an explicitly
+        # provided config file takes effect. When None, engine=None preserves
+        # the CARRYMEM_CONFIG_PATH env fallback inside the default engine.
+        engine = MemoryClassificationEngine(config_path) if config_path else None
+
         self._carrymem = CarryMem(
             storage=storage,
             db_path=db_path,
             knowledge_adapter=knowledge_adapter,
             namespace=namespace,
+            engine=engine,
         )
         self._engine = self._carrymem.engine
 
-        from carrymem.rules import RuleEngine
-
-        rule_db_path: Optional[str] = getattr(self._carrymem._adapter, "_db_path", None) or getattr(
-            self._carrymem._adapter, "db_path", None
-        )
-        self._rule_engine = RuleEngine(db_path=rule_db_path)
+        # P1 consolidation: reuse the facade's canonical RuleEngine instance
+        # instead of constructing a second one over the same SQLite DB. The
+        # facade instance is eager-probed at init (CLAUDE.md constraint 1)
+        # and shares the adapter's connection state; a second instance
+        # created independent storage/FTS handles for the same rules DB.
+        self._rule_engine = self._carrymem.rule_engine
 
         self._default_user_id = default_user_id
 

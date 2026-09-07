@@ -35,6 +35,11 @@ venv/
 logs/
 src/logs/
 
+# Editor / patch leftovers
+*~
+*.orig
+*.rej
+
 # Test artifacts
 .pytest_cache/
 htmlcov/
