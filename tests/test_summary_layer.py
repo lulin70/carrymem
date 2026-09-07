@@ -2,31 +2,29 @@
 
 Covers 9 dimensions per spec/v0.5.2_spec.md §6:
 - Happy Path: rule-based summarizer across types and levels
-- LLM switch: env var override, TRAE detection, default off, LLM fallback
-- Progressive: bucket→depth mapping, budget exhaustion
-- Cache: hit, raw_text update invalidation, force regenerate
+- LLM switch: env var override, TRAE detection, default off
 - Boundary: empty text, long text, None summary, single sentence
 - Integration: build_prompt progressive=True/False, format depth
 - Performance: 1000 memories < 500ms
 - Config: CARRYMEM_SUMMARY_ENABLED=0
 - Schema: migrate_v052 idempotent + field existence
+
+(post-v0.10.1, 2026-09-07: the SummaryLayer class was removed as a half-ghost — production
+uses RuleBasedSummarizer via format.py. SummaryLayer/BUCKET_DEPTH tests
+were dropped with it; cache/progressive behavior now lives in
+format_memory_entry/build_prompt tests below.)
 """
 
 from __future__ import annotations
 
-import os
 import time
-from typing import Any, Dict, List, Optional
-from unittest.mock import MagicMock
+from typing import Any, Dict
 
 import pytest
 
 from carrymem.format import format_memory_entry
 from carrymem.layers.summary_layer import (
-    BUCKET_DEPTH,
     RuleBasedSummarizer,
-    SummaryLayer,
-    get_depth_for_bucket,
     is_llm_summary_enabled,
     is_summary_enabled,
 )
@@ -66,12 +64,6 @@ def fact_memory() -> Dict[str, Any]:
         "content": "User drives Toyota Camry.",
         "confidence": 0.85,
     }
-
-
-@pytest.fixture
-def summary_layer() -> SummaryLayer:
-    """SummaryLayer with no LLM client (rule-based only)."""
-    return SummaryLayer()
 
 
 @pytest.fixture(autouse=True)
@@ -167,117 +159,10 @@ class TestLLMSwitch:
         assert is_llm_summary_enabled() is False
 
 
-class TestLLMFallback:
-    """Verify LLM failure degrades to rule-based."""
-
-    def test_llm_failure_falls_back_to_rule_based(self, sample_memory):
-        """When LLM call fails, should fall back to rule-based summary."""
-        mock_llm = MagicMock()
-        mock_llm.is_available.return_value = True
-        mock_llm.chat.side_effect = RuntimeError("LLM service unavailable")
-
-        layer = SummaryLayer(llm_client=mock_llm)
-        # Enable LLM summary via env
-        os.environ["CARRYMEM_LLM_SUMMARY"] = "1"
-        try:
-            result = layer.summarize(sample_memory, level=2)
-            assert "[Preference]" in result
-            assert "tea" in result.lower()
-        finally:
-            os.environ.pop("CARRYMEM_LLM_SUMMARY", None)
-
-    def test_llm_unavailable_uses_rule_based(self, sample_memory):
-        """When LLM is not available, should use rule-based directly."""
-        mock_llm = MagicMock()
-        mock_llm.is_available.return_value = False
-
-        layer = SummaryLayer(llm_client=mock_llm)
-        os.environ["CARRYMEM_LLM_SUMMARY"] = "1"
-        try:
-            result = layer.summarize(sample_memory, level=2)
-            assert "[Preference]" in result
-        finally:
-            os.environ.pop("CARRYMEM_LLM_SUMMARY", None)
-
-
 # ── 3. Progressive Disclosure ─────────────────────────────────────
 
 
-class TestProgressiveDisclosure:
-    """Verify bucket→depth mapping and progressive rendering."""
-
-    def test_bucket_depth_mapping(self):
-        """BUCKET_DEPTH should map: mandatory=3, important=2, context=2, outdated=1."""
-        assert BUCKET_DEPTH["mandatory"] == 3
-        assert BUCKET_DEPTH["important"] == 2
-        assert BUCKET_DEPTH["context"] == 2
-        assert BUCKET_DEPTH["outdated"] == 1
-
-    def test_get_depth_for_bucket_known(self):
-        """get_depth_for_bucket should return correct depth for known buckets."""
-        assert get_depth_for_bucket("mandatory") == 3
-        assert get_depth_for_bucket("important") == 2
-        assert get_depth_for_bucket("context") == 2
-        assert get_depth_for_bucket("outdated") == 1
-
-    def test_get_depth_for_bucket_unknown_defaults_to_3(self):
-        """Unknown bucket should default to depth 3 (full content)."""
-        assert get_depth_for_bucket("unknown_bucket") == 3
-
-    def test_render_for_bucket_mandatory_returns_full(self, sample_memory):
-        """render_for_bucket('mandatory') should return full raw_text."""
-        layer = SummaryLayer()
-        result = layer.render_for_bucket(sample_memory, "mandatory")
-        assert result == sample_memory["raw_text"]
-
-    def test_render_for_bucket_outdated_returns_keywords(self, sample_memory):
-        """render_for_bucket('outdated') should return keyword-level summary."""
-        layer = SummaryLayer()
-        result = layer.render_for_bucket(sample_memory, "outdated")
-        assert "[Preference]" in result
-        # Level 1 should be shorter than full raw_text
-        assert len(result) < len(sample_memory["raw_text"])
-
-
 # ── 4. Cache Behavior ─────────────────────────────────────────────
-
-
-class TestSummaryCache:
-    """Verify summary caching, invalidation, and force regeneration."""
-
-    def test_cache_hit_returns_cached_summary(self, sample_memory):
-        """When cached summary exists at sufficient level, should use it."""
-        m = dict(sample_memory)
-        m["summary"] = "User prefers tea"
-        m["summary_level"] = 2
-
-        layer = SummaryLayer()
-        result = layer.summarize(m, level=2)
-        assert "User prefers tea" in result
-
-    def test_force_bypasses_cache(self, sample_memory):
-        """force=True should regenerate even when cache exists."""
-        m = dict(sample_memory)
-        m["summary"] = "Old cached summary"
-        m["summary_level"] = 2
-
-        mock_llm = MagicMock()
-        mock_llm.is_available.return_value = False
-        layer = SummaryLayer(llm_client=mock_llm)
-
-        result = layer.summarize(m, level=2, force=True)
-        assert "Old cached summary" not in result
-        assert "[Preference]" in result
-
-    def test_level_3_always_returns_raw_text_ignoring_cache(self, sample_memory):
-        """Level 3 should always return raw_text, ignoring any cache."""
-        m = dict(sample_memory)
-        m["summary"] = "Cached summary"
-        m["summary_level"] = 2
-
-        layer = SummaryLayer()
-        result = layer.summarize(m, level=3)
-        assert result == sample_memory["raw_text"]
 
 
 # ── 5. Boundary Cases ─────────────────────────────────────────────
@@ -442,14 +327,6 @@ class TestSummaryEnabledConfig:
         """CARRYMEM_SUMMARY_ENABLED=0 should disable summary layer."""
         monkeypatch.setenv("CARRYMEM_SUMMARY_ENABLED", "0")
         assert is_summary_enabled() is False
-
-    def test_disabled_summary_returns_rule_based_anyway(self, sample_memory, monkeypatch):
-        """When disabled, summarize() should still return rule-based (fallback)."""
-        monkeypatch.setenv("CARRYMEM_SUMMARY_ENABLED", "0")
-        layer = SummaryLayer()
-        result = layer.summarize(sample_memory, level=2)
-        # Should still produce a valid summary (rule-based fallback)
-        assert "[Preference]" in result
 
 
 # ── 9. Schema Migration ───────────────────────────────────────────

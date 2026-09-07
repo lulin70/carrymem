@@ -1,8 +1,14 @@
 # ADR-009: 异步管道
 
-## 状态: 已采纳
+## 状态: 部分修订（2026-09-07）— `native_async=True` 模式已移除，方案 A（线程池包装）成为唯一路径
 ## 日期: 2026-07-11 (v0.7.2)
 ## 决策者: CarryMem 核心团队
+
+> **2026-09-07 修订**：双模式中的 `native_async=True`（AsyncSQLiteAdapter 支持）在真实使用中不可用——
+> `AsyncCarryMem` 的 20 个公开方法中有 16 个在该模式下无条件抛出 `RuntimeError`，属于无法兑现的承诺。
+> 已删除该模式（含 `connect`/`store_entry`/`recall_async`/`count_async` 4 个半残方法），保留方案 A 的
+> 线程池包装作为唯一异步 API。`AsyncSQLiteAdapter` 类保留，可独立使用（`encryption_key` 改为
+> fail-closed：传入即抛 `NotImplementedError`）。本文件其余内容作为历史决策记录保留。
 
 ---
 

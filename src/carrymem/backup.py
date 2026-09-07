@@ -45,7 +45,7 @@ class BackupManager:
         try:
             os.chmod(self._backup_dir, 0o700)
         except (OSError, AttributeError):
-            pass
+            pass  # best-effort hardening: some filesystems lack POSIX perms
 
     @staticmethod
     def _ensure_dir(path: str) -> None:
@@ -120,7 +120,7 @@ class BackupManager:
                 try:
                     os.remove(pre_restore_backup)
                 except OSError:
-                    pass
+                    pass  # rollback snapshot cleanup is best-effort; restore already succeeded
 
     def list_backups(self) -> List[Dict[str, Any]]:
         """List available backups sorted by creation time (newest first)."""

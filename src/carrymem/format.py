@@ -133,7 +133,7 @@ def _format_progressive(m: Dict[str, Any], label: str, depth: int) -> str:
 
     Uses cached `summary` field if available; otherwise generates a rule-based
     summary on-the-fly. No LLM calls — LLM summaries are pre-cached by
-    SummaryLayer.summarize() at recall time.
+    RuleBasedSummarizer.summarize() at recall time.
 
     Args:
         m: Memory dict.

@@ -14,13 +14,13 @@ concurrency:
 
 jobs:
   # ═══════════════════════════════════════
-  # GATE 0: Quick syntax check (advisory)
+  # GATE 0: Quick syntax check (blocking — zero-cost gate, C3)
   # ═══════════════════════════════════════
   syntax:
     name: Syntax Check
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    continue-on-error: true
+    continue-on-error: false
     steps:
       - uses: actions/checkout@v7
 

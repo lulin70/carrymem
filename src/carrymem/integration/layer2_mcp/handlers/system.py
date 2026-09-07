@@ -48,10 +48,10 @@ def handle_my_profile(carrymem, args: Dict[str, Any]) -> Dict[str, Any]:
 
     if include_rules:
         try:
-            from carrymem.rules import RuleEngine
-
-            db_path = carrymem._adapter.db_path if hasattr(carrymem._adapter, "db_path") else None
-            engine = RuleEngine(db_path=db_path)
+            # P1 consolidation: reuse the facade's canonical RuleEngine
+            # (eager-probed at CarryMem init) instead of constructing a new
+            # instance over the same SQLite DB on every call.
+            engine = carrymem.rule_engine
             rules = engine.list_rules(status="active", limit=200)
             scope_counts: Dict[str, int] = {}
             rule_type_counts: Dict[str, int] = {}

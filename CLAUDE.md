@@ -227,4 +227,5 @@ src/carrymem/
 2. 涉及存储 / rule_engine / FTS5 schema 的改动，必须额外运行 `pytest tests/test_e2e_concurrent_access.py tests/test_sqlite_connection_pool.py -v` 验证并发安全。
 3. 涉及 MCP 工具的改动，运行 `pytest tests/test_e2e_mcp_tools.py tests/test_mcp_server.py tests/test_handlers.py -v`。
 4. 提交前确认 `black --check`、`flake8`、`mypy`、`pytest tests/ -m "not slow"` 全绿。
-5. 发布前必须运行完整 E2E 套件（`pytest tests/test_e2e_*.py`）做模拟真实用户使用的端到端验证。
+5. **发布前必须先本地复刻 CI 四门禁预跑**（radon/flake8/black/isort/mypy 锁定版本，防止 lint 红门禁随版本带入——v0.10.0/0.10.1 教训）：`python3 scripts/ci_local_check.py`（脚本内部对齐 `.pre-commit-config.yaml` 与 ci.yml 锁定版本；需先在 /tmp venv 装锁定版本 + textual/aiosqlite 以同构 mypy 环境）。
+6. 发布前必须运行完整 E2E 套件（`pytest tests/test_e2e_*.py`）做模拟真实用户使用的端到端验证。

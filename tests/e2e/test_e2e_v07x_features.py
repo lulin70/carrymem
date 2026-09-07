@@ -5,7 +5,8 @@ Covers the complete v0.7.x user experience:
   2. Session Dual-Layer: set_session → preload → promote_to_permanent → end_session
   3. Multi-Mode Retrieval: recall_by_time / recall_semantic / recall_hybrid / recall_multi_mode
   4. Memify Consolidation: derive_facts → reinforce_edges → auto_decay
-  5. AsyncSQLiteAdapter: native async I/O via AsyncCarryMem.native_async mode
+  5. AsyncSQLiteAdapter: native async I/O (standalone; AsyncCarryMem native_async
+     mode removed after v0.10.1, 2026-09-07, ships in v0.11.0)
 
 Uses real SQLite in-memory DB (no Mock) per testing philosophy.
 """
@@ -206,7 +207,10 @@ class TestMemifyConsolidationE2E:
 
 
 class TestAsyncAdapterE2E:
-    """User journey: AsyncCarryMem native_async mode → store → recall → count."""
+    """User journey: AsyncSQLiteAdapter direct → connect → store → recall → count.
+
+    (post-v0.10.1: AsyncCarryMem native_async mode removed, 2026-09-07, ships in v0.11.0; the adapter is used
+    standalone here.)"""
 
     @pytest.mark.asyncio
     async def test_async_lifecycle(self):

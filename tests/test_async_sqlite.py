@@ -6,7 +6,7 @@ Covers all test dimensions per DevSquad Iron Rules:
   - Error Cases: not connected, operations before connect, close idempotent
   - Performance: bulk store, bulk recall
   - Configuration: custom namespace, custom db_path, in-memory mode
-  - Integration: AsyncCarryMem native_async mode, async context manager
+  - Integration: AsyncCarryMem executor wrapper, async context manager
 
 Uses real aiosqlite (in-memory) per testing philosophy.
 """
@@ -299,38 +299,37 @@ class TestConfiguration:
 class TestIntegration:
     """Verify: integration with AsyncCarryMem and async patterns."""
 
-    async def test_async_carrymem_native_async_mode(self):
-        """Verify: AsyncCarryMem native_async mode uses AsyncSQLiteAdapter."""
+    async def test_async_carrymem_executor_wrapper_smoke(self, tmp_path):
+        """Verify: AsyncCarryMem (executor-wrapped mode) stores and recalls.
+
+        Uses a file-backed DB: SQLiteAdapter's :memory: connection is
+        thread-bound and cannot cross the executor thread boundary
+        (pre-existing constraint, unrelated to the native_async removal).
+        The native_async mode was removed after v0.10.1 (2026-09-07, ships in
+        v0.11.0) — 16/20 of its methods
+        raised RuntimeError unconditionally); the executor wrapper is the
+        one and only AsyncCarryMem surface.
+        """
         from carrymem.async_carrymem import AsyncCarryMem
 
-        acm = AsyncCarryMem(storage="sqlite", db_path=":memory:", namespace="default", native_async=True)
-        assert acm._native_async is True
-        assert acm._async_adapter is not None
-        assert acm._sync is None
+        acm = AsyncCarryMem(storage="sqlite", db_path=str(tmp_path / "acm_smoke.db"), namespace="default")
+        try:
+            result = await acm.classify_and_remember("I prefer dark mode for coding")
+            assert result.get("stored") is True, result
 
-        await acm.connect()
-        entry = MemoryEntry(
-            id="acm_test", type="fact_declaration", content="Async CarryMem", raw_text="Async CarryMem", confidence=0.5
-        )
-        stored = await acm.store_entry(entry)
-        assert stored.storage_key is not None
+            results = await acm.recall_memories(query="dark mode")
+            assert len(results) >= 1
+        finally:
+            await acm.close()
 
-        count = await acm.count_async()
-        assert count == 1
+    async def test_adapter_encryption_key_fail_closed(self):
+        """Verify: encryption_key raises NotImplementedError (fail-closed).
 
-        results = await acm.recall_async("Async")
-        assert len(results) >= 1
-        await acm.close()
-
-    async def test_async_carrymem_native_async_requires_flag(self):
-        """Verify: native async methods raise without native_async=True."""
-        from carrymem.async_carrymem import AsyncCarryMem
-
-        acm = AsyncCarryMem(storage="sqlite", db_path=":memory:", namespace="default", native_async=False)
-        with pytest.raises(RuntimeError, match="native_async"):
-            await acm.store_entry(
-                MemoryEntry(id="x", type="fact_declaration", content="x", raw_text="x", confidence=0.5)
-            )
+        Silently ignoring the key would store plaintext where the caller
+        expects encryption at rest (P1-A4 fix).
+        """
+        with pytest.raises(NotImplementedError, match="encryption_key"):
+            AsyncSQLiteAdapter(":memory:", namespace="default", encryption_key="some-key")
 
     async def test_async_context_manager(self):
         """Verify: async context manager protocol works."""

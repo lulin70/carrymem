@@ -21,19 +21,33 @@ class DevSquadAdapter:
         if adapter.is_available():
             rules = adapter.match_rules("Design REST API", "user1", role="architect")
             prompt = adapter.format_rules_as_prompt(rules)
+
+    RuleEngine consolidation (P1-A2): when the host already owns a CarryMem
+    instance, pass ``rule_engine=carrymem.rule_engine`` so the adapter reuses
+    the facade's canonical instance instead of building a second engine over
+    the same SQLite DB. When omitted (standalone usage), the adapter creates
+    its own engine on ``db_path`` as before.
     """
 
-    def __init__(self, db_path: Optional[str] = None, namespace: str = "default"):
+    def __init__(
+        self,
+        db_path: Optional[str] = None,
+        namespace: str = "default",
+        rule_engine: Optional[RuleEngine] = None,
+    ):
         self._db_path = db_path or ":memory:"
         self._namespace = namespace
         self._rule_engine: Optional[RuleEngine] = None
         self._audit: Optional[AuditLogger] = None
         self._init_error: Optional[str] = None
-        self._init()
+        self._init(rule_engine)
 
-    def _init(self):
+    def _init(self, injected_engine: Optional[RuleEngine] = None):
         try:
-            self._rule_engine = RuleEngine(self._db_path)
+            if injected_engine is not None:
+                self._rule_engine = injected_engine
+            else:
+                self._rule_engine = RuleEngine(self._db_path)
             self._audit = AuditLogger(
                 persist_path=self._db_path,
             )

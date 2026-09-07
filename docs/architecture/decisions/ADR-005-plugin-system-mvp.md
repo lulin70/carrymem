@@ -1,6 +1,13 @@
 # ADR-005: 插件系统 MVP
 
-> ⚠️ **Status: Accepted but Experimental** — PluginManager is fully implemented but NOT integrated into the main CarryMem class. The plugin system is experimental and API surface may change. See `src/carrymem/plugins/__init__.py` module docstring for details.
+> ⛔ **Status: Superseded / Retired (2026-09-07)** — the experimental `plugins/` module
+> (PluginManager + example plugin) was **removed** after v0.10.1 (2026-09-07, ships in v0.11.0) as a ghost feature
+> (fully implemented but never instantiated by CarryMem; zero wiring, zero consumers).
+> This ADR is retained as a historical record. If a plugin system is ever needed,
+> rebuild per the original design below — see git history for the removed implementation
+> and docs/design/V0.10.1_REMAINING_ISSUES_PLAN.md §B1 for the removal rationale.
+
+> ⚠️ **Status (original): Accepted but Experimental** — PluginManager is fully implemented but NOT integrated into the main CarryMem class. The plugin system is experimental and API surface may change. See `src/carrymem/plugins/__init__.py` module docstring for details. *(module deleted 2026-09-07)*
 
 ## 状态: 已采纳
 ## 日期: 2026-06-11

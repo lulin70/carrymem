@@ -61,10 +61,25 @@ class AsyncSQLiteAdapter:
         Args:
             db_path: Database path (default: ~/.carrymem/memories.db).
             namespace: Namespace scope.
-            encryption_key: Optional encryption key (not yet implemented).
+            encryption_key: Not supported by this adapter. Passing a key
+                raises ``NotImplementedError`` (fail-closed) — silently
+                ignoring it would store plaintext where the caller expects
+                encryption at rest.
+
+        Raises:
+            ImportError: aiosqlite is not installed.
+            NotImplementedError: encryption_key was provided.
         """
         if aiosqlite is None:
             raise ImportError("AsyncSQLiteAdapter requires aiosqlite. " "Install with: pip install carrymem[async]")
+
+        if encryption_key is not None:
+            raise NotImplementedError(
+                "AsyncSQLiteAdapter does not support encryption_key. "
+                "Silently storing plaintext would violate the caller's "
+                "encryption-at-rest expectation. Use the sync SQLiteAdapter "
+                "with encryption_key for encrypted storage."
+            )
 
         if db_path is None:
             import os

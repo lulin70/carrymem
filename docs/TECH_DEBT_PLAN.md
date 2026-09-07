@@ -167,7 +167,7 @@
 | **负责角色** | Tester |
 | **验证标准** | 命令 `pytest --cov=carrymem.adapters.sqlite --cov-report=term-missing tests/test_sqlite_adapter.py` 覆盖率 ≥80%；错误/边界维度覆盖 ≥15%/≥10% |
 | **依赖** | 无 |
-| **状态** | ✅ 已完成 (110 tests/12 类全通过；`sqlite/__init__.py` 覆盖率 33.62%→**82.45%**；错误维度 ~19%；边界维度 ~16%；运行 21.74s) |
+| **状态** | ✅ 已完成 (112 tests/12 类全通过（2026-09-07 实测复核，此前文档误记 110）；`sqlite/__init__.py` 覆盖率 33.62%→**82.45%**；错误维度 ~19%；边界维度 ~16%；运行 21.74s) |
 | **生命周期** | P7 测试规划 → P9 测试执行 |
 
 #### TD-011: TUI 29.85% 覆盖（根因修正）⚠️ 描述已修正
@@ -378,7 +378,7 @@
 | **验证标准** | 命令 `grep -c "password.*PYPI_API_TOKEN" .github/workflows/release.yml` 返回 0；`gh secret list` 显示无 `PYPI_API_TOKEN`；rc 预发布 tag 成功上传到 PyPI |
 | **依赖** | 无 |
 | **状态** | ✅ 已完成 (2026-07-22, password-based 发布恢复) — 用户决定不配置 PyPI Trusted Publisher，OIDC 迁移方案放弃。release.yml 恢复 `password: ${{ secrets.PYPI_API_TOKEN }}` 行，保留 `environment: pypi` + `id-token: write` 声明（harmless，为未来 OIDC 迁移预留）。**carrymem==0.9.3rc1 已成功发布到 PyPI**（run 29893374227, HTTP 200 确认 whl+tar.gz 文件在 PyPI CDN 上）。**PEP 440 version normalization 修复保留**（`packaging.version.Version` 规范化 tag 与 wheel 版本号，修复 `0.9.3-rc1` vs `0.9.3rc1` 不匹配问题）。**new-main 分支保护已配置**（6 个 status checks）。**⚠️ 安全提醒**：之前暴露的 PyPI API token 仍然有效（用于本次发布），应尽快在 https://pypi.org/manage/account/token/ 撤销旧 token 并创建新 token，然后用 `gh secret set PYPI_API_TOKEN -R lulin70/carrymem` 更新 GitHub secret |
-| **后续决策** | 🟡 暂缓轮换 (2026-07-26 用户决策): 用户决定暂缓轮换 PyPI token，下次发布时再处理。风险记录: 旧 token 暴露期间可能被滥用，但仅用于发布且权限受限。DevSquad Security 角色保留一票否决权，如发现异常使用立即触发轮换 |
+| **后续决策** | 🟡 暂缓轮换 (2026-07-26 用户决策): 用户决定暂缓轮换 PyPI token，下次发布时再处理。风险记录: 旧 token 暴露期间可能被滥用，但仅用于发布且权限受限。DevSquad Security 角色保留一票否决权，如发现异常使用立即触发轮换。**2026-09-07 补充判定（按用户 2026-08-20 轮换判定标准）**：仅当旧 token 曾推送到对外公开渠道（Git 公开历史/公共 CI 日志/公开社区/公开截图）才必须轮换；若仅出现在本机内部对话与私有 CI secret 中则不触发。**✅ 渠道已核查（2026-09-07）**：`git log --all -p | grep -cE "pypi-[A-Za-z0-9_-]{30,}"` = 0（全历史无字面 token）；修复提交 3ade6f3 之前 release.yml 仅有 `${{ secrets.PYPI_API_TOKEN }}` secret 引用；提交信息自证暴露渠道为"conversation channel"（本机对话）。**结论：仅本机内部对话暴露，不满足轮换条件，维持暂缓并关闭本决策项** |
 | **生命周期** | P6 安全审查 → P10 部署发布 |
 
 #### TD-016: 6 个 CI job 缺 timeout-minutes
@@ -810,7 +810,7 @@
 | **负责角色** | DevOps |
 | **验证标准** | `grep "interval:" .github/dependabot.yml` 全部输出 `daily`；`grep "groups:" .github/dependabot.yml` 输出 2 行（pip + github-actions） |
 | **依赖** | 无 |
-| **状态** | ✅ 已完成 (2026-07-25): dependabot.yml 已更新 (weekly→daily + groups for pip/github-actions)；ignore 配置暂缓待用户确认 |
+| **状态** | ✅ 已完成 (2026-07-25): dependabot.yml 已更新 (weekly→daily + groups for pip/github-actions)；ignore 配置暂缓待用户确认。**2026-09-07 终态**：dependabot 版本更新已被用户整体禁用（commit 6e15b4d 删除 dependabot.yml，不再恢复——版本噪音归零）；作为替代安全通道，**Dependabot security updates 已在 repo settings 开启**（2026-09-07 经 GitHub API 确认 status=enabled，每日 advisory 驱动、仅发安全修复 PR、零版本噪音）。project_memory 中 4 条 dependabot 版本更新硬约束相应作废，以本条终态为准。**通道首跑验证（2026-09-07）**：security updates 开启后当日即生成 3 个安全 PR —— #53 cryptography 49→50（CVE-2026-69247，全量 CI 绿）已合并、#52 js-yaml 4.3.0→4.3.2 已合并、#51 glob 10.4.5→10.5.0 已触发 rebase 后跟进；端到端闭环生效 |
 | **后续决策 1** | ✅ 已完成 (2026-07-26 用户决策): 用户确认调整 project_memory 约定 — 删除 "ignore dev deps patch/minor" 要求，允许 dependabot 为 dev 依赖的 patch/minor 更新创建 PR。理由: radon 6.0→6.0.1 案例证明 patch 更新有用，保持依赖最新可避免安全漏洞积累。project_memory.md 已同步更新 |
 | **后续决策 2** | ✅ 已完成 (2026-07-27 DevSquad 7 角色共识 + 用户决策): 用户要求"只升级 Patch 版本"。所有 ecosystem (pip/github-actions/docker) 添加 `ignore: version-update:semver-major + semver-minor` 规则。dev-dependencies group `update-types` 从 `minor+patch` 改为 `patch` only。理由: minor/major 升级引入 breaking changes (ruff/mypy 版本漂移致 4 次 CI 全红历史教训)。Security: runtime deps 安全修复仍通过 daily security advisory 独立通道流入。project_memory.md 已同步: "allow patch/minor" → "only allow patch"。验证: YAML 语法 OK, 3 ecosystems ignore 规则全部就位 |
 | **生命周期** | P10 部署发布 |

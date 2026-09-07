@@ -168,12 +168,12 @@ jobs:
 
   release:
     name: Build & Publish
-    # VSCode E2E has pre-existing module resolution issues
-    # (Cannot find module '/undefined', out/src/package.json missing).
-    # Temporarily removed from needs until tsc output structure is fixed.
-    # VSCode E2E job still runs in parallel for visibility but is non-blocking.
-    # TODO: fix vscode-e2e compile script to copy package.json to out/, re-add to needs.
-    needs: [pre-release-test, e2e-gate]
+    # vscode-e2e re-added to the needs chain (C2, 2026-09-07): the historical
+    # module resolution issues ("Cannot find module '/undefined'" and missing
+    # out/src/package.json) were fixed in runVscodeTests.js (correct
+    # extensionDevelopmentPath / extensionTestsPath) — nightly run 30145432223
+    # passed 17/17 journeys (216ms, exit 0).
+    needs: [pre-release-test, e2e-gate, vscode-e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # TD-015 step 2: OIDC migration — declare the GitHub deployment environment.

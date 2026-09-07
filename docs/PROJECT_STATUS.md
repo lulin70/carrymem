@@ -144,8 +144,11 @@
   SQLiteAdapter but with async I/O. Implements connect/store_entry/recall/forget_memory/count/close
   + async context manager protocol.
 - **`[async]` extra**: `pip install carrymem[async]` installs aiosqlite>=0.19.
-- **`AsyncCarryMem.native_async` mode**: True async I/O via AsyncSQLiteAdapter when
-  `native_async=True`. Adds connect/store_entry/recall_async/count_async methods.
+- **`AsyncCarryMem` executor wrapper** (unchanged): the one and only async facade —
+  wraps sync `CarryMem` with `run_in_executor`. The `native_async=True` mode was
+  **removed after v0.10.1** (2026-09-07, ships in v0.11.0; unusable promise: 16/20 methods raised RuntimeError
+  unconditionally; see ADR-009 revision). Direct async I/O needs are served by
+  `AsyncSQLiteAdapter` used standalone.
 - **Dual-mode coexistence**: Sync SQLiteAdapter (zero-dep) + AsyncSQLiteAdapter ([async] extra).
 - **Protocol consistency**: `RecallOps` Protocol updated with `consolidate_memories` signature.
 - **58 new tests**: 32 (test_memify.py) + 26 (test_async_sqlite.py). 6 dimensions each,
@@ -421,7 +424,7 @@ each py3.11 + py3.12).
 
 ## Next Milestone
 
-**v0.11.0** (next MINOR — TBD based on user feedback and architecture evolution plan; v0.10.0 repeat-correction upgrade 与 v0.10.1 CLI startup fix 已于 2026-09-05 发布)
+**v0.11.0** (next MINOR — will ship the `native_async` mode removal (breaking API change, see ADR-009 revision) + cryptography 50 floor from the 2026-09-07 security-PR merge; version MUST be 0.11.0, not 0.10.2, per SemVer)
 
 Potential areas for v0.10.0+ (per CARRYMEM_ARCHITECTURE_EVOLUTION_PLAN.md):
 - Vector search enhancements (HNSW indexing, approximate nearest neighbor)
@@ -452,7 +455,7 @@ Potential areas for v0.10.0+ (per CARRYMEM_ARCHITECTURE_EVOLUTION_PLAN.md):
 - MemifyEngine: auto_decay (three-way gate: stale + low importance + zero access) ✅
 - consolidate_memories() unified API on SQLiteAdapter + base + RecallMixin + Protocol ✅
 - AsyncSQLiteAdapter: native async I/O via aiosqlite ([async] extra) ✅
-- AsyncCarryMem: native_async=True mode with connect/store_entry/recall_async/count_async ✅
+- AsyncCarryMem: native_async=True mode (✅ then; mode removed after v0.10.1, 2026-09-07, ships in v0.11.0 — see ADR-009 revision)
 - [async] extra in setup.py + added to [full] extra ✅
 - 58 new tests (32 test_memify.py + 26 test_async_sqlite.py) — 6 dimensions, no Mock ✅
 

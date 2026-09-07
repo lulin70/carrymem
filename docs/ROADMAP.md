@@ -527,7 +527,7 @@ See CHANGELOG.md for detailed history.
 - [x] `AsyncSQLiteAdapter` (`src/carrymem/adapters/async_sqlite.py`): Native async SQLite using aiosqlite. Same SQL as SQLiteAdapter with async I/O
 - [x] Implements: `connect`, `store_entry`, `recall`, `forget_memory`, `count`, `close`. Async context manager protocol
 - [x] `[async]` extra: `pip install carrymem[async]` installs aiosqlite>=0.19
-- [x] `AsyncCarryMem.native_async` mode: `native_async=True` parameter. Sync methods raise `RuntimeError` when enabled (and vice versa)
+- [x] `AsyncCarryMem.native_async` mode: `native_async=True` parameter. Sync methods raise `RuntimeError` when enabled (and vice versa) — **removed after v0.10.1** (2026-09-07, ships in v0.11.0; unusable promise: 16/20 methods raised unconditionally; see ADR-009 revision)
 - [x] Dual-mode coexistence: sync `SQLiteAdapter` (zero-dep) + `AsyncSQLiteAdapter` ([async] extra)
 
 **Architecture**:

@@ -600,33 +600,6 @@ server = MonitoringHTTPServer(port=8766, health_checker=health, metrics_collecto
 - `recall` P99 < 500ms
 - Startup time < 2s
 
-### Plugin System (v0.4.0 New)
-
-Extensible plugin architecture with hook points:
-
-```python
-from carrymem.plugins import PluginProtocol, PluginManager, HookPoint
-
-class MyPlugin:
-    name = "my-plugin"
-    version = "1.0.0"
-
-    def on_load(self, carrymem):
-        print(f"Loaded into CarryMem")
-
-    def on_memory_stored(self, memory):
-        print(f"Memory stored: {memory.content}")
-
-    def on_unload(self):
-        print("Plugin unloaded")
-
-manager = PluginManager(plugin_dir="./plugins")
-manager.set_carrymem(cm)
-manager.load("my-plugin")
-```
-
-**Hook Points**: `on_memory_stored` | `on_memory_recalled` | `on_classified` | `on_error`
-
 ### Permission System (v0.4.0 New)
 
 Lightweight access control MVP:
@@ -937,8 +910,6 @@ Backward compatible: `from carrymem.layers.pattern_analyzer import PatternAnalyz
 | `obsidian_adapter` | `src/carrymem/adapters/obsidian_adapter.py` | Obsidian vault knowledge-base adapter |
 | **Monitoring** (v0.4.0 New) | | |
 | `monitoring` | `src/carrymem/monitoring/__init__.py` | HealthChecker, MetricsCollector, AlertManager, MonitoringHTTPServer, LatencyTimer |
-| **Plugins** (v0.4.0 New) | | |
-| `plugins` | `src/carrymem/plugins/__init__.py` | PluginProtocol, PluginManager, HookPoint definitions, event dispatch |
 | **Security** | | |
 | `permissions` | `src/carrymem/security/permissions.py` | Permission constants & AccessPolicy (owner-based MVP) |
 | **i18n** (v0.4.0 New) | | |

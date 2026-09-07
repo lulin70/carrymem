@@ -12,8 +12,11 @@ SLO Targets:
 
 import threading
 import time
+from collections import deque
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
+
+_LATENCY_MAX_SAMPLES = 10_000
 
 # ── Data Classes ──────────────────────────────────────────────────────────
 
@@ -61,7 +64,7 @@ class MetricsCollector:
     def __init__(self):
         self._lock = threading.RLock()
         self._counters: Dict[str, int] = {}
-        self._latency_buckets: Dict[str, List[float]] = {}
+        self._latency_buckets: Dict[str, deque] = {}
         self._gauges: Dict[str, float] = {}
         self._start_time: float = time.time()
 
@@ -71,10 +74,14 @@ class MetricsCollector:
             self._counters[operation] = self._counters.get(operation, 0) + value
 
     def record_latency(self, operation: str, ms: float) -> None:
-        """Record a latency sample (in milliseconds) for the given operation."""
+        """Record a latency sample (in milliseconds) for the given operation.
+
+        Samples are retained in a bounded deque (oldest dropped beyond
+        ``_LATENCY_MAX_SAMPLES``) so per-operation memory stays constant.
+        """
         with self._lock:
             if operation not in self._latency_buckets:
-                self._latency_buckets[operation] = []
+                self._latency_buckets[operation] = deque(maxlen=_LATENCY_MAX_SAMPLES)
             self._latency_buckets[operation].append(ms)
 
     def set_gauge(self, name: str, value: float) -> None:

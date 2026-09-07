@@ -51,7 +51,7 @@ src/carrymem/
 │   ├── memory_pattern_detectors.py # 实体提取 (v0.7.0)
 │   ├── noise_detector.py      # 噪声检测 (v0.7.x)
 │   ├── feedback_detector.py   # 反馈检测 (v0.7.x)
-│   ├── summary_layer.py       # 摘要层 (v0.7.x)
+│   ├── summary_layer.py       # RuleBasedSummarizer (SummaryLayer 类已删, post-v0.10.1)
 │   └── entity_normalizer.py   # 实体规范化 (v0.5.1)
 │
 ├── rules/                   # ★ 规则引擎（独立子系统）
@@ -111,7 +111,7 @@ src/carrymem/
 │
 ├── llm/                     # LLM 客户端抽象
 ├── monitoring/              # 监控（预留）
-├── plugins/                 # 插件系统
+├── security/                # 加密 + 权限 + 审计 + 输入校验 + 脱敏
 │
 └── [根级模块]               # ~30 个平铺模块文件
     ├── constants.py, types.py, errors.py, exceptions.py
