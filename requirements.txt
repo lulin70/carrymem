@@ -10,7 +10,7 @@ cachetools==7.1.6
 certifi==2026.7.22
 cffi==2.1.0
 click==8.4.2
-cryptography==49.0.0
+cryptography==50.0.0
 cuda-bindings==13.3.1
 cuda-pathfinder==1.6.0
 cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3.0
