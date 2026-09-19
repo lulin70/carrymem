@@ -17,7 +17,7 @@ import tempfile
 import pytest
 
 from carrymem import CarryMem
-from carrymem.prompt_builder import PromptBuilder
+from carrymem.prompt_builder import PromptBuilder, _estimate_tokens
 from carrymem.scoring import RecallBudget
 
 # ---------------------------------------------------------------------------
@@ -338,20 +338,39 @@ class TestBudgetFilter:
     """Tests for PromptBuilder._budget_filter."""
 
     def test_pref_token_cap(self, pb, cm):
-        """Preferences are capped at 40% of memories_budget."""
+        """Preferences stop being added once they consume 60% of memories_budget.
+
+        The budget has to be tight enough that 20 short preferences actually
+        exceed it, otherwise the cap never engages and the assertion is vacuous.
+        Ratio per docs/ROADMAP.md: "Preference token budget 40%→60%".
+        """
         for i in range(20):
             cm.classify_and_remember(f"I prefer option {i} for testing", force_type="user_preference")
         all_mems, seen = pb._recall_base_memories("prefer", limit=60)
-        pref_mems, pref_keys, all_mems = pb._identify_preferences(all_mems, seen, "prefer")
+        _pref_mems, pref_keys, all_mems = pb._identify_preferences(all_mems, seen, "prefer")
+        assert len(pref_keys) == 20, f"premise: all 20 preferences must be visible, got {len(pref_keys)}"
 
         budget = RecallBudget(max_results=20, max_tokens=4000)
-        memories_budget = 2000  # 40% = 800 tokens for prefs
+        memories_budget = 200  # preferences may use int(200 * 0.6) = 120 tokens
         scores = pb._compute_recalc_scores(all_mems)
         filtered = pb._budget_filter(all_mems, pref_keys, budget, memories_budget, scores)
 
         pref_in_filtered = [m for m in filtered if m.get("storage_key") in pref_keys]
-        # Should not include all 20 preferences
-        assert len(pref_in_filtered) < 20
+        # This assertion has been observed to fail once inside a full-suite run while
+        # passing deterministically (kept=17, used=119) in isolated runs, so the failure
+        # message carries the full token arithmetic. Without it a re-occurrence is
+        # undiagnosable (see docs/design/V0.11.0_OBSERVABILITY_INSTRUMENTATION.md §9).
+        diag = (
+            f"kept={len(pref_in_filtered)}/20 len(all_mems)={len(all_mems)} "
+            f"len(pref_keys)={len(pref_keys)} len(filtered)={len(filtered)} "
+            f"budget={int(memories_budget * 0.6)} "
+            f"tokens={sorted(_estimate_tokens(m.get('content', '')) for m in pref_in_filtered)} "
+            f"content_lens={sorted(len(m.get('content') or '') for m in pref_in_filtered)}"
+        )
+        # Capped: some are dropped, but the cap must not starve preferences either.
+        assert 0 < len(pref_in_filtered) < 20, f"cap did not engage: {diag}"
+        used = sum(_estimate_tokens(m.get("content", "")) for m in pref_in_filtered)
+        assert used <= 120, f"preference tokens must stay within 60% of the budget, used={used} ({diag})"
 
     def test_type_quotas_respected(self, pb, cm):
         """Type quotas from RecallBudget are respected."""

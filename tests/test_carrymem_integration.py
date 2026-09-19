@@ -10,6 +10,8 @@ import os
 import pytest
 
 from carrymem import CarryMem
+from carrymem.adapters.obsidian_adapter import ObsidianAdapter
+from carrymem.errors import KnowledgeNotConfiguredError
 
 
 @pytest.fixture
@@ -24,13 +26,13 @@ def cm(tmp_path):
 def cm_with_rules(tmp_path):
     db_path = str(tmp_path / "test_cm_rules.db")
     carrymem = CarryMem(db_path=db_path)
-    carrymem.engine.rules.add_rule(
+    carrymem.rule_engine.add_rule(
         trigger="security",
         action="Never leak secrets",
         rule_type="forbid",
         override=True,
     )
-    carrymem.engine.rules.add_rule(
+    carrymem.rule_engine.add_rule(
         trigger="database",
         action="Prefer PostgreSQL",
         rule_type="prefer",
@@ -40,49 +42,61 @@ def cm_with_rules(tmp_path):
     carrymem.close()
 
 
+@pytest.fixture
+def cm_with_knowledge(tmp_path):
+    """CarryMem wired to an Obsidian knowledge adapter, all paths isolated."""
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    (vault / "note.md").write_text("# Test Note\nSome knowledge content about Python")
+    knowledge = ObsidianAdapter(str(vault), db_path=str(tmp_path / "knowledge.db"))
+    carrymem = CarryMem(
+        db_path=str(tmp_path / "test_cm_knowledge.db"),
+        knowledge_adapter=knowledge,
+        auto_backup_interval=0,
+    )
+    yield carrymem
+    carrymem.close()
+
+
 class TestCarryMemKnowledgeAdapter:
-    def test_knowledge_adapter_property(self, cm):
-        adapter = cm.knowledge_adapter
-        assert adapter is None or adapter is not None
+    def test_knowledge_adapter_property(self, cm, cm_with_knowledge):
+        assert cm.knowledge_adapter is None
+        assert cm_with_knowledge.knowledge_adapter is not None
 
-    def test_index_knowledge(self, cm, tmp_path):
-        vault = tmp_path / "vault"
-        vault.mkdir()
-        (vault / "note.md").write_text("# Test Note\nSome knowledge content")
-        try:
-            result = cm.index_knowledge(str(vault))
-            assert result is not None
-        except Exception:
-            pass
+    def test_index_knowledge(self, cm_with_knowledge):
+        stats = cm_with_knowledge.index_knowledge()
+        assert stats == {"total_files": 1, "new": 1, "updated": 0, "skipped": 0}, stats
 
-    def test_recall_from_knowledge(self, cm, tmp_path):
-        vault = tmp_path / "vault2"
-        vault.mkdir()
-        (vault / "note.md").write_text("# Python Guide\nPython is great for AI")
-        try:
-            cm.index_knowledge(str(vault))
-            result = cm.recall_from_knowledge("Python")
-            assert isinstance(result, list)
-        except Exception:
-            pass
+    def test_index_knowledge_without_adapter_raises(self, cm):
+        with pytest.raises(KnowledgeNotConfiguredError):
+            cm.index_knowledge()
+
+    def test_recall_from_knowledge(self, cm_with_knowledge):
+        cm_with_knowledge.index_knowledge()
+        results = cm_with_knowledge.recall_from_knowledge("Python")
+        assert len(results) == 1, results
+        note = results[0]
+        assert note["file_path"] == "note.md", note
+        assert "Some knowledge content about Python" in note["content"], note
+
+    def test_recall_from_knowledge_without_adapter_raises(self, cm):
+        with pytest.raises(KnowledgeNotConfiguredError):
+            cm.recall_from_knowledge("Python")
 
 
 class TestCarryMemSystemPromptWithRules:
-    def test_build_prompt_with_rules(self, cm):
-        cm.declare("I prefer dark mode")
-        try:
-            prompt = cm.build_system_prompt(context="security review")
-            assert isinstance(prompt, str)
-        except Exception:
-            pass
+    def test_build_prompt_with_rules(self, cm_with_rules):
+        cm_with_rules.declare("I prefer dark mode")
+        prompt = cm_with_rules.build_system_prompt(context="security review")
+        assert isinstance(prompt, str) and prompt.strip()
+        assert "I prefer dark mode" in prompt
+        assert "Never leak secrets" in prompt
 
-    def test_build_prompt_with_memories_and_rules(self, cm):
-        cm.declare("I prefer dark mode")
-        try:
-            prompt = cm.build_system_prompt(context="coding")
-            assert isinstance(prompt, str)
-        except Exception:
-            pass
+    def test_build_prompt_with_memories_and_rules(self, cm_with_rules):
+        cm_with_rules.declare("I prefer dark mode")
+        prompt = cm_with_rules.build_system_prompt(context="coding")
+        assert isinstance(prompt, str) and prompt.strip()
+        assert "I prefer dark mode" in prompt
 
 
 class TestCarryMemRecallMemories:

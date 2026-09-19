@@ -431,21 +431,10 @@ class TestExceptionSwallowing:
             cm._adapter.recall = failing_recall
 
             # MUTATION CHECK: 如果异常被吞没并返回空列表，
-            # 调用方无法区分"无数据"和"查询失败"
-            try:
-                results = cm.recall_memories(query="test")
-
-                # 如果返回了结果（异常被吞没），至少应该是空列表而非 None
-                # 且调用方应该能够检测到这是一个异常情况
-                if results is None:
-                    pytest.fail("Recall returned None on error - exception swallowed?")
-
-                # 注意：当前实现可能会捕获异常并返回空列表
-                # 这是一种有效的错误处理策略，但测试应记录这种行为
-                assert isinstance(results, list), "Even on error, should return consistent type (list)"
-            except Exception:
-                # 异常传播也是可接受的行为
-                pass
+            # 调用方无法区分"无数据"和"查询失败"。
+            # 契约：适配器异常必须向上传播，不得被吞成空结果。
+            with pytest.raises(OSError, match="Simulated recall failure"):
+                cm.recall_memories(query="test")
 
             # 恢复
             cm._adapter.recall = original_recall

@@ -30,6 +30,7 @@ from carrymem.errors import (
     SecurityError,
     StorageAdapterError,
 )
+from carrymem.security import EncryptionError
 
 
 @pytest.fixture
@@ -135,14 +136,19 @@ class TestEncryptionErrorHandling:
     """Scenario: Encryption failures are handled gracefully with degradation."""
 
     def test_wrong_encryption_key_handling(self, tmp_path):
-        """Verify: Opening encrypted DB with wrong key fails gracefully.
+        """Verify: Opening encrypted DB with wrong key fails loudly, not silently.
 
         Steps:
         1. Create encrypted database with key A
-        2. Store data
+        2. Store data (asserted to be persisted)
         3. Close
-        4. Attempt to reopen with different key B
-        5. Verify graceful failure (not crash)
+        4. Reopen with different key B
+        5. Verify recall raises EncryptionError instead of returning wrong data
+
+        Note: ``classify_and_remember`` rejects this message as non-memorable
+        (``stored=False``), which would leave the database empty and make every
+        wrong-key assertion vacuous — so ``declare`` (an explicit user write) is
+        used to guarantee an encrypted row exists.
         """
         db_path = str(tmp_path / "wrong_key.db")
         key_a = "correct-encryption-key-alpha"
@@ -150,24 +156,20 @@ class TestEncryptionErrorHandling:
 
         # Create and encrypt with key A
         cm1 = CarryMem(db_path=db_path, encryption_key=key_a)
-        cm1.classify_and_remember("Secret data encrypted with key A")
-        cm1.close()
-
-        # Try to open with wrong key B - should fail gracefully or return empty
         try:
-            cm2 = CarryMem(db_path=db_path, encryption_key=key_b)
-            try:
-                # If it opens, recalls may fail or return empty/corrupted
-                recalled = cm2.recall_memories(limit=10)
-                # Either empty list or corrupted data - both acceptable
-                assert isinstance(recalled, list), "Should return list even on wrong key"
-            finally:
-                cm2.close()
-        except Exception as e:
-            # Also acceptable: fails to open entirely
-            assert isinstance(
-                e, (CarryMemError, RuntimeError, Exception)
-            ), f"Wrong key should raise appropriate error, got {type(e)}"
+            assert cm1.declare("Secret data encrypted with key A")["declared"] is True
+            assert cm1._adapter.count() == 1, "premise: an encrypted row must be stored"
+        finally:
+            cm1.close()
+
+        # Reopen with the wrong key: decryption must fail loudly rather than
+        # hand back empty/corrupted data as if it were valid.
+        cm2 = CarryMem(db_path=db_path, encryption_key=key_b)
+        try:
+            with pytest.raises(EncryptionError):
+                cm2.recall_memories(limit=10)
+        finally:
+            cm2.close()
 
     def test_encryption_initialization_failure(self, tmp_path):
         """Verify: Invalid encryption key causes initialization failure.

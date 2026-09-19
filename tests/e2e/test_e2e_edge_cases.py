@@ -17,7 +17,7 @@ import tempfile
 import pytest
 
 from carrymem import CarryMem
-from carrymem.exceptions import DBConnectionError
+from carrymem.exceptions import DBConnectionError, ValidationError
 
 
 @pytest.fixture
@@ -296,19 +296,19 @@ class TestE2EPermissionScenarios:
             os.chmod(db_path, 0o644)  # Restore for cleanup
 
     def test_nonexistent_parent_directory(self, tmp_path):
-        """Verify: Non-existent parent directory is handled appropriately."""
+        """Verify: A non-existent parent directory is created on demand."""
         db_path = str(tmp_path / "nonexistent" / "nested" / "deep" / "test.db")
+        assert not os.path.exists(os.path.dirname(db_path))
 
-        # Behavior varies: might create dirs or raise error
+        cm = CarryMem(db_path=db_path)
         try:
-            cm = CarryMem(db_path=db_path)
-            try:
-                result = cm.classify_and_remember("Auto-create dir test")
-                assert isinstance(result, dict), "Should work if auto-creating dirs"
-            finally:
-                cm.close()
-        except Exception:
-            pass  # Acceptable: requires pre-existing directory
+            result = cm.classify_and_remember("Auto-create dir test")
+            assert result["stored"] is True, result
+            assert cm.recall_memories(query="Auto-create dir test", limit=5), "stored but not recallable"
+        finally:
+            cm.close()
+
+        assert os.path.exists(db_path), "db_path parent directory was not created"
 
 
 class TestE2EDiskSpaceSimulation:
@@ -427,26 +427,21 @@ class TestE2EAPIBoundaryConditions:
 
         cm.classify_and_remember("Large limit test")
 
-        # Request huge limit - should raise ValidationError or cap gracefully
-        with pytest.raises((Exception,)):
+        # Request huge limit - rejected with a validation error
+        with pytest.raises(ValidationError):
             cm.recall_memories(limit=999999999)
 
     def test_negative_or_zero_limit(self, standard_carrymem):
-        """Verify: Negative or zero limit parameters are handled."""
+        """Verify: Negative limits are rejected, zero returns an empty page."""
         cm = standard_carrymem
 
         cm.classify_and_remember("Limit boundary test")
 
         for limit in [-1, -100]:
-            with pytest.raises((ValueError, Exception)):
+            with pytest.raises(ValidationError):
                 cm.recall_memories(limit=limit)
 
-        # Zero limit should return empty list or raise
-        try:
-            result = cm.recall_memories(limit=0)
-            assert isinstance(result, list), "Limit=0 should return list"
-        except Exception:
-            pass  # Also acceptable
+        assert cm.recall_memories(limit=0) == []
 
     def test_empty_query_recall(self, standard_carrymem):
         """Verify: Empty query string in recall is handled."""

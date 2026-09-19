@@ -55,11 +55,11 @@ class TestBackup:
 
 
 class TestEncryption:
-    def test_encryption_module_import(self):
-        try:
-            from carrymem.security.encryption import EncryptionManager
+    def test_encryption_round_trip(self):
+        """The public encryption backend encrypts and decrypts its own output."""
+        from carrymem.security.encryption import MemoryEncryption
 
-            em = EncryptionManager()
-            assert em is not None
-        except Exception:
-            pass
+        enc = MemoryEncryption(key="backup-encryption-test-key")
+        ciphertext = enc.encrypt("backup payload")
+        assert ciphertext != "backup payload"
+        assert enc.decrypt(ciphertext) == "backup payload"

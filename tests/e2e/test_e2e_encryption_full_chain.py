@@ -224,18 +224,25 @@ class TestE2EDegradedKeyScenarios:
             cm2.close()
 
     def test_empty_string_key_behavior(self, tmp_path):
-        """Verify: Empty string as encryption key is handled safely."""
+        """Verify: An empty string key still engages encryption, never plaintext."""
         db_path = str(tmp_path / "empty_key.db")
+        sentinel = "Test with empty key"
 
-        # Some implementations treat empty key as "no encryption"
         cm = CarryMem(db_path=db_path, encryption_key="")
         try:
-            result = cm.classify_and_remember("Test with empty key")
-            assert isinstance(result, dict), "Empty key should not crash"
-        except Exception:
-            pass  # May raise error depending on implementation
+            result = cm.classify_and_remember(sentinel)
+            assert result["stored"] is True, result
+            assert [m["content"] for m in cm.recall_memories(limit=5)] == [sentinel]
         finally:
             cm.close()
+
+        # An explicit "" is a key, not "no encryption": the plaintext must not
+        # be recoverable from any file of the store.
+        for suffix in ("", "-wal", "-shm"):
+            sidecar = db_path + suffix
+            if os.path.exists(sidecar):
+                with open(sidecar, "rb") as fh:
+                    assert sentinel.encode() not in fh.read(), f"empty-key store kept plaintext in {sidecar}"
 
 
 class TestE2EKeyRotation:
@@ -271,15 +278,11 @@ class TestE2EKeyRotation:
         # Phase 2: New key instance cannot read old-encrypted data (expected)
         cm_new = CarryMem(db_path=db_path, encryption_key=new_key)
         try:
-            # New key instance should initialize without crashing
-            # But recall of old-encrypted data will fail or return empty
-            try:
-                new_recall = cm_new.recall_memories(limit=10)
-                assert isinstance(new_recall, list), "New key instance should respond to queries"
-                # Data encrypted with old key may be undecryptable with new key;
-                # this is expected behavior for encryption key changes
-            except Exception:
-                pass  # Acceptable: old data undecryptable with new key
+            # Rows written with old_key are undecryptable with new_key. Recall
+            # must fail loudly: silently returning an empty page would look
+            # like "no memories stored" and hide the undecryptable data.
+            with pytest.raises(EncryptionError):
+                cm_new.recall_memories(limit=10)
         finally:
             cm_new.close()
 

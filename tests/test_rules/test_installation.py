@@ -525,13 +525,12 @@ class TestPipInstallVerification:
         assert result.returncode == 0
 
     def test_package_metadata_accessible(self):
-        try:
-            from importlib.metadata import metadata
+        from importlib.metadata import metadata
 
-            meta = metadata("carrymem")
-            assert meta is not None
-        except Exception:
-            pass
+        import carrymem
+
+        meta = metadata("carrymem")
+        assert meta["Version"] == carrymem.__version__
 
     def test_py_typed_marker_exists(self):
         import carrymem

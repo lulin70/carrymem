@@ -10,6 +10,7 @@ Validates adapter switching and data migration:
 import json
 import os
 import shutil
+import sqlite3
 import tempfile
 
 import pytest
@@ -251,38 +252,45 @@ class TestE2EAdapterErrorHandling:
         with pytest.raises((ValueError, TypeError, Exception)):
             CarryMem(storage="nonexistent_adapter", db_path=db_path)
 
-    def test_missing_db_path_handling(self):
-        """Verify: Missing db_path is handled appropriately."""
-        # Behavior may vary: might use default path or raise error
+    def test_missing_db_path_handling(self, tmp_path, monkeypatch):
+        """Verify: CarryMem() with no arguments falls back to the default location."""
+        default_db = tmp_path / "default_location.db"
+        monkeypatch.setenv("CARRYMEM_DB_PATH", str(default_db))
+
+        cm = CarryMem()  # No arguments: db_path comes from CARRYMEM_DB_PATH
         try:
-            cm = CarryMem()  # No arguments
-            # If it succeeds, should still be usable
             assert isinstance(cm, CarryMem), "Default CarryMem() should return a CarryMem instance"
+            assert cm.classify_and_remember("Default location probe")["stored"] is True
+        finally:
             cm.close()
-        except Exception:
-            pass  # May raise error depending on configuration
+
+        assert default_db.exists(), "CarryMem() did not use the configured default db_path"
 
     def test_corrupted_json_file_handling(self, tmp_path):
-        """Verify: Corrupted JSON file doesn't crash catastrophically."""
-        json_path = str(tmp_path / "corrupted.json")
+        """Verify: Corrupted JSON store is preserved and the store stays usable."""
+        json_path = tmp_path / "corrupted.json"
+        corrupt_bytes = "{ this is not valid JSON !!!"
+        json_path.write_text(corrupt_bytes)
 
-        # Write invalid JSON
-        with open(json_path, "w") as f:
-            f.write("{ this is not valid JSON !!!")
-
-        # Try to open - should handle gracefully
+        cm = CarryMem(storage="json", db_path=str(json_path))
         try:
-            cm = CarryMem(storage="json", db_path=json_path)
-            # If it opens, operations should not crash hard
-            try:
-                result = cm.classify_and_remember("Test on corrupted DB")
-                assert isinstance(result, dict), "Should return some response"
-            except Exception:
-                pass  # Operations on corrupted DB may fail
-            finally:
-                cm.close()
-        except (json.JSONDecodeError, Exception):
-            pass  # Expected: reject corrupted file on open
+            result = cm.classify_and_remember("Test on corrupted DB")
+            assert isinstance(result, dict), "Should return some response"
+            assert result["stored"] is True, result
+        finally:
+            cm.close()
+
+        # The unreadable original must survive: starting from an empty store
+        # makes the next save rewrite the file.
+        preserved = sorted(tmp_path.glob("corrupted.json.corrupt.*"))
+        assert len(preserved) == 1, f"expected exactly one preserved copy, got {preserved}"
+        assert preserved[0].read_text() == corrupt_bytes
+
+        # The store is valid JSON again and contains the newly stored memory.
+        with open(json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        contents = [m["content"] for m in data["default"]["memories"].values()]
+        assert "Test on corrupted DB" in contents, contents
 
     def test_readonly_database_handling(self, tmp_path):
         """Verify: Read-only database is handled appropriately."""
@@ -305,13 +313,20 @@ class TestE2EAdapterErrorHandling:
                 recalled = cm_ro.recall_memories(limit=5)
                 assert isinstance(recalled, list), "Read should work on read-only DB"
 
-                # Write operations may fail or be queued
+                # Writes on a chmod'ed read-only DB file: SQLite may still
+                # accept them because the WAL sidecars live outside the
+                # chmod'ed inode. Both outcomes are legitimate, so assert
+                # each explicitly rather than swallowing the assertion.
                 try:
                     write_result = cm_ro.classify_and_remember("Attempted write")
-                    # If no error, implementation handles it somehow
-                    assert isinstance(write_result, dict)
-                except Exception:
-                    pass  # Acceptable: writes fail on read-only
+                except (sqlite3.OperationalError, sqlite3.DatabaseError, OSError) as exc:
+                    assert "readonly" in str(exc).lower() or "read-only" in str(exc).lower(), exc
+                else:
+                    assert isinstance(write_result, dict), write_result
+                    assert write_result["stored"] is True, write_result
+                    assert cm_ro.recall_memories(
+                        query="Attempted write", limit=5
+                    ), "write reported stored=True but the record is not retrievable"
             finally:
                 cm_ro.close()
         finally:

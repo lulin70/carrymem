@@ -9,6 +9,7 @@ import os
 
 import pytest
 
+from carrymem.adapters.base import MemoryEntry
 from carrymem.adapters.obsidian_adapter import ObsidianAdapter
 
 
@@ -52,13 +53,13 @@ class TestObsidianAdapter:
         results = adapter.recall("nonexistent_topic_xyz_12345")
         assert isinstance(results, list)
 
-    def test_store_and_recall(self, adapter):
+    def test_store_is_rejected(self, adapter):
+        """Verify the read-only contract: writes raise NotImplementedError."""
         adapter.index_vault()
-        try:
-            result = adapter.store("test_key", {"content": "test content"})
-            assert result is not None
-        except Exception:
-            pass
+        with pytest.raises(NotImplementedError):
+            adapter.store({"content": "test content"})
+        with pytest.raises(NotImplementedError):
+            adapter.store_entry(MemoryEntry(type="note", content="test content"))
 
     def test_close(self, adapter):
         adapter.close()

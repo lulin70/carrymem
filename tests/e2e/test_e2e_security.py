@@ -9,6 +9,7 @@ Tests for:
 """
 
 import os
+import sqlite3
 import tempfile
 from pathlib import Path
 
@@ -22,12 +23,19 @@ class TestSQLInjectionPrevention:
     """Test SQL injection attack prevention."""
 
     def test_sql_injection_in_search_query(self):
-        """Test that SQL injection attempts in search queries are prevented."""
+        """Test that SQL injection attempts in search queries are prevented.
+
+        The search query reaches SQLite as a bound parameter, so every payload
+        must be treated as literal text: it matches nothing and leaves both the
+        schema and the stored rows untouched.
+        """
         with tempfile.TemporaryDirectory() as tmpdir:
-            cm = CarryMem(db_path=os.path.join(tmpdir, "test.db"))
+            db_path = os.path.join(tmpdir, "test.db")
+            cm = CarryMem(db_path=db_path)
 
             # Store legitimate memory
-            cm.classify_and_remember("Alice loves Python programming")
+            result = cm.classify_and_remember("Alice loves Python programming")
+            assert result["stored"] is True, "premise: a legitimate row must exist"
 
             # Attempt SQL injection in search
             malicious_queries = [
@@ -40,23 +48,29 @@ class TestSQLInjectionPrevention:
             ]
 
             for query in malicious_queries:
-                try:
-                    # Should not raise exception or return unexpected results
-                    results = cm.recall_memories(query=query, limit=10)
-                    # Should return empty or legitimate results only
-                    assert isinstance(results, list)
-                except Exception as e:
-                    # Some validation might raise exceptions, which is acceptable
-                    error_str = str(e).upper()
-                    # Should not expose SQL internals
-                    assert "DROP" not in error_str or "valid" in str(e).lower()
+                results = cm.recall_memories(query=query, limit=10)
+                assert results == [], f"injection payload {query!r} matched stored rows"
 
             cm.close()
 
+            conn = sqlite3.connect(db_path)
+            try:
+                tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+                assert "memories" in tables, "injection must not drop the memories table"
+                count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
+                assert count == 1, f"injection must not delete rows, count={count}"
+            finally:
+                conn.close()
+
     def test_sql_injection_in_namespace(self):
-        """Test SQL injection prevention in namespace parameter."""
+        """Test SQL injection prevention in namespace parameter.
+
+        ``namespace`` is a constructor-level scope (not a per-call kwarg), and it
+        is bound as a parameter: the payload is stored literally, each row stays
+        scoped to its own namespace, and the schema is untouched.
+        """
         with tempfile.TemporaryDirectory() as tmpdir:
-            cm = CarryMem(db_path=os.path.join(tmpdir, "test.db"))
+            db_path = os.path.join(tmpdir, "test.db")
 
             malicious_namespaces = [
                 "default'; DROP TABLE memories--",
@@ -64,17 +78,28 @@ class TestSQLInjectionPrevention:
                 "../../etc/passwd",
             ]
 
-            for ns in malicious_namespaces:
+            for idx, ns in enumerate(malicious_namespaces):
+                cm = CarryMem(db_path=db_path, namespace=ns)
                 try:
-                    # Should sanitize or reject malicious namespace
-                    cm.classify_and_remember("test content", namespace=ns)
-                    results = cm.recall_memories(query="test", namespace=ns, limit=5)
-                    assert isinstance(results, list)
-                except Exception as e:
-                    # Expected: validation should catch this
-                    assert "invalid" in str(e).lower() or "namespace" in str(e).lower()
+                    content = f"test content number {idx}"
+                    assert cm.declare(content)["declared"] is True
 
-            cm.close()
+                    results = cm.recall_memories(query=content, limit=5)
+                    assert len(results) == 1, f"namespace {ns!r} lost its own row"
+                    assert results[0]["namespace"] == ns, "namespace must be stored literally"
+                finally:
+                    cm.close()
+
+            conn = sqlite3.connect(db_path)
+            try:
+                tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+                assert "memories" in tables, "injection must not drop the memories table"
+                stored = {row[0] for row in conn.execute("SELECT namespace FROM memories")}
+                assert stored == set(malicious_namespaces), f"unexpected namespaces: {stored}"
+                count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
+                assert count == len(malicious_namespaces), f"expected one row per namespace, count={count}"
+            finally:
+                conn.close()
 
 
 class TestPathTraversalPrevention:
