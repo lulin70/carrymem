@@ -48,25 +48,6 @@ class SupersedeManager:
         "now live",
         "now work",
     ]
-    _PREFERENCE_KEYWORDS = {
-        "prefer",
-        "偏好",
-        "喜欢",
-        "选用",
-        "recommend",
-        "avoid",
-        "不用",
-        "别用",
-        "不要用",
-        "dislike",
-        "hate",
-        "never",
-        "always",
-        "switched",
-        "changed",
-        "replaced",
-        "instead",
-    }
     _ASSISTANT_PREFIXES = ("[assistant said]", "[ai said]", "[bot said]")
 
     def __init__(self, adapter):
@@ -92,9 +73,7 @@ class SupersedeManager:
             return
 
         entry_words = set(entry.content.lower().split())
-        entry_lower = entry.content.lower()
-        has_update_marker = self._has_update_marker(entry_lower)
-        entry_has_pref_kw = self._has_preference_keyword(entry_lower)
+        has_update_marker = self._has_update_marker(entry.content.lower())
 
         for row in rows:
             old_content = row["content"] or ""
@@ -105,7 +84,7 @@ class SupersedeManager:
             if jaccard is None:
                 continue
 
-            if not self._should_supersede(entry, old_content, has_update_marker, entry_has_pref_kw, jaccard):
+            if not self._should_supersede(entry, old_content, has_update_marker, jaccard):
                 continue
 
             if self._is_skip_content(entry.content):
@@ -121,11 +100,6 @@ class SupersedeManager:
             f" {m} " in f" {content_lower} " or content_lower.startswith(f"{m} ")
             for m in SupersedeManager._UPDATE_MARKERS
         )
-
-    @staticmethod
-    def _has_preference_keyword(content_lower: str) -> bool:
-        """Check if content contains a preference keyword."""
-        return any(kw in content_lower for kw in SupersedeManager._PREFERENCE_KEYWORDS)
 
     @staticmethod
     def _is_skip_content(content: str) -> bool:
@@ -147,17 +121,22 @@ class SupersedeManager:
         entry: MemoryEntry,
         old_content: str,
         has_update_marker: bool,
-        entry_has_pref_kw: bool,
         jaccard: float,
     ) -> bool:
-        """Decide whether old_content should be superseded by entry.content."""
+        """Decide whether old_content should be superseded by entry.content.
+
+        Only explicit signals qualify: a contradiction pair (like/dislike,
+        dark/light, ...) or an update marker (now, switched, no longer, ...)
+        combined with topical overlap. Mere keyword co-occurrence is NOT a
+        conflict signal — two independent preferences such as "I prefer
+        morning flights" and "I prefer evening flights" share the word
+        "prefer" and 0.6 Jaccard, yet the user may hold both. Superseding on
+        that basis silently removed a user's memory from recall (P0-1).
+        """
         if SupersedeManager.is_contradictory(entry.content, old_content):
             return True
         if has_update_marker and jaccard >= 0.40:
             return True
-        if entry.type == "user_preference" and entry_has_pref_kw:
-            if SupersedeManager._has_preference_keyword(old_content.lower()):
-                return True
         return False
 
     @staticmethod
