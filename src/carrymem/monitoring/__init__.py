@@ -104,6 +104,7 @@ class MetricsCollector:
                         "min": round(sorted_samples[0], 3),
                         "max": round(sorted_samples[-1], 3),
                         "avg": round(sum(sorted_samples) / n, 3),
+                        "p50": round(sorted_samples[n // 2], 3),
                         "p99": round(sorted_samples[p99_idx], 3),
                         "p95": round(sorted_samples[int(n * 0.95)], 3) if n > 20 else None,
                     }
@@ -134,18 +135,23 @@ class MetricsCollector:
             if stats.get("count", 0) > 0:
                 safe_op = op.replace("-", "_").replace(".", "_")
                 lines.append(f'carrymem_latency_ms{{operation="{safe_op}",quantile="0.99"}} {stats.get("p99", 0)}')
-                lines.append(f'carrymem_latency_ms{{operation="{safe_op}",quantile="0.95"}} {stats.get("p95", 0)}')
-                lines.append(f'carrymem_latency_ms{{operation="{safe_op}",quantile="0.5"}} {stats.get("avg", 0)}')
+                # p95 is only defined past 20 samples; emitting a literal
+                # "None" would be an unparseable exposition line.
+                p95 = stats.get("p95")
+                if p95 is not None:
+                    lines.append(f'carrymem_latency_ms{{operation="{safe_op}",quantile="0.95"}} {p95}')
+                lines.append(f'carrymem_latency_ms{{operation="{safe_op}",quantile="0.5"}} {stats.get("p50", 0)}')
                 latency_sum = round(stats.get("avg", 0) * stats["count"], 2)
                 lines.append(f'carrymem_latency_ms_sum{{operation="{safe_op}"}} {latency_sum}')
                 lines.append(f'carrymem_latency_ms_count{{operation="{safe_op}"}} {stats["count"]}')
 
-        # Gauges
-        if snapshot["gauges"]:
-            lines.append("\n# TYPE carrymem_gauge gauge")
-            for name, val in snapshot["gauges"].items():
-                safe_name = name.replace("-", "_").replace(".", "_")
-                lines.append(f"{safe_name} {val}")
+        # Gauges — one TYPE line per family. Emitting a single
+        # "# TYPE carrymem_gauge" header while publishing differently-named
+        # series does not declare those series, so each gauge declares itself.
+        for name, val in snapshot["gauges"].items():
+            safe_name = name.replace("-", "_").replace(".", "_")
+            lines.append(f"\n# TYPE {safe_name} gauge")
+            lines.append(f"{safe_name} {val}")
 
         lines.append(f"\n# TYPE carrymem_uptime_seconds gauge")
         lines.append(f'carrymem_uptime_seconds {snapshot["uptime_seconds"]}')
@@ -250,10 +256,71 @@ class HealthChecker:
         }
 
 
+# ── Process-level collector ───────────────────────────────────────────────
+#
+# Core operation paths record into a single process-wide collector, and the
+# MCP HTTP server exports that same instance from /metrics. Without a shared
+# instance the exporter can only ever report uptime (the v0.11.0 defect this
+# module now fixes).
+
+_GLOBAL_COLLECTOR: Optional[MetricsCollector] = None
+_GLOBAL_COLLECTOR_LOCK = threading.Lock()
+
+_STARTUP_REFERENCE: Optional[float] = None
+_STARTUP_RECORDED = False
+_STARTUP_LOCK = threading.Lock()
+
+
+def get_metrics_collector() -> MetricsCollector:
+    """Return the process-wide ``MetricsCollector``, creating it on first use.
+
+    Metrics are per-process: counters and latency samples reset when the
+    process restarts. CarryMem runs as a local single-instance tool, so no
+    cross-process aggregation is attempted.
+    """
+    global _GLOBAL_COLLECTOR
+    if _GLOBAL_COLLECTOR is None:
+        with _GLOBAL_COLLECTOR_LOCK:
+            if _GLOBAL_COLLECTOR is None:
+                _GLOBAL_COLLECTOR = MetricsCollector()
+    return _GLOBAL_COLLECTOR
+
+
+def mark_startup_reference() -> None:
+    """Mark the start of the ``carrymem`` package import.
+
+    Called while ``carrymem/__init__.py`` executes, before the heavy module
+    imports (``sentence_transformers`` -> torch), so the ``startup`` sample
+    includes them.
+    """
+    global _STARTUP_REFERENCE
+    _STARTUP_REFERENCE = time.perf_counter()
+
+
+def record_startup_once() -> None:
+    """Record the ``startup`` latency sample at most once per process.
+
+    Spans :func:`mark_startup_reference` (package import start) to the first
+    ``CarryMem`` construction. Later constructions deliberately produce no
+    sample: the reference is a fixed point in time, so measuring again would
+    report process uptime rather than startup cost.
+    """
+    global _STARTUP_RECORDED
+    with _STARTUP_LOCK:
+        if _STARTUP_RECORDED or _STARTUP_REFERENCE is None:
+            return
+        _STARTUP_RECORDED = True
+        reference = _STARTUP_REFERENCE
+    get_metrics_collector().record_latency("startup", (time.perf_counter() - reference) * 1000.0)
+
+
 __all__ = [
     "AlertSeverity",
     "SLOTarget",
     "_DEFAULT_SLOS",
     "MetricsCollector",
     "HealthChecker",
+    "get_metrics_collector",
+    "mark_startup_reference",
+    "record_startup_once",
 ]

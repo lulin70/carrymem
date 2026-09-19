@@ -11,13 +11,19 @@ Run:
 
 import os
 import sys
+import time
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from carrymem import monitoring
+from carrymem.carrymem import CarryMem
+from carrymem.exceptions import ValidationError
 from carrymem.monitoring import (
     HealthChecker,
     MetricsCollector,
+    get_metrics_collector,
+    record_startup_once,
 )
 
 
@@ -217,6 +223,153 @@ class TestHealthChecker(unittest.TestCase):
         slo_classify = next((s for s in result["slo"] if s["operation"] == "classify_and_remember"), None)
         self.assertIsNotNone(slo_classify)
         self.assertIs(slo_classify["within_slo"], True)
+
+
+class TestProcessCollector(unittest.TestCase):
+    """The exporter and the instrumentation writers must share one instance."""
+
+    def test_get_metrics_collector_is_process_wide_singleton(self):
+        """Repeated calls return the same collector — otherwise /metrics can
+        never observe samples written by core operation paths."""
+        self.assertIs(get_metrics_collector(), get_metrics_collector())
+        self.assertIs(get_metrics_collector(), get_metrics_collector())
+
+    def test_written_sample_is_visible_to_a_second_caller(self):
+        """A sample written through one reference is readable through another."""
+        get_metrics_collector().reset()
+        get_metrics_collector().increment("shared_probe")
+        self.assertEqual(get_metrics_collector().get_snapshot()["counters"]["shared_probe"], 1)
+        get_metrics_collector().reset()
+
+
+class TestStartupInstrumentation(unittest.TestCase):
+    """`startup` is a one-shot, process-level measurement."""
+
+    def setUp(self):
+        self.mc = get_metrics_collector()
+        self.mc.reset()
+        self._saved = (monitoring._STARTUP_REFERENCE, monitoring._STARTUP_RECORDED)
+
+    def tearDown(self):
+        monitoring._STARTUP_REFERENCE, monitoring._STARTUP_RECORDED = self._saved
+        self.mc.reset()
+
+    def test_records_latency_measured_from_the_package_import_reference(self):
+        """The sample covers the window opened at package import."""
+        monitoring._STARTUP_REFERENCE = time.perf_counter() - 0.05
+        monitoring._STARTUP_RECORDED = False
+
+        record_startup_once()
+
+        stats = self.mc.get_snapshot()["latency"]["startup"]
+        self.assertEqual(stats["count"], 1)
+        self.assertGreaterEqual(stats["p99"], 40.0, "should measure the ~50ms reference window")
+
+    def test_second_call_does_not_add_another_sample(self):
+        """A second construction must not record process uptime as 'startup'."""
+        monitoring._STARTUP_REFERENCE = time.perf_counter() - 0.05
+        monitoring._STARTUP_RECORDED = False
+
+        record_startup_once()
+        record_startup_once()
+
+        self.assertEqual(self.mc.get_snapshot()["latency"]["startup"]["count"], 1)
+
+    def test_no_sample_without_a_reference(self):
+        """Without the import reference there is nothing meaningful to record."""
+        monitoring._STARTUP_REFERENCE = None
+        monitoring._STARTUP_RECORDED = False
+
+        record_startup_once()
+
+        self.assertNotIn("startup", self.mc.get_snapshot()["latency"])
+
+
+class TestCoreOperationInstrumentation(unittest.TestCase):
+    """The /metrics series must be produced by real core operation paths."""
+
+    def setUp(self):
+        self.mc = get_metrics_collector()
+        self.mc.reset()
+        self.cm = CarryMem(storage="sqlite", db_path=":memory:")
+
+    def tearDown(self):
+        self.cm.close()
+        self.mc.reset()
+
+    def test_control_group_publishes_nothing_before_an_operation_runs(self):
+        """Control group: absence of series proves later assertions are not vacuous."""
+        snap = self.mc.get_snapshot()
+        self.assertEqual(snap["counters"], {})
+        self.assertNotIn("classify_and_remember", snap["latency"])
+        self.assertNotIn("recall", snap["latency"])
+
+    def test_classify_and_remember_records_counter_and_latency(self):
+        result = self.cm.classify_and_remember("I prefer dark mode for coding")
+        self.assertTrue(result["stored"], f"expected a stored memory, got {result}")
+
+        snap = self.mc.get_snapshot()
+        self.assertEqual(snap["counters"]["classify_and_remember"], 1)
+        self.assertEqual(snap["latency"]["classify_and_remember"]["count"], 1)
+
+    def test_recall_memories_records_counter_and_latency(self):
+        self.cm.classify_and_remember("I prefer dark mode for coding")
+        before = self.mc.get_snapshot()["counters"].get("recall", 0)
+
+        hits = self.cm.recall_memories("dark mode")
+        self.assertGreaterEqual(len(hits), 1)
+
+        snap = self.mc.get_snapshot()
+        self.assertGreater(snap["counters"]["recall"], before)
+        self.assertGreaterEqual(snap["latency"]["recall"]["count"], 1)
+
+    def test_failed_classify_records_error_counter_and_reraises(self):
+        """A failing operation must be visible: silence would look like health."""
+        with self.assertRaises(ValidationError):
+            self.cm.classify_and_remember("")
+
+        snap = self.mc.get_snapshot()
+        self.assertEqual(snap["counters"].get("classify_and_remember", 0), 0)
+        self.assertEqual(snap["counters"]["classify_and_remember_errors"], 1)
+        self.assertEqual(snap["latency"]["classify_and_remember"]["count"], 1)
+
+    def test_slo_entries_report_real_values_not_no_data(self):
+        """HealthChecker must consume the same collector the core writes to."""
+        self.cm.classify_and_remember("I prefer dark mode for coding")
+        self.cm.recall_memories("dark mode")
+
+        slo = {entry["operation"]: entry for entry in HealthChecker(metrics_collector=self.mc).check()["slo"]}
+        self.assertNotEqual(slo["classify_and_remember"].get("status"), "no_data")
+        self.assertNotEqual(slo["recall"].get("status"), "no_data")
+        self.assertIs(slo["classify_and_remember"]["within_slo"], True)
+        self.assertIs(slo["recall"]["within_slo"], True)
+
+
+class TestPrometheusExpositionContract(unittest.TestCase):
+    """`/metrics` is an external contract: every emitted line must be parseable."""
+
+    def test_each_gauge_declares_its_own_type(self):
+        mc = MetricsCollector()
+        mc.set_gauge("carrymem_sse_clients", 3)
+        output = mc.to_prometheus()
+        self.assertIn("# TYPE carrymem_sse_clients gauge", output)
+        self.assertIn("carrymem_sse_clients 3", output)
+
+    def test_no_unparseable_none_values_below_20_samples(self):
+        """p95 is undefined for <=20 samples; it must be omitted, not printed as None."""
+        mc = MetricsCollector()
+        mc.record_latency("few_samples", 12.5)
+        output = mc.to_prometheus()
+        self.assertNotIn("None", output)
+        self.assertIn('quantile="0.99"', output)
+
+    def test_half_quantile_reports_the_median_not_the_mean(self):
+        """quantile="0.5" must be a real median (avg would misrepresent the tail)."""
+        mc = MetricsCollector()
+        for value in (1.0, 2.0, 100.0):
+            mc.record_latency("skewed", value)
+        output = mc.to_prometheus()
+        self.assertIn('carrymem_latency_ms{operation="skewed",quantile="0.5"} 2.0', output)
 
 
 if __name__ == "__main__":

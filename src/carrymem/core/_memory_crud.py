@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 from carrymem.adapters.base import MemoryEntry, VersioningProvider
 from carrymem.constants import BATCH_RECALL_LIMIT, MAX_MESSAGE_LENGTH
 from carrymem.core._lifecycle import StorageNotConfiguredError
 from carrymem.exceptions import ClassificationError
+from carrymem.monitoring import get_metrics_collector
 from carrymem.types import (
     ClassificationResult,
     DeclareResult,
@@ -131,7 +133,34 @@ class MemoryCRUDMixin:
         force_type: Optional[str] = None,
         user_id: Optional[str] = None,
     ) -> ClassificationResult:
-        """Classify a message and persist the resulting memory entries."""
+        """Classify a message and persist the resulting memory entries.
+
+        Instrumented: the whole call produces exactly one latency sample plus
+        either one success counter or one error counter, covering every
+        early-return path (redaction, classification failure) as well.
+        """
+        metrics = get_metrics_collector()
+        started = time.perf_counter()
+        try:
+            result = self._classify_and_remember_impl(message, context, language, session_id, force_type, user_id)
+        except Exception:
+            metrics.increment("classify_and_remember_errors")
+            raise
+        finally:
+            metrics.record_latency("classify_and_remember", (time.perf_counter() - started) * 1000.0)
+        metrics.increment("classify_and_remember")
+        return result
+
+    def _classify_and_remember_impl(
+        self,
+        message: str,
+        context: Optional[Dict[str, Any]] = None,
+        language: Optional[str] = None,
+        session_id: Optional[str] = None,
+        force_type: Optional[str] = None,
+        user_id: Optional[str] = None,
+    ) -> ClassificationResult:
+        """Uninstrumented implementation of :meth:`classify_and_remember`."""
         self._check_write_permission(user_id)
 
         # Validate input BEFORE checking storage adapter so that invalid

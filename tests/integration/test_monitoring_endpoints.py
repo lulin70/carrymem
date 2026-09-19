@@ -6,6 +6,7 @@ import json
 import pytest
 
 from carrymem.integration.layer2_mcp.http_server import MCPHTTPServer
+from carrymem.monitoring import get_metrics_collector
 
 
 async def _wait_for_server(host: str, port: int, timeout: float = 5.0) -> None:
@@ -24,6 +25,17 @@ async def _wait_for_server(host: str, port: int, timeout: float = 5.0) -> None:
     raise RuntimeError(f"Server at {host}:{port} did not start within {timeout}s: {last_err}")
 
 
+async def _read_all(reader) -> str:
+    """Read the full response body until the server closes the connection."""
+    chunks = []
+    while True:
+        chunk = await reader.read(65536)
+        if not chunk:
+            break
+        chunks.append(chunk)
+    return b"".join(chunks).decode()
+
+
 async def _http_get(host: str, port: int, path: str) -> str:
     """Send a GET request and return the response string."""
     reader, writer = await asyncio.open_connection(host, port)
@@ -31,11 +43,35 @@ async def _http_get(host: str, port: int, path: str) -> str:
         request = f"GET {path} HTTP/1.1\r\nHost: localhost\r\n\r\n".encode()
         writer.write(request)
         await writer.drain()
-        response = await reader.read(4096)
-        return response.decode()
+        return await _read_all(reader)
     finally:
         writer.close()
         await writer.wait_closed()
+
+
+async def _http_post(host: str, port: int, path: str, payload: dict) -> str:
+    """Send a JSON POST request and return the response string."""
+    reader, writer = await asyncio.open_connection(host, port)
+    try:
+        body = json.dumps(payload).encode()
+        request = (
+            f"POST {path} HTTP/1.1\r\n"
+            "Host: localhost\r\n"
+            "Content-Type: application/json\r\n"
+            f"Content-Length: {len(body)}\r\n"
+            "\r\n"
+        ).encode() + body
+        writer.write(request)
+        await writer.drain()
+        return await _read_all(reader)
+    finally:
+        writer.close()
+        await writer.wait_closed()
+
+
+def _body_of(response: str) -> str:
+    """Return everything after the HTTP header block."""
+    return response[response.find("\r\n\r\n") + 4 :]
 
 
 class TestMonitoringEndpoints:
@@ -124,6 +160,74 @@ class TestMonitoringEndpoints:
             response = await _http_get("127.0.0.1", 18767, "/metrics")
             assert "401" not in response  # Should not be unauthorized
             assert "200" in response
+        finally:
+            await server.stop()
+            server_task.cancel()
+            try:
+                await server_task
+            except asyncio.CancelledError:
+                pass
+
+
+class TestInstrumentedMetricsEndToEnd:
+    """Real TCP HTTP + real SQLite: series must come from a real tool call.
+
+    This is the end-to-end proof of the v0.11.0 observability decision: the
+    exporter and the core operation paths share one collector, so a real MCP
+    tool call becomes visible in both /metrics and the /healthz SLO section.
+    """
+
+    @pytest.mark.asyncio
+    async def test_real_tool_call_produces_metrics_and_slo_data(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("CARRYMEM_DATA_PATH", str(tmp_path))
+        monkeypatch.setenv("CARRYMEM_BACKUP_DIR", str(tmp_path / "backups"))
+
+        port = 18768
+        server = MCPHTTPServer(host="127.0.0.1", port=port)
+        server_task = asyncio.create_task(server.start())
+        await _wait_for_server("127.0.0.1", port)
+
+        try:
+            collector = get_metrics_collector()
+            collector.reset()
+
+            # Control group: before the operation runs, the series must not exist.
+            before = await _http_get("127.0.0.1", port, "/metrics")
+            assert 'operation="classify_and_remember"' not in before, (
+                "the series must not be published before any operation ran; " f"got:\n{before}"
+            )
+
+            raw = await _http_post(
+                "127.0.0.1",
+                port,
+                "/message",
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "classify_and_remember",
+                        "arguments": {"message": "I prefer dark mode for coding"},
+                    },
+                },
+            )
+            assert "200 OK" in raw, f"tool call did not succeed:\n{raw}"
+            payload = json.loads(_body_of(raw))
+            tool_result = json.loads(payload["result"]["content"][0]["text"])
+            assert tool_result.get("success") is True, f"tool call returned an error: {tool_result}"
+
+            after = await _http_get("127.0.0.1", port, "/metrics")
+            assert 'carrymem_total{operation="classify_and_remember"} 1' in after, f"missing counter in:\n{after}"
+            assert (
+                'carrymem_latency_ms_count{operation="classify_and_remember"} 1' in after
+            ), f"missing latency sample in:\n{after}"
+            assert "None" not in after, f"exposition must stay parseable:\n{after}"
+
+            health_raw = await _http_get("127.0.0.1", port, "/healthz")
+            health = json.loads(_body_of(health_raw))
+            entry = next(e for e in health["slo"] if e["operation"] == "classify_and_remember")
+            assert "status" not in entry, f"SLO entry must carry real data, got {entry}"
+            assert entry["within_slo"] is True, f"unexpected SLO violation: {entry}"
         finally:
             await server.stop()
             server_task.cancel()

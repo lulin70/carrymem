@@ -30,7 +30,7 @@ import uuid
 from typing import Any, Dict, Optional
 
 from carrymem.__version__ import __version__ as _version
-from carrymem.monitoring import HealthChecker, MetricsCollector
+from carrymem.monitoring import HealthChecker, get_metrics_collector
 
 from .server import MCPServer
 
@@ -81,8 +81,10 @@ class MCPHTTPServer:
         self._clients: Dict[str, SSEClient] = {}
         self._server: Optional[asyncio.AbstractServer] = None
         self._mcq_server: Optional[MCPServer] = None
-        # Monitoring components
-        self._metrics = MetricsCollector()
+        # Monitoring components — the process-wide collector, so /metrics and
+        # /healthz export the samples written by real core operation paths
+        # instead of an isolated, permanently empty instance.
+        self._metrics = get_metrics_collector()
         self._health_checker = HealthChecker(metrics_collector=self._metrics)
 
     def _check_auth(self, headers: Dict[str, str]) -> bool:
@@ -276,6 +278,7 @@ class MCPHTTPServer:
         client_id = str(uuid.uuid4())
         client = SSEClient(client_id)
         self._clients[client_id] = client
+        self._metrics.set_gauge("carrymem_sse_clients", len(self._clients))
 
         cors_origin = self._get_cors_origin(request_origin)
         headers = (
@@ -307,6 +310,7 @@ class MCPHTTPServer:
         finally:
             client.close()
             self._clients.pop(client_id, None)
+            self._metrics.set_gauge("carrymem_sse_clients", len(self._clients))
 
     async def _handle_message(self, writer, body: bytes, request_origin: str = ""):
         try:

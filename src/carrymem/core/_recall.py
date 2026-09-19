@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
@@ -10,6 +11,7 @@ from carrymem.adapters.base import RawConnectionProvider
 from carrymem.adapters.obsidian_adapter import ObsidianAdapter
 from carrymem.constants import DEFAULT_RECALL_LIMIT, RULE_MATCH_LIMIT_CAP
 from carrymem.core._lifecycle import KnowledgeNotConfiguredError, StorageNotConfiguredError
+from carrymem.monitoring import get_metrics_collector
 from carrymem.types import StoredMemoryDict
 from carrymem.utils.validators import validate_limit, validate_query
 
@@ -127,20 +129,34 @@ class RecallMixin:
         namespaces: Optional[List[str]] = None,
         update_access: bool = True,
     ) -> List[Dict[str, Any]]:
-        """Recall stored memories matching the query."""
-        if not self._adapter:
-            raise StorageNotConfiguredError()
+        """Recall stored memories matching the query.
 
-        validate_query(query or "")
-        validate_limit(limit)
-        results = self._adapter.recall(
-            query or "",
-            filters=filters,
-            limit=limit,
-            namespaces=namespaces,
-            update_access=update_access,
-        )
-        return [r.to_dict() for r in results]
+        Instrumented: one latency sample per call plus a success or error
+        counter, matching the ``recall`` SLO entry in ``monitoring._DEFAULT_SLOS``.
+        """
+        metrics = get_metrics_collector()
+        started = time.perf_counter()
+        try:
+            if not self._adapter:
+                raise StorageNotConfiguredError()
+
+            validate_query(query or "")
+            validate_limit(limit)
+            results = self._adapter.recall(
+                query or "",
+                filters=filters,
+                limit=limit,
+                namespaces=namespaces,
+                update_access=update_access,
+            )
+            payload = [r.to_dict() for r in results]
+        except Exception:
+            metrics.increment("recall_errors")
+            raise
+        finally:
+            metrics.record_latency("recall", (time.perf_counter() - started) * 1000.0)
+        metrics.increment("recall")
+        return payload
 
     def recall_aggregated(
         self,

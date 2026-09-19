@@ -110,7 +110,7 @@ src/carrymem/
 │   └── devsquad/            # DevSquad 适配器
 │
 ├── llm/                     # LLM 客户端抽象
-├── monitoring/              # 监控（预留）
+├── monitoring/              # 指标采集（core 操作路径埋点）+ /metrics 导出 + SLO 健康检查
 ├── security/                # 加密 + 权限 + 审计 + 输入校验 + 脱敏
 │
 └── [根级模块]               # ~30 个平铺模块文件

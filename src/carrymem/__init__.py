@@ -21,8 +21,15 @@ CLI:
 
 import os as _os
 
+from carrymem.monitoring import mark_startup_reference
+
 _os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 _os.environ.setdefault("HF_HUB_OFFLINE", "1")
+
+# Start of the process "startup" SLO window. Captured before the heavy adapter
+# imports below (sentence_transformers -> torch) because that import cost is
+# exactly what the startup SLO is meant to surface.
+mark_startup_reference()
 
 from carrymem.adapters.base import MemoryEntry, StorageAdapter, StoredMemory
 from carrymem.adapters.json_adapter import JSONAdapter

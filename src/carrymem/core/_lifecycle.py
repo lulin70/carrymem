@@ -10,12 +10,14 @@ from types import TracebackType
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, Union
 
 from carrymem.adapters.base import StorageAdapter
+from carrymem.adapters.json_adapter import JSONAdapter
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.engine import MemoryClassificationEngine
 from carrymem.error_messages import get_hint, get_message
 from carrymem.errors import CarryMemError
 from carrymem.exceptions import KnowledgeNotConfiguredError as _KnowledgeNotConfiguredError
 from carrymem.exceptions import StorageNotConfiguredError as _StorageNotConfiguredError
+from carrymem.monitoring import record_startup_once
 from carrymem.rules.candidate_generator import RuleCandidateGenerator
 
 if TYPE_CHECKING:
@@ -138,6 +140,11 @@ class LifecycleMixin:
         self._init_entity_normalizer()
         self._perform_initial_backup()
 
+        # Observability: the first construction in a process closes the
+        # "startup" SLO window opened by carrymem/__init__.py. Later
+        # constructions are no-ops by design (see monitoring.record_startup_once).
+        record_startup_once()
+
     @staticmethod
     def _resolve_db_path(db_path: Optional[str]) -> Optional[str]:
         if db_path is None:
@@ -175,7 +182,7 @@ class LifecycleMixin:
         if isinstance(storage, StorageAdapter):
             return storage
         if isinstance(storage, str):
-            return self._init_adapter_from_name(storage)
+            return self._init_adapter_from_name(storage, db_path)
         raise CarryMemError(
             code="CM-202",
             message=get_message("CM-202"),
@@ -184,7 +191,7 @@ class LifecycleMixin:
         )
 
     @staticmethod
-    def _init_adapter_from_name(storage: str) -> StorageAdapter:
+    def _init_adapter_from_name(storage: str, db_path: Optional[str] = None) -> StorageAdapter:
         from carrymem.adapters.loader import load_adapter
 
         try:
@@ -205,6 +212,11 @@ class LifecycleMixin:
                 hint=get_hint("CM-110"),
                 cause=ValueError("ObsidianAdapter requires a vault_path."),
             )
+        if storage == "json":
+            # db_path must reach the JSON adapter: dropping it silently
+            # redirected every write to ~/.carrymem/memories.json, ignoring
+            # both the caller's path and CARRYMEM_DB_PATH.
+            return JSONAdapter(path=db_path)
         return adapter_cls()
 
     def _init_rule_engine_eager(self) -> None:
