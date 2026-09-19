@@ -48,7 +48,7 @@ carrymem version
 
 期待される出力：
 ```
-CarryMem v0.10.1
+CarryMem v0.11.0
 ```
 
 ### 2. インポート確認

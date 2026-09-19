@@ -10,7 +10,7 @@
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI 版本"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-4322-brightgreen" alt="测试">
+  <img src="https://img.shields.io/badge/tests-4948%20passed%2C%204%20skipped-brightgreen" alt="测试">
   <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="覆盖率">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval 学术基准"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
@@ -112,7 +112,7 @@ cd carrymem && pip install -e ".[dev]"
 
 | 功能 | 依赖包 | 安装命令 |
 |------|--------|----------|
-| 核心功能（含加密） | PyYAML≥5.0, cryptography≥46.0.6 | 自动包含 |
+| 核心功能（含加密） | PyYAML≥5.0, cryptography≥50.0.0 | 自动包含 |
 | 多语言检测 | pycld2, langdetect | `pip install carrymem[language]` |
 | 语义搜索 | sqlite-vec, sentence-transformers | `pip install carrymem[semantic]` |
 
@@ -171,10 +171,9 @@ carrymem backup --restore <path> # 从备份恢复
 - 主动注入 > 全量提醒 — 首个证明这一点的系统
 - 比提醒方式减少 24% 无用回答（28 vs 38）— 更精准，更少噪音
 
-### 2. 零 LLM 分类 — 88% 无需调用任何 LLM
-- 规则引擎分类 88% 的记忆，零 Token 消耗
-- 唯一内置规则引擎的系统（竞争对手：0%）
-- P99 延迟：1.3ms — 比 Mem0 快 93 倍
+### 2. 零 LLM 分类 — 规则优先
+- 规则引擎优先处理符合条件的输入，不消耗 LLM Token；历史内部快照曾报告 88%，但该数据没有版本化数据集，不作为当前发布门禁。
+- 当前可复现行为请运行仓库测试与 benchmark；历史 P99 延迟和竞品对比仅在有可复现 artifact 时使用。
 
 ### 3. 轻量可携带 — 仅 SQLite
 - 核心功能零外部依赖
@@ -188,7 +187,7 @@ carrymem backup --restore <path> # 从备份恢复
 ```
 用户输入
     ↓
-自动分类（7 种类型，4 层）  ← 88% 零 LLM
+自动分类（7 种类型，规则优先）  → 智能存储（SQLite + FTS5）
     ↓
 重要性评分（confidence × type × recency × access）
     ↓
@@ -535,8 +534,9 @@ carrymem tui
 
 | | 优势 | 结果 |
 |---|------|------|
-| 💰 | 零 LLM 摄入 | **88%** 记忆无需 **LLM Token** |
-| ⚡ | P99 延迟 | **1.3ms** — 比 Mem0 **快 93 倍** |
+| 💰 | 零 LLM 摄入 | 历史内部快照：抽样输入中 88% 走规则路径；数据集 artifact 当前未版本化 |
+| ⚡ | P99 延迟 | 历史内部结果：1.3ms；当前可复现 benchmark：`pytest tests/test_performance_benchmark.py -k classify_and_remember -s` |
+| 🔬 | Mem0 对比 | 历史 93x 对比不属于当前发布声明；仓库未提供可复现对比 harness |
 | 🪶 | 依赖 | **仅需 SQLite** — 无需向量数据库 |
 | 🛡️ | 规则引擎 | **唯一拥有**规则引擎（竞争对手：0%） |
 
@@ -649,9 +649,9 @@ cm.import_memories(input_path="backup.json")
 
 ## 项目状态
 
-**当前版本**：v0.10.1
-**测试**：4878 collected (incl. 263 E2E)
-**覆盖率**：80%+
+**当前版本**：v0.11.0
+**测试**：4948 passed, 4 skipped
+**质量门禁**：flake8 / Black / isort / mypy / radon 全部通过
 
 **更新日志**：
 - **v0.2.0**：USB 携带加密、自动备份、并发安全、PrefEval 83.0%（200 条）、8 客户端 MCP 配置

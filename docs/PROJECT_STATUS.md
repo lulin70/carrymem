@@ -1,21 +1,30 @@
 # CarryMem — Project Status
 
-**Version**: v0.10.1
-**Last Updated**: 2026-09-07
+**Version**: v0.11.0
+**Last Updated**: 2026-09-09
 **Maintainer**: CarryMem Team
 
 ---
 
-## v0.10.1 Project Status (2026-09-07)
+## v0.11.0 Project Status (2026-09-09)
 
-**Current State**: Production-ready beta. v0.10.1 is a PATCH release (CLI startup cost fix, L-V0100-006). 2026-09-07 项目整理评估完成：MCP 清单（server.json/smithery.yaml）补齐 3 个 graph 工具并同步版本号、config_path 断链修复、RuleEngine 收敛为 facade 单实例、E2E 守门员修复（幽灵 pack API → 真实 backup/restore 往返、真实 export→import 迁移、精确加密异常断言）、文档批量同步。
+**Current State**: Release candidate preparation. This is a MINOR breaking release: `AsyncCarryMem` now exposes only the executor-backed async facade; native async SQLite I/O remains available through standalone `AsyncSQLiteAdapter`. The core encryption floor is `cryptography>=50.0.0`.
+
+The P1-P2 technical-debt closure is complete. E1/E2 local CI gates are reproducible and blocking, and D5 benchmark claims now distinguish current reproducible measurements from historical internal snapshots.
+
+### Release Evidence
+
+- **Regression**: Full-suite regression is still running in a detached process; prior completed evidence is `4939 passed, 13 skipped, 244 warnings, 25 subtests passed`. The previously observed CLI timeout was resolved by giving subprocess entry-point tests a 60-second startup budget; the isolated test passed in 17.82s and the complete entry-point module passed (`16 passed`).
+- **Quality gates**: flake8, Black, isort, mypy, and radon all passed in `scripts/ci_local_check.py`.
+- **Async migration**: remove `native_async=True` from `AsyncCarryMem`; use `AsyncCarryMem` for executor-backed calls or `AsyncSQLiteAdapter` directly for native async SQLite I/O.
+- **Benchmark provenance**: the 88% rule-path and 93x Mem0 comparison remain historical claims without versioned artifacts; the repository ships a reproducible CarryMem benchmark command for current measurements.
 
 ### Recent Releases
 
 | Version | Date | Key Changes |
 |---------|------|-------------|
-| v0.10.1 | 2026-09-05 | CLI startup cost fix (PATCH): `python -m carrymem version` fast path + test_installation subprocess timeouts 10s/15s → 60s (L-V0100-006). |
-| v0.10.0 | 2026-09-05 | Repeat-correction upgrade: detect_repeat_correction() + semantic dedup (Jaccard + entity) + security-keyword bypass (forge 借鉴点 2). |
+| v0.11.0 | 2026-09-08 | Breaking async API cleanup, cryptography 50 floor, reproducible local CI gates, and benchmark provenance corrections. |
+| v0.10.0 | 2026-09-05 | Repeat-correction upgrade: `detect_repeat_correction()` + semantic dedup (Jaccard + entity) + security-keyword bypass (Forge-inspired). |
 | v0.9.9 | 2026-08-03 | Methodology: orthogonal classification table (METHODOLOGY.md) + design space positioning (README + COMPETITIVE_ANALYSIS). |
 | v0.9.8 | 2026-07-27 | Knowledge graph deletion completeness: `forget()` cascades to `memory_entities` + `memory_relations` (TD-066). 4 new tests. Oracle Agent Memory report启发. |
 | v0.9.7 | 2026-07-26 | Tech debt cleanup: TD-003b/009/011b/002 follow-ups (deleted cli.py facade, added TUI fallback tests, downgraded SQLITE_SCHEMA to P3) |
@@ -424,7 +433,7 @@ each py3.11 + py3.12).
 
 ## Next Milestone
 
-**v0.11.0** (next MINOR — will ship the `native_async` mode removal (breaking API change, see ADR-009 revision) + cryptography 50 floor from the 2026-09-07 security-PR merge; version MUST be 0.11.0, not 0.10.2, per SemVer)
+**v0.11.0** (release candidate — ships the `native_async` mode removal as a breaking API change, plus the `cryptography>=50.0.0` floor and reproducible release gates; see ADR-009. This release is `0.11.0`, not `0.10.2`, per SemVer.)
 
 Potential areas for v0.10.0+ (per CARRYMEM_ARCHITECTURE_EVOLUTION_PLAN.md):
 - Vector search enhancements (HNSW indexing, approximate nearest neighbor)

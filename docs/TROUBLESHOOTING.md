@@ -1770,7 +1770,7 @@ carrymem doctor
 
 **Error examples**:
 ```
-pkg_resources.VersionConflict: (cryptography 40.0.0 (installed), Requirement.parse('cryptography>=46.0.6'))
+pkg_resources.VersionConflict: (cryptography 40.0.0 (installed), Requirement.parse('cryptography>=50.0.0'))
 ImportError: cannot import name 'Fernet' from 'cryptography'
 AttributeError: module 'pycld2' has no attribute 'detect'
 ```
@@ -1812,18 +1812,18 @@ If a system package pins an old version (e.g., `cryptography<40`):
 pipx install carrymem
 
 # Option B: Force-reinstall the correct version
-pip install --force-reinstall --no-deps cryptography>=46.0.6
+pip install --force-reinstall --no-deps 'cryptography>=50.0.0'
 
 # Option C: Use --no-deps to skip dependency resolution
 pip install carrymem --no-deps
-pip install cryptography>=46.0.6 PyYAML>=5.0  # install required deps manually
+pip install 'cryptography>=50.0.0' PyYAML>=5.0  # install required deps manually
 ```
 
 **Optional dependency matrix** (if a feature fails):
 
 | Feature | Required Package | Install Command |
 |---------|------------------|-----------------|
-| Encryption (required) | `cryptography>=46.0.6` | `pip install carrymem` (included) |
+| Encryption (required) | `cryptography>=50.0.0` | `pip install carrymem` (included) |
 | Multi-language | `pycld2`, `langdetect` | `pip install carrymem[language]` |
 | Semantic search | `sqlite-vec`, `sentence-transformers` | `pip install carrymem[semantic]` |
 | TUI | `textual` | `pip install textual` |

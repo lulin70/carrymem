@@ -10,7 +10,7 @@
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI バージョン"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-4322-brightgreen" alt="テスト">
+  <img src="https://img.shields.io/badge/tests-4948%20passed%2C%204%20skipped-brightgreen" alt="テスト">
   <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="カバレッジ">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval 学術ベンチマーク"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
@@ -140,10 +140,9 @@ carrymem backup --restore <path> # バックアップから復元
 - プロアクティブ注入 > フルリマインダー — これを証明した初のシステム
 - リマインダーより24%少ない役立たず回答（28 vs 38）— より正確、より少ないノイズ
 
-### 2. ゼロ LLM 分類 — 88% LLM 呼び出し不要
-- ルールエンジンが88%のメモリを分類、ゼロ Token 消費
-- ルールエンジン内蔵の唯一のシステム（競合：0%）
-- P99 レイテンシ：1.3ms — Mem0 より93倍高速
+### 2. ゼロ LLM 分類 — ルール優先
+- ルールエンジンは対象入力を LLM Token なしで先に処理します。88% はバージョン管理されたデータセットのない過去の内部スナップショットであり、リリースゲートではありません。
+- 現在の再現可能な挙動はリポジトリのテストと benchmark で確認できます。過去の P99 と競合比較は再現可能な artifact がある場合に限ります。
 
 ### 3. 軽量・ポータブル — SQLite のみ
 - コア機能に外部依存関係ゼロ
@@ -157,7 +156,7 @@ carrymem backup --restore <path> # バックアップから復元
 ```
 ユーザー入力
     ↓
-自動分類（7タイプ、4層）  ← 88% ゼロ LLM
+自動分類（7タイプ、ルール優先） → スマートストレージ（SQLite + FTS5）
     ↓
 重要度スコアリング（confidence × type × recency × access）
     ↓
@@ -523,8 +522,10 @@ carrymem tui
 
 | | 利点 | 結果 |
 |---|------|------|
-| 💰 | ゼロLLM取り込み | **88%** のメモリはLLMトークン不要 |
-| ⚡ | P99レイテンシ | **1.3ms** — Mem0より**93倍高速** |
+| 💰 | ゼロLLM取り込み | 過去の内部スナップショット：サンプル入力の88%がルール経路。データセットは未バージョン化 |
+| ⚡ | P99レイテンシ | 過去の内部結果：1.3ms。現在の再現可能 benchmark：`pytest tests/test_performance_benchmark.py -k classify_and_remember -s` |
+| 🔬 | Mem0比較 | 過去の93x比較は現在のリリース声明ではありません。再現可能な比較 harness は未提供 |
+
 | 🪶 | 依存関係 | **SQLiteのみ** — ベクトルDB不要 |
 | 🛡️ | ルールエンジン | **唯一**ルールエンジン搭載（競合：0%） |
 
@@ -637,8 +638,8 @@ AI にはメモリが必要だと知っている。プロンプトファイル�
 
 ## プロジェクトステータス
 
-**現在のバージョン**: v0.10.1
-**テスト**: 4878 collected (incl. 263 E2E)
+**現在のバージョン**: v0.11.0
+**テスト**: 4948 passed, 4 skipped
 **カバレッジ**: 80%+
 
 **チェンジログ**:

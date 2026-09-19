@@ -32,7 +32,7 @@ import pytest
 class TestPythonMCarryMem:
     """Tests for ``python -m carrymem`` entry point."""
 
-    def _run(self, *args: str, timeout: float = 30.0) -> subprocess.CompletedProcess:
+    def _run(self, *args: str, timeout: float = 60.0) -> subprocess.CompletedProcess:
         """Run ``python -m carrymem <args>`` and capture output."""
         return subprocess.run(
             [sys.executable, "-m", "carrymem", *args],

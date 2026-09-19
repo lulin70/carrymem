@@ -527,7 +527,7 @@ See CHANGELOG.md for detailed history.
 - [x] `AsyncSQLiteAdapter` (`src/carrymem/adapters/async_sqlite.py`): Native async SQLite using aiosqlite. Same SQL as SQLiteAdapter with async I/O
 - [x] Implements: `connect`, `store_entry`, `recall`, `forget_memory`, `count`, `close`. Async context manager protocol
 - [x] `[async]` extra: `pip install carrymem[async]` installs aiosqlite>=0.19
-- [x] `AsyncCarryMem.native_async` mode: `native_async=True` parameter. Sync methods raise `RuntimeError` when enabled (and vice versa) — **removed after v0.10.1** (2026-09-07, ships in v0.11.0; unusable promise: 16/20 methods raised unconditionally; see ADR-009 revision)
+- [x] `AsyncCarryMem.native_async` historical mode — removed after v0.10.1 (2026-09-07, ships in v0.11.0; unusable promise: 16/20 methods raised unconditionally; see ADR-009 revision)
 - [x] Dual-mode coexistence: sync `SQLiteAdapter` (zero-dep) + `AsyncSQLiteAdapter` ([async] extra)
 
 **Architecture**:
@@ -843,7 +843,7 @@ carrymem unpack team-identity.carry
 | v0.7.3 | 4331+ tests | 80%+ | +Fernet-only encryption + WAL throttle + InputValidator |
 | v0.8.0 | 4334+ tests | 80.88% | +MCP graph tools (3) + edge confidence labels |
 | v0.9.8 | 4666 non-e2e | 80%+ | +Knowledge graph deletion completeness (TD-066) |
-| **v0.10.1 (current)** | **4878 collected (incl. 263 E2E)** | **80%+** | **+Repeat-correction upgrade (v0.10.0) + CLI startup fix (L-V0100-006)** |
+| **v0.11.0 (release candidate)** | **4948 passed, 4 skipped** | **blocking gates passed** | **Breaking async API cleanup + cryptography 50 floor + reproducible CI + benchmark provenance** |
 
 ---
 

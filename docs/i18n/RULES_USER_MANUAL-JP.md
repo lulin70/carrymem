@@ -1,9 +1,9 @@
 # CarryMem ルールユーザーマニュアル
 
-**バージョン**: v0.10.1  
-**Date**: 2026-05-03  
+**バージョン**: v0.11.0
+**Date**: 2026-09-08
 **Audience**: End Users (Developers, Power Users, Teams)  
-**Prerequisites**: Python 3.9+, pip
+**Prerequisites**: Python 3.12+, pip
 
 ---
 

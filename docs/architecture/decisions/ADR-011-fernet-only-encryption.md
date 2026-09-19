@@ -30,7 +30,7 @@ The `cryptography` package was optional, and the system would automatically degr
 
 ### Changes
 
-1. `cryptography>=46.0.6` is now in `install_requires` (not `extras_require["encryption"]`)
+1. `cryptography>=50.0.0` is now in `install_requires` (not `extras_require["encryption"]`)
 2. `MemoryEncryption` only supports `strong` (Fernet) and `none` (testing only)
 3. The `security_level` parameter no longer accepts `"weak"`
 4. A migration script (`scripts/migrate_encryption.py`) is provided for users upgrading from v0.7.2 or earlier
@@ -63,7 +63,7 @@ The `cryptography` package was optional, and the system would automatically degr
 ## Implementation References
 
 - `src/carrymem/security/encryption.py`: Fernet-only implementation (lines 1-21 document the v0.7.3+ strategy)
-- `setup.py:94`: `cryptography>=46.0.6` in `install_requires`
+- `setup.py:94`: `cryptography>=50.0.0` in `install_requires`
 - `scripts/migrate_encryption.py`: Migration script for v0.7.2 → v0.7.3+
 - `CHANGELOG.md`: v0.7.3 release notes (lines 60-78)
 

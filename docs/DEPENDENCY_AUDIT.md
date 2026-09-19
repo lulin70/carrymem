@@ -212,8 +212,8 @@ pip install carrymem[full]
 ### 1. 立即行动项
 
 ```bash
-# cryptography 已为硬依赖 (v0.8.0)，无需单独升级
-# install_requires 中已包含 cryptography>=46.0.6
+# cryptography 已为硬依赖 (v0.11.0)，当前下限为 50.0.0
+# install_requires 中已包含 cryptography>=50.0.0
 ```
 
 ### 2. 代码审计清单

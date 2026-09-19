@@ -112,7 +112,7 @@ cd carrymem && pip install -e ".[dev]"
 
 | 功能 | 相依套件 | 安裝指令 |
 |------|----------|----------|
-| 核心功能（含加密） | PyYAML≥5.0, cryptography≥46.0.6 | 自動包含 |
+| 核心功能（含加密） | PyYAML≥5.0, cryptography≥50.0.0 | 自動包含 |
 | 多語言偵測 | pycld2, langdetect | `pip install carrymem[language]` |
 | 語意搜尋 | sqlite-vec, sentence-transformers | `pip install carrymem[semantic]` |
 
@@ -171,10 +171,9 @@ carrymem backup --restore <path> # 從備份還原
 - 主動注入 > 全量提醒 — 首個證明這一點的系統
 - 比提醒方式減少 24% 無用回答（28 vs 38）— 更精準，更少噪音
 
-### 2. 零 LLM 分類 — 88% 無需呼叫任何 LLM
-- 規則引擎分類 88% 的記憶，零 Token 消耗
-- 唯一內建規則引擎的系統（競爭對手：0%）
-- P99 延遲：1.3ms — 比 Mem0 快 93 倍
+### 2. 零 LLM 分類 — 規則優先
+- 規則引擎會先處理符合條件的輸入，不消耗 LLM Token；88% 是沒有版本化資料集的歷史內部快照，不是目前發布門檻。
+- 目前可重現行為請執行儲存庫測試與 benchmark；歷史 P99 與競品比較僅在有可重現 artifact 時採用。
 
 ### 3. 輕量可攜帶 — 僅 SQLite
 - 核心功能零外部相依性
@@ -188,7 +187,7 @@ carrymem backup --restore <path> # 從備份還原
 ```
 使用者輸入
     ↓
-自動分類（7 種類型，4 層）  ← 88% 零 LLM
+自動分類（7 種類型，規則優先） → 智慧儲存（SQLite + FTS5）
     ↓
 重要性評分（confidence × type × recency × access）
     ↓
@@ -535,8 +534,10 @@ carrymem tui
 
 | | 優勢 | 結果 |
 |---|------|------|
-| 💰 | 零 LLM 攝入 | **88%** 記憶無需 **LLM Token** |
-| ⚡ | P99 延遲 | **1.3ms** — 比 Mem0 **快 93 倍** |
+| 💰 | 零 LLM 攝入 | 歷史內部快照：抽樣輸入中 88% 走規則路徑；資料集 artifact 目前未版本化 |
+| ⚡ | P99 延遲 | 歷史內部結果：1.3ms；目前可重現 benchmark：`pytest tests/test_performance_benchmark.py -k classify_and_remember -s` |
+| 🔬 | Mem0 對比 | 歷史 93x 對比不屬於目前發布聲明；儲存庫未提供可重現對比 harness |
+
 | 🪶 | 相依性 | **僅需 SQLite** — 無需向量資料庫 |
 | 🛡️ | 規則引擎 | **唯一擁有**規則引擎（競爭對手：0%） |
 
@@ -547,7 +548,7 @@ carrymem tui
 ```
 使用者輸入
     ↓
-自動分類（7 種類型，4 層）
+自動分類（7 種類型，規則優先）
     ↓
 重要性評分（confidence × type × recency × access）
     ↓
@@ -649,9 +650,9 @@ cm.import_memories(input_path="backup.json")
 
 ## 專案狀態
 
-**目前版本**：v0.10.1
-**測試**：4878 collected (incl. 263 E2E)
-**覆蓋率**：80%+
+**目前版本**：v0.11.0
+**測試**：4948 passed, 4 skipped
+**品質門檻**：flake8 / Black / isort / mypy / radon 全部通過
 
 **更新日誌**：
 - **v0.2.0**：USB 攜帶加密、自動備份、並行安全、PrefEval 83.0%（200 條）、8 用戶端 MCP 設定

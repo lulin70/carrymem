@@ -209,6 +209,56 @@ class TestVersionChain:
         assert len(chain_ids) >= 2
         assert len(set(chain_ids)) == 2  # Two different chains
 
+    def test_independent_preferences_are_not_superseded(self, db):
+        """Two unrelated preferences must both stay active (P0-1 regression).
+
+        Before the fix, `_should_supersede` had a third branch that triggered on
+        keyword co-occurrence alone ("prefer" in both) with no similarity or
+        contradiction check, so declaring a second unrelated preference silently
+        removed the first one from recall/list/prompt injection.
+        """
+        db.store_entry(MemoryEntry(type="user_preference", content="I prefer morning flights"))
+        db.store_entry(MemoryEntry(type="user_preference", content="I prefer evening flights"))
+
+        rows = db.recall(query="flights", filters={"include_superseded": True})
+        assert len(rows) == 2, f"Both preferences should be stored, got {[r.content for r in rows]}"
+        assert [
+            r.content for r in rows if r.superseded_at
+        ] == [], f"Unrelated preferences must not be superseded, got {[r.content for r in rows if r.superseded_at]}"
+
+        visible = db.recall(query="flights")
+        contents = " ".join(r.content.lower() for r in visible)
+        assert "morning" in contents and "evening" in contents, f"Both must stay recallable, got {contents!r}"
+
+    def test_unrelated_preference_topics_are_not_superseded(self, db):
+        """Preferences on different topics must not supersede each other (P0-1)."""
+        db.store_entry(MemoryEntry(type="user_preference", content="I prefer dark mode"))
+        db.store_entry(MemoryEntry(type="user_preference", content="I prefer vim keybindings"))
+
+        rows = db.recall(query="", filters={"include_superseded": True}, limit=50)
+        assert len(rows) == 2, f"Both preferences should be stored, got {[r.content for r in rows]}"
+        assert [r.content for r in rows if r.superseded_at] == []
+
+    def test_update_marker_supersedes_without_contradiction_pair(self, db):
+        """Update marker + overlap must still supersede (no contradiction pair involved)."""
+        db.store_entry(MemoryEntry(type="user_preference", content="I prefer tabs for indentation"))
+        db.store_entry(MemoryEntry(type="user_preference", content="I now prefer spaces for indentation"))
+
+        rows = db.recall(query="indentation", filters={"include_superseded": True})
+        superseded = [r.content for r in rows if r.superseded_at]
+        assert superseded == [
+            "I prefer tabs for indentation"
+        ], f"Update marker 'now' + overlap (0.71) must supersede, got {superseded}"
+
+    def test_contradiction_pair_supersedes_without_update_marker(self, db):
+        """Contradiction pair must still supersede (no update marker involved)."""
+        db.store_entry(MemoryEntry(type="user_preference", content="I prefer dark mode"))
+        db.store_entry(MemoryEntry(type="user_preference", content="I prefer light mode"))
+
+        rows = db.recall(query="mode", filters={"include_superseded": True})
+        superseded = [r.content for r in rows if r.superseded_at]
+        assert superseded == ["I prefer dark mode"], f"Contradiction pair dark/light must supersede, got {superseded}"
+
     def test_recall_excludes_superseded_by_default(self, db):
         """recall should exclude superseded memories by default."""
         e1 = MemoryEntry(type="user_preference", content="I prefer dark mode")
@@ -223,6 +273,12 @@ class TestVersionChain:
         assert len(active) >= 1
         # Superseded should not appear by default
         assert len(superseded) == 0
+        # Guard the premise: the old row really is superseded, otherwise the
+        # assertion above would be vacuously true even if filtering broke.
+        all_rows = db.recall(query="mode", filters={"include_superseded": True})
+        assert [r.content for r in all_rows if r.superseded_at] == [
+            "I prefer dark mode"
+        ], f"Premise failed: old preference was not superseded, got {[r.content for r in all_rows]}"
 
     def test_recall_includes_superseded_when_requested(self, db):
         """recall with include_superseded=True should include old versions."""

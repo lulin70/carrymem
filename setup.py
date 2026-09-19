@@ -91,7 +91,7 @@ setup(
     scripts=["bin/carrymem"],
     install_requires=[
         "PyYAML>=5.0",
-        "cryptography>=46.0.6",  # CVE-2026-34073: X.509 cert validation bypass fix; hard dep since v0.7.3
+        "cryptography>=50.0.0",  # CVE-2026-34073: X.509 cert validation bypass fix; hard dep since v0.7.3
         "rich>=13.0",  # P0-C2: CLI colored output, tables, and progress indicators
     ],
     extras_require={
@@ -119,11 +119,11 @@ setup(
             "twine>=4.0",
             "pycld2>=0.41",
             "langdetect>=1.0.9",
-            "flake8>=6.0",
-            "black>=23.0",
-            "isort>=5.12",
-            "mypy>=1.0",
-            "radon>=6.0",
+            "flake8==7.3.0",
+            "black==26.5.1",
+            "isort==6.1.0",
+            "mypy==2.3.0",
+            "radon==6.0.1",
         ],
         "llm": [
             "openai>=1.0",

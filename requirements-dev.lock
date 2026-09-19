@@ -4,9 +4,7 @@
 #
 #    pip-compile --output-file=requirements-dev.lock requirements-dev.in
 #
-# NOTE: --index-url removed to ensure portability across CI environments
-# (GitHub Actions runs in US/EU; the Tsinghua mirror is only reachable from China).
-# Install with: pip install --no-deps -r requirements-dev.lock
+--index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
 aiosqlite==0.22.1
     # via -r requirements.in
@@ -20,6 +18,8 @@ anyio==4.14.2
     #   openai
 ast-serialize==0.6.0
     # via mypy
+attrs==26.1.0
+    # via flake8-bugbear
 black==26.5.1
     # via -r requirements-dev.in
 build==1.5.0
@@ -47,7 +47,7 @@ coverage[toml]==7.15.2
     # via
     #   -r requirements-dev.in
     #   pytest-cov
-cryptography==49.0.0
+cryptography==50.0.1
     # via -r requirements.in
 distlib==0.4.3
     # via virtualenv
@@ -62,6 +62,10 @@ filelock==3.30.3
     #   torch
     #   virtualenv
 flake8==7.3.0
+    # via
+    #   -r requirements-dev.in
+    #   flake8-bugbear
+flake8-bugbear==25.11.29
     # via -r requirements-dev.in
 fsspec==2026.6.0
     # via
@@ -94,7 +98,7 @@ idna==3.18
     #   requests
 iniconfig==2.3.0
     # via pytest
-isort==8.0.1
+isort==6.1.0
     # via -r requirements-dev.in
 jaraco-classes==3.4.0
     # via keyring
@@ -252,6 +256,7 @@ rfc3986==2.0.0
     # via twine
 rich==15.0.0
     # via
+    #   -r requirements.in
     #   textual
     #   twine
     #   typer

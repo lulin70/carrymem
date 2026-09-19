@@ -31,8 +31,9 @@ jobs:
 
       - name: Compile all .py files
         run: |
-          find src tests -name "*.py" ! -path "*__pycache__*" -exec python3 -m py_compile {} + 2>&1 && \
-            echo "OK: all files compiled" || echo "WARNING: compile errors (see above)"
+          set -o pipefail
+          find src tests -name "*.py" ! -path "*__pycache__*" -exec python3 -m py_compile {} + 2>&1
+          echo "OK: all files compiled"
 
   # ═══════════════════════════════════════
   # GATE 1: Unit Tests (HARD GATE)
@@ -165,7 +166,7 @@ jobs:
           pip install flake8==7.3.0 black==26.5.1 isort==6.1.0 mypy==2.3.0 radon==6.0.1
           # Install runtime deps so mypy can resolve real types (rich/textual/aiosqlite).
           # Without these, mypy treats them as Any and flags type:ignore as unused.
-          pip install rich>=13.0 textual>=0.40 aiosqlite>=0.19 cryptography>=46.0.6 PyYAML>=5.0
+          pip install rich>=13.0 textual>=0.40 aiosqlite>=0.19 cryptography>=50.0.0 PyYAML>=5.0
 
       - name: flake8
         run: flake8 src/ tests/ --count --max-line-length=120 --statistics

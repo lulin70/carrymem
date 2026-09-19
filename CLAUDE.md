@@ -7,12 +7,12 @@
 ## 项目概述
 
 - **CarryMem** 是一个可移植的 AI 记忆层：让 AI 自动记住用户的偏好、决策与纠正，跨模型 / 工具 / 设备复用，无需每次重复自我介绍。
-- **当前版本**：`0.10.1`（来源：`src/carrymem/__version__.py`）
+- **当前版本**：`0.11.0`（来源：`src/carrymem/__version__.py`）
 - **核心技术栈**：
   - Python 3.12+（`setup.py` 中 `python_requires=">=3.12"`）
   - SQLite + FTS5（默认存储与全文检索）
   - MCP（Model Context Protocol）服务器集成
-  - 核心依赖：`PyYAML>=5.0` + `cryptography>=46.0.6`（v0.7.3 起 cryptography 为硬依赖），语言检测 / 向量检索 / LLM / TUI 均为可选 extras
+  - 核心依赖：`PyYAML>=5.0` + `cryptography>=50.0.0`（v0.11.0 起安全版本下限），语言检测 / 向量检索 / LLM / TUI 均为可选 extras
 - **仓库**：https://github.com/lulin70/carrymem
 - **CI 默认分支**：`new-main`（非 `main`，提交 PR 时注意基分支）
 
@@ -97,7 +97,7 @@ mypy src/
 | --- | --- | --- |
 | `pyproject.toml` | pytest / coverage / black / isort / mypy | line-length=120；`[tool.mypy] python_version="3.12"`，`warn_unused_ignores=True`，`strict_equality=True` |
 | `.flake8` | flake8 | `max-line-length=120`；`extend-ignore` 含 E203/W503/F403/F405/E402/E731 等 |
-| `.pre-commit-config.yaml` | pre-commit 钩子 | black 26.5.0 / isort 6.1.0 / flake8 7.3.0 / mypy v2.1.0 |
+| `.pre-commit-config.yaml` | pre-commit 钩子 | black 26.5.1 / isort 6.1.0 / flake8 7.3.0 / mypy 2.3.0 |
 
 ```bash
 # pre-commit（工具版本须与 CI 对齐）

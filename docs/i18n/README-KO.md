@@ -28,7 +28,7 @@ CarryMem이 이 문제를 해결합니다. 가볍고 의존성이 없는 기억 
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-4322-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-4948%20passed%2C%204%20skipped-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="Coverage">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval Academic Benchmark"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
@@ -163,10 +163,9 @@ CarryMem을 다른 모든 기억 솔루션과 차별화하는 핵심:
 - 능동적 주입 > 완전 리마인더 — 이것을 입증한 최초 시스템
 - 리마인더보다 24% 덜 유익하지 않은 응답(28 vs 38) — 더 정밀하고 노이즈 감소
 
-### 2. 제로 LLM 분류 — LLM 호출 없이 88%
-- 규칙 엔진이 88%의 기억을 분류, 토큰 비용 제로
-- 내장 규칙 엔진을 갖춘 유일한 시스템(경쟁사: 0%)
-- P99 지연 시간: 1.3ms — Mem0보다 93배 빠름
+### 2. 제로 LLM 분류 — 규칙 우선
+- 규칙 엔진은 대상 입력을 LLM 토큰 없이 먼저 처리합니다. 88%는 버전 관리된 데이터셋이 없는 과거 내부 스냅샷이며 출시 게이트가 아닙니다.
+- 현재 재현 가능한 동작은 저장소 테스트와 benchmark로 확인합니다. 과거 P99 및 경쟁 제품 비교는 재현 가능한 artifact가 있을 때만 사용합니다.
 
 ### 3. 경량 & 휴대 가능 — SQLite만
 - 핵심 기능에 외부 의존성 제로
@@ -178,7 +177,7 @@ CarryMem을 다른 모든 기억 솔루션과 차별화하는 핵심:
 ## 작동 원리
 
 ```
-사용자 입력 → 자동 분류(7종류, 88% 규칙 기반) → 스마트 저장(SQLite + FTS5)
+사용자 입력 → 자동 분류(7종류, 규칙 우선) → 스마트 저장(SQLite + FTS5)
     → 의미론적 리콜(크로스 언어) → 컨텍스트 주입(토큰 예산) → AI 도구
 ```
 
@@ -209,7 +208,7 @@ pip install carrymem
 
 | 기능 | 패키지 | 설치 |
 |------|--------|------|
-| Core (암호화 포함) | PyYAML≥5.0, cryptography≥46.0.6 | `pip install carrymem` (포함) |
+| Core (암호화 포함) | PyYAML≥5.0, cryptography≥50.0.0 | `pip install carrymem` (포함) |
 | 다국어 | pycld2, langdetect | `pip install carrymem[language]` |
 | 의미론적 검색 | sqlite-vec, sentence-transformers | `pip install carrymem[semantic]` |
 | Full (모든 기능) | 위 모두 | `pip install carrymem[full]` |
@@ -651,8 +650,10 @@ carrymem tui
 
 | | 장점 | 결과 |
 |---|-----------|--------|
-| 💰 | 제로 LLM 섭취 | **88%** 기억에 **LLM 토큰 필요 없음** |
-| ⚡ | P99 지연 시간 | **1.3ms** — Mem0보다 **93배 빠름** |
+| 💰 | 제로 LLM 섭취 | 과거 내부 스냅샷: 샘플 입력의 88%가 규칙 경로를 사용했지만 데이터셋은 버전 관리되지 않았습니다 |
+| ⚡ | P99 지연 시간 | 과거 내부 결과: 1.3ms; 현재 재현 가능한 benchmark: `pytest tests/test_performance_benchmark.py -k classify_and_remember -s` |
+| 🔬 | Mem0 비교 | 과거 93x 비교는 현재 출시 선언이 아니며 재현 가능한 비교 harness는 제공되지 않습니다 |
+
 | 🪶 | 의존성 | **SQLite만** — 벡터 DB 불필요 |
 | 🛡️ | 규칙 엔진 | **규칙 엔진을 가진 유일한 시스템**(경쟁사: 0%) |
 
@@ -765,8 +766,8 @@ AI에 기억이 필요하다는 건 이미 알고 있습니다. 프롬프트 파
 
 ## 프로젝트 상태
 
-**현재 버전**: v0.10.1
-**테스트**: 4878 collected (incl. 263 E2E)
+**현재 버전**: v0.11.0
+**테스트**: 4948 passed, 4 skipped
 **커버리지**: 80%+
 
 **변경 로그**:
