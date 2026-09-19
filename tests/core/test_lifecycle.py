@@ -37,6 +37,40 @@ class TestLifecycleInit(unittest.TestCase):
         finally:
             cm.close()
 
+    def test_json_adapter_honors_db_path(self):
+        """storage='json' with db_path must write there, not to ~/.carrymem."""
+        import hashlib
+        import json
+
+        default_path = os.path.expanduser("~/.carrymem/memories.json")
+
+        def default_fingerprint():
+            if not os.path.exists(default_path):
+                return None
+            with open(default_path, "rb") as fh:
+                return hashlib.sha256(fh.read()).hexdigest()
+
+        before = default_fingerprint()
+        db_path = os.path.join(self.tmpdir, "isolated.json")
+
+        cm = CarryMem(storage="json", db_path=db_path, auto_backup_interval=0)
+        try:
+            cm.classify_and_remember("JSON db_path isolation probe")
+        finally:
+            cm.close()
+
+        self.assertTrue(os.path.exists(db_path), "db_path was ignored: no file written at the requested path")
+        with open(db_path, "r", encoding="utf-8") as fh:
+            stored = json.load(fh)
+        contents = [m["content"] for m in stored["default"]["memories"].values()]
+        self.assertIn("JSON db_path isolation probe", contents)
+
+        self.assertEqual(
+            default_fingerprint(),
+            before,
+            "CarryMem(storage='json', db_path=...) wrote to the default ~/.carrymem/memories.json",
+        )
+
     def test_init_raises_on_unsupported_storage_type(self):
         """Init with an unknown storage string raises CarryMemError."""
         with self.assertRaises(CarryMemError):

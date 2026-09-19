@@ -17,12 +17,14 @@ Limitations:
 
 import json
 import os
+import shutil
 import threading
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from ..scoring import calculate_importance
 from ..utils.helpers import TIER_TTL, content_hash
+from ..utils.logger import logger
 from .base import MemoryEntry, StorageAdapter, StoredMemory
 
 
@@ -45,10 +47,22 @@ class JSONAdapter(StorageAdapter):
             try:
                 with open(self._path, "r", encoding="utf-8") as f:
                     self._data = json.load(f)
-            except (json.JSONDecodeError, IOError):
+            except (json.JSONDecodeError, IOError) as e:
+                # Starting from an empty dict means the next _save() rewrites
+                # the file, so the unreadable original must be preserved
+                # first — otherwise a recoverable file is destroyed silently.
+                logger.warning("Unreadable JSON store %s (%s); preserving a .corrupt copy", self._path, e)
+                self._preserve_corrupt_file()
                 self._data = {}
         else:
             self._data = {}
+
+    def _preserve_corrupt_file(self) -> None:
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+        try:
+            shutil.copy2(self._path, f"{self._path}.corrupt.{stamp}")
+        except OSError as e:
+            logger.warning("Could not preserve unreadable JSON store %s: %s", self._path, e)
 
     def _save(self):
         dir_path = os.path.dirname(self._path)

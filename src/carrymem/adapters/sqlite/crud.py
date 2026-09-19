@@ -66,7 +66,12 @@ class CRUDOperations:
         if existing:
             return self._handle_existing_memory(conn, existing, entry, c_hash)
 
-        storage_key = f"cm_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}_{c_hash[:8]}"
+        # storage_key is globally UNIQUE, but dedup/lookups are scoped to a
+        # namespace: without the namespace tag, storing identical content in a
+        # second namespace collided with the first row and raised
+        # "UNIQUE constraint failed: memories.storage_key".
+        ns_tag = content_hash(self._adapter.namespace)[:6]
+        storage_key = f"cm_{ns_tag}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}_{c_hash[:8]}"
         now = datetime.now(timezone.utc)
 
         ttl = TIER_TTL.get(entry.tier)
