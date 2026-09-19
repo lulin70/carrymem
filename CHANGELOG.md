@@ -30,6 +30,7 @@ This MINOR release removes the incomplete `AsyncCarryMem(native_async=True)` sur
 - Make the local CI script reproducible with a disposable virtual environment and blocking flake8, Black, isort, mypy, and radon gates.
 - Correct the CI Python compilation step so syntax failures cannot be masked by a successful warning message.
 - Probe `sentence_transformers` lazily instead of at import time: `import carrymem` no longer pulls in `sentence_transformers` (or torch), cutting cold start from ~16.6s to ~0.8s and bringing the `startup` SLO back within target. The `SENTENCE_TRANSFORMERS_AVAILABLE` name keeps working via a PEP 562 module `__getattr__` in both `carrymem.adapters.sqlite` and the `carrymem.adapters.sqlite_adapter` compatibility shim.
+- Replace 18 tests whose assertions could never fail (bare `except` swallowing asserts, truthy literals, mock-only checks) with falsifiable ones. No assertion was relaxed to match the source; every rewritten test was falsified on purpose first, and the cases that then failed were fixed in the source rather than in the test.
 
 ### Added
 
@@ -41,6 +42,10 @@ This MINOR release removes the incomplete `AsyncCarryMem(native_async=True)` sur
 
 ### Fixed
 
+- An existing preference was superseded whenever both memories happened to contain a preference keyword, so two semantically unrelated preferences silently hid each other: the first one received a `superseded_at` stamp and disappeared from `list`, `search`, and prompt injection. The heuristic now also requires a similarity floor, and a regression test asserts the first preference stays visible.
+- `CarryMem(storage="json", db_path=...)` ignored `db_path` and wrote to `~/.carrymem/memories.json`, so applications that asked for an isolated file silently wrote into the user's home directory. The requested path is now honoured.
+- A corrupt JSON store was silently overwritten, destroying whatever could still be recovered. The damaged file is now preserved as `.corrupt.<timestamp>` next to the original and a warning is emitted.
+- `storage_key` was not namespace-scoped, so storing the same content in a second namespace raised `IntegrityError` instead of creating a separate memory.
 - `to_prometheus()` emitted an unparseable `carrymem_latency_ms{...,quantile="0.95"} None` line whenever a summary held fewer than 20 samples.
 - `quantile="0.5"` exported the mean instead of the median; `get_snapshot()` now computes a real `p50`.
 - Each gauge declares its own `# TYPE` line instead of a single `# TYPE carrymem_gauge` header that named no exported series.
@@ -59,7 +64,7 @@ This MINOR release removes the incomplete `AsyncCarryMem(native_async=True)` sur
 - Monitoring instrumentation: targeted suites (`tests/test_monitoring.py`, `tests/integration/test_monitoring_endpoints.py`) **39 passed**, and a real end-to-end call through `MCPHTTPServer` produces non-empty `/metrics` plus `/healthz` SLO data. The instrumentation tests were falsified on purpose (removing the counter / restoring the isolated collector) and went red, reproducing the pre-fix empty `/metrics` body.
 - Local blocking gates: flake8, Black, isort, mypy, and radon passed via `python3 scripts/ci_local_check.py` (Black must be the CI-pinned `26.5.1`; a newer/older local Black reports spurious formatting diffs).
 - Known limitation: the `startup` SLO target (2000ms) was not met on a cold interpreter while `sentence_transformers` was imported eagerly (~17.5s). Fixed by the lazy probe (cold start now ~0.83s against the untouched 2000ms target); `GET /healthz` no longer reports `degraded`. The SLO threshold itself was never relaxed.
-- E2E and cryptography-50 compatibility verification remain release-candidate gates before tagging.
+- Release-candidate gates closed before tagging: the full `tests/e2e/` suite passes (**265 passed in 91.44s**), the real MCP user journey passes end to end (**9/9**, cold start **1.2s / 1.0s** against 19.7s / 20.7s before the lazy probe), and the `cryptography` 50 floor is verified by installing the built wheel into a clean Python 3.14 venv that resolved `cryptography==50.0.1` (`pip check`: *No broken requirements found.*) and running `tests/e2e/test_e2e_encryption_full_chain.py tests/test_backup_encryption.py tests/e2e/test_e2e_security.py` there (**29 passed**).
 
 ## [0.10.1] - 2026-09-05 — CLI startup cost fix (PATCH)
 
