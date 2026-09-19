@@ -47,17 +47,47 @@ try:
 except ImportError:
     PYSQLITE3_AVAILABLE = False
 
-try:
-    from sentence_transformers import SentenceTransformer
+# `sentence_transformers` pulls in torch (~16s in this environment), so probing
+# its availability at module load time would make every `import carrymem` pay
+# that cost even when vector search is never used (P1#10). Probe lazily and
+# memoize instead — see docs/design/V0.11.0_OBSERVABILITY_INSTRUMENTATION.md §10.
+_SENTENCE_TRANSFORMERS_AVAILABLE: Optional[bool] = None
 
-    SENTENCE_TRANSFORMERS_AVAILABLE = True
-except (ImportError, OSError, ValueError):
-    # ImportError: sentence_transformers not installed
-    # OSError: torch cannot load CUDA shared libs (e.g. libcudart.so.13 not
-    #   found in CPU-only environments like Docker slim images)
-    # ValueError: torch cannot find CUDA libs in system path
-    # All three mean vector search is unavailable in this environment.
-    SENTENCE_TRANSFORMERS_AVAILABLE = False
+
+def sentence_transformers_available() -> bool:
+    """Return whether sentence_transformers is importable (memoized probe).
+
+    The first call performs the real import probe; later calls reuse the cached
+    result. Mirrors the semantics of the old module-level
+    ``SENTENCE_TRANSFORMERS_AVAILABLE`` constant.
+    """
+    global _SENTENCE_TRANSFORMERS_AVAILABLE
+    if _SENTENCE_TRANSFORMERS_AVAILABLE is None:
+        try:
+            import sentence_transformers  # noqa: F401
+
+            _SENTENCE_TRANSFORMERS_AVAILABLE = True
+        except (ImportError, OSError, ValueError):
+            # ImportError: sentence_transformers not installed
+            # OSError: torch cannot load CUDA shared libs (e.g. libcudart.so.13 not
+            #   found in CPU-only environments like Docker slim images)
+            # ValueError: torch cannot find CUDA libs in system path
+            # All three mean vector search is unavailable in this environment.
+            _SENTENCE_TRANSFORMERS_AVAILABLE = False
+    return _SENTENCE_TRANSFORMERS_AVAILABLE
+
+
+def __getattr__(name: str) -> Any:
+    """PEP 562: resolve ``SENTENCE_TRANSFORMERS_AVAILABLE`` lazily (P1#10).
+
+    Kept as a module attribute (rather than only a function) because ``__all__``,
+    tests and external callers use ``from carrymem.adapters.sqlite import
+    SENTENCE_TRANSFORMERS_AVAILABLE``.
+    """
+    if name == "SENTENCE_TRANSFORMERS_AVAILABLE":
+        return sentence_transformers_available()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 _EMBEDDING_MODEL_CACHE: Dict[str, Any] = {}
 _EMBEDDING_MODEL_LOCK = __import__("threading").Lock()
@@ -74,6 +104,10 @@ def _get_or_load_embedding_model(model_name: str):
     with _EMBEDDING_MODEL_LOCK:
         if model_name in _EMBEDDING_MODEL_CACHE:
             return _EMBEDDING_MODEL_CACHE[model_name]
+        # Imported here (not at module level) so that `import carrymem` does not
+        # pull in torch unless a model is actually loaded (P1#10).
+        from sentence_transformers import SentenceTransformer
+
         os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
         model = SentenceTransformer(model_name)
         _EMBEDDING_MODEL_CACHE[model_name] = model
@@ -274,7 +308,7 @@ class SQLiteAdapter(StorageAdapter):
     ) -> Tuple[bool, Any, int]:
         """Initialize vector search; returns (enabled, model, dim)."""
         enable_vector = (
-            enable_vector_search and SQLITE_VEC_AVAILABLE and PYSQLITE3_AVAILABLE and SENTENCE_TRANSFORMERS_AVAILABLE
+            enable_vector_search and SQLITE_VEC_AVAILABLE and PYSQLITE3_AVAILABLE and sentence_transformers_available()
         )
         model: Any = None
         dim = 384

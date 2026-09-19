@@ -7,6 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-09-08 — async API cleanup and release quality gates (MINOR / BREAKING)
+
+### Summary
+
+This MINOR release removes the incomplete `AsyncCarryMem(native_async=True)` surface. `AsyncCarryMem` is now the executor-backed async facade only; applications that need native async SQLite I/O should use `AsyncSQLiteAdapter` directly. It also instruments the monitoring pipeline for real, so `GET /metrics` and `GET /healthz` report actual operation data instead of an empty collector.
+
+### Breaking Changes
+
+- Remove the `native_async` constructor argument from `AsyncCarryMem`.
+- Remove the incomplete facade methods that only existed for the native mode (`connect`, `store_entry`, `recall_async`, and `count_async`).
+- Migrate executor-backed callers to `AsyncCarryMem(...)` without `native_async=True`.
+- Migrate native async SQLite callers to standalone `AsyncSQLiteAdapter` and install the `[async]` extra when needed.
+
+### Changed
+
+- Raise `NotImplementedError` instead of silently accepting unsupported encryption in `AsyncSQLiteAdapter`.
+- Raise the core encryption dependency floor to `cryptography>=50.0.0`; regenerated lock files resolve `cryptography==50.0.1`.
+- Reuse the facade's canonical `RuleEngine` in the MCP system path and allow explicit rule-engine injection in the DevSquad adapter.
+- Bound monitoring latency samples to 10,000 entries to prevent unbounded memory growth.
+- Remove unconnected plugin and obsolete summary-layer code.
+- Make the local CI script reproducible with a disposable virtual environment and blocking flake8, Black, isort, mypy, and radon gates.
+- Correct the CI Python compilation step so syntax failures cannot be masked by a successful warning message.
+- Probe `sentence_transformers` lazily instead of at import time: `import carrymem` no longer pulls in `sentence_transformers` (or torch), cutting cold start from ~16.6s to ~0.8s and bringing the `startup` SLO back within target. The `SENTENCE_TRANSFORMERS_AVAILABLE` name keeps working via a PEP 562 module `__getattr__` in both `carrymem.adapters.sqlite` and the `carrymem.adapters.sqlite_adapter` compatibility shim.
+
+### Added
+
+- Instrument the real operation paths: `classify_and_remember` and `recall_memories` now record one latency sample plus either a success or an error counter, and the first `CarryMem` construction in a process closes the `startup` SLO window.
+- Add the process-wide `get_metrics_collector()` accessor, plus `mark_startup_reference()` / `record_startup_once()`, so the writers (core) and the reader (`MCPHTTPServer`) share one collector instead of an isolated, permanently empty instance.
+- Add the `carrymem_sse_clients` gauge tracking active SSE connections.
+- Count failures explicitly (`classify_and_remember_errors`, `recall_errors`) and record their latency too, so an operation that always fails can no longer appear as healthy `no_data`.
+- Add `sentence_transformers_available()`, the memoized lazy capability probe that replaces the module-level `SENTENCE_TRANSFORMERS_AVAILABLE` constant.
+
+### Fixed
+
+- `to_prometheus()` emitted an unparseable `carrymem_latency_ms{...,quantile="0.95"} None` line whenever a summary held fewer than 20 samples.
+- `quantile="0.5"` exported the mean instead of the median; `get_snapshot()` now computes a real `p50`.
+- Each gauge declares its own `# TYPE` line instead of a single `# TYPE carrymem_gauge` header that named no exported series.
+- README and `MODULE_BOUNDARIES.md` documented a monitoring API that does not exist (`AlertManager`, `MonitoringHTTPServer`, `LatencyTimer` — importing them raises `ImportError`); replaced with the real API and an explicit exposed-series table.
+
+### Benchmark and Documentation Provenance
+
+- The historical 88% rule-path, 1.3ms P99, and 93x Mem0 comparison are explicitly labeled as historical results where no versioned artifact is available.
+- Current CarryMem performance can be reproduced with `pytest tests/test_performance_benchmark.py -k classify_and_remember -s`.
+- The PrefEval 83.0% result remains an academic benchmark reference to the cited protocol; it is not a local release gate.
+
+### Verification
+
+- Full regression: **4969 passed, 13 skipped, 0 failed** (244 warnings, 25 subtests passed, 667.77s) via `PYTHONPATH=src .venv/bin/python -m pytest tests/ -q -o addopts='' -p no:cacheprovider --timeout=180`; the 13 skips are `skipif`-gated optional vector/semantic dependencies and macOS concurrent torch+SQLite cases. The `4969` is `4963` (monitoring round) plus the 6 new guards added by the lazy-import change.
+- Lazy `sentence_transformers` probe: `tests/test_sqlite_adapter.py::TestLazySentenceTransformersImport` and `tests/test_performance_smoke.py::TestColdImportSmoke` pass (**6 passed**), and both were falsified on purpose — restoring the eager module-level import turns them red (`2 failed, 4 passed`: `['True', 'True'] != ['False', 'False']` for the subprocess `sys.modules` assertion, and `import carrymem took 20.37s` against a `3.00s` budget for the cold-import smoke). The cold-import smoke uses a relative budget (`max(3.0s, 12 x stdlib-control)`) because the earlier `CI_FACTOR`-scaled absolute budget was measured to be a false green on this machine.
+- Monitoring instrumentation: targeted suites (`tests/test_monitoring.py`, `tests/integration/test_monitoring_endpoints.py`) **39 passed**, and a real end-to-end call through `MCPHTTPServer` produces non-empty `/metrics` plus `/healthz` SLO data. The instrumentation tests were falsified on purpose (removing the counter / restoring the isolated collector) and went red, reproducing the pre-fix empty `/metrics` body.
+- Local blocking gates: flake8, Black, isort, mypy, and radon passed via `python3 scripts/ci_local_check.py` (Black must be the CI-pinned `26.5.1`; a newer/older local Black reports spurious formatting diffs).
+- Known limitation: the `startup` SLO target (2000ms) was not met on a cold interpreter while `sentence_transformers` was imported eagerly (~17.5s). Fixed by the lazy probe (cold start now ~0.83s against the untouched 2000ms target); `GET /healthz` no longer reports `degraded`. The SLO threshold itself was never relaxed.
+- E2E and cryptography-50 compatibility verification remain release-candidate gates before tagging.
+
 ## [0.10.1] - 2026-09-05 — CLI startup cost fix (PATCH)
 
 ### Summary

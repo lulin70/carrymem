@@ -129,6 +129,69 @@ class TestBatchInsertSmoke:
 
 
 # ---------------------------------------------------------------------------
+# Cold-start import guard (P1#10)
+# ---------------------------------------------------------------------------
+
+# A raw second-budget does not work here: this repo's CI runners are ~10x slower
+# than dev machines, so any absolute budget loose enough to pass on CI (~50s
+# with CI_FACTOR) is far too loose to catch the ~17s regression it exists to
+# catch — verified by restoring the eager import and watching such a test stay
+# green. The budget is therefore relative: `import carrymem` is compared against
+# a control import of the stdlib modules carrymem genuinely needs, measured in
+# the same interpreter, so both sides scale with machine speed. The floor keeps
+# a warm-cache control (much smaller on repeat runs) from shrinking the budget
+# below a meaningful value.
+_COLD_IMPORT_RATIO = 12.0  # measured fixed-state ratio is ~4x control
+_COLD_IMPORT_FLOOR_S = 3.0  # measured fixed-state import is ~0.6s locally
+_CONTROL_MODULES = "json, os, sqlite3, typing, re, hashlib"
+
+
+class TestColdImportSmoke:
+    """Smoke: `import carrymem` must not re-acquire a heavy optional dependency.
+
+    Before P1#10, module import pulled in sentence_transformers + torch
+    unconditionally, making `import carrymem` alone cost ~16.6s (worst measured
+    ~23.7s / ~17.6s cross-process) instead of ~0.6s. This smoke catches a
+    regression back to a torch-scale import; the deterministic guard for the
+    exact regression is TestLazySentenceTransformersImport in
+    tests/test_sqlite_adapter.py.
+    """
+
+    def test_import_carrymem_smoke(self):
+        """Subprocess `import carrymem` must stay within budget of the control."""
+        import subprocess
+        import sys
+
+        import carrymem
+
+        src_dir = os.path.dirname(os.path.dirname(os.path.abspath(carrymem.__file__)))
+        env = dict(os.environ)
+        env["PYTHONPATH"] = src_dir + os.pathsep + env.get("PYTHONPATH", "")
+
+        code = (
+            "import time\n"
+            f"t0 = time.perf_counter()\nimport {_CONTROL_MODULES}\n"
+            "t1 = time.perf_counter()\n"
+            "import carrymem\n"
+            "t2 = time.perf_counter()\n"
+            "print(t1 - t0)\n"
+            "print(t2 - t1)\n"
+        )
+        proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env=env, timeout=300)
+        assert proc.returncode == 0, f"child interpreter failed:\n{proc.stderr}"
+
+        control_s, import_s = (float(line) for line in proc.stdout.split())
+        budget_s = max(_COLD_IMPORT_FLOOR_S, _COLD_IMPORT_RATIO * control_s)
+
+        assert import_s < budget_s, (
+            f"`import carrymem` took {import_s:.2f}s (control {control_s:.3f}s, "
+            f"budget {budget_s:.2f}s = max({_COLD_IMPORT_FLOOR_S}s, "
+            f"{_COLD_IMPORT_RATIO}x control)) — a heavy optional dependency was "
+            f"likely re-imported at module load (P1#10)."
+        )
+
+
+# ---------------------------------------------------------------------------
 # Baseline Regression Guard (TD-040)
 # ---------------------------------------------------------------------------
 

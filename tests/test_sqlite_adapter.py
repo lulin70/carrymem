@@ -192,6 +192,26 @@ class TestCRUDOperations:
         second = adapter.store_entry(entry)
         assert first.storage_key == second.storage_key
 
+    def test_store_same_content_across_namespaces(self, db_path):
+        """Identical content in a second namespace must not collide on storage_key.
+
+        storage_key is globally UNIQUE while dedup is namespace-scoped, so the
+        generated key has to carry the namespace: without it the second
+        namespace raised "UNIQUE constraint failed: memories.storage_key".
+        """
+        content = "identical content across namespaces"
+        keys = []
+        for ns in ("ns1", "ns2", "ns3"):
+            a = SQLiteAdapter(db_path, namespace=ns, enable_semantic_recall=False, enable_cache=False)
+            try:
+                keys.append(a.store_entry(MemoryEntry(content=content, type="user_preference")).storage_key)
+                assert a.count({"namespace": ns}) == 1, f"{ns}: row was not stored"
+            finally:
+                a.close()
+
+        assert len(set(keys)) == 3, f"storage keys must be distinct per namespace: {keys}"
+        assert all(k.startswith("cm_") for k in keys)
+
     def test_store_batch_atomic_success(self, adapter):
         """store_batch inserts all entries in a single transaction."""
         entries = [MemoryEntry(content=f"batch item {i}", type="user_preference") for i in range(5)]
@@ -1078,3 +1098,87 @@ class TestModuleConstants:
     def test_sentence_transformers_available_is_bool(self):
         """SENTENCE_TRANSFORMERS_AVAILABLE is a boolean."""
         assert isinstance(SENTENCE_TRANSFORMERS_AVAILABLE, bool)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 13. Lazy sentence_transformers probe (P1#10)
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class TestLazySentenceTransformersImport:
+    """Importing carrymem must not drag in sentence_transformers/torch (P1#10).
+
+    Root cause of the ~16.6s cold start: `adapters/sqlite/__init__.py` used to
+    compute SENTENCE_TRANSFORMERS_AVAILABLE at module load time, which executes
+    `from sentence_transformers import SentenceTransformer` (torch) on every
+    `import carrymem` — even when vector search is disabled/unavailable.
+    """
+
+    @staticmethod
+    def _run_child(code: str) -> str:
+        """Run ``code`` in a fresh interpreter that can import carrymem."""
+        import subprocess
+        import sys
+
+        import carrymem
+
+        src_dir = os.path.dirname(os.path.dirname(os.path.abspath(carrymem.__file__)))
+        env = dict(os.environ)
+        env["PYTHONPATH"] = src_dir + os.pathsep + env.get("PYTHONPATH", "")
+        proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env=env, timeout=300)
+        assert proc.returncode == 0, f"child interpreter failed:\n{proc.stderr}"
+        return proc.stdout
+
+    def test_import_carrymem_does_not_load_heavy_modules(self):
+        """`import carrymem` leaves sentence_transformers and torch unimported.
+
+        Must be a subprocess assertion: this interpreter already has those
+        modules in sys.modules (imported by other tests), so checking in-process
+        would pass vacuously regardless of the fix.
+        """
+        out = self._run_child(
+            "import sys\n"
+            "import carrymem\n"
+            "print('sentence_transformers' in sys.modules)\n"
+            "print('torch' in sys.modules)\n"
+        )
+        assert out.split() == ["False", "False"], f"heavy modules leaked into `import carrymem`: {out!r}"
+
+    def test_flag_resolvable_via_package_path(self):
+        """`from carrymem.adapters.sqlite import SENTENCE_TRANSFORMERS_AVAILABLE` works."""
+        from carrymem.adapters import sqlite as sqlite_pkg
+
+        assert isinstance(sqlite_pkg.SENTENCE_TRANSFORMERS_AVAILABLE, bool)
+        assert isinstance(sqlite_pkg.sentence_transformers_available(), bool)
+
+    def test_flag_resolvable_via_backward_compat_shim(self):
+        """`from carrymem.adapters.sqlite_adapter import ...` also works (shim delegates)."""
+        from carrymem.adapters import sqlite_adapter as shim
+
+        assert isinstance(shim.SENTENCE_TRANSFORMERS_AVAILABLE, bool)
+
+    def test_probe_is_memoized(self, monkeypatch):
+        """A second probe reuses the cache instead of importing again."""
+        import builtins
+
+        from carrymem.adapters import sqlite as sqlite_pkg
+
+        first = sqlite_pkg.sentence_transformers_available()
+        real_import = builtins.__import__
+
+        def _no_reimport(name, *args, **kwargs):
+            assert name != "sentence_transformers", "probe re-imported instead of using the memoized result"
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", _no_reimport)
+        assert sqlite_pkg.sentence_transformers_available() == first
+
+    def test_unknown_attribute_raises(self):
+        """__getattr__ must not swallow typos (it only serves the flag)."""
+        from carrymem.adapters import sqlite as sqlite_pkg
+        from carrymem.adapters import sqlite_adapter as shim
+
+        with pytest.raises(AttributeError):
+            sqlite_pkg.definitely_not_a_real_name
+        with pytest.raises(AttributeError):
+            shim.definitely_not_a_real_name

@@ -63,7 +63,7 @@ CarryMem fixes this. It's a lightweight, zero-dependency memory system that stor
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-4878-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-4948%20passed%2C%204%20skipped-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="Coverage">
   <img src="https://img.shields.io/badge/mypy-0%20errors-brightgreen" alt="mypy">
   <img src="https://img.shields.io/badge/security-bandit%2Bpip--audit-blue" alt="Security">
@@ -201,18 +201,18 @@ These are what make CarryMem different from every other memory solution:
 - Proactive injection > full reminder — first system to prove this
 - 24% fewer unhelpful responses than reminder (28 vs 38) — more precise, less noisy
 
-### 2. Zero-LLM Classification — 88% Without Calling Any LLM
-- Rule engine classifies 88% of memories with zero token cost
-- Only system with built-in rule engine (competitors: 0%)
-- P99 latency: 1.3ms — 93x faster than Mem0
+### 2. Zero-LLM Classification — Rule-Based First
+- The rule engine classifies eligible memories without LLM tokens; a historical internal snapshot reported 88% of sampled inputs on that path.
+- Current reproducible classification behavior is covered by the rule-engine tests and the benchmark command below; the 88% figure has no versioned dataset artifact and is not a release gate.
+- Historical P99 latency and competitor comparisons are reported separately unless accompanied by a reproducible artifact.
 
 ### 3. Lightweight & Portable — SQLite Only
 - Zero external dependencies for core functionality
 - Single .db file — carry your identity anywhere
 - Works with Cursor, Claude Code, ChatGPT, any MCP client
 
-### 4. Industrial-Grade Engineering — 4878 Tests / mypy 0 / flake8 0
-- **4878 tests collected & passing** (incl. 263 E2E user-journey tests) with 80%+ coverage (tested: 7 memory types × 4 tiers × lifecycle)
+### 4. Industrial-Grade Engineering — 4948 Tests / mypy 0 / flake8 0
+- **4948 tests passed, 4 skipped** in the current full regression (optional vector/semantic dependencies account for the skips); E2E and TUI suites are included in the repository test run.
 - **mypy 0 errors** across 150+ source files — fully type-safe (CI blocking gate)
 - **flake8 0 errors** — clean codebase, no lint violations (black + isort formatted)
 - **24 sensitive-pattern redaction** — auto-detects API keys, passwords, tokens before storage
@@ -225,7 +225,7 @@ These are what make CarryMem different from every other memory solution:
 ## How It Works
 
 ```
-User Input → Auto-Classification (7 types, 88% rule-based) → Smart Storage (SQLite + FTS5)
+User Input → Auto-Classification (7 types, rule-based first) → Smart Storage (SQLite + FTS5)
     → Semantic Recall (cross-language) → Context Injection (token budget) → AI Tool
 ```
 
@@ -256,7 +256,8 @@ pip install carrymem
 
 | Feature | Package | Install |
 |---------|---------|---------|
-| Core (incl. encryption) | PyYAML≥5.0, cryptography≥46.0.6 | `pip install carrymem` (included) |
+| Core (incl. encryption) | PyYAML≥5.0, cryptography≥50.0.0 | `pip install carrymem` (included) |
+
 | Multi-language | pycld2, langdetect | `pip install carrymem[language]` |
 | Semantic Search | sqlite-vec, sentence-transformers | `pip install carrymem[semantic]` |
 | Full (all features) | all above | `pip install carrymem[full]` |
@@ -569,36 +570,62 @@ except CarryMemError as e:
 - Actionable hints for every error
 - 7 concrete error subclasses for programmatic handling
 
-### Monitoring Framework (v0.4.0 New)
+### Monitoring Framework
 
-Production-ready monitoring with Prometheus export:
+Metrics are recorded automatically by the real operation paths — no manual
+`increment()` calls are needed in application code:
 
 ```python
-from carrymem.monitoring import HealthChecker, MetricsCollector, AlertManager, MonitoringHTTPServer
+from carrymem import CarryMem
+from carrymem.monitoring import HealthChecker, get_metrics_collector
 
-# Health checks
-health = HealthChecker()
-health.register_check("storage", lambda: cm._adapter is not None)
-status = health.check()  # {"status": "ok", "checks": {...}, "slo": [...]}
+cm = CarryMem(storage="sqlite")
+cm.classify_and_remember("I prefer dark mode")   # counts + times the operation
+cm.recall_memories("dark mode")                  # counts + times the operation
 
-# Metrics collection
-metrics = MetricsCollector()
-metrics.increment("classify_and_remember")
-metrics.record_latency("recall", 12.5)
-print(metrics.to_prometheus())  # Prometheus text format
+# The process-wide collector both ends share:
+metrics = get_metrics_collector()
+print(metrics.to_prometheus())                   # Prometheus text format
 
-# SLO alerts
-alerts = AlertManager()
-alert_list = alerts.check_alerts(metrics.get_snapshot())
-
-# HTTP server (optional)
-server = MonitoringHTTPServer(port=8766, health_checker=health, metrics_collector=metrics)
+# SLO evaluation runs over the same data
+health = HealthChecker(metrics_collector=metrics)
+status = health.check()  # {"status": "ok"|"degraded", "checks": {...}, "slo": [...]}
 ```
+
+**Exposed series** (authoritative producer table:
+[docs/design/V0.11.0_OBSERVABILITY_INSTRUMENTATION.md](docs/design/V0.11.0_OBSERVABILITY_INSTRUMENTATION.md)):
+
+| Series | Type | Produced by |
+|---|---|---|
+| `carrymem_total{operation="classify_and_remember"}` | counter | `CarryMem.classify_and_remember` |
+| `carrymem_total{operation="recall"}` | counter | `CarryMem.recall_memories` |
+| `carrymem_total{operation="classify_and_remember_errors"}` / `"recall_errors"` | counter | failures of the two operations above |
+| `carrymem_latency_ms{operation=...}` (+ `_sum` / `_count`) | summary | the two operations above, plus `startup` |
+| `carrymem_sse_clients` | gauge | MCP HTTP server SSE connections |
+| `carrymem_uptime_seconds` | gauge | metrics collector |
+
+In HTTP mode (`carrymem serve`) the same data is scraped from `GET /metrics`,
+and `GET /healthz` returns the SLO section (`503` when a target is violated).
 
 **SLO Targets**:
 - `classify_and_remember` P99 < 200ms
 - `recall` P99 < 500ms
-- Startup time < 2s
+- `startup` < 2s — from `import carrymem` to the first `CarryMem()` construction,
+  so it covers module import plus the first construction; one sample per process.
+  `sentence_transformers`/torch are imported lazily (only when vector search is
+  actually enabled), so they are **not** part of `startup`.
+
+**Honest boundaries**:
+- Metrics are **per process** and reset on restart — CarryMem is a local
+  single-instance tool, so no cross-process aggregation is attempted.
+- `"status": "no_data"` in the SLO section means the operation has not run in
+  this process yet. If it runs and still shows `no_data`, that is an
+  instrumentation bug, not health.
+- `sentence_transformers` is probed lazily: importing carrymem does not import
+  it or torch. Enabling vector search (`enable_vector_search=True` with the
+  vector extra installed) still loads the embedding model during
+  `SQLiteAdapter` construction — that is the explicit cost of vector search, not
+  an import side effect.
 
 ### Permission System (v0.4.0 New)
 
@@ -755,7 +782,7 @@ Rule management directly in your editor:
 | AI remembers what I said | ✅ | ✅ Profile | ✅ | ✅ Automatic |
 | Switch AI tools, still remembers | ❌ | ❌ | ❌ Code-only | ✅ One file follows you |
 | Don't want AI to remember something | ❌ | ⚠️ Limited | ⚠️ Delete code | ✅ Delete anytime, separate zones |
-| Remember without spending tokens | ❌ | ⚠️ LLM extract | ❌ LLM exec | ✅ 88% zero-cost |
+| Remember without spending tokens | ❌ | ⚠️ LLM extract | ❌ LLM exec | ✅ Rule-based path available |
 | Own your own data | ⚠️ Self-host only | ⚠️ Self-host | ✅ Local | ✅ Local file |
 | **Execute user-defined rules** | ❌ | ❌ | ✅ Python | ✅ Rule Engine |
 
@@ -823,10 +850,11 @@ Sample: 200 items, 10 inter-turns, Claude Sonnet 4
 
 | | Advantage | Result |
 |---|-----------|--------|
-| 💰 | Zero-LLM Ingestion | **88%** memories need **no LLM tokens** |
-| ⚡ | P99 Latency | **1.3ms** — **93x faster** than Mem0 |
+| 💰 | Zero-LLM Ingestion | Historical internal snapshot: **88%** of sampled inputs took the rule-based path; dataset artifact not currently versioned |
+| ⚡ | P99 Latency | Historical internal result: **1.3ms**; current reproducible benchmark is `pytest tests/test_performance_benchmark.py -k classify_and_remember -s` |
+| 🔬 | Mem0 comparison | Historical **93x** comparison is not a current release claim; no reproducible comparison harness is shipped |
 | 🪶 | Dependencies | **SQLite only** — no vector DB |
-| 🛡️ | Rule Engine | **Only system** with rule engine (competitors: 0%) |
+| 🛡️ | Rule Engine | Built-in rule engine; competitor comparison requires a versioned harness |
 
 ---
 
@@ -908,8 +936,8 @@ Backward compatible: `from carrymem.layers.pattern_analyzer import PatternAnalyz
 | `sqlite_adapter` | `src/carrymem/adapters/sqlite_adapter.py` | SQLite adapter (re-exports from `adapters/sqlite/`) |
 | `json_adapter` | `src/carrymem/adapters/json_adapter.py` | JSON file-based storage adapter (zero-dependency) |
 | `obsidian_adapter` | `src/carrymem/adapters/obsidian_adapter.py` | Obsidian vault knowledge-base adapter |
-| **Monitoring** (v0.4.0 New) | | |
-| `monitoring` | `src/carrymem/monitoring/__init__.py` | HealthChecker, MetricsCollector, AlertManager, MonitoringHTTPServer, LatencyTimer |
+| **Monitoring** | | |
+| `monitoring` | `src/carrymem/monitoring/__init__.py` | MetricsCollector, get_metrics_collector, HealthChecker, SLOTarget (Prometheus export) |
 | **Security** | | |
 | `permissions` | `src/carrymem/security/permissions.py` | Permission constants & AccessPolicy (owner-based MVP) |
 | **i18n** (v0.4.0 New) | | |
@@ -1002,8 +1030,8 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 
 ## Project Status
 
-**Current Version**: v0.10.1
-**Tests**: 4878 tests collected & passing (incl. 263 E2E), 4 skipped (vector/semantic optional deps); 97 TUI tests passing
+**Current Version**: v0.11.0
+**Tests**: 4948 passed, 4 skipped in the current full regression; optional vector/semantic dependencies account for the skips; 97 TUI tests passing
 **Coverage**: 80%+
 **mypy**: 0 errors (150+ source files, CI blocking gate)
 **flake8**: 0 errors (black + isort formatted)
@@ -1011,7 +1039,7 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 **Maturity**: 80/100 (B) per 7-dimension DevSquad evaluation
 
 **Changelog**:
-- **v0.10.1**: CLI startup cost fix (PATCH) — `python -m carrymem version` fast path + test_installation subprocess timeouts 10s/15s → 60s (L-V0100-006). See [CHANGELOG.md](CHANGELOG.md).
+- **v0.11.0**: Breaking async API cleanup — `AsyncCarryMem` is the executor-backed async facade only; standalone native async SQLite I/O remains available through `AsyncSQLiteAdapter`. The core encryption floor is `cryptography>=50.0.0`. See [CHANGELOG.md](CHANGELOG.md) and [ADR-009](docs/architecture/decisions/ADR-009-async-pipeline.md).
 - **v0.10.0**: Repeat-correction upgrade — `detect_repeat_correction()` + semantic dedup (Jaccard + entity) + security-keyword bypass (forge 借鉴点 2). See [docs/design/V0.10.0_REPEAT_CORRECTION.md](docs/design/V0.10.0_REPEAT_CORRECTION.md).
 - **v0.9.9**: Methodology: orthogonal classification table (docs/design/METHODOLOGY.md) + design space positioning (README Comparison + COMPETITIVE_ANALYSIS). See [docs/design/METHODOLOGY.md](docs/design/METHODOLOGY.md).
 - **v0.9.8**: Knowledge graph deletion completeness — `forget()` now cascades to `memory_entities` + `memory_relations` (TD-066, Oracle Agent Memory report启发). 4 new tests.

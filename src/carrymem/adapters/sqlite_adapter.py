@@ -1,18 +1,14 @@
 """Backward-compatible re-export: SQLiteAdapter is now in carrymem.adapters.sqlite."""
 
-from carrymem.adapters.sqlite import SQLiteAdapter
+from typing import TYPE_CHECKING
 
-# Re-export module-level constants for backward compatibility
-try:
-    from carrymem.adapters.sqlite import (
-        PYSQLITE3_AVAILABLE,
-        SENTENCE_TRANSFORMERS_AVAILABLE,
-        SQLITE_VEC_AVAILABLE,
-    )
-except ImportError:
-    SQLITE_VEC_AVAILABLE = False
-    PYSQLITE3_AVAILABLE = False
-    SENTENCE_TRANSFORMERS_AVAILABLE = False
+# The two capability flags below only probe lightweight C extensions, so they
+# stay eager. `SENTENCE_TRANSFORMERS_AVAILABLE` needs `sentence_transformers`
+# (which loads torch, ~16s), so it is resolved lazily via PEP 562 delegation
+# (P1#10).
+from carrymem.adapters.sqlite import PYSQLITE3_AVAILABLE, SQLITE_VEC_AVAILABLE, SQLiteAdapter
+
+_LAZY_FLAGS = ("SENTENCE_TRANSFORMERS_AVAILABLE",)
 
 __all__ = [
     "SQLiteAdapter",
@@ -20,3 +16,15 @@ __all__ = [
     "PYSQLITE3_AVAILABLE",
     "SENTENCE_TRANSFORMERS_AVAILABLE",
 ]
+
+if TYPE_CHECKING:  # pragma: no cover — static binding only; resolved lazily at runtime
+    SENTENCE_TRANSFORMERS_AVAILABLE: bool
+
+
+def __getattr__(name):
+    """PEP 562: delegate lazy capability flags to carrymem.adapters.sqlite."""
+    if name in _LAZY_FLAGS:
+        from carrymem.adapters import sqlite
+
+        return getattr(sqlite, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
