@@ -2,17 +2,21 @@
 
 Covers 9 dimensions per spec/v0.5.2_spec.md §6:
 - Happy Path: rule-based summarizer across types and levels
-- LLM switch: env var override, TRAE detection, default off
+- Progressive Disclosure / Cache Behavior
 - Boundary: empty text, long text, None summary, single sentence
 - Integration: build_prompt progressive=True/False, format depth
 - Performance: 1000 memories < 500ms
-- Config: CARRYMEM_SUMMARY_ENABLED=0
 - Schema: migrate_v052 idempotent + field existence
+- CRUD: summary invalidation on update
+- Serialization: StoredMemory summary fields
 
 (post-v0.10.1, 2026-09-07: the SummaryLayer class was removed as a half-ghost — production
 uses RuleBasedSummarizer via format.py. SummaryLayer/BUCKET_DEPTH tests
 were dropped with it; cache/progressive behavior now lives in
-format_memory_entry/build_prompt tests below.)
+format_memory_entry/build_prompt tests below.
+2026-09-21: the unwired config switches `is_summary_enabled` /
+`is_llm_summary_enabled` were deleted along with their tests — nothing in src/
+ever called them.)
 """
 
 from __future__ import annotations
@@ -23,11 +27,7 @@ from typing import Any, Dict
 import pytest
 
 from carrymem.format import format_memory_entry
-from carrymem.layers.summary_layer import (
-    RuleBasedSummarizer,
-    is_llm_summary_enabled,
-    is_summary_enabled,
-)
+from carrymem.layers.summary_layer import RuleBasedSummarizer
 from carrymem.prompt import build_prompt
 
 # ── Fixtures ──────────────────────────────────────────────────────
@@ -64,13 +64,6 @@ def fact_memory() -> Dict[str, Any]:
         "content": "User drives Toyota Camry.",
         "confidence": 0.85,
     }
-
-
-@pytest.fixture(autouse=True)
-def _clear_env(monkeypatch):
-    """Clear all summary-related env vars before each test."""
-    for var in ("CARRYMEM_SUMMARY_ENABLED", "CARRYMEM_LLM_SUMMARY", "CARRYMEM_ENV", "TRAE_SESSION_ID"):
-        monkeypatch.delenv(var, raising=False)
 
 
 # ── 1. Happy Path: RuleBasedSummarizer ────────────────────────────
@@ -122,50 +115,13 @@ class TestRuleBasedSummarizer:
         assert "[Custom_Type]" in result
 
 
-# ── 2. LLM Switch Configuration ───────────────────────────────────
+# ── 2. Progressive Disclosure ─────────────────────────────────────
 
 
-class TestLLMSwitch:
-    """Verify LLM summary enable/disable logic."""
-
-    def test_default_disabled(self):
-        """LLM summary should be disabled by default."""
-        assert is_llm_summary_enabled() is False
-
-    def test_env_var_explicit_enable(self, monkeypatch):
-        """CARRYMEM_LLM_SUMMARY=1 should enable LLM summary."""
-        monkeypatch.setenv("CARRYMEM_LLM_SUMMARY", "1")
-        assert is_llm_summary_enabled() is True
-
-    def test_env_var_explicit_disable(self, monkeypatch):
-        """CARRYMEM_LLM_SUMMARY=0 should disable LLM summary."""
-        monkeypatch.setenv("CARRYMEM_LLM_SUMMARY", "0")
-        assert is_llm_summary_enabled() is False
-
-    def test_trae_env_detection(self, monkeypatch):
-        """CARRYMEM_ENV=trae should auto-enable LLM summary."""
-        monkeypatch.setenv("CARRYMEM_ENV", "trae")
-        assert is_llm_summary_enabled() is True
-
-    def test_trae_session_id_detection(self, monkeypatch):
-        """TRAE_SESSION_ID presence should auto-enable LLM summary."""
-        monkeypatch.setenv("TRAE_SESSION_ID", "session-123")
-        assert is_llm_summary_enabled() is True
-
-    def test_env_var_overrides_trae_detection(self, monkeypatch):
-        """CARRYMEM_LLM_SUMMARY=0 should override TRAE env detection."""
-        monkeypatch.setenv("CARRYMEM_ENV", "trae")
-        monkeypatch.setenv("CARRYMEM_LLM_SUMMARY", "0")
-        assert is_llm_summary_enabled() is False
+# ── 3. Cache Behavior ─────────────────────────────────────────────
 
 
-# ── 3. Progressive Disclosure ─────────────────────────────────────
-
-
-# ── 4. Cache Behavior ─────────────────────────────────────────────
-
-
-# ── 5. Boundary Cases ─────────────────────────────────────────────
+# ── 4. Boundary Cases ─────────────────────────────────────────────
 
 
 class TestBoundaryCases:
@@ -201,7 +157,7 @@ class TestBoundaryCases:
         assert "Python" in result
 
 
-# ── 6. Integration: format_memory_entry + build_prompt ────────────
+# ── 5. Integration: format_memory_entry + build_prompt ────────────
 
 
 class TestFormatMemoryEntryDepth:
@@ -267,7 +223,7 @@ class TestBuildPromptProgressive:
         assert "I prefer tea over coffee. I especially enjoy oolong tea" in prompt
 
 
-# ── 7. Performance ────────────────────────────────────────────────
+# ── 6. Performance ────────────────────────────────────────────────
 
 
 class TestPerformance:
@@ -313,23 +269,7 @@ class TestPerformance:
         assert elapsed_ms < 500, f"Progressive prompt took {elapsed_ms:.1f}ms (target: <500ms)"
 
 
-# ── 8. Config: CARRYMEM_SUMMARY_ENABLED ───────────────────────────
-
-
-class TestSummaryEnabledConfig:
-    """Verify CARRYMEM_SUMMARY_ENABLED switch."""
-
-    def test_summary_enabled_by_default(self):
-        """Summary layer should be enabled by default."""
-        assert is_summary_enabled() is True
-
-    def test_summary_disabled_when_env_zero(self, monkeypatch):
-        """CARRYMEM_SUMMARY_ENABLED=0 should disable summary layer."""
-        monkeypatch.setenv("CARRYMEM_SUMMARY_ENABLED", "0")
-        assert is_summary_enabled() is False
-
-
-# ── 9. Schema Migration ───────────────────────────────────────────
+# ── 7. Schema Migration ───────────────────────────────────────────
 
 
 class TestSchemaMigration:
@@ -385,7 +325,7 @@ class TestSchemaMigration:
         conn_mgr.close()
 
 
-# ── 10. CRUD: Summary Invalidation on Update ──────────────────────
+# ── 8. CRUD: Summary Invalidation on Update ───────────────────────
 
 
 class TestSummaryInvalidation:
@@ -437,7 +377,7 @@ class TestSummaryInvalidation:
         adapter.close()
 
 
-# ── 11. StoredMemory Serialization ────────────────────────────────
+# ── 9. StoredMemory Serialization ─────────────────────────────────
 
 
 class TestStoredMemorySummaryFields:

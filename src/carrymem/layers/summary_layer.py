@@ -6,44 +6,15 @@ prompt injection. Rule-based by default (zero LLM), LLM optional.
 Design: spec/v0.5.2_spec.md
 """
 
-import os
 import re
 from typing import Any, Dict
 
-# ── Config switches ───────────────────────────────────────────────
-
-_SUMMARY_ENABLED_ENV = "CARRYMEM_SUMMARY_ENABLED"
-_LLM_SUMMARY_ENV = "CARRYMEM_LLM_SUMMARY"
-_TRAE_ENV_ENV = "CARRYMEM_ENV"
-_TRAE_SESSION_ENV = "TRAE_SESSION_ID"
+# ── Length limits ─────────────────────────────────────────────────
 
 _MAX_SUMMARY_LENGTH = 500  # C22: prevent oversized LLM output
 _MAX_KEYWORDS = 3  # level=1 keyword count
 _MAX_SHORT_CHARS = 120  # level=2 max chars before truncation
 _MAX_FIRST_SENTENCE_CHARS = 200  # first sentence extraction limit
-
-
-def is_summary_enabled() -> bool:
-    """Whether the summary layer is enabled (default: enabled)."""
-    return os.environ.get(_SUMMARY_ENABLED_ENV, "1") != "0"
-
-
-def is_llm_summary_enabled() -> bool:
-    """Whether LLM summarization is enabled (default: disabled).
-
-    Priority: CARRYMEM_LLM_SUMMARY env > TRAE env detection > False.
-    """
-    explicit = os.environ.get(_LLM_SUMMARY_ENV, "")
-    if explicit == "1":
-        return True
-    if explicit == "0":
-        return False
-    # TRAE environment auto-detection
-    if os.environ.get(_TRAE_ENV_ENV, "").lower() == "trae":
-        return True
-    if os.environ.get(_TRAE_SESSION_ENV):
-        return True
-    return False
 
 
 # ── Rule-based summarizer (zero LLM) ──────────────────────────────
