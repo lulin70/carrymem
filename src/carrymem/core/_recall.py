@@ -164,12 +164,23 @@ class RecallMixin:
     ) -> List[Dict[str, Any]]:
         """Recall without emitting metrics, for internal infrastructure reads.
 
-        The rule candidate generator reads existing memories while a memory is
-        being stored. Those reads are bookkeeping the user never asked for, and
-        counting them inflated ``carrymem_total{operation="recall"}`` by two per
-        ``classify_and_remember`` (measured) while diluting the recall latency
-        SLO with fast internal lookups. The counter is meant to answer "how many
-        recall operations did the user request, and how slow were they".
+        Several code paths read existing memories *as a side effect of storing*
+        rather than because the user asked for a recall:
+
+        - ``rules/candidate_generator.py`` looks for patterns to suggest rules for;
+        - ``core/_classification.py`` resolves pronouns (coreference) and analyses
+          correction history.
+
+        Those reads are bookkeeping the user never asked for. Counting them
+        inflated ``carrymem_total{operation="recall"}`` (measured: two per
+        ``classify_and_remember`` from the rule path, plus one more when the
+        message contains a pronoun and the coreference branch runs) and diluted
+        the recall latency SLO with fast internal lookups. The counter is meant
+        to answer "how many recall operations did the user request, and how slow
+        were they", so these paths call this method instead.
+
+        Reads that *serve* a user request — ``recall_all``, prompt building,
+        ``whoami`` — keep using the instrumented ``recall_memories``.
         """
         if not self._adapter:
             raise StorageNotConfiguredError()

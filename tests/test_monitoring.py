@@ -334,18 +334,51 @@ class TestCoreOperationInstrumentation(unittest.TestCase):
         self.assertEqual(snap["latency"]["classify_and_remember"]["count"], 1)
 
     def test_storing_a_memory_does_not_count_as_a_recall(self):
-        """The rule engine reads memories while storing; those are not user recalls.
+        """Storing reads memories internally; those reads are not user recalls.
 
-        Before this was fixed, one ``classify_and_remember`` emitted two extra
-        ``recall`` samples (``rules/candidate_generator.py`` reading existing
-        memories), inflating the counter and diluting the recall latency SLO.
+        ``classify_and_remember`` reads existing memories as a side effect of
+        storing, through three independent paths: the rule candidate generator,
+        coreference resolution (only when the message contains a pronoun), and
+        correction-history analysis. Each one went through the instrumented
+        ``recall_memories``, inflating ``carrymem_total{operation="recall"}``
+        (measured: +2 from the rule path, +1 more from coreference) and diluting
+        the recall latency SLO with fast internal lookups.
+
+        Every message shape is exercised on purpose: an earlier version of this
+        guard used only a pronoun-free message, so the coreference leak survived
+        the fix unnoticed.
         """
+        messages = [
+            "I prefer dark mode for coding",  # rule path only
+            "I prefer dark mode in all my editors",  # + coreference ("my")
+            "We decided to ship it next week",  # + coreference ("it")
+            "Actually, I prefer light mode instead of dark mode",  # + correction path
+        ]
+
+        for message in messages:
+            with self.subTest(message=message):
+                self.mc.reset()
+                self.cm.classify_and_remember(message)
+
+                snapshot = self.mc.get_snapshot()
+                self.assertEqual(snapshot["counters"]["classify_and_remember"], 1)
+                self.assertNotIn(
+                    "recall",
+                    snapshot["counters"],
+                    f"internal reads during storing leaked into the recall counter for {message!r}",
+                )
+                self.assertNotIn("recall", snapshot["latency"])
+
+    def test_an_explicit_recall_still_counts(self):
+        """Control group: the guard above must not be satisfied by never counting."""
         self.cm.classify_and_remember("I prefer dark mode for coding")
+        self.mc.reset()
+
+        self.cm.recall_memories("dark mode")
 
         snapshot = self.mc.get_snapshot()
-        self.assertEqual(snapshot["counters"]["classify_and_remember"], 1)
-        self.assertNotIn("recall", snapshot["counters"], "internal rule-engine reads leaked into the recall counter")
-        self.assertNotIn("recall", snapshot["latency"])
+        self.assertEqual(snapshot["counters"]["recall"], 1)
+        self.assertEqual(snapshot["latency"]["recall"]["count"], 1)
 
     def test_slo_entries_report_real_values_not_no_data(self):
         """HealthChecker must consume the same collector the core writes to.

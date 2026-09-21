@@ -56,6 +56,15 @@ class ClassificationMixin:
             update_access: bool = True,
         ) -> List[Dict[str, Any]]: ...
 
+        def _recall_memories_uninstrumented(
+            self,
+            query: Optional[str] = None,
+            filters: Optional[Dict[str, Any]] = None,
+            limit: int = 20,
+            namespaces: Optional[List[str]] = None,
+            update_access: bool = True,
+        ) -> List[Dict[str, Any]]: ...
+
         # From MemoryCRUDMixin
         def classify_message(
             self,
@@ -132,7 +141,12 @@ class ClassificationMixin:
                     context_str = context.get("ai_reply", "") or context.get("previous_message", "")
                 recent_mems = []
                 try:
-                    recent_mems = self.recall_memories(query="", limit=COREFERENCE_RECALL_LIMIT, update_access=False)
+                    # Uninstrumented: this read is a side effect of storing, not a
+                    # recall the user asked for. Counting it inflated the ``recall``
+                    # counter and diluted its latency SLO.
+                    recent_mems = self._recall_memories_uninstrumented(
+                        query="", limit=COREFERENCE_RECALL_LIMIT, update_access=False
+                    )
                 except (KeyError, ValueError, RuntimeError) as e:
                     logger.debug("Coreference recall skipped (non-critical): %s", e)
                 resolved_message, coreference_resolved = resolve_coreference(
@@ -336,7 +350,8 @@ class ClassificationMixin:
             # current deduped row is excluded by storage key; identical
             # repeats are represented by repetition_count instead.
             try:
-                history = self.recall_memories(
+                # Uninstrumented: side effect of storing, not a user recall.
+                history = self._recall_memories_uninstrumented(
                     query="",
                     filters={"type": "correction"},
                     limit=CORRECTION_RECALL_LIMIT,
@@ -556,7 +571,8 @@ class ClassificationMixin:
     ) -> Optional[CorrectionUpdateInfo]:
         """Find and update a memory matching correction keywords."""
         try:
-            related = self.recall_memories(limit=CORRECTION_RECALL_LIMIT)
+            # Uninstrumented: side effect of storing, not a user recall.
+            related = self._recall_memories_uninstrumented(limit=CORRECTION_RECALL_LIMIT)
             for mem in related:
                 mem_content = mem.get("content", "").lower()
                 mem_type = mem.get("type", "")
