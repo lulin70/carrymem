@@ -1,30 +1,36 @@
 # CarryMem — Project Status
 
-**Version**: v0.11.0
-**Last Updated**: 2026-09-09
+**Version**: v0.11.2
+**Last Updated**: 2026-09-21
 **Maintainer**: CarryMem Team
 
 ---
 
-## v0.11.0 Project Status (2026-09-09)
+## v0.11.2 Project Status (2026-09-21)
 
-**Current State**: Release candidate preparation. This is a MINOR breaking release: `AsyncCarryMem` now exposes only the executor-backed async facade; native async SQLite I/O remains available through standalone `AsyncSQLiteAdapter`. The core encryption floor is `cryptography>=50.0.0`.
+**Current State**: **Released and published.** `0.11.2` is on PyPI as `latest`. Verification used the PyPI JSON API (`https://pypi.org/pypi/carrymem/json`), not the git tag alone — see the `tag ≠ 已发布` rule in [RELEASE_RUNBOOK.md](RELEASE_RUNBOOK.md) §1.
 
-The P1-P2 technical-debt closure is complete. E1/E2 local CI gates are reproducible and blocking, and D5 benchmark claims now distinguish current reproducible measurements from historical internal snapshots.
+The v0.11.x line carries the breaking `native_async` removal, the `cryptography>=50.0.0` floor, reproducible blocking local CI gates, and the correction of the `recall` metric semantics.
 
 ### Release Evidence
 
-- **Regression**: Full-suite regression is still running in a detached process; prior completed evidence is `4939 passed, 13 skipped, 244 warnings, 25 subtests passed`. The previously observed CLI timeout was resolved by giving subprocess entry-point tests a 60-second startup budget; the isolated test passed in 17.82s and the complete entry-point module passed (`16 passed`).
-- **Quality gates**: flake8, Black, isort, mypy, and radon all passed in `scripts/ci_local_check.py`.
-- **Async migration**: remove `native_async=True` from `AsyncCarryMem`; use `AsyncCarryMem` for executor-backed calls or `AsyncSQLiteAdapter` directly for native async SQLite I/O.
+- **Regression (CI semantics)**: `python3 scripts/ci_local_check.py` → `collected 4986 items / 77 deselected / 4909 selected`, **`4899 passed, 10 skipped, 77 deselected, 143 warnings in 946.04s (0:15:46)`**, `Total coverage: 83.20%` (`fail_under = 80`), `radon: no functions with complexity >= 21`, `All six blocking local CI gates passed (flake8, black, isort, mypy, pytest, radon).`
+- **Release workflow**: run `35572211377` (`Release v0.11.2`) — all four jobs `success`: Pre-Release Tests / E2E Tests (User Journey Gate) / VSCode Tier 2 UI E2E / Build & Publish.
+- **PyPI**: `carrymem-0.11.2-py3-none-any.whl` (537,877 B) and `carrymem-0.11.2.tar.gz` (1,645,442 B) uploaded `2026-09-21T07:36Z`; `info.version == 0.11.2`.
+- **Fresh-install smoke** (venv + `pip install carrymem==0.11.2` from PyPI): `installed: 0.11.2`, `pip check` → `No broken requirements found.` Four storing message shapes — including two that contain pronouns and one correction — each report `counters={'classify_and_remember': 1}` with **no `recall` key**, and one explicit `recall_memories` reports `{'recall': 1}`. `LEAKING BRANCHES: none`.
+- **Metric semantics**: `carrymem_total{operation="recall"}` now counts only user-requested reads. Internal bookkeeping reads (`rules/candidate_generator.py`, plus coreference and correction-history in `core/_classification.py`) use `_recall_memories_uninstrumented`; reads that serve a user request (`recall_all`, prompt building, `whoami`) keep the instrumented path.
+- **Async migration**: `AsyncCarryMem` exposes only the executor-backed async facade; native async SQLite I/O remains available through `AsyncSQLiteAdapter` directly (ADR-009).
 - **Benchmark provenance**: the 88% rule-path and 93x Mem0 comparison remain historical claims without versioned artifacts; the repository ships a reproducible CarryMem benchmark command for current measurements.
 
 ### Recent Releases
 
 | Version | Date | Key Changes |
 |---------|------|-------------|
-| v0.11.0 | 2026-09-08 | Breaking async API cleanup, cryptography 50 floor, reproducible local CI gates, and benchmark provenance corrections. |
-| v0.10.0 | 2026-09-05 | Repeat-correction upgrade: `detect_repeat_correction()` + semantic dedup (Jaccard + entity) + security-keyword bypass (Forge-inspired). |
+| v0.11.2 | 2026-09-21 | Completes the `recall` metric correction: the coreference and correction-history reads in `core/_classification.py` no longer count as user recalls, and the guard that missed them now covers four message shapes plus a control group. |
+| v0.11.1 | 2026-09-21 | Release-gate fix (the SLO assertion that blocked `v0.11.0`), the first `recall` metric correction, and full regression added as a sixth blocking local CI gate. |
+| v0.11.0 | 2026-09-08 | Breaking async API cleanup, cryptography 50 floor, reproducible local CI gates, and benchmark provenance corrections. **Tagged but never published** — the release workflow failed; superseded by v0.11.1 / v0.11.2. |
+| v0.10.1 | 2026-09-07 | Patch on the v0.10.0 repeat-correction line. **Tagged but never published** (release workflow failed at the lint gate). |
+| v0.10.0 | 2026-09-05 | Repeat-correction upgrade: `detect_repeat_correction()` + semantic dedup (Jaccard + entity) + security-keyword bypass (Forge-inspired). **Tagged but never published** (release workflow failed at the lint gate). |
 | v0.9.9 | 2026-08-03 | Methodology: orthogonal classification table (METHODOLOGY.md) + design space positioning (README + COMPETITIVE_ANALYSIS). |
 | v0.9.8 | 2026-07-27 | Knowledge graph deletion completeness: `forget()` cascades to `memory_entities` + `memory_relations` (TD-066). 4 new tests. Oracle Agent Memory report启发. |
 | v0.9.7 | 2026-07-26 | Tech debt cleanup: TD-003b/009/011b/002 follow-ups (deleted cli.py facade, added TUI fallback tests, downgraded SQLITE_SCHEMA to P3) |
@@ -433,7 +439,7 @@ each py3.11 + py3.12).
 
 ## Next Milestone
 
-**v0.11.0** (release candidate — ships the `native_async` mode removal as a breaking API change, plus the `cryptography>=50.0.0` floor and reproducible release gates; see ADR-009. This release is `0.11.0`, not `0.10.2`, per SemVer.)
+**v0.11.2 shipped.** The next MINOR is not yet scoped. Open follow-ups that are known but not release-blocking: the ghost feature switches `is_summary_enabled` / `is_llm_summary_enabled` (documented but not wired), stale version references in secondary docs, and i18n drift between the README translations. See [V0.11.0_PROJECT_REVIEW.md](design/V0.11.0_PROJECT_REVIEW.md) §8 for the full list.
 
 Potential areas for v0.10.0+ (per CARRYMEM_ARCHITECTURE_EVOLUTION_PLAN.md):
 - Vector search enhancements (HNSW indexing, approximate nearest neighbor)
