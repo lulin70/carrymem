@@ -133,23 +133,19 @@ class RecallMixin:
 
         Instrumented: one latency sample per call plus a success or error
         counter, matching the ``recall`` SLO entry in ``monitoring._DEFAULT_SLOS``.
+        Internal infrastructure reads must call ``_recall_memories_uninstrumented``
+        instead — see its docstring for why.
         """
         metrics = get_metrics_collector()
         started = time.perf_counter()
         try:
-            if not self._adapter:
-                raise StorageNotConfiguredError()
-
-            validate_query(query or "")
-            validate_limit(limit)
-            results = self._adapter.recall(
-                query or "",
+            payload = self._recall_memories_uninstrumented(
+                query=query,
                 filters=filters,
                 limit=limit,
                 namespaces=namespaces,
                 update_access=update_access,
             )
-            payload = [r.to_dict() for r in results]
         except Exception:
             metrics.increment("recall_errors")
             raise
@@ -157,6 +153,37 @@ class RecallMixin:
             metrics.record_latency("recall", (time.perf_counter() - started) * 1000.0)
         metrics.increment("recall")
         return payload
+
+    def _recall_memories_uninstrumented(
+        self,
+        query: Optional[str] = None,
+        filters: Optional[Dict[str, Any]] = None,
+        limit: int = DEFAULT_RECALL_LIMIT,
+        namespaces: Optional[List[str]] = None,
+        update_access: bool = True,
+    ) -> List[Dict[str, Any]]:
+        """Recall without emitting metrics, for internal infrastructure reads.
+
+        The rule candidate generator reads existing memories while a memory is
+        being stored. Those reads are bookkeeping the user never asked for, and
+        counting them inflated ``carrymem_total{operation="recall"}`` by two per
+        ``classify_and_remember`` (measured) while diluting the recall latency
+        SLO with fast internal lookups. The counter is meant to answer "how many
+        recall operations did the user request, and how slow were they".
+        """
+        if not self._adapter:
+            raise StorageNotConfiguredError()
+
+        validate_query(query or "")
+        validate_limit(limit)
+        results = self._adapter.recall(
+            query or "",
+            filters=filters,
+            limit=limit,
+            namespaces=namespaces,
+            update_access=update_access,
+        )
+        return [r.to_dict() for r in results]
 
     def recall_aggregated(
         self,

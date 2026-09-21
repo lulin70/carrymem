@@ -91,6 +91,15 @@ class LifecycleMixin:
             update_access: bool = True,
         ) -> List[Dict[str, Any]]: ...
 
+        def _recall_memories_uninstrumented(
+            self,
+            query: Optional[str] = None,
+            filters: Optional[Dict[str, Any]] = None,
+            limit: int = 20,
+            namespaces: Optional[List[str]] = None,
+            update_access: bool = True,
+        ) -> List[Dict[str, Any]]: ...
+
         # From BackupMixin
         def _do_initial_backup(self) -> None: ...
 
@@ -121,7 +130,9 @@ class LifecycleMixin:
         self._prompt_builder: Optional[PromptBuilder] = None
         self._candidate_generator = RuleCandidateGenerator(
             rule_engine_getter=lambda: self.rule_engine,
-            recall_memories=self.recall_memories,
+            # Uninstrumented on purpose: these are bookkeeping reads performed
+            # while a memory is being stored, not user-initiated recalls.
+            recall_memories=self._recall_memories_uninstrumented,
         )
 
         # Eagerly initialize the rule engine schema before any concurrent

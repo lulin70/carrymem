@@ -333,16 +333,69 @@ class TestCoreOperationInstrumentation(unittest.TestCase):
         self.assertEqual(snap["counters"]["classify_and_remember_errors"], 1)
         self.assertEqual(snap["latency"]["classify_and_remember"]["count"], 1)
 
+    def test_storing_a_memory_does_not_count_as_a_recall(self):
+        """The rule engine reads memories while storing; those are not user recalls.
+
+        Before this was fixed, one ``classify_and_remember`` emitted two extra
+        ``recall`` samples (``rules/candidate_generator.py`` reading existing
+        memories), inflating the counter and diluting the recall latency SLO.
+        """
+        self.cm.classify_and_remember("I prefer dark mode for coding")
+
+        snapshot = self.mc.get_snapshot()
+        self.assertEqual(snapshot["counters"]["classify_and_remember"], 1)
+        self.assertNotIn("recall", snapshot["counters"], "internal rule-engine reads leaked into the recall counter")
+        self.assertNotIn("recall", snapshot["latency"])
+
     def test_slo_entries_report_real_values_not_no_data(self):
-        """HealthChecker must consume the same collector the core writes to."""
+        """HealthChecker must consume the same collector the core writes to.
+
+        This asserts the *wiring*, not the latency: the operation entries must
+        carry real samples instead of the `no_data` placeholder. It deliberately
+        does not assert `within_slo is True` — that would measure the host, not
+        the code. The first operation on a fresh adapter pays one-time
+        initialisation (schema, FTS triggers, language detection) and coverage
+        instrumentation alone inflates it ~14x (7.5ms -> 106ms locally), so on a
+        slower CI runner a cold first call legitimately exceeds the steady-state
+        target. Whether the threshold can actually fail is covered by
+        `test_slo_flags_a_breach_when_p99_exceeds_the_target`.
+        """
         self.cm.classify_and_remember("I prefer dark mode for coding")
         self.cm.recall_memories("dark mode")
 
         slo = {entry["operation"]: entry for entry in HealthChecker(metrics_collector=self.mc).check()["slo"]}
         self.assertNotEqual(slo["classify_and_remember"].get("status"), "no_data")
         self.assertNotEqual(slo["recall"].get("status"), "no_data")
-        self.assertIs(slo["classify_and_remember"]["within_slo"], True)
-        self.assertIs(slo["recall"]["within_slo"], True)
+
+        # One sample each proves HealthChecker reads the collector the core wrote
+        # into, rather than a second, empty instance.
+        snapshot = self.mc.get_snapshot()
+        self.assertEqual(snapshot["latency"]["classify_and_remember"]["count"], 1)
+        self.assertEqual(snapshot["latency"]["recall"]["count"], 1)
+        self.assertIsInstance(slo["classify_and_remember"]["within_slo"], bool)
+        self.assertIsInstance(slo["recall"]["within_slo"], bool)
+
+    def test_slo_reports_no_data_before_the_operation_runs(self):
+        """Control group: `not no_data` above is only meaningful if `no_data` exists."""
+        slo = {entry["operation"]: entry for entry in HealthChecker(metrics_collector=self.mc).check()["slo"]}
+
+        self.assertEqual(slo["classify_and_remember"]["status"], "no_data")
+        self.assertEqual(slo["recall"]["status"], "no_data")
+
+    def test_slo_flags_a_breach_when_p99_exceeds_the_target(self):
+        """The SLO must be able to fail; a threshold that never trips is decoration.
+
+        Machine-independent on purpose: the sample is injected, so this holds on
+        any host regardless of how fast it runs the real operation.
+        """
+        self.mc.record_latency("classify_and_remember", 5000.0)
+
+        report = HealthChecker(metrics_collector=self.mc).check()
+        slo = {entry["operation"]: entry for entry in report["slo"]}
+
+        self.assertIs(slo["classify_and_remember"]["within_slo"], False)
+        self.assertEqual(slo["classify_and_remember"]["threshold_ms"], 200.0)
+        self.assertEqual(report["status"], "degraded")
 
 
 class TestPrometheusExpositionContract(unittest.TestCase):
