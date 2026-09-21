@@ -146,6 +146,7 @@ def main() -> int:
                     "-q",
                 ],
             ),
+            ("version-consistency", [str(python), str(ROOT / "scripts" / "check_version_consistency.py")]),
         ]
 
         failures: list[str] = []
@@ -167,7 +168,10 @@ def main() -> int:
         if failures:
             print("\nFAILED gates: " + ", ".join(failures))
             return 1
-        print("\nAll six blocking local CI gates passed (flake8, black, isort, mypy, pytest, radon).")
+        print(
+            "\nAll seven blocking local CI gates passed "
+            "(flake8, black, isort, mypy, pytest, radon, version-consistency)."
+        )
         return 0
 
 

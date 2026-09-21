@@ -196,6 +196,9 @@ jobs:
             echo "OK: No functions with complexity >=21"
           fi
 
+      - name: Version consistency
+        run: python3 scripts/check_version_consistency.py
+
   # ═══════════════════════════════════════
   # ADVISORY: i18n Compliance (non-blocking)
   # ═══════════════════════════════════════
