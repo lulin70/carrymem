@@ -1,9 +1,17 @@
 #!/usr/bin/env python3
 """Run the repository's blocking quality gates in a disposable CI-like venv.
 
-The commands and tool versions intentionally mirror the blocking ``lint`` job in
-``.github/workflows/ci.yml``.  The temporary environment is removed when the
+The commands and tool versions intentionally mirror the blocking gates in
+``.github/workflows/ci.yml`` and the ``pre-release-test`` job in
+``.github/workflows/release.yml``.  The temporary environment is removed when the
 script exits, so the result does not depend on packages installed globally.
+
+The test gate runs the suite exactly the way the release gate does
+(``--cov=carrymem``, ``--timeout=120``, ``-m "not slow"``).  That equivalence
+matters: running the suite without ``--cov`` is not the same measurement, because
+coverage instrumentation alone slowed the first core operation from 7.5ms to
+106ms locally — enough to hide a release-blocking failure.  The 80% floor is
+enforced by ``[tool.coverage.report] fail_under`` in ``pyproject.toml``.
 """
 
 from __future__ import annotations
@@ -30,6 +38,16 @@ RUNTIME_REQUIREMENTS = [
     "cryptography>=50.0.0",
     "PyYAML>=5.0",
 ]
+TEST_REQUIREMENTS = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "pytest-cov>=4.0",
+    "pytest-mock>=3.10",
+    "pytest-timeout>=2.0",
+    "coverage[toml]>=7.0",
+    "pycld2>=0.41",
+    "langdetect>=1.0.9",
+]
 
 
 def run(command: list[str], *, capture: bool = False) -> subprocess.CompletedProcess[str]:
@@ -39,7 +57,7 @@ def run(command: list[str], *, capture: bool = False) -> subprocess.CompletedPro
 
 
 def install_environment(python: Path) -> None:
-    """Install the exact lint toolchain and mypy runtime dependencies."""
+    """Install the exact lint toolchain, the test dependencies, and the package."""
     requirements = [f"{name}=={version}" for name, version in TOOLS.items()]
     run([str(python), "-m", "pip", "install", "--disable-pip-version-check", "--upgrade", "pip>=26.1.2"])
     result = run(
@@ -51,10 +69,18 @@ def install_environment(python: Path) -> None:
             "--disable-pip-version-check",
             *requirements,
             *RUNTIME_REQUIREMENTS,
+            *TEST_REQUIREMENTS,
         ]
     )
     if result.returncode != 0:
         raise SystemExit("Unable to install the pinned local CI toolchain.")
+
+    # Editable install so the `carrymem` console script exists, exactly as the CI
+    # jobs have it. Tests that shell out to the CLI would otherwise behave
+    # differently here than in CI.
+    editable = run([str(python), "-m", "pip", "install", "--disable-pip-version-check", "-e", "."])
+    if editable.returncode != 0:
+        raise SystemExit("Unable to install the project in editable mode.")
 
 
 def check_versions(python: Path) -> bool:
@@ -105,6 +131,21 @@ def main() -> int:
                 [str(python), "-m", "isort", "--check-only", "--diff", "src/", "tests/"],
             ),
             ("mypy", [str(python), "-m", "mypy", "src/"]),
+            (
+                "pytest",
+                [
+                    str(python),
+                    "-m",
+                    "pytest",
+                    "tests/",
+                    "--cov=carrymem",
+                    "--cov-report=term-missing",
+                    "--timeout=120",
+                    "-m",
+                    "not slow",
+                    "-q",
+                ],
+            ),
         ]
 
         failures: list[str] = []
@@ -126,7 +167,7 @@ def main() -> int:
         if failures:
             print("\nFAILED gates: " + ", ".join(failures))
             return 1
-        print("\nAll five blocking local CI gates passed.")
+        print("\nAll six blocking local CI gates passed (flake8, black, isort, mypy, pytest, radon).")
         return 0
 
 
