@@ -10,7 +10,7 @@
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI バージョン"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-4948%20passed%2C%204%20skipped-brightgreen" alt="テスト">
+  <img src="https://img.shields.io/badge/tests-4891%20passed%2C%2010%20skipped-brightgreen" alt="テスト">
   <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="カバレッジ">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval 学術ベンチマーク"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
@@ -196,7 +196,7 @@ pip install carrymem
 
 | 機能 | パッケージ | インストール |
 |------|-----------|-------------|
-| コア（暗号化含む） | PyYAML≥5.0, cryptography≥46.0.6 | `pip install carrymem` に含む |
+| コア（暗号化含む） | PyYAML≥5.0, cryptography≥50.0.0 | `pip install carrymem` に含む |
 | 多言語 | pycld2, langdetect | `pip install carrymem[language]` |
 | セマンティック検索 | sqlite-vec, sentence-transformers | `pip install carrymem[semantic]` |
 | 全機能 | 上記すべて | `pip install carrymem[full]` |
@@ -638,11 +638,12 @@ AI にはメモリが必要だと知っている。プロンプトファイル�
 
 ## プロジェクトステータス
 
-**現在のバージョン**: v0.11.0
-**テスト**: 4948 passed, 4 skipped
+**現在のバージョン**: v0.11.2
+**テスト**: 4891 passed, 10 skipped
 **カバレッジ**: 80%+
 
 **チェンジログ**:
+- **v0.11.0**: 破壊的な非同期 API クリーンアップ —— `AsyncCarryMem` は executor ベースの非同期ファサードのみとなりました。単体のネイティブ非同期 SQLite I/O が必要な場合は `AsyncSQLiteAdapter` を直接使用してください。コア暗号化ライブラリの下限を `cryptography>=50.0.0` に引き上げました。詳細は [CHANGELOG.md](../../CHANGELOG.md) と [ADR-009](../architecture/decisions/ADR-009-async-pipeline.md) を参照。
 - **v0.2.0**: USB 携帯暗号化、自動バックアップ、並行安全性、PrefEval 83.0%（200項目）、8クライアントMCP設定
 - **v0.2.3**（リセット前）: 定期統合（schedule/stop）、PrefEval 標準化
 - **v0.2.2**（リセット前）: トークン予算 + デッドコード修正 + セキュリティ、PrefEval 87.9%

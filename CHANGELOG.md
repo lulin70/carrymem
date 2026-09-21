@@ -7,6 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `scripts/check_version_consistency.py` — asserts that all five machine-readable
+  version sources (`VERSION`, `src/carrymem/__version__.py`, `server.json`,
+  `Dockerfile` `ARG VERSION`, `smithery.yaml`) report the same version, and prints
+  `file:line = value` with a `<-- MISMATCH` marker plus a non-zero exit when they
+  do not. Wired in as the seventh blocking local gate in
+  `scripts/ci_local_check.py` and as a `Version consistency` step in the `Lint`
+  job of `.github/workflows/ci.yml`.
+
+### Fixed
+
+- Three real version drifts in machine-readable and user-facing files, all of
+  which survived the v0.11.2 release because nothing checked them: `Dockerfile`
+  built images stamped `0.9.8`, `smithery.yaml` declared `0.10.1`, and the
+  "Current Version" line of `README.md` plus the header stamps of twelve
+  `docs/i18n/*` documents still said `v0.11.0`.
+- `docs/i18n/README-JP.md` listed the core dependency floor as
+  `cryptography≥46.0.6`; the other four README translations and the actual
+  requirement say `≥50.0.0`.
+- The four non-English READMEs jumped straight from v0.2.0 to v0.2.3 in their
+  changelog section, so readers of those translations never saw the v0.11.0
+  breaking change. Each now carries a translated v0.11.0 entry linking to
+  `CHANGELOG.md` and ADR-009.
+
+### Removed
+
+- `is_summary_enabled()` and `is_llm_summary_enabled()` in
+  `src/carrymem/layers/summary_layer.py`, together with the four environment
+  constants they read (`_SUMMARY_ENABLED_ENV`, `_LLM_SUMMARY_ENV`, `_TRAE_ENV_ENV`,
+  `_TRAE_SESSION_ENV`). No code in `src/` ever called either function — they were
+  unwired switches that advertised a configuration surface that did not exist.
+  Their tests were removed with them (`tests/test_summary_layer.py` goes from 33
+  to 25 tests).
+
+### Changed
+
+- `docs/design/V0.11.0_PROJECT_REVIEW.md` §3.2 retracts a finding that claimed the
+  Chinese and Japanese architecture documents teach a removed plugin system.
+  `src/carrymem/adapters/loader.py` still resolves the `carrymem.adapters` entry
+  point group, so the translations were correct and are left untouched. The
+  review now records the genuine issue in the same section: the translations are
+  879/882 lines against a 208-line English original.
+
+### Verification
+
+- `python3 scripts/ci_local_check.py` (CI semantics: `--cov=carrymem`,
+  `--timeout=120`, `-m "not slow"`):
+  **`4891 passed, 10 skipped, 77 deselected, 2231 warnings in 218.07s (0:03:38)`**,
+  `Required test coverage of 80.0% reached. Total coverage: 83.08%`,
+  `Success: no issues found in 160 source files` (mypy),
+  `radon: no functions with complexity >= 21`,
+  `Version consistency OK: all 5 sources report 0.11.2 (VERSION:1, src/carrymem/__version__.py:1, server.json:166, Dockerfile:23, smithery.yaml:3).`, and
+  `All seven blocking local CI gates passed (flake8, black, isort, mypy, pytest, radon, version-consistency).`
+  The passed count is exactly 8 lower than the 4899 recorded for v0.11.2, matching
+  the 8 tests deleted with the ghost switches.
+- Falsification of the new gate: setting `Dockerfile`'s `ARG VERSION` back to
+  `0.9.8` makes it print
+  `Dockerfile:23 = 0.9.8  <-- MISMATCH` and exit 1.
+- Falsification of the deletion: `grep -rn 'is_summary_enabled\|is_llm_summary_enabled'
+  src/ tests/ --include='*.py'` returns only the two docstring lines that record the
+  removal — no code reference remains.
+
 ## [0.11.2] - 2026-09-21 — complete the recall metric correction (PATCH)
 
 ### Summary

@@ -439,7 +439,7 @@ each py3.11 + py3.12).
 
 ## Next Milestone
 
-**v0.11.2 shipped.** The next MINOR is not yet scoped. Open follow-ups that are known but not release-blocking: the ghost feature switches `is_summary_enabled` / `is_llm_summary_enabled` (documented but not wired), stale version references in secondary docs, and i18n drift between the README translations. See [V0.11.0_PROJECT_REVIEW.md](design/V0.11.0_PROJECT_REVIEW.md) §8 for the full list.
+**v0.11.2 shipped.** The next MINOR is not yet scoped. The post-release review's P1 items #7 (ghost feature switches) and #9 (i18n content drift) are closed, and the machine-readable half of #8 (version stamps) is closed and now guarded by `scripts/check_version_consistency.py`. One follow-up remains open and is not release-blocking: the root `docs/{README,API_REFERENCE,ARCHITECTURE,RULES_USER_MANUAL}.md` set still describes v0.8.0-era content, which is a content rebuild rather than a version-string fix. See [V0.11.0_PROJECT_REVIEW.md](design/V0.11.0_PROJECT_REVIEW.md) §8 for the full list.
 
 Potential areas for v0.10.0+ (per CARRYMEM_ARCHITECTURE_EVOLUTION_PLAN.md):
 - Vector search enhancements (HNSW indexing, approximate nearest neighbor)

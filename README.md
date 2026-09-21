@@ -63,7 +63,7 @@ CarryMem fixes this. It's a lightweight, zero-dependency memory system that stor
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-4948%20passed%2C%204%20skipped-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-4891%20passed%2C%2010%20skipped-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="Coverage">
   <img src="https://img.shields.io/badge/mypy-0%20errors-brightgreen" alt="mypy">
   <img src="https://img.shields.io/badge/security-bandit%2Bpip--audit-blue" alt="Security">
@@ -211,9 +211,9 @@ These are what make CarryMem different from every other memory solution:
 - Single .db file — carry your identity anywhere
 - Works with Cursor, Claude Code, ChatGPT, any MCP client
 
-### 4. Industrial-Grade Engineering — 4948 Tests / mypy 0 / flake8 0
-- **4948 tests passed, 4 skipped** in the current full regression (optional vector/semantic dependencies account for the skips); E2E and TUI suites are included in the repository test run.
-- **mypy 0 errors** across 150+ source files — fully type-safe (CI blocking gate)
+### 4. Industrial-Grade Engineering — 4891 Tests / mypy 0 / flake8 0
+- **4891 tests passed, 10 skipped** in the current full regression (optional vector/semantic dependencies account for the skips); E2E and TUI suites are included in the repository test run.
+- **mypy 0 errors** across 160 source files — fully type-safe (CI blocking gate)
 - **flake8 0 errors** — clean codebase, no lint violations (black + isort formatted)
 - **24 sensitive-pattern redaction** — auto-detects API keys, passwords, tokens before storage
 - **PatternAnalyzer God Class split** (1547→171 LOC facade + 3 modules) — maintainable architecture
@@ -1030,15 +1030,17 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 
 ## Project Status
 
-**Current Version**: v0.11.0
-**Tests**: 4948 passed, 4 skipped in the current full regression; optional vector/semantic dependencies account for the skips; 97 TUI tests passing
+**Current Version**: v0.11.2
+**Tests**: 4891 passed, 10 skipped in the current full regression; optional vector/semantic dependencies account for the skips; 97 TUI tests passing
 **Coverage**: 80%+
-**mypy**: 0 errors (150+ source files, CI blocking gate)
+**mypy**: 0 errors (160 source files, CI blocking gate)
 **flake8**: 0 errors (black + isort formatted)
 **radon**: 0 D/E/F functions (CI blocking gate)
 **Maturity**: 80/100 (B) per 7-dimension DevSquad evaluation
 
 **Changelog**:
+- **v0.11.2**: Completes the `recall` metric correction — the coreference and correction-history reads inside `core/_classification.py` no longer count as user recalls, and the guard that missed them now covers four message shapes plus a control group. See [CHANGELOG.md](CHANGELOG.md).
+- **v0.11.1**: Fixes the release gate that blocked `v0.11.0` (a steady-state SLO assertion ran on the first call of a process), corrects the first `recall` leak, and adds the full regression as a blocking local CI gate.
 - **v0.11.0**: Breaking async API cleanup — `AsyncCarryMem` is the executor-backed async facade only; standalone native async SQLite I/O remains available through `AsyncSQLiteAdapter`. The core encryption floor is `cryptography>=50.0.0`. See [CHANGELOG.md](CHANGELOG.md) and [ADR-009](docs/architecture/decisions/ADR-009-async-pipeline.md).
 - **v0.10.0**: Repeat-correction upgrade — `detect_repeat_correction()` + semantic dedup (Jaccard + entity) + security-keyword bypass (forge 借鉴点 2). See [docs/design/V0.10.0_REPEAT_CORRECTION.md](docs/design/V0.10.0_REPEAT_CORRECTION.md).
 - **v0.9.9**: Methodology: orthogonal classification table (docs/design/METHODOLOGY.md) + design space positioning (README Comparison + COMPETITIVE_ANALYSIS). See [docs/design/METHODOLOGY.md](docs/design/METHODOLOGY.md).

@@ -28,7 +28,7 @@ CarryMem이 이 문제를 해결합니다. 가볍고 의존성이 없는 기억 
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-4948%20passed%2C%204%20skipped-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-4891%20passed%2C%2010%20skipped-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="Coverage">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval Academic Benchmark"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
@@ -766,11 +766,12 @@ AI에 기억이 필요하다는 건 이미 알고 있습니다. 프롬프트 파
 
 ## 프로젝트 상태
 
-**현재 버전**: v0.11.0
-**테스트**: 4948 passed, 4 skipped
+**현재 버전**: v0.11.2
+**테스트**: 4891 passed, 10 skipped
 **커버리지**: 80%+
 
 **변경 로그**:
+- **v0.11.0**: 파괴적 비동기 API 정리 —— `AsyncCarryMem`은 이제 executor 기반 비동기 파사드일 뿐입니다. 독립적인 네이티브 비동기 SQLite I/O가 필요하면 `AsyncSQLiteAdapter`를 직접 사용하세요. 핵심 암호화 라이브러리 하한을 `cryptography>=50.0.0`으로 상향했습니다. 자세한 내용은 [CHANGELOG.md](../../CHANGELOG.md) 및 [ADR-009](../architecture/decisions/ADR-009-async-pipeline.md)를 참조하세요.
 - **v0.2.4**: 베타 릴리스 — CI 루트 수정, 24개 보안 수정, Glama TDQS 향상, 6게이트 CI 파이프라인
 - **v0.2.0**: USB 휴대 암호화, 자동 백업, 동시성 안전, PrefEval 83.0% (200 항목), 8 클라이언트 MCP 설정
 - **v0.2.3** (리셋 전): 통합 예약(schedule/stop), PrefEval 표준화
