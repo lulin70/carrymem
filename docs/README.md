@@ -1,7 +1,10 @@
 # CarryMem Documentation Hub
 
-**Version**: v0.8.0  
-**Last Updated**: 2026-07-14
+**Version**: v0.11.2
+**Last Updated**: 2026-09-21
+
+New here? Start with the [Quick Start Guide](QUICK_START_GUIDE.md).
+Want to know where the project actually stands? Read [Project Status](PROJECT_STATUS.md).
 
 ---
 
@@ -31,42 +34,87 @@ carrymem status
 
 ---
 
-## 📚 Core Documentation
+## 📚 Documentation Index
 
-### User Documentation
+### For users
 
-| Document | Description | Audience |
-|----------|-------------|----------|
-| [Quick Start Guide](QUICK_START_GUIDE.md) | Get started in 5 minutes | ⭐ All users |
-| [User Guide](USER_GUIDE.md) | Complete usage guide | All users |
-| [Troubleshooting](TROUBLESHOOTING.md) | Diagnose and fix common issues | All users |
-| [Install Guide](INSTALL.md) | Detailed installation instructions | All users |
+| Document | Description |
+|----------|-------------|
+| [Quick Start Guide](QUICK_START_GUIDE.md) | Get started in 5 minutes |
+| [Install Guide](INSTALL.md) | Detailed installation instructions |
+| [User Guide](USER_GUIDE.md) | Complete usage guide |
+| [Rules User Manual](RULES_USER_MANUAL.md) | Rule engine usage guide |
+| [Troubleshooting](TROUBLESHOOTING.md) | Diagnose and fix common issues |
 
-### Developer Documentation
+### For developers and contributors
 
-| Document | Description | Audience |
-|----------|-------------|----------|
-| [Architecture](ARCHITECTURE.md) | System architecture design | Developers |
-| [API Reference](API_REFERENCE.md) | API interface documentation | Developers |
-| [API Stability](API_STABILITY.md) | API stability guarantees | Developers |
-| [Rules User Manual](RULES_USER_MANUAL.md) | Rule engine usage guide | All users |
-| [Roadmap](ROADMAP.md) | Future plans | Contributors |
-| [Contributing Guide](../CONTRIBUTING.md) | How to contribute | Contributors |
+| Document | Description |
+|----------|-------------|
+| [Architecture](ARCHITECTURE.md) | Core architecture — Mixin coupling governance (P0-1) |
+| [Module Boundaries](MODULE_BOUNDARIES.md) | Module boundary visualisation |
+| [API Reference](API_REFERENCE.md) | API interface documentation (Chinese) |
+| [API Stability](API_STABILITY.md) | API stability guarantees |
+| [Error Handling Guide](ERROR_HANDLING_GUIDE.md) | Error handling conventions |
+| [Entry Points](ENTRY_POINTS.md) | CLI / TUI / MCP feature parity matrix |
+| [Dependency Audit](DEPENDENCY_AUDIT.md) | Dependency security audit |
+| [Contributing Guide](../CONTRIBUTING.md) | How to contribute |
 
-### Internationalized Documentation (i18n/)
+### Project status and process
 
-| Document | EN | CN | JP |
-|----------|----|----|-----|
-| README | [EN](../README.md) | [CN](i18n/README-CN.md) | [JP](i18n/README-JP.md) |
-| Install Guide | [EN](INSTALL.md) | [CN](i18n/INSTALL-CN.md) | [JP](i18n/INSTALL-JP.md) |
-| Quick Start | [EN](QUICK_START_GUIDE.md) | [CN](i18n/QUICK_START_GUIDE-CN.md) | [JP](i18n/QUICK_START_GUIDE-JP.md) |
-| User Guide | [EN](USER_GUIDE.md) | [CN](i18n/USER_GUIDE-CN.md) | [JP](i18n/USER_GUIDE-JP.md) |
-| Troubleshooting | [EN](TROUBLESHOOTING.md) | [CN](i18n/TROUBLESHOOTING-CN.md) | [JP](i18n/TROUBLESHOOTING-JP.md) |
-| Rules Manual | [EN](RULES_USER_MANUAL.md) | [CN](i18n/RULES_USER_MANUAL-CN.md) | [JP](i18n/RULES_USER_MANUAL-JP.md) |
-| Architecture | [EN](ARCHITECTURE.md) | [CN](i18n/ARCHITECTURE-CN.md) | [JP](i18n/ARCHITECTURE-JP.md) |
-| API Reference | [EN](API_REFERENCE.md) | [CN](i18n/API_REFERENCE-CN.md) | [JP](i18n/API_REFERENCE-JP.md) |
-| API Stability | [EN](API_STABILITY.md) | [CN](i18n/API_STABILITY-CN.md) | [JP](i18n/API_STABILITY-JP.md) |
-| Roadmap | [EN](ROADMAP.md) | [CN](i18n/ROADMAP-CN.md) | [JP](i18n/ROADMAP-JP.md) |
+| Document | Description |
+|----------|-------------|
+| [Project Status](PROJECT_STATUS.md) | Current release, release evidence, open follow-ups |
+| [Roadmap](ROADMAP.md) | Product roadmap |
+| [Technical Debt Plan](TECH_DEBT_PLAN.md) | Living technical debt tracker |
+| [P0–P3 Debt Roadmap](ROADMAP_P0_P3.md) | Wave-by-wave debt execution plan |
+| [Release Runbook](RELEASE_RUNBOOK.md) | Release and rollback procedure |
+| [Project Review](PROJECT_REVIEW.md) | v0.8.0 consolidation assessment (historical) |
+
+### Research and benchmarks
+
+| Document | Description |
+|----------|-------------|
+| [External Memory Benchmarks](EXTERNAL_MEMORY_BENCHMARKS.md) | External benchmark evaluation plan |
+| [MSC Benchmark Guide](MSC_BENCHMARK_GUIDE.md) | MSC official benchmark guide |
+| [Competitive Analysis](COMPETITIVE_ANALYSIS_MEMORY_GRAPH.md) | Memory graph design-space positioning |
+| [Architecture Evolution Plan](CARRYMEM_ARCHITECTURE_EVOLUTION_PLAN.md) | Long-term architecture evolution |
+| [Obsidian Adapter](OBSIDIAN_ADAPTER.md) | Obsidian integration |
+
+### Versioned records
+
+| Directory | Contents |
+|-----------|----------|
+| [design/](design/) | Per-version design documents, retrospectives and reviews |
+| [runbooks/](runbooks/) | Per-version operational runbooks |
+| [architecture/decisions/](architecture/decisions/) | ADR-001 … ADR-013 |
+| [spec/](spec/) | Implementation specs (v0.5.0, v0.5.2) |
+| [archive/](archive/) | Superseded plans and historical assessments |
+
+---
+
+## 🌐 Translations (`i18n/`)
+
+| Document | EN | CN | JP | KO | ZH-TW |
+|----------|----|----|----|----|-------|
+| README | [EN](../README.md) | [CN](i18n/README-CN.md) | [JP](i18n/README-JP.md) | [KO](i18n/README-KO.md) | [ZH-TW](i18n/README-ZH-TW.md) |
+| Install Guide | [EN](INSTALL.md) | [CN](i18n/INSTALL-CN.md) | [JP](i18n/INSTALL-JP.md) | [KO](i18n/INSTALL-KO.md) | [ZH-TW](i18n/INSTALL-ZH-TW.md) |
+| Quick Start | [EN](QUICK_START_GUIDE.md) | [CN](i18n/QUICK_START_GUIDE-CN.md) | [JP](i18n/QUICK_START_GUIDE-JP.md) | — | — |
+| User Guide | [EN](USER_GUIDE.md) | [CN](i18n/USER_GUIDE-CN.md) | [JP](i18n/USER_GUIDE-JP.md) | — | — |
+| Troubleshooting | [EN](TROUBLESHOOTING.md) | [CN](i18n/TROUBLESHOOTING-CN.md) | [JP](i18n/TROUBLESHOOTING-JP.md) | — | — |
+| Rules Manual | [EN](RULES_USER_MANUAL.md) | [CN](i18n/RULES_USER_MANUAL-CN.md) | [JP](i18n/RULES_USER_MANUAL-JP.md) | — | — |
+| API Stability | [EN](API_STABILITY.md) | [CN](i18n/API_STABILITY-CN.md) | [JP](i18n/API_STABILITY-JP.md) | — | — |
+| Roadmap | [EN](ROADMAP.md) | [CN](i18n/ROADMAP-CN.md) | [JP](i18n/ROADMAP-JP.md) | [KO](i18n/ROADMAP-KO.md) | [ZH-TW](i18n/ROADMAP-ZH-TW.md) |
+
+**Architecture and API Reference have no English edition.** Both root files are
+written in Chinese, and the `i18n/` copies are separate, longer documents rather
+than translations of them:
+
+| Document | Root (Chinese) | `i18n/` (separate document) |
+|----------|----------------|-----------------------------|
+| Architecture | [Mixin coupling governance](ARCHITECTURE.md), 208 lines | [架构设计](i18n/ARCHITECTURE-CN.md), 879 lines · [JP](i18n/ARCHITECTURE-JP.md), 882 lines |
+| API Reference | [API 参考手册（中文版）](API_REFERENCE.md), 1492 lines | [API 参考](i18n/API_REFERENCE-CN.md), 1274 lines · [JP](i18n/API_REFERENCE-JP.md), 1266 lines |
+
+These two pairs are queued for consolidation; see [Project Status](PROJECT_STATUS.md).
 
 ---
 
@@ -76,7 +124,8 @@ carrymem status
 ```bash
 carrymem add "I prefer dark mode"
 ```
-Auto-classified into 7 types: user_preference, correction, fact_declaration, decision, relationship, task_pattern, sentiment_marker
+Auto-classified into 7 types: user_preference, correction, fact_declaration, decision, relationship, task_pattern, sentiment_marker.
+(Session summaries are a separate 8th stored type, produced by `summarize_and_store`, not by the classifier.)
 
 ### 2. Semantic Recall
 ```bash
@@ -103,7 +152,8 @@ carrymem serve --port 8765
 ```
 
 ### 6. Data Security
-- AES encrypted storage
+- Fernet (AES-128-CBC + HMAC) encrypted storage — the single supported backend
+  since v0.7.3 ([ADR-011](architecture/decisions/ADR-011-fernet-only-encryption.md))
 - Automatic backup + safe rollback
 - Access audit logging
 - Input validation (SQL injection / XSS / path traversal protection)
@@ -127,6 +177,7 @@ carrymem serve --port 8765
 ### Scenario 4: Check system status
 1. Run `carrymem status`
 2. Run `carrymem stats`
+3. Read [Project Status](PROJECT_STATUS.md) for the release-level view
 
 ### Scenario 5: Developer, want to contribute
 1. Read [Architecture](ARCHITECTURE.md)
@@ -163,6 +214,8 @@ carrymem export <path>           # Export memories
 carrymem import <path>           # Import memories
 ```
 
+The full CLI / TUI / MCP parity matrix lives in [Entry Points](ENTRY_POINTS.md).
+
 ---
 
 ## 📁 Documentation Directory Structure
@@ -171,37 +224,34 @@ carrymem import <path>           # Import memories
 docs/
 ├── README.md                          # This document (docs index)
 ├── QUICK_START_GUIDE.md               # Quick start
-├── USER_GUIDE.md                       # User guide
-├── TROUBLESHOOTING.md                  # Troubleshooting guide
-├── INSTALL.md                          # Install guide
-├── ARCHITECTURE.md                    # Architecture
-├── API_REFERENCE.md                   # API reference
-├── API_STABILITY.md                   # API stability guarantees
+├── INSTALL.md                         # Install guide
+├── USER_GUIDE.md                      # User guide
 ├── RULES_USER_MANUAL.md               # Rules engine manual
-├── ROADMAP.md                         # Roadmap
-├── archive/                           # Archived documents
-│   └── review/                        # Internal review documents
-└── i18n/                              # Internationalized documents
-    ├── README-CN.md                   # Chinese README
-    ├── README-JP.md                   # Japanese README
-    ├── INSTALL-CN.md                  # Chinese install guide
-    ├── INSTALL-JP.md                  # Japanese install guide
-    ├── QUICK_START_GUIDE-CN.md        # Chinese quick start
-    ├── QUICK_START_GUIDE-JP.md        # Japanese quick start
-    ├── USER_GUIDE-CN.md               # Chinese user guide
-    ├── USER_GUIDE-JP.md               # Japanese user guide
-    ├── TROUBLESHOOTING-CN.md          # Chinese troubleshooting
-    ├── TROUBLESHOOTING-JP.md          # Japanese troubleshooting
-    ├── RULES_USER_MANUAL-CN.md        # Chinese rules manual
-    ├── RULES_USER_MANUAL-JP.md        # Japanese rules manual
-    ├── ARCHITECTURE-CN.md             # Chinese architecture
-    ├── ARCHITECTURE-JP.md             # Japanese architecture
-    ├── API_REFERENCE-CN.md            # Chinese API reference
-    ├── API_REFERENCE-JP.md            # Japanese API reference
-    ├── API_STABILITY-CN.md            # Chinese API stability
-    ├── API_STABILITY-JP.md            # Japanese API stability
-    ├── ROADMAP-CN.md                  # Chinese roadmap
-    └── ROADMAP-JP.md                  # Japanese roadmap
+├── TROUBLESHOOTING.md                 # Troubleshooting guide
+├── ARCHITECTURE.md                    # Core architecture (Mixin coupling governance)
+├── MODULE_BOUNDARIES.md               # Module boundary visualisation
+├── API_REFERENCE.md                   # API reference (Chinese)
+├── API_STABILITY.md                   # API stability guarantees
+├── ERROR_HANDLING_GUIDE.md            # Error handling conventions
+├── ENTRY_POINTS.md                    # CLI / TUI / MCP parity matrix
+├── DEPENDENCY_AUDIT.md                # Dependency security audit
+├── OBSIDIAN_ADAPTER.md                # Obsidian integration
+├── PROJECT_STATUS.md                  # Release state and open follow-ups
+├── PROJECT_REVIEW.md                  # v0.8.0 consolidation assessment
+├── ROADMAP.md                         # Product roadmap
+├── ROADMAP_P0_P3.md                   # P0-P3 debt roadmap (living)
+├── TECH_DEBT_PLAN.md                  # Technical debt plan (living)
+├── RELEASE_RUNBOOK.md                 # Release and rollback runbook
+├── CARRYMEM_ARCHITECTURE_EVOLUTION_PLAN.md
+├── COMPETITIVE_ANALYSIS_MEMORY_GRAPH.md
+├── EXTERNAL_MEMORY_BENCHMARKS.md
+├── MSC_BENCHMARK_GUIDE.md
+├── architecture/decisions/            # ADR-001 … ADR-013
+├── design/                            # Per-version design docs and reviews
+├── runbooks/                          # Per-version operational runbooks
+├── spec/                              # Implementation specs
+├── archive/                           # Superseded plans and assessments
+└── i18n/                              # Translations (CN / JP / KO / ZH-TW)
 ```
 
 ---
@@ -218,5 +268,5 @@ docs/
 
 ---
 
-**Last Updated**: 2026-07-14  
+**Last Updated**: 2026-09-21
 **Maintainer**: CarryMem Team
