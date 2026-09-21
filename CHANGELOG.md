@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.2] - 2026-09-21 — complete the recall metric correction (PATCH)
+
+### Summary
+
+PATCH release. `0.11.1` fixed only one of the three paths that made storing a memory
+look like a user recall. A post-release smoke test using a message that contains a
+pronoun showed the counter still moved. This release reroutes the remaining paths and
+strengthens the guard that missed them.
+
+### Fixed
+
+- `carrymem_total{operation="recall"}` was still incremented by `classify_and_remember`
+  for messages that contain a pronoun (e.g. "I prefer dark mode in **my** editors").
+  `core/_classification.py` reads existing memories to resolve coreference before
+  storing, and that read went through the instrumented `recall_memories`. The same
+  applied to the correction-history reads (rephrased corrections) and the
+  correction-keyword match. All three now use `_recall_memories_uninstrumented`.
+  Measured after the fix: six message shapes covering every storing branch — with and
+  without pronouns, preferences, decisions, facts, first and repeated corrections —
+  each leave the `recall` counter untouched, while one explicit `recall_memories`
+  still records exactly one sample.
+- `test_storing_a_memory_does_not_count_as_a_recall` used a single pronoun-free
+  message, so the coreference branch never ran and the leak above survived the fix.
+  It now exercises four message shapes (including two with pronouns and one
+  correction) via `subTest`, and a new control group
+  (`test_an_explicit_recall_still_counts`) proves the guard is not satisfied by
+  simply never counting. Falsified on purpose: restoring the instrumented call makes
+  exactly the two pronoun cases fail, and the old pronoun-free version of this test
+  passes against that same broken source.
+
+### Changed
+
+- `0.11.1`'s CHANGELOG entry overstated the scope of its fix. It is corrected in
+  place to say what that release actually did. The published `0.11.1` sdist carries
+  the original wording.
+
+### Verification
+
+- Branch coverage of the counter, measured by a probe that traces every instrumented
+  call: six message shapes (preference without a pronoun, preference/decision/fact
+  with pronouns, first and repeated correction) each report
+  `{'classify_and_remember': 1}` with **no `recall` key at all**, while one explicit
+  `recall_memories` reports `{'recall': 1}`.
+- Falsification: reverting the coreference call to `self.recall_memories` makes exactly
+  the two pronoun cases fail
+  (`AssertionError: 'recall' unexpectedly found in {'recall': 1, ...}`) — and the
+  previous, pronoun-free version of the same guard still passes against that broken
+  source, which is how the leak escaped 0.11.1.
+- Targeted suites: `tests/test_monitoring.py tests/core/ tests/integration/test_monitoring_endpoints.py`
+  **192 passed, 4 subtests passed in 6.95s**.
+- Full regression in CI semantics via `python3 scripts/ci_local_check.py`:
+  `collected 4986 items / 77 deselected / 4909 selected` →
+  **`4899 passed, 10 skipped, 77 deselected, 143 warnings in 946.04s (0:15:46)`**,
+  `Required test coverage of 80.0% reached. Total coverage: 83.20%`,
+  `radon: no functions with complexity >= 21`, and
+  `All six blocking local CI gates passed (flake8, black, isort, mypy, pytest, radon).`
+
 ## [0.11.1] - 2026-09-21 — release-gate fix and recall metric correction (PATCH)
 
 ### Summary
@@ -31,6 +88,13 @@ No public API change; `recall_memories` keeps its signature and semantics.
   `_recall_memories_uninstrumented`, and the rule engine is wired to the uninstrumented
   path. Guarded by `test_storing_a_memory_does_not_count_as_a_recall`, which was
   falsified on purpose (restoring the old wiring makes it report 2 instead of 0).
+
+  > **Scope correction (added in 0.11.2)**: this fixed only the rule-generator path.
+  > Storing a memory read memories through two further internal paths in
+  > `core/_classification.py` — coreference resolution and correction analysis — which
+  > kept inflating the counter for messages that contain a pronoun. Those are fixed in
+  > **0.11.2**, along with the guard, which used a pronoun-free message and therefore
+  > never exercised the branch that was still leaking.
 - `test_slo_entries_report_real_values_not_no_data` no longer asserts
   `within_slo is True`. It asserted a steady-state target on a cold-start first call;
   coverage instrumentation alone was measured to slow that call from **7.5ms to
