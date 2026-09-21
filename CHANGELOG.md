@@ -7,6 +7,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-09-21 — release-gate fix and recall metric correction (PATCH)
+
+### Summary
+
+PATCH release. `v0.11.0` was tagged but **never reached PyPI**: the release workflow
+failed in `pre-release-test` because `test_slo_entries_report_real_values_not_no_data`
+asserted a *steady-state* SLO on the *first* core call of a process — which pays a
+one-time initialisation cost that is outside that contract. The same investigation
+exposed a second, user-visible defect: the `recall` metric was inflated by internal
+bookkeeping reads.
+
+No public API change; `recall_memories` keeps its signature and semantics.
+
+### Fixed
+
+- `carrymem_total{operation="recall"}` was inflated by two for every
+  `classify_and_remember`: the rule candidate generator reads existing memories while
+  a memory is being stored, and those bookkeeping reads were counted as user recalls.
+  The same reads also diluted the `recall` latency SLO with fast internal lookups, so
+  the metric no longer answered "how many recalls did the user request, and how slow
+  were they". `recall_memories` is now a thin instrumented wrapper over the new
+  `_recall_memories_uninstrumented`, and the rule engine is wired to the uninstrumented
+  path. Guarded by `test_storing_a_memory_does_not_count_as_a_recall`, which was
+  falsified on purpose (restoring the old wiring makes it report 2 instead of 0).
+- `test_slo_entries_report_real_values_not_no_data` no longer asserts
+  `within_slo is True`. It asserted a steady-state target on a cold-start first call;
+  coverage instrumentation alone was measured to slow that call from **7.5ms to
+  106ms** locally (14x, against a 200ms target), so on a shared CI runner it failed
+  for reasons unrelated to the code under test. The assertion now checks the
+  structural contract it always claimed to check (entry present, real values, exactly
+  one sample, `within_slo` is a `bool`), and two machine-independent guards were added
+  in its place: `test_slo_reports_no_data_before_the_operation_runs` and
+  `test_slo_flags_a_breach_when_p99_exceeds_the_target` (injects a 5000ms sample and
+  asserts `within_slo is False`, `threshold_ms == 200.0`, `status == "degraded"`).
+  **No SLO threshold was changed and no test was skipped.**
+
+### Changed
+
+- `scripts/ci_local_check.py` now runs the test suite as a sixth blocking gate, with
+  the same flags as `release.yml` (`tests/ --cov=carrymem --cov-report=term-missing
+  --timeout=120 -m "not slow" -q`) and installs the matching test dependencies plus an
+  editable install. Local verification previously omitted `--cov`; that difference is
+  exactly what let a release-blocking failure stay green locally.
+
+### Verification
+
+- Full regression in CI semantics (`--cov=carrymem --timeout=120 -m "not slow"`), run
+  as part of `python3 scripts/ci_local_check.py`: **`4898 passed, 10 skipped, 77
+  deselected, 143 warnings in 1023.60s (0:17:03)`**, `FAILED`/`ERROR` = 0, coverage
+  **83.20%** (floor 80%). The script ends with
+  `All six blocking local CI gates passed (flake8, black, isort, mypy, pytest, radon).`
+  For reference, the failing `v0.11.0` run reported `1 failed, 4893 passed, 11 skipped`
+  — the delta is the 3 new guards plus one environment-gated skip that runs locally.
+- Targeted: `tests/test_monitoring.py` **38 passed in 10.09s** (35 before the two new
+  guards and the recall-count guard).
+- Falsification of the new guards: restoring the pre-fix wiring
+  (`recall_memories=self.recall_memories`) makes the recall-count guard fail with
+  `2` where `0` is required; injecting a 5000ms sample makes the breach guard assert
+  `within_slo is False` as intended.
+- Pre-release user-facing gates: `tests/e2e/` **265 passed in 372.66s**, and the real
+  MCP user journey (real subprocess, real SQLite, no mocks) **9/9 passed** — initialize
+  handshake, 31 tools, store, recall, on-disk persistence, `health_check`, system-prompt
+  injection, survival across a server restart, `forget_memory` — with cold starts of
+  **1.8s / 1.2s**. Both report `version: 0.11.1`.
+- Release-linkage audit: `v0.10.0` and `v0.10.1` also never published — both failed at
+  `Lint — flake8` on real violations (`W292` in `__main__.py`,
+  `E128`/`W292` in `tests/e2e/`, `E303`/`E302` in
+  `tests/unit/test_v0100_repeat_correction.py`), which were fixed in later commits.
+  See `docs/design/V0.11.0_PROJECT_REVIEW.md` §0.3 for the full evidence table.
+
 ## [0.11.0] - 2026-09-08 — async API cleanup and release quality gates (MINOR / BREAKING)
 
 ### Summary

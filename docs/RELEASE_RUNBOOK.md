@@ -22,6 +22,22 @@
 - git tag 一旦推送，不建议强制删除（会破坏下游 CI 缓存）
 - 发布是**不可逆**的，只能通过发新版本修复
 
+> ### ⚠️ 铁律：`tag ≠ 已发布`
+>
+> 推送 `v*` tag **只触发**工作流，不等于发布成功。`release` job 依赖
+> `pre-release-test` 与 `e2e-gate`，任一失败则 **PyPI 上不会出现该版本**，
+> 而 tag 已经存在于远端。
+>
+> 2026-09-21 复盘：`v0.10.0` / `v0.10.1` / `v0.11.0` 三个 tag 均已推送，
+> 但 PyPI 上只有到 `0.9.3rc1` 为止的版本——三次 `release.yml` 全部在
+> `pre-release-test` 阶段失败（前两次 flake8 真实违规，第三次测试断言问题）。
+> 当时仅凭「tag 推送成功」就误报为已发布。
+>
+> **硬性要求**：宣布发布完成前，必须同时满足
+> ① `gh run list --workflow=release.yml` 中该 tag 的 run 为 `success`；
+> ② `curl -s https://pypi.org/pypi/carrymem/json` 的版本列表中出现该版本号。
+> 缺一不可。
+
 ---
 
 ## 2. 发布前检查清单
@@ -34,10 +50,15 @@
 - [ ] 确认 `docs/ROADMAP_P0_P3.md` 中 Wave 推进表已更新
 - [ ] 所有 P0/P1 技术债项已完成或标注阻塞原因
 - [ ] 主分支 `new-main` 处于绿色状态（CI 全通过）
+- [ ] 上一个 tag 已确认**真正发布**（release workflow 绿 + PyPI 可见），无遗留未发布 tag
 
 ### 2.2 测试验证
 
-- [ ] 本地运行 `pytest tests/ -m "not slow" -q` 全通过
+- [ ] 本地运行 `python3 scripts/ci_local_check.py` 六门禁全过（flake8 / black / isort / mypy / **pytest** / radon）
+      —— 该脚本用与 `release.yml` 完全相同的口径跑测试
+      （`--cov=carrymem --timeout=120 -m "not slow"`），**不要**用不带 `--cov` 的命令代替：
+      覆盖插桩会把首次核心调用从 7.5ms 拖到 106ms（实测 14 倍），
+      足以让一个发布阻断级失败在本地隐身。
 - [ ] 本地运行 `pytest tests/e2e/ -m "not slow" -v` 全通过（用户规则3：发布前必须做模拟真实用户使用的测试）
 - [ ] 本地运行 `pre-commit run --all-files` 全通过
 - [ ] 本地运行 `flake8 src/ tests/ --max-line-length=120` 无错误
@@ -163,22 +184,34 @@ pre-release-test (lint+test+coverage)
    git push origin v0.8.0
    ```
 
-2. **监控工作流**:
-   - 访问 `https://github.com/lulin70/carrymem/actions`
-   - 确认 "Release" 工作流已触发
+2. **监控工作流**（推送 tag 后**必须**执行，不能凭 tag 推送成功就收工）:
+   ```bash
+   gh run list --workflow=release.yml --limit 3
+   # 失败时看证据，不要靠猜：
+   gh run view <run-id> --log-failed
+   gh run view <run-id> --job=<job-id> --log
+   ```
    - 等待 `pre-release-test` → `e2e-gate` → `release` 依次通过（`vscode-e2e` 独立运行，不阻塞）
 
-3. **验证发布结果**:
+3. **验证发布结果**（三项全绿才算发布完成）:
    ```bash
-   # 验证 PyPI
-   pip index versions carrymem  # 或访问 https://pypi.org/project/carrymem/
-   # 验证 GitHub Release
+   # 1) workflow 结论必须是 success
+   gh run list --workflow=release.yml --limit 1
+
+   # 2) PyPI 上必须真的出现该版本（这是唯一权威判据）
+   curl -s https://pypi.org/pypi/carrymem/json \
+     | python -c "import json,sys; print(sorted(json.load(sys.stdin)['releases']))"
+
+   # 3) GitHub Release 已创建
    gh release view v0.8.0  # 或访问 https://github.com/lulin70/carrymem/releases
-   # 验证 fresh install
+
+   # 4) fresh install 可用
    python -m venv /tmp/verify_venv
    /tmp/verify_venv/bin/pip install carrymem==0.8.0
    /tmp/verify_venv/bin/python -c "import carrymem; print(carrymem.__version__)"
    ```
+   > 若 workflow 失败：**不要**删除/重推同一个 tag（见 §4 与关键约束），
+   > 而是修好门禁后按 SemVer 递增发下一个 PATCH 版本（如 `v0.11.0` 失败 → 发 `v0.11.1`）。
 
 4. **发布后通知**:
    - 更新 `docs/PROJECT_STATUS.md`
