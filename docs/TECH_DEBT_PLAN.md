@@ -7,7 +7,7 @@
 > **配套文档**: [ROADMAP_P0_P3.md](ROADMAP_P0_P3.md) — 执行路线图 (Wave 推进表 + 7-Role 投票矩阵 + 11 阶段生命周期映射)
 >
 > **文档分工**:
-> - 本文档 (TECH_DEBT_PLAN.md) = 技术债**目录** (TD-001~TD-067 明细 + 验证标准 + 风险矩阵)
+> - 本文档 (TECH_DEBT_PLAN.md) = 技术债**目录** (TD-001~TD-068 明细 + 验证标准 + 风险矩阵)
 > - ROADMAP_P0_P3.md = 技术债**执行路线** (Wave 推进表 + 共识投票矩阵 + 活文档同步清单)
 
 ---
@@ -33,7 +33,8 @@
 | P3 低优先级 | 10 项 | ~4h | 日常维护渐进 |
 
 > **复核说明（2026-09-21, v0.11.2）**：上表为 v2 创建时的统计。经逐项复核，§2~§5 中所有 TD 条目
-> （含后续新增的 TD-055~TD-066）均为 ✅ 已完成；唯一遗留待办为本次新发现的 **TD-067**（见 §5，状态 ⬜ 待开始）。
+> （含后续新增的 TD-055~TD-066）均为 ✅ 已完成；遗留两项为本次新发现的 **TD-067**（见 §5，状态 ⬜ 待开始）
+> 与 **TD-068**（状态 ⬜ 无法推进——上游 zhipuai 把传递依赖 pyjwt 钉在 2.8.0，无本地修复路径，证据见该条）。
 
 ### 用户价值映射 (PM 建议)
 
@@ -360,7 +361,7 @@
 | 字段 | 值 |
 |------|-----|
 | **优先级** | P1 |
-| **位置** | `setup.py` L92-145, `requirements.txt`, `Dockerfile:32-36` |
+| **位置** | `setup.py` L92-145, `Dockerfile:32-36` |
 | **问题描述** | 所有依赖均使用 `>=` 开放下限，无上限、无 lock 文件。**修正后**: Dockerfile runtime 阶段走 `pip install "${whl}[full]"` 不消费 requirements.lock，锁文件对镜像层无效 |
 | **修复方案** | (a) 引入 `pip-tools` 生成 `requirements.lock` (生产) 与 `requirements-dev.lock` (开发)；(b) **Dockerfile 改造**: runtime 阶段改为 `COPY requirements.lock` + `pip install --no-deps -r requirements.lock` + `pip install --no-deps "${whl}"` |
 | **负责角色** | DevOps |
@@ -643,7 +644,7 @@
 
 ---
 
-## 5. P3 — 低优先级及增量维护项 (TD-028~TD-067)
+## 5. P3 — 低优先级及增量维护项 (TD-028~TD-068)
 
 > **执行方式**: 日常维护渐进改善
 
@@ -915,6 +916,21 @@
 | **依赖** | 无 |
 | **状态** | ⬜ 待开始 (2026-09-21 新发现) |
 | **生命周期** | P8 实现 |
+
+### TD-068: PyJWT 被上游 zhipuai 钉在 2.8.0，Dependabot 告警无本地修复路径 ⚠️ 新增 (2026-09-21)
+
+| 字段 | 值 |
+|------|-----|
+| **优先级** | P3 |
+| **位置** | `requirements.in` (`zhipuai>=2.0`) → `requirements.lock:118` / `requirements-dev.lock:212` (`pyjwt==2.8.0`) |
+| **问题描述** | Dependabot 报告 5 条 pyjwt 告警（2 high / 2 medium / 1 low，修复版本 2.13.0）。**根因是上游约束，不是本项目缺陷**：`pyjwt` 是 `zhipuai` 的传递依赖，`zhipuai` 声明 `pyjwt<2.9.0,>=2.8.0`，而镜像上 `zhipuai` 的最新版恰为当前钉住的 `2.1.5.20250825`——不存在放宽该上限的新版本。`pyjwt` 不被 `src/` 直接引用（无 `import jwt`），仅在用户显式配置 zhipuai 后端时经 `src/carrymem/llm/__init__.py:44` 间接加载。 |
+| **复现** | `pip-compile --upgrade-package pyjwt --output-file=requirements.lock requirements.in` → 两个 lock 的 pin **零变化**（唯一 diff 是头部命令行）；`pip index versions zhipuai` → `2.1.5.20250825`（= 当前钉住版本）；`pip index versions pyjwt` → 最新 `2.14.0` 可用但被上游上限拒绝 |
+| **修复方案** | 无本地修复路径。可选：(a) 接受风险并保留证据（**当前选择**）；(b) 上游 zhipuai 放宽上限后，`pip-compile --upgrade-package pyjwt` 自动跟进；(c) 移除 zhipuai 后端（会失去一个可用的 LLM provider，不建议）。**禁止**强行 pin `pyjwt>=2.9.0`——那会产出违反上游声明元数据的 lock，属假修复 |
+| **负责角色** | DevOps / Security |
+| **验证标准** | `grep -n '^pyjwt==' requirements.lock requirements-dev.lock` 的取值与 `pip index versions zhipuai` 最新版声明的 pyjwt 上限一致；上游放宽后重跑 `pip-compile --upgrade-package pyjwt` 应产生非零 pin 变化 |
+| **依赖** | 上游 zhipuai 发版 |
+| **状态** | ⬜ 无法推进（上游约束，证据已留痕） |
+| **生命周期** | P6 安全审查 |
 
 ---
 

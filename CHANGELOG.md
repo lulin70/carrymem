@@ -93,7 +93,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   banner saying so, pointing at the executable runners in `benchmarks/` and
   `docs/MSC_BENCHMARK_GUIDE.md`.
 
+### Security
+
+- `extensions/vscode-carrymem` pins `serialize-javascript` to `^7.0.5` through an
+  npm `overrides` entry. It arrives transitively via `mocha@10.8.2`, which only
+  accepts `^6.0.2`, so the two Dependabot advisories (one high, one medium) could
+  not be cleared by an ordinary bump. The lockfile entry was moved to `7.0.5`
+  with the registry's real integrity hash and the now-unused `randombytes`
+  subtree was removed. **Not verified locally** — this machine has no
+  `node`/`npm`, so the `vscode-ext` CI job's `npm install` is the first real
+  check of the change.
+- The five pyjwt advisories on `requirements.txt` are **not fixable here** and are
+  now recorded as TD-068 instead of being papered over: `pyjwt` is a transitive
+  dependency of `zhipuai`, which declares `pyjwt<2.9.0,>=2.8.0`, and
+  `2.1.5.20250825` — the version already pinned — is the newest `zhipuai`
+  published. Forcing `pyjwt>=2.9.0` would produce a lock that violates the
+  upstream metadata, which is a fake fix, not a fix.
+
 ### Removed
+
+- `requirements.txt`. It was a `pip freeze` snapshot taken before the TD-014 lock
+  files existed — 87 pinned lines including `torch` and the `nvidia-*` CUDA
+  wheels — it disagreed with `requirements.lock`, and neither CI nor the
+  Dockerfile read it, yet its own header still said
+  `pip install -r requirements.txt`. It was also the only manifest Dependabot
+  scanned for the five pyjwt advisories, so its removal clears that scanning
+  surface; it does **not** move the pin, which is upstream-constrained (TD-068).
 
 - `is_summary_enabled()` and `is_llm_summary_enabled()` in
   `src/carrymem/layers/summary_layer.py`, together with the four environment
@@ -147,6 +172,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Falsification of the deletion: `grep -rn 'is_summary_enabled\|is_llm_summary_enabled'
   src/ tests/ --include='*.py'` returns only the two docstring lines that record the
   removal — no code reference remains.
+- Attempted the pyjwt bump before concluding it was impossible:
+  `pip-compile --upgrade-package pyjwt` (pip-compile 7.6.1) over
+  `requirements.in` and `requirements-dev.in` left **every pin byte-identical**;
+  the only diff was a spurious `--no-index` that pip-compile wrote into its own
+  generated command header, which has been reverted. `pip index versions
+  zhipuai` lists `2.1.5.20250825` as the newest available — the version already
+  pinned — while `pip index versions pyjwt` offers up to `2.14.0`. The cap is
+  what blocks the upgrade, not the index.
+- The extension change is **structurally** checked only: `node` and `npm` are
+  both absent from this machine, so no `npm install`/`npm ci` was possible. The
+  lockfile was verified to be valid JSON with zero dangling dependency
+  references, `serialize-javascript` reading `7.0.5`, `randombytes` removed, and
+  `safe-buffer` retained because `readable-stream` and `string_decoder` still
+  require it. Whether npm accepts the `overrides` entry is unverified.
 
 ## [0.11.2] - 2026-09-21 — complete the recall metric correction (PATCH)
 
