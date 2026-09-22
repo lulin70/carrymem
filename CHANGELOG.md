@@ -110,8 +110,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   which declares `pyjwt<2.9.0,>=2.8.0`, and `2.1.5.20250825` — the version already
   pinned — is the newest `zhipuai` published. Forcing `pyjwt>=2.9.0` would produce
   a lock that violates the upstream metadata, which is a fake fix, not a fix. The
-  five alerts closed as `fixed` on 2026-09-22 only because the graph stopped
-  seeing the package, not because the pin moved — see the rename below.
+  alerts first closed as `fixed` on 2026-09-22, but only because the graph had
+  stopped seeing the package — not because the pin moved. Once the rename below
+  restored visibility they reopened, five on `requirements.txt` and five on
+  `requirements-dev.txt`, and were then dismissed with reason `tolerable_risk`,
+  the upstream evidence recorded on each alert. **Dismissed, not fixed.**
 
 ### Removed
 
@@ -142,7 +145,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `httpx`, `numpy`, `scipy`, …) absent. Deleting the stale freeze without this
   rename would have left the repository with **no** automated pip alerting at all.
   `Dockerfile`, both `.in` files and the lock headers were updated with the rename;
-  no CI workflow referenced the old names.
+  no CI workflow referenced the old names. The fix proved itself observably: the
+  graph went from 29 to 115 pypi packages and the pyjwt advisories reappeared,
+  which is the alerting path working rather than staying silent.
 - `docs/design/V0.11.0_PROJECT_REVIEW.md` §3.2 retracts a finding that claimed the
   Chinese and Japanese architecture documents teach a removed plugin system.
   `src/carrymem/adapters/loader.py` still resolves the `carrymem.adapters` entry
@@ -214,6 +219,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `pyjwt` present again and the SBOM's pypi package count rising from 29 to 115.
   Both renamed files also still parse under pip (`--dry-run --no-deps`, exit 0),
   with pin counts unchanged at 63 and 111.
+- The alert lifecycle was checked at each step rather than assumed:
+  `GET /repos/lulin70/carrymem/dependabot/alerts` reported 7 open before the work,
+  0 open after the freeze was deleted (5 `fixed`, 2 `fixed`), then **10 open**
+  again once the rename restored graph visibility — 5 on `requirements.txt` and 5
+  on `requirements-dev.txt`. All 10 were then dismissed with
+  `dismissed_reason=tolerable_risk` and the upstream constraint recorded on each
+  alert. Final tally: `0 open, 10 dismissed, 5 fixed, 4 auto_dismissed`.
 
 ## [0.11.2] - 2026-09-21 — complete the recall metric correction (PATCH)
 

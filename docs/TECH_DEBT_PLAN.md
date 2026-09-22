@@ -923,7 +923,7 @@
 |------|-----|
 | **优先级** | P3 |
 | **位置** | `requirements.in` (`zhipuai>=2.0`) → `requirements.txt:118` / `requirements-dev.txt:212` (`pyjwt==2.8.0`) |
-| **问题描述** | Dependabot 报告 5 条 pyjwt 告警（2 high / 2 medium / 1 low，修复版本 2.13.0）。**根因是上游约束，不是本项目缺陷**：`pyjwt` 是 `zhipuai` 的传递依赖，`zhipuai` 声明 `pyjwt<2.9.0,>=2.8.0`，而镜像上 `zhipuai` 的最新版恰为当前钉住的 `2.1.5.20250825`——不存在放宽该上限的新版本。`pyjwt` 不被 `src/` 直接引用（无 `import jwt`），仅在用户显式配置 zhipuai 后端时经 `src/carrymem/llm/__init__.py:44` 间接加载。**注意**：这 5 条告警在 2026-09-22 显示为 `fixed`，但那是删除过期 freeze + 依赖图变更的结果，**pin 本身未动**，本条依然成立。 |
+| **问题描述** | Dependabot 报告 5 条 pyjwt 告警（2 high / 2 medium / 1 low，修复版本 2.13.0）。**根因是上游约束，不是本项目缺陷**：`pyjwt` 是 `zhipuai` 的传递依赖，`zhipuai` 声明 `pyjwt<2.9.0,>=2.8.0`，而镜像上 `zhipuai` 的最新版恰为当前钉住的 `2.1.5.20250825`——不存在放宽该上限的新版本。`pyjwt` 不被 `src/` 直接引用（无 `import jwt`），仅在用户显式配置 zhipuai 后端时经 `src/carrymem/llm/__init__.py:44` 间接加载。**注意**：这 5 条告警在 2026-09-22 曾显示为 `fixed`（依赖图不再看见该包），改名恢复可见后**重新打开**，最终以 `tolerable_risk` 理由关闭并在告警上留痕——**是 dismissed，不是 fixed**，pin 本身未动，本条依然成立。 |
 | **复现** | `pip-compile --upgrade-package pyjwt --output-file=requirements.txt requirements.in` → 两个编译产物的 pin **零变化**（唯一 diff 是头部命令行）；`pip index versions zhipuai` → `2.1.5.20250825`（= 当前钉住版本）；`pip index versions pyjwt` → 最新 `2.14.0` 可用但被上游上限拒绝 |
 | **修复方案** | 无本地修复路径。可选：(a) 接受风险并保留证据（**当前选择**）；(b) 上游 zhipuai 放宽上限后，`pip-compile --upgrade-package pyjwt` 自动跟进；(c) 移除 zhipuai 后端（会失去一个可用的 LLM provider，不建议）。**禁止**强行 pin `pyjwt>=2.9.0`——那会产出违反上游声明元数据的 lock，属假修复 |
 | **负责角色** | DevOps / Security |
