@@ -31,6 +31,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   changelog section, so readers of those translations never saw the v0.11.0
   breaking change. Each now carries a translated v0.11.0 entry linking to
   `CHANGELOG.md` and ADR-009.
+- The root documents were rebuilt against v0.9–v0.11 behaviour instead of being
+  re-stamped, because they were wrong in *content*, not only in version number.
+  `docs/RULES_USER_MANUAL.md` (and its `-CN` / `-JP` copies) documented a
+  `carrymem rules show` sub-command that does not exist, an interactive
+  `rules check` cleanup wizard that does not exist, `🎯 Found N matching rules` /
+  `⭐⭐⭐ Similarity: 0.95` output that the CLI never prints, `--note` and
+  `--source-memories` flags the CLI rejects, a `rules edit <id> "<action>"`
+  positional form that fails with `unrecognized arguments`, a per-rule
+  "deprecate with reason" delete flow, `[回避]` / `[硬性]` labels, and a
+  similarity threshold of 0.7 that the matcher does not apply. Every command
+  output in the manual is now a capture from a real v0.11.2 install, including
+  the surprising ones (`帮我写一份Q2销售报告` matches nothing; a Chinese
+  prompt-injection action *is* stored and only redacted at injection time).
+- `docs/PROJECT_STATUS.md` said `v0.11.2` in its header while its body still
+  carried `## Current Release: v0.8.0`. Its Version History table also marked
+  v0.5.3–v0.7.3 as `✅ Released` although no such version was ever published —
+  PyPI has 13 releases total (`0.1.2, 0.1.6, 0.2.0, 0.2.4, 0.4.0, 0.4.1, 0.5.0,
+  0.5.1, 0.5.2, 0.8.0, 0.9.3rc1, 0.11.1, 0.11.2`) against 18 git tags. The table
+  now has separate `Git tag` and `PyPI` columns.
+- `docs/API_REFERENCE.md` was missing 14 public methods (`store_messages`,
+  `recall_by_time`, `recall_semantic`, `recall_hybrid`, `recall_multi_mode`,
+  `recall_graph`, `recall_by_entity`, `recall_by_relation`, `add_graph_relation`,
+  `set_session`, `preload_session`, `end_session`, `promote_to_permanent`,
+  `consolidate_memories`) and did not document `AsyncCarryMem` at all. 13
+  existing signatures were also wrong — including `CarryMem.__init__` parameter
+  order, `merge_memories` default strategy, `consolidate(dry_run=)`,
+  `schedule_consolidation` defaults, and the `language=` default on five prompt
+  builders (`zh` in the docs, `en` in the code).
+- `docs/ARCHITECTURE.md` omitted `core/_correction_upgrade.py` and
+  `core/recall_thresholds.py` from its file listing.
+- `docs/ROADMAP.md` and the four `docs/i18n/ROADMAP-*` translations still
+  announced `v0.10.1` as current with `4878` tests, and `docs/ROADMAP.md:435`
+  listed `SummaryLayer` as completed without recording that the class was
+  deleted in v0.11.0. `docs/ROADMAP_P0_P3.md` (4529 tests) and
+  `docs/TECH_DEBT_PLAN.md` (4708 tests) carried the same stale snapshot. The
+  "Test Coverage Progress" table also stopped at the v0.11.0 release candidate,
+  so its `4948 passed, 4 skipped` row contradicted the current count printed
+  everywhere else; a `v0.11.2 (post-release tree)` row was added rather than
+  rewriting the historical candidate row.
+- The post-release collected count was reported as 4986; deleting 8 passing
+  tests takes collection from 4986 to **4978** (`4891 passed + 10 skipped +
+  77 deselected`). Corrected in `PROJECT_STATUS.md`, `ROADMAP.md`, the four
+  `ROADMAP` translations, `ROADMAP_P0_P3.md` and `TECH_DEBT_PLAN.md`.
+- `docs/TROUBLESHOOTING.md` was stamped `v0.10.0` while its `-CN` / `-JP`
+  counterparts said `v0.11.2` — the same root-document-lags-translation inversion
+  the post-release review flagged elsewhere.
+- `docs/MSC_BENCHMARK_GUIDE.md` linked to `../docs/FAQ.md`, which does not exist
+  in the repository, and to a placeholder `github.com/your-repo/carrymem/issues`.
+  The first now points at the FAQ section of `QUICK_START_GUIDE.md`, the second at
+  `github.com/lulin70/carrymem`.
+- `docs/spec/v0.5.2_spec.md` still presented `SummaryLayer` as the design of
+  record; it now carries a banner marking the class as deleted in v0.11.0.
+- `docs/EXTERNAL_MEMORY_BENCHMARKS.md` is a v0.7.2-era evaluation *plan* that is
+  linked from `docs/README.md` as a live document, but its §3 code sketches do
+  not run against the current API: `cm.add_rule()` and `cm.match_rules()` are not
+  `CarryMem` facade methods (the rule engine lives under `carrymem.rules`),
+  `build_system_prompt()` takes `max_memories: int` as its second positional
+  parameter and has no `matched_rules=` parameter, and `recall_memories()` has no
+  `memory_type=` parameter. The plan is kept as written and now carries a dated
+  banner saying so, pointing at the executable runners in `benchmarks/` and
+  `docs/MSC_BENCHMARK_GUIDE.md`.
 
 ### Removed
 
@@ -50,6 +111,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   point group, so the translations were correct and are left untouched. The
   review now records the genuine issue in the same section: the translations are
   879/882 lines against a 208-line English original.
+- Recorded (not fixed) a new type/return drift as TD-067 in
+  `docs/TECH_DEBT_PLAN.md`: `src/carrymem/types.py:350-356` declares
+  `ScheduleConsolidationResult` with `scheduled/interval_hours/dry_run/message`,
+  while `core/_maintenance.py:254-260` actually returns
+  `scheduled/interval_hours/dry_run/run_p1/run_p2` — no `message`, and two
+  undocumented fields.
+- Recorded (not fixed) that `docs/i18n/RULES_USER_MANUAL-CN.md` and `-JP.md` are
+  not translations: only the title and version lines are localized, the body is
+  the English original verbatim. They are now byte-identical to the English
+  manual below line 4. Collapsing them into a pointer page is a documentation
+  architecture decision that remains open, alongside the
+  `ARCHITECTURE`/`API_REFERENCE` CN/JP pairs.
+- `docs/design/V0.11.0_PROJECT_REVIEW.md` §8 item 8 (documentation version
+  inversion) moves from 🟡 to ✅ and the P1 heading no longer says the root-docs
+  half is unstarted. The item now records what was rebuilt and what is still
+  undecided, so the review's own status cannot drift away from the documents it
+  describes.
 
 ### Verification
 
