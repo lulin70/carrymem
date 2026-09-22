@@ -165,7 +165,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Version consistency OK: all 5 sources report 0.11.2 (VERSION:1, src/carrymem/__version__.py:1, server.json:166, Dockerfile:23, smithery.yaml:3).`, and
   `All seven blocking local CI gates passed (flake8, black, isort, mypy, pytest, radon, version-consistency).`
   The passed count is exactly 8 lower than the 4899 recorded for v0.11.2, matching
-  the 8 tests deleted with the ghost switches.
+  the 8 tests deleted with the ghost switches. Two runs on this same tree disagreed
+  on the coverage *denominator* — `18967 statements ... 83.08%` against
+  `19121 statements ... 83.18%` — while their outcomes were identical
+  (`4891 passed, 10 skipped, 77 deselected`) and their branch totals matched
+  exactly (`5960`, `680` partial); the missed-statement count moved by one
+  (`3001` → `3002`). That is lazy-import measurement variance, not a change in what
+  ran, and both runs cleared the 80% floor. Treat the counts as the stable evidence
+  and the percentage as approximate.
 - Falsification of the new gate: setting `Dockerfile`'s `ARG VERSION` back to
   `0.9.8` makes it print
   `Dockerfile:23 = 0.9.8  <-- MISMATCH` and exit 1.
