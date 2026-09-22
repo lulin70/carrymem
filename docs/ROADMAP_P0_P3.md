@@ -2,7 +2,7 @@
 
 > **文档性质**: 活文档 (Living Document) — 每完成一个 Wave 立即更新状态
 > **创建时间**: 2026-07-17
-> **最后更新**: 2026-07-18 (Batch 4 (Wave 6-9) + P2 Group D 完成：12 项 TD 已完成 (TD-003b/014/015/016/017/018/020/025/026/035/042/043)；TD-019 类型标注 377 函数延后到 v0.8.2；4529 tests + 220 e2e 全通过)
+> **最后更新**: 2026-09-21 (v0.11.2 事实复核：全部 TD 项已完成；测试 `4891 passed, 10 skipped, 77 deselected` (4978 collected) + e2e 265 passed；coverage 83.08%；mypy `160 source files`；radon 无 ≥21 函数。数字依据 `docs/PROJECT_STATUS.md` §"Current Test & Quality Metrics (post-release tree, 2026-09-21)" 与 `CHANGELOG.md` [Unreleased]/[0.11.2]；历史批次记录见 §3/§4)
 > **基于**: TECH_DEBT_PLAN.md (技术债目录) + DevSquad V4.1.0 7-Role 共识机制 + 11 阶段生命周期
 > **用户规则映射**:
 >   - 推进 P0-P1 按项目生命周期，文档先行，充分验证，推送 Git
@@ -14,8 +14,8 @@
 
 ## 1. 概述
 
-本文档是 CarryMem v0.8.0 技术债推进的**执行路线图**，与 [TECH_DEBT_PLAN.md](TECH_DEBT_PLAN.md) 互补：
-- **TECH_DEBT_PLAN.md** = 技术债**目录** (50 项明细 + 验证标准)
+本文档是 CarryMem 技术债推进的**执行路线图**（v0.8.0 起规划，已推进至 v0.11.2），与 [TECH_DEBT_PLAN.md](TECH_DEBT_PLAN.md) 互补：
+- **TECH_DEBT_PLAN.md** = 技术债**目录** (TD-001~TD-067 明细 + 验证标准)
 - **ROADMAP_P0_P3.md** = 技术债**执行路线** (Wave 推进表 + 11 阶段映射 + 共识投票矩阵)
 
 **执行原则** (来自 DevSquad Meta Iron Rule):
@@ -26,18 +26,19 @@
 
 ---
 
-## 2. 当前推进状态 (Snapshot @ 2026-07-18)
+## 2. 当前推进状态 (Snapshot @ 2026-09-21, v0.11.2 复核)
 
 | 优先级 | 总数 | 完成 | 进行中 | 待开始 | 完成率 |
 |--------|------|------|--------|--------|--------|
 | **P0 立即修复** | 5 | 5 | 0 | 0 | **100%** ✅ |
-| **P1 高优先级** | 20 | 19 | 0 | 1 | **95%** 🟢 (仅 TD-019 延后) |
-| **P2 中优先级** | 18 | 4 | 0 | 14 | **22%** 🟡 (Group D 完成) |
-| **P3 低优先级** | 11 | 11 | 0 | 0 | **100%** ✅ (2026-09-07 复核：TD-028~058 全部完成，见 TECH_DEBT_PLAN §5) |
-| **总计** | 54 | 35 | 0 | 19 | **64.8%** |
+| **P1 高优先级** | 20 | 20 | 0 | 0 | **100%** ✅ (TD-019 于 v0.8.2 完成) |
+| **P2 中优先级** | 18 | 18 | 0 | 0 | **100%** ✅ (v0.8.2 起分批完成，见 TECH_DEBT_PLAN §4) |
+| **P3 低优先级** | 11 | 11 | 0 | 0 | **100%** ✅ (TD-028~058 全部完成，见 TECH_DEBT_PLAN §5) |
+| **总计** | 54 | 54 | 0 | 0 | **100%** ✅ |
 
-> **复核说明（2026-09-07）**：本表为批次快照。P3 行已按 TECH_DEBT_PLAN §5 逐项核实更新（TD-028~058 全 ✅）；
-> P2 行快照早于 v0.9.x 批次（TD-056~062 等），以 TECH_DEBT_PLAN 各条目状态为最终事实来源。
+> **复核说明（2026-09-21, v0.11.2）**：本表已按 TECH_DEBT_PLAN §2~§5 逐项核实更新——P0~P3 全部条目均为 ✅ 已完成
+> （P1 的 TD-019 于 v0.8.2 完成，不再"延后"；P2 18 项自 v0.8.2 起分批完成）。以 TECH_DEBT_PLAN 各条目状态为最终事实来源。
+> 历史快照（2026-07-18）为 P1 95% / P2 22% / 总计 64.8%，已被本表取代。
 
 **Git 历史里程碑**:
 - `d6bdd81` — P0 batch 完成 (5 项: TD-001/002/003a/004/032)
@@ -88,7 +89,7 @@
 - 验证命令: `pytest --cov=carrymem.adapters.sqlite --cov-report=term-missing tests/test_sqlite_adapter.py` 覆盖率 ≥80%
 - 错误维度覆盖 ≥15%，边界维度覆盖 ≥10%
 
-### 3.3 P1 Batch 3 — 架构重构 (进行中 🟡, Wave 2-4 完成 ✅)
+### 3.3 P1 Batch 3 — 架构重构 (完成 ✅, Wave 2-5 全部完成)
 
 **前置条件**: TD-010 完成 (SQLiteAdapter 覆盖率 ≥80% 作为重构安全网) ✅
 **回滚点**: `git tag pre-p1-architecture` (Batch 2 完成后)
@@ -225,16 +226,16 @@
 ### 3.4 P1 Batch 4 — DevOps + 代码质量 (完成 ✅)
 
 **特性**: 与 Batch 3 独立推进，无架构依赖，可并行
-**状态**: Wave 6-9 全部完成，仅 TD-019 因工作量过大延后到 v0.8.2
+**状态**: Wave 6-9 全部完成（TD-019 亦于 v0.8.2 完成，不再延后）
 
 | Wave | TD 项 | 角色 | 11 阶段 | 依赖 | 状态 |
 |------|-------|------|---------|------|------|
 | W6 | TD-014 (依赖锁定 + Dockerfile) | DevOps | P10 | TD-001 ✅ | ✅ 已完成 (requirements.in/lock 36 包 + Dockerfile runtime 改造) |
 | W6 | TD-016 (CI timeout) | DevOps | P8 | 无 | ✅ 已完成 (6 个 CI job 全部添加 timeout) |
-| W7 | TD-015 (OIDC 6 步迁移) | DevOps+Security | P6→P10 | 无 | 🟡 代码部分完成 (release.yml `environment: pypi` 已加；3 手动步骤待用户执行) |
+| W7 | TD-015 (OIDC 6 步迁移) | DevOps+Security | P6→P10 | 无 | ✅ 已完成 (OIDC 方案放弃，改回 password-based 发布；`environment: pypi` + `id-token: write` 保留；carrymem==0.9.3rc1 已发布到 PyPI，见 TECH_DEBT_PLAN §3.4 TD-015) |
 | W8 | TD-017 (星导入，排除 facade) | Coder | P8 | 无 | ✅ 已完成 (cli/_*.py 6 处星导入清理) |
 | W8 | TD-018 (重复代码抽取) | Coder | P8 | 无 | ✅ 已完成 (4 辅助函数: _add_common_args 42 处 + compute_suggested_action + safe_json_loads 7 处 + safe_probe) |
-| W8 | TD-019 (类型标注 74%→90%) | Coder | P8 | 无 | 🟡 延后到 v0.8.2 (377 函数工作量过大) |
+| W8 | TD-019 (类型标注 74%→90%) | Coder | P8 | 无 | ✅ 已完成 (v0.8.2: 覆盖率 79.3%→90.3%，1455/1611 函数) |
 | W8 | TD-020 (魔法数字按域分) | Coder | P8 | 无 | ✅ 已完成 (recall_thresholds.py Enum + sqlite/constants.py) |
 | W8 | TD-003b (8 项公共 API deprecation) | Coder | P8 | 无 | ✅ 已完成 (8 API 加 DeprecationWarning + 6 测试文件包装) |
 | W9 | TD-035 (AccessPolicy 集成) | Security+Architect | P2→P6→P8 | 无 | ✅ 已完成 (handlers.py 集成 + 16 新测试 7 类) |
@@ -407,16 +408,16 @@ pytest tests/e2e/ -m "not slow" -v --timeout=300
 ### 4.2 P2 推进时间表
 
 ```
-v0.8.1 (P1 收尾):
-  └─ Group D 全部 (TD-025/026/042/043) — DevOps 改进，独立推进
-  └─ Group C TD-013 (快速胜利) + TD-040/045/046
-
-v0.9.0 (P1 完成后):
-  └─ Group A 全部 (TD-022/024/039/044) — 依赖 P1 Batch 3 完成
-  └─ Group B 全部 (TD-021/023/027/047)
-  └─ Group E (TD-038)
-  └─ Group F (TD-041)
+v0.8.2 (P1 收尾 + P2 全部完成) ✅ [2026-07-18；git tag 存在，未上 PyPI]:
+  └─ Group D 全部 (TD-025/026/042/043) — DevOps 改进 ✅
+  └─ Group C TD-013 (快速胜利) + TD-040/045/046 ✅
+  └─ Group A 全部 (TD-022/024/039/044) — 依赖 P1 Batch 3 完成 ✅
+  └─ Group B 全部 (TD-021/023/027/047) ✅
+  └─ Group E (TD-038) ✅
+  └─ Group F (TD-041) ✅
 ```
+
+> **事实修正（2026-09-21）**：原表写"v0.8.1 (P1 收尾)"，但 **v0.8.1 从未打 git tag、也从未发布**；P1 收尾与 P2 全部并入 **v0.8.2**（2026-07-18，git tag 存在但未上 PyPI）。
 
 ### 4.3 P3 方案 (11 项，日常维护渐进改善)
 
@@ -518,16 +519,16 @@ v0.9.0 (P1 完成后):
 | 阶段 | 当前活跃 TD 项 | Gate 状态 |
 |------|---------------|-----------|
 | **P1 需求分析** | — (技术债清理无需新需求) | ✅ N/A |
-| **P2 架构设计** | TD-007, TD-037, TD-006, TD-005, TD-035 | 🟡 Batch 3 待启动 |
-| **P3 技术设计** | TD-007, TD-037, TD-006, TD-005 | 🟡 Batch 3 待启动 |
-| **P4 数据设计** | TD-006, TD-038 | 🟡 待 Batch 3 |
-| **P5 交互设计** | TD-041, TD-046, TD-054 | ⬜ P2-P3 阶段 |
-| **P6 安全审查** | TD-015, TD-035, TD-044 | 🟡 Wave 7/9 |
+| **P2 架构设计** | TD-007, TD-037, TD-006, TD-005, TD-035 | ✅ 完成 |
+| **P3 技术设计** | TD-007, TD-037, TD-006, TD-005 | ✅ 完成 |
+| **P4 数据设计** | TD-006, TD-038 | ✅ 完成 |
+| **P5 交互设计** | TD-041, TD-046, TD-054 | ✅ 完成 |
+| **P6 安全审查** | TD-015, TD-035, TD-044 | ✅ 完成 |
 | **P7 测试规划** | TD-010 | ✅ 完成 |
-| **P8 实现** | TD-008, TD-016~020, TD-003b | ⬜ Batch 4 待启动 |
-| **P9 测试执行** | TD-010, TD-005, TD-006, TD-008 | 🟡 TD-010 ✅, 其余依赖 P8 |
-| **P10 部署发布** | TD-014, TD-015 | ⬜ Wave 6-7 |
-| **P11 运维保障** | TD-042, TD-043, TD-050 | ⬜ P2-P3 阶段 |
+| **P8 实现** | TD-008, TD-016~020, TD-003b | ✅ 完成 |
+| **P9 测试执行** | TD-010, TD-005, TD-006, TD-008 | ✅ 完成 |
+| **P10 部署发布** | TD-014, TD-015 | ✅ 完成 |
+| **P11 运维保障** | TD-042, TD-043, TD-050 | ✅ 完成 |
 
 ---
 
@@ -647,6 +648,7 @@ python -m build --wheel && twine check dist/*
 | 日期 | 变更 | 操作者 |
 |------|------|--------|
 | 2026-07-17 | 创建文档。基于 TECH_DEBT_PLAN.md v3 + DevSquad 7-Role 共识评估。包含: P0-P1 执行计划 (Batch 2 进行中 + Batch 3/4 待启动)、P2-P3 方案与共识 (18 P2 项 + 11 P3 项分组)、7-Role 投票矩阵、11 阶段生命周期映射、活文档同步清单 | DevSquad (Architect+PM 共识) |
+| 2026-09-21 | v0.11.2 事实复核：头部测试数（旧快照值已过时）更正为 `4891 passed, 10 skipped, 77 deselected` (4978 collected) + e2e 265 passed；§2 Snapshot 由 P1 95%/P2 22%/总计 64.8% 更正为全 100% (逐项核对 TECH_DEBT_PLAN §2~§5)；§3.3 头部、§3.4 TD-015/TD-019、§6 11 阶段 Gate 状态由 🟡/⬜ 更正为 ✅；§4.2/§12 中 v0.8.1 从未发布、v0.9.x 仅 v0.9.3rc1 上 PyPI 等事实修正。依据 PROJECT_STATUS.md + CHANGELOG.md | DevSquad |
 
 ---
 
@@ -682,21 +684,25 @@ python -m build --wheel && twine check dist/*
 ### 执行顺序 (基于决策结果)
 
 ```
-[当前] TD-010 (独立 commit) → v0.8.1 发布
+[已完成] TD-010 (独立 commit) → 并入 v0.8.2（v0.8.1 从未打 tag 或发布）
    ↓
-[Batch 3 架构重构] W2: TD-007 → TD-037 → W3: TD-006 → W4: TD-005 → W5: TD-008a/b
+[Batch 3 架构重构 ✅] W2: TD-007 → TD-037 → W3: TD-006 → W4: TD-005 → W5: TD-008a/b
    ↓
-[Batch 4 + P2-D 并行]
+[Batch 4 + P2-D 并行 ✅]
    ├─ Batch 4: TD-014/016/015/017/018/019/020/003b/035 (4 Wave)
    └─ P2 Group D: TD-025/026/042/043 (DevOps 改进)
    ↓
-v0.8.2 发布
+v0.8.2 ✅ (2026-07-18, git tag 存在；未上 PyPI)
    ↓
-[P2 其余组] A 架构 / B 代码质量 / C 测试 / E 安全 / F UI (18 项)
+[P2 其余组 ✅] A 架构 / B 代码质量 / C 测试 / E 安全 / F UI (18 项)
    ↓
-v0.9.0 发布 ✅ (2026-07-20, UI/UX Overhaul)
+v0.9.0 ✅ (2026-07-20, UI/UX Overhaul；git tag 存在，未上 PyPI)
    ↓
-v0.9.1 ~ v0.9.7 ✅ (2026-07-20 ~ 2026-07-26, tech debt cleanup series)
+v0.9.1 / v0.9.2 ✅ (2026-07-20, tech debt cleanup series；git tag 存在，未上 PyPI)
    ↓
-[P3 渐进改善] 11 项 (日常维护)
+v0.9.3rc1 ✅ (2026-07-22, 0.9.x 中唯一上 PyPI 的版本)
+   ↓
+v0.9.4 ~ v0.9.7 ✅ (2026-07-25 ~ 2026-07-26, tech debt cleanup series；untagged，未上 PyPI)
+   ↓
+[P3 渐进改善 ✅] 11 项 (日常维护)
 ```

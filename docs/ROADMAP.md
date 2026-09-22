@@ -1,8 +1,8 @@
 # CarryMem Product Roadmap
 
-**Last Updated**: 2026-07-11
+**Last Updated**: 2026-09-21
 **Product Positioning**: AI Identity Layer — Memory + Rules + Knowledge
-**Version Scheme**: v0.5.x (Stable APIs) → v0.6.x (Architecture Cleanup) → v0.7.x (Knowledge Graph + Multi-Mode Retrieval + Memify) → v0.8.0 (Graphify — MCP Graph Tools + Edge Confidence)
+**Version Scheme**: v0.5.x (Stable APIs) → v0.6.x (Architecture Cleanup) → v0.7.x (Knowledge Graph + Multi-Mode Retrieval + Memify) → v0.8.0 (Graphify — MCP Graph Tools + Edge Confidence) → v0.9.x (UI/UX Overhaul) → v0.10.x (Repeat-Correction Upgrade) → v0.11.0 (Async API Cleanup + `cryptography>=50.0.0` floor + real observability) → v0.11.1 (Release-Gate Fix + first `recall` metric correction) → v0.11.2 (Completes the `recall` metric correction)
 
 ---
 
@@ -38,7 +38,12 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
   ├── v0.7.1  Multi-Mode Retrieval (time/semantic/hybrid/multi_mode APIs)  ✅
   ├── v0.7.2  Memify + Async I/O  (Dynamic refinement + AsyncSQLiteAdapter)✅
   ├── v0.7.3  Security Hardening  (Fernet-only + WAL throttle + defense)  ✅
-  └── v0.8.0  Graphify            (MCP graph tools + edge confidence)      ✅
+  ├── v0.8.0  Graphify            (MCP graph tools + edge confidence)      ✅
+  ├── v0.9.0  UI/UX Overhaul      (Morandi aesthetic + accessibility + onboarding) ✅
+  ├── v0.10.0 Repeat Correction   (detect_repeat_correction + semantic dedup + keyword bypass) ✅
+  ├── v0.11.0 Async API Cleanup   (native_async removed + cryptography 50 floor + observability) ✅
+  ├── v0.11.1 Release-Gate Fix    (SLO gate fix + first recall metric correction) ✅
+  └── v0.11.2 Recall Metric Fix   (completes the recall metric correction) ✅
 ```
 
 **Versioning Rules**:
@@ -46,7 +51,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 - Second digit changes for GA milestones (API stability guarantee)
 - No "v1.0.0 jump" — earn it through proven production usage
 
-> **Note**: The v0.3.0–v0.8.0 versions listed above represent the project's development history through v0.8.0. **Current version is v0.10.1**: v0.5.x (Entity Normalizer, Summary Layer, store_entry/store_batch core APIs), v0.6.x (deprecated API removal, architecture cleanup decoupling core from SQLiteAdapter, CVE-2026-34073 security fix, recency decay weighting), v0.7.0 (SQLite-native Knowledge Graph + Session dual-layer O(1) recall), v0.7.1 (multi-mode retrieval: recall_by_time/recall_semantic/recall_hybrid/recall_multi_mode), v0.7.2 (MemifyEngine three-phase dynamic refinement + AsyncSQLiteAdapter native async I/O), v0.7.3 (HMAC-CTR fallback removed, cryptography hard dependency, WAL throttle, input validator defense-in-depth, batched LIKE queries), v0.8.0 (3 MCP graph tools: query_graph/shortest_path/get_memory_impact, edge confidence labels EXTRACTED/INFERRED/AMBIGUOUS, schema migration v100), v0.9.x (UI/UX Overhaul + Morandi Aesthetic, mypy 0 baseline, tech debt cleanup TD series, OIDC→token publish decision), v0.9.9 (methodology docs: orthogonal classification table + design space positioning), v0.10.0 (repeat-correction upgrade: detect_repeat_correction() + semantic dedup + security-keyword bypass), v0.10.1 (CLI startup cost fix, L-V0100-006). **4878 tests collected (incl. 263 E2E), 80%+ coverage, mypy 0 errors.** Next milestone: v0.11.0 (TBD based on user feedback and architecture evolution plan).
+> **Note**: The v0.3.0–v0.11.2 versions listed above represent the project's development history through v0.11.2. **Current version is v0.11.2**: v0.5.x (Entity Normalizer, Summary Layer, store_entry/store_batch core APIs), v0.6.x (deprecated API removal, architecture cleanup decoupling core from SQLiteAdapter, CVE-2026-34073 security fix, recency decay weighting), v0.7.0 (SQLite-native Knowledge Graph + Session dual-layer O(1) recall), v0.7.1 (multi-mode retrieval: recall_by_time/recall_semantic/recall_hybrid/recall_multi_mode), v0.7.2 (MemifyEngine three-phase dynamic refinement + AsyncSQLiteAdapter native async I/O), v0.7.3 (HMAC-CTR fallback removed, cryptography hard dependency, WAL throttle, input validator defense-in-depth, batched LIKE queries), v0.8.0 (3 MCP graph tools: query_graph/shortest_path/get_memory_impact, edge confidence labels EXTRACTED/INFERRED/AMBIGUOUS, schema migration v100), v0.9.x (UI/UX Overhaul + Morandi Aesthetic, mypy 0 baseline, tech debt cleanup TD series, OIDC→token publish decision), v0.9.9 (methodology docs: orthogonal classification table + design space positioning), v0.10.0 (repeat-correction upgrade: detect_repeat_correction() + semantic dedup + security-keyword bypass), v0.10.1 (CLI startup cost fix, L-V0100-006), v0.11.0 (breaking async API cleanup: `AsyncCarryMem(native_async=True)` removed, `cryptography>=50.0.0` floor, real observability instrumentation), v0.11.1 (release-gate fix + first `recall` metric correction), v0.11.2 (completes the `recall` metric correction). **4978 tests collected / 4891 passed (10 skipped, 77 deselected; incl. 265 E2E), 83.08% coverage, mypy 0 errors.** Next milestone: the next MINOR is not yet scoped (TBD based on user feedback and the architecture evolution plan).
 
 ---
 
@@ -76,7 +81,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 │  │  • Cross-language semantic recall (FTS5)          │    │
 │  │  • Session-aware storage + knowledge supersession (v0.1.7)    │    │
 │  │  • Time reasoning + structured prompt injection (v0.1.7)      │    │
-│  │|  •  4330 tests passing, 80%+ coverage           ││    │
+│  │|  •  4891 tests passing, 80%+ coverage           ││    │
 │  └──────────────────────────────────────────────────┘    │
 │              ↑ reads from          ↑ injects into         │
 │  Layer 1: Knowledge (WHAT you know) ← v0.3.0 PLANNED     │
@@ -427,7 +432,7 @@ See CHANGELOG.md for detailed history.
 - [x] Ontology-lite: maps surface forms to canonical forms without external NLP libs
 
 ### ✅ v0.5.2 — Summary Layer + Progressive Disclosure (DONE)
-- [x] `SummaryLayer` module: field-level memory summary caching for token-efficient prompt injection
+- [x] `SummaryLayer` module: field-level memory summary caching for token-efficient prompt injection — historical class removed after v0.10.1 (2026-09-07, ships in v0.11.0; half-ghost: production used `RuleBasedSummarizer` via `format.py`; `layers/summary_layer.py` now keeps only `RuleBasedSummarizer`; see V0.11.0_PROJECT_REVIEW.md §4.1)
 - [x] `RuleBasedSummarizer`: 3 depth levels (keywords/medium/full), zero-LLM
 
 ### ✅ v0.5.3 — store_entry() Core API (DONE)
@@ -844,6 +849,7 @@ carrymem unpack team-identity.carry
 | v0.8.0 | 4334+ tests | 80.88% | +MCP graph tools (3) + edge confidence labels |
 | v0.9.8 | 4666 non-e2e | 80%+ | +Knowledge graph deletion completeness (TD-066) |
 | **v0.11.0 (release candidate)** | **4948 passed, 4 skipped** | **blocking gates passed** | **Breaking async API cleanup + cryptography 50 floor + reproducible CI + benchmark provenance** |
+| **v0.11.2 (post-release tree)** | **4891 passed, 10 skipped, 77 deselected (4978 collected)** | **83.08%** | **Root-document rebuild against v0.9–v0.11 behaviour + 8 unwired-switch tests removed with their source** |
 
 ---
 

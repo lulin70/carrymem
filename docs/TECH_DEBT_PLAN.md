@@ -2,19 +2,19 @@
 
 > **文档性质**: 活文档 (Living Document) — 每完成一项立即更新状态
 > **创建时间**: 2026-07-17
-> **最后更新**: 2026-07-18 (v11 — v0.8.2 技术债清理完成：TD-019 类型标注 90.3%、TD-021 25 个 D 级函数全部重构、P2 14 项全部完成 (TD-013/021/022/023/024/027/038/039/040/041/044/045/046/047)；4708 tests + 7 concurrent 全通过；radon 0 D/E/F)
+> **最后更新**: 2026-09-21 (v0.11.2 事实复核：全部 TD 项 ✅ 已完成；测试 `4891 passed, 10 skipped, 77 deselected` (4978 collected) + e2e 265 passed；coverage 83.08%；mypy `160 source files`；radon 无 ≥21 函数。数字依据 `docs/PROJECT_STATUS.md` §"Current Test & Quality Metrics (post-release tree, 2026-09-21)" 与 `CHANGELOG.md` [Unreleased]/[0.11.2]。历史批次记录见 §9 更新日志)
 > **基于**: 7 维度项目整理评估 (2026-07-17, B+ 77/100) + DevSquad 7 角色并行审核
 > **配套文档**: [ROADMAP_P0_P3.md](ROADMAP_P0_P3.md) — 执行路线图 (Wave 推进表 + 7-Role 投票矩阵 + 11 阶段生命周期映射)
 >
 > **文档分工**:
-> - 本文档 (TECH_DEBT_PLAN.md) = 技术债**目录** (50 项明细 + 验证标准 + 风险矩阵)
+> - 本文档 (TECH_DEBT_PLAN.md) = 技术债**目录** (TD-001~TD-067 明细 + 验证标准 + 风险矩阵)
 > - ROADMAP_P0_P3.md = 技术债**执行路线** (Wave 推进表 + 共识投票矩阵 + 活文档同步清单)
 
 ---
 
 ## 1. 概述
 
-本文档记录 CarryMem v0.8.2 的全部技术债，按优先级 (P0-P3) 和 DevSquad 11 阶段项目生命周期组织。
+本文档记录 CarryMem 自 v0.8.2 起的全部技术债（已推进至 v0.11.2），按优先级 (P0-P3) 和 DevSquad 11 阶段项目生命周期组织。
 
 **执行原则** (来自用户规则):
 - P0-P1: 按项目生命周期推进，文档先行，充分验证，推送 Git
@@ -31,6 +31,9 @@
 | P1 高优先级 | 22 项 | ~28h | 测试先行 → 架构重构 → DevOps+代码 |
 | P2 中优先级 | 13 项 | ~18h | 方案+共识后推进 |
 | P3 低优先级 | 10 项 | ~4h | 日常维护渐进 |
+
+> **复核说明（2026-09-21, v0.11.2）**：上表为 v2 创建时的统计。经逐项复核，§2~§5 中所有 TD 条目
+> （含后续新增的 TD-055~TD-066）均为 ✅ 已完成；唯一遗留待办为本次新发现的 **TD-067**（见 §5，状态 ⬜ 待开始）。
 
 ### 用户价值映射 (PM 建议)
 
@@ -501,7 +504,7 @@
 | **修复方案** | 渐进式拆分，每个版本降 3-5 个 D 级函数到 C 级以下 |
 | **负责角色** | Coder |
 | **验证标准** | 命令 `radon cc -nc -d src/carrymem/ | wc -l` ≤10 |
-| **状态** | ✅ 已完成 (v0.8.2: 25/25 D-grade functions refactored to C or better via Extract Method; radon cc -n D returns empty; 4708 tests pass) |
+| **状态** | ✅ 已完成 (v0.8.2: 25/25 D-grade functions refactored to C or better via Extract Method; radon cc -n D returns empty; 该批次全量测试通过) |
 
 ### TD-022: 辅助类伪解耦 (100+ 处私有访问)
 
@@ -640,7 +643,7 @@
 
 ---
 
-## 5. P3 — 低优先级 (10 项)
+## 5. P3 — 低优先级及增量维护项 (TD-028~TD-067)
 
 > **执行方式**: 日常维护渐进改善
 
@@ -899,6 +902,20 @@
 | **状态** | ✅ 已完成 (2026-07-25): [tool.ruff] + [tool.ruff.lint] 配置已添加 |
 | **生命周期** | P8 实现 |
 
+### TD-067: ScheduleConsolidationResult 类型声明与实际返回值漂移 ⚠️ 新增 (2026-09-21)
+
+| 字段 | 值 |
+|------|-----|
+| **优先级** | P2 |
+| **位置** | `src/carrymem/types.py:350-356` (`ScheduleConsolidationResult`), `src/carrymem/core/_maintenance.py:237-260` (`MaintenanceMixin.schedule_consolidation`) |
+| **问题描述** | `types.py:350-356` 声明 `ScheduleConsolidationResult` 字段为 `scheduled` / `interval_hours` / `dry_run` / `message`；但 `MaintenanceMixin.schedule_consolidation` (`core/_maintenance.py:254-260`) 实际返回 `scheduled` / `interval_hours` / `dry_run` / `run_p1` / `run_p2` —— **不含 `message`，多出 `run_p1` / `run_p2`**。当前方法返回类型标注为 `Dict[str, Any]` 而非该 TypedDict，故 mypy 未报错；TypedDict 与实现不一致，按该 TypedDict 取值的使用方会读到不存在的 `message` 且丢失 `run_p1` / `run_p2` |
+| **修复方案** | 二选一：(a) 将 `ScheduleConsolidationResult` 字段改为 `scheduled` / `interval_hours` / `dry_run` / `run_p1` / `run_p2`，并把方法返回类型收窄为该 TypedDict；(b) 若 `message` 是预期契约，则在 `schedule_consolidation` 返回值中补齐 `message` 并保留 `run_p1` / `run_p2` |
+| **负责角色** | Coder |
+| **验证标准** | `types.py` 与 `core/_maintenance.py:254-260` 的字段集合一致；`mypy src/` 0 错误；全测试通过 |
+| **依赖** | 无 |
+| **状态** | ⬜ 待开始 (2026-09-21 新发现) |
+| **生命周期** | P8 实现 |
+
 ---
 
 ## 6. 生命周期阶段映射
@@ -1047,6 +1064,7 @@ TD-035 (AccessPolicy 集成) — 安全债，独立推进
 | 2026-07-26 | v11: 待后续处理事项推进 (DevSquad 7 角色共识, commit 7c48ccd, v0.9.7)。4 项待后续处理事项推进: (1) TD-003b 核实发现 8 项公共 API **已被完全删除**（非仅 deprecation），文档状态过时已更新；(2) TD-009 删除 `src/carrymem/cli.py` 16 行 facade（被 `cli/` 包目录遮蔽，零调用者）；(3) TD-011b 新增 `TestRunTuiFallbackHint` 3 个测试覆盖 ⑩ HAS_TEXTUAL=False fallback 提示路径（10 条交互路径全部覆盖）；(4) TD-002 SQLITE_SCHEMA 竞争降级为 P3 观察项（已有 `_init_rule_engine_eager` + `_prime_fts5_vtable` + WAL 模式保护）。验证: 4666 non-e2e tests pass (0 failed), 97 TUI tests pass (3 new), flake8/black/isort clean。**待用户决策**: TD-015 PyPI token 轮换 + TD-059 dependabot ignore 配置 | DevSquad 7 角色共识 |
 | 2026-07-27 | v12: TD-059 后续决策 2 推进 (DevSquad 7 角色共识 + 用户决策"只升级 Patch 版本")。`.github/dependabot.yml` 3 个 ecosystem (pip/github-actions/docker) 全部添加 `ignore: version-update:semver-major + semver-minor` 规则；dev-dependencies group `update-types` 从 `minor+patch` 收紧为 `patch` only；github-actions group 添加 `update-types: patch`。理由: minor/major 升级引入 breaking changes (ruff/mypy 版本漂移致 4 次 CI 全红历史教训)。Security 共识: runtime deps 安全修复仍通过 dependabot daily security advisory 独立通道流入，不受 ignore 影响。验证: YAML 语法 OK (python yaml.safe_load), 3 ecosystems ignore 规则全部就位。project_memory.md 硬约束同步: "allow patch/minor" → "only allow patch" | DevSquad 7 角色共识 |
 | 2026-07-27 | v13: TD-066 (new) knowledge graph 删除完整性修复 (DevSquad 7 角色共识, v0.9.8)。Oracle Agent Memory 报告 (arXiv:2607.13157) 启发：`forget()` 之前仅删除 `memories` + `memory_vectors`，遗留 `memory_entities` 孤儿实体 + `memory_relations` 残留关系。根因: FK `ON DELETE SET NULL` 在 DELETE FROM memories 时把 `memory_key` 设为 NULL，但 entity 记录本身残留。修复: `forget()` 新增 `_collect_entity_ids()` 在 DELETE 前预捕获 entity_ids (绕过 FK 副作用)，`_cleanup_graph_data()` 用预捕获的 entity_ids 级联删除 relations + entities + source_memory_key relations。4 个新测试: entities 清理 / relations 清理 / 共享实体保留 / 不存在 key 不报错。验证: 4651 passed, 14 skipped (pre-existing), 0 failed。**P0-2 superseded 过滤已全面覆盖确认** (SQL 层 5 处 + Python 层 4 处 `superseded_at IS NULL`)。**P1-4 CMB 基准评估取消**: CarryMem 已有 PrefEval (94.0%) + LongMemEval + LaMP + LoCoMo + MSC 5 个学术基准，无需新建 | DevSquad 7 角色共识 |
+| 2026-09-21 | v14: v0.11.2 事实复核 (对照 PROJECT_STATUS.md + CHANGELOG.md)。头部测试数（旧快照值已过时）更正为 `4891 passed, 10 skipped, 77 deselected` (4978 collected) + e2e 265 passed；§1 增加"全部 TD 项已完成"复核说明；新增 **TD-067**（`types.py:350-356` 的 `ScheduleConsolidationResult` 声明字段 `scheduled/interval_hours/dry_run/message` 与 `core/_maintenance.py:254-260` 实际返回的 `scheduled/interval_hours/dry_run/run_p1/run_p2` 漂移，状态 ⬜ 待开始）。本次复核同时核对：`plugins/` 目录与 `SummaryLayer` 类已于 v0.11.0 删除、`AsyncCarryMem(native_async=True)` 模式已删除、`AsyncSQLiteAdapter` 对 `encryption_key` fail-closed——本文档原无与这些事实冲突的表述 | DevSquad |
 
 ---
 

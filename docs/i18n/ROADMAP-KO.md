@@ -1,8 +1,8 @@
 # CarryMem 제품 로드맵
 
-**최종 업데이트**: 2026-05-29
+**최종 업데이트**: 2026-09-21
 **제품 포지셔닝**: AI 신원 레이어 — 기억 + 규칙 + 지식
-**버전 체계**: v0.2.x (증분) → v0.3.0 (GA 마일스톤)
+**버전 체계**: v0.2.x (증분) → v0.3.0 (GA 마일스톤) → v0.4.x (엔터프라이즈) → v0.5.x (안정 API) → v0.6.x (아키텍처 정리) → v0.7.x (지식 그래프 + 다중 모드 검색 + Memify) → v0.8.0 (Graphify — MCP 그래프 도구 + 엣지 신뢰도) → v0.9.x (UI/UX 개편) → v0.10.x (반복 수정 업그레이드) → v0.11.0 (async API 정리 + cryptography 50 하한 + 실제 관측성) → v0.11.1 (릴리스 게이트 수정 + recall 메트릭 최초 수정) → v0.11.2 (recall 메트릭 수정 완료)
 
 ---
 
@@ -30,7 +30,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 - 두 번째 자리: GA 마일스톤 (API 안정성 보장)
 - "v1.0.0 점프" 없음 — 실제 프로덕션 사용으로 획득
 
-> **참고**: 위에 나열된 v0.3.0–v0.4.1 버전은 프로젝트의 개발 이력을 나타냅니다. 현재 버전은 v0.10.1이며, 자동 백업, 암호화 .carry 파일, 동시성 안전, E2E 테스트, **PrefEval 83.0%** (200샘플, 3조건 정식), 상태/이벤트 버전 체인, 보안 강화, 선호 주입 최적화, context.py 모듈화, 통합 스케줄링 등을 포함하며, P0/P1/P2 성숙도 수정(RecallCache 세분화 무효화, PBKDF2 600k, 다단계 Dockerfile, release.yml 버전 일관성 게이트)도 포함합니다.
+> **참고**: 위에 나열된 v0.3.0–v0.4.1 버전은 프로젝트의 개발 이력을 나타냅니다. 현재 버전은 v0.11.2이며, 자동 백업, 암호화 .carry 파일, 동시성 안전, E2E 테스트, **PrefEval 83.0%** (200샘플, 3조건 정식), 상태/이벤트 버전 체인, 보안 강화, 선호 주입 최적화, context.py 모듈화, 통합 스케줄링 등을 포함하며, P0/P1/P2 성숙도 수정(RecallCache 세분화 무효화, PBKDF2 600k, 다단계 Dockerfile, release.yml 버전 일관성 게이트)도 포함합니다. v0.11.x 라인은 파괴적인 async API 정리(`AsyncCarryMem(native_async=True)` 제거), `cryptography>=50.0.0` 하한, `recall` 메트릭 수정을 도입했습니다.
 
 ---
 
@@ -60,7 +60,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 │  │  • Cross-language semantic recall (FTS5)          │    │
 │  │  • Session-aware storage + knowledge supersession (v0.1.7)   │    │
 │  │  • Time reasoning + structured prompt injection (v0.1.7)     │    │
-│  │|  •  4878 tests passing, 80%+ coverage           ││    │
+│  │|  •  4891 tests passing, 80%+ coverage           ││    │
 │  └──────────────────────────────────────────────────┘    │
 │              ↑ reads from          ↑ injects into         │
 │  Layer 1: Knowledge (WHAT you know) ← v0.3.0 계획         │
@@ -662,7 +662,7 @@ carrymem unpack team-identity.carry
 | v0.3.0 (pre-reset) | 1900+ | ~85% | +Knowledge CJK +relevance scoring |
 | v0.4.0 (pre-reset) | 1814 | ~77% | +Rule Scopes +Skill Format +VS Code Extension |
 | v0.4.1 (pre-reset) | 2056 | 79% | +Core Loop Fix +Auto Rule Suggestion +Security |
-| **v0.4.0** | **4878 tests** | **79%+** | **+Recall Purity +Scope Injection +PrefEval **83.0%** +8-client MCP** |
+| **v0.4.0** | **4198 tests** | **80%+** | **+Recall Purity +Scope Injection +PrefEval **83.0%** +8-client MCP** |
 
 ---
 
@@ -740,7 +740,7 @@ carrymem unpack team-identity.carry
 
 ---
 
-**Next Milestone**: v0.10.0 (next minor — planning TBD)
+**Next Milestone**: next minor (planning TBD)
 
-Note: v0.9.0 ~ v0.9.7 series completed (2026-07-20 ~ 2026-07-26). See CHANGELOG.md for details.
-**Status**: ✅ **v0.8.0 complete (4334+ tests, 80%+ coverage, Memory + Rules + Knowledge + Enterprise)** — current: v0.10.1 (4878 collected)
+Note: v0.11.2 released (2026-09-21, PyPI). See CHANGELOG.md for the v0.9.0 ~ v0.11.2 series.
+**Status**: ✅ **v0.11.2 released (4978 collected / 4891 passed, 83.08% coverage, Memory + Rules + Knowledge + Enterprise)**

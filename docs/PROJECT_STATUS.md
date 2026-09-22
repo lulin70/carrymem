@@ -42,7 +42,26 @@ The v0.11.x line carries the breaking `native_async` removal, the `cryptography>
 | v0.9.1 | 2026-07-20 | TD-055: mypy src/ baseline errors cleared 9 → 0 |
 | v0.9.0 | 2026-07-20 | UI/UX Overhaul — Morandi Aesthetic + Accessibility + Onboarding |
 
-### Test & Quality Metrics (v0.9.8)
+> Publication status is tracked per version in [Version History](#version-history).
+> Only `0.11.2`, `0.11.1`, `0.9.3rc1`, `0.8.0` and `0.5.0`–`0.5.2` are on PyPI;
+> everything between them exists as source and CHANGELOG entries only.
+
+### Current Test & Quality Metrics (post-release tree, 2026-09-21)
+
+Measured on the tree after the ghost-switch removal, which is the tree the
+numbers below describe — not the v0.11.2 tag.
+
+- **Tests**: `4891 passed, 10 skipped, 77 deselected` (4978 collected) — exactly 8
+  below the v0.11.2 figure of 4899, matching the 8 tests deleted with the two
+  unwired summary switches. (The v0.11.2 tree collected 4986; 4986 − 8 = 4978.)
+- **Coverage**: 83.08% (`fail_under = 80`)
+- **Lint**: flake8 clean, black clean, isort clean, mypy `Success: no issues found in 160 source files`
+- **Complexity**: `radon: no functions with complexity >= 21`
+- **Version consistency**: all five machine-readable sources report `0.11.2`
+- **Gates**: seven blocking local gates (flake8, black, isort, mypy, pytest, radon,
+  version-consistency) via `python3 scripts/ci_local_check.py`
+
+### Test & Quality Metrics (v0.9.8, historical)
 
 - **Non-e2e tests**: 4666 passed, 0 failed, 4 skipped (vector/semantic optional deps)
 - **TUI tests**: 97 passed (including 3 new TD-011b fallback tests)
@@ -59,7 +78,7 @@ The v0.11.x line carries the breaking `native_async` removal, the `cryptography>
 | Dimension | Score | Status |
 |-----------|-------|--------|
 | Architecture | B+ | PromptDelegateMixin MRO corrected, doctor Python 3.12 aligned |
-| Modularity | A- | ✅ No ghost features, all 31 tools have handlers |
+| Modularity | A- | ✅ All 31 MCP tools have handlers (ghost features found later are recorded in [V0.11.0_PROJECT_REVIEW.md](design/V0.11.0_PROJECT_REVIEW.md) §4) |
 | Security | B+ | MCP XSS strict_mode enabled, SecurityError propagation fixed |
 | Performance | B | Smoke tests added to CI (4 tests, not marked slow) |
 | Maintainability | B+ | Documentation consistency verified across 15 files |
@@ -112,7 +131,12 @@ The v0.11.x line carries the breaking `native_async` removal, the `cryptography>
 
 ---
 
-## Current Release: v0.8.0
+## Release Detail — v0.8.0 and earlier (historical)
+
+> Everything below this line is a historical record of releases up to v0.8.0.
+> **The current release is v0.11.2** — see the top of this document. Numbers in
+> this section (test counts, coverage gate, CI job list) describe the tree as it
+> stood at v0.8.0 and are deliberately not rewritten.
 
 **Theme**: Graphify — MCP Graph Query Tools + Edge Confidence Labels
 
@@ -264,7 +288,7 @@ The v0.11.x line carries the breaking `native_async` removal, the `cryptography>
 
 ## CI Pipeline Status
 
-### Current State (as of v0.8.0, commits `b55a93a` / `fab1ea4`)
+### CI State (as of v0.8.0, commits `b55a93a` / `fab1ea4`)
 
 | Job | Status | Duration | Notes |
 |-----|--------|----------|-------|
@@ -419,34 +443,83 @@ each py3.11 + py3.12).
 
 ## Version History
 
-| Version | Date | Theme | Status |
-|---------|------|-------|--------|
-| v0.8.0 | 2026-07-14 | Graphify — MCP Graph Query Tools + Edge Confidence Labels | ✅ Released |
-| v0.7.3 | 2026-07-12 | Security Hardening (Fernet-only, WAL throttle, input validation) | ✅ Released |
-| v0.7.2 | 2026-07-11 | Memify Dynamic Refinement + Native Async I/O | ✅ Released |
-| v0.7.1 | 2026-07-11 | Multi-Mode Retrieval API | ✅ Released |
-| v0.7.0 | 2026-07-11 | Knowledge Graph + Session Dual-Layer Memory | ✅ Released |
-| v0.6.2 | 2026-07-11 | Security Fix + Access Frequency Weighting | ✅ Released |
-| v0.6.1 | 2026-07-10 | Architecture Cleanup — Phase 3.5 refactoring & decoupling | ✅ Released |
-| v0.6.0 | 2026-07-09 | Deprecated API Removal (Breaking Change — Phase 3) | ✅ Released |
-| v0.5.4 | 2026-07-09 | Batch API (store_batch/delete_batch) — Phase 2 | ✅ Released |
-| v0.5.3 | 2026-07-08 | store_entry() Core API — Phase 1 | ✅ Released |
-| v0.5.2 | 2026-07-02 | Summary Layer + Progressive Disclosure | ✅ Released |
-| v0.5.1 | 2026-07-02 | Entity Normalization (Ontology-lite) | ✅ Released |
-| v0.5.0 | 2026-07-01 | Rules Engine + Maturity Fixes | ✅ Released |
+**Status legend** (per the `tag ≠ 已发布` rule in [RELEASE_RUNBOOK.md](RELEASE_RUNBOOK.md) §1):
+"On PyPI" means the version appears in `https://pypi.org/pypi/carrymem/json`;
+"tag only" means a git tag exists but no artifact was ever uploaded;
+"untagged" means neither exists.
+
+| Version | Date | Theme | Git tag | PyPI |
+|---------|------|-------|---------|------|
+| v0.11.2 | 2026-09-21 | Complete the `recall` metric correction | `v0.11.2` | ✅ 0.11.2 |
+| v0.11.1 | 2026-09-21 | Release-gate fix + first `recall` metric correction | `v0.11.1` | ✅ 0.11.1 |
+| v0.11.0 | 2026-09-08 | Async API cleanup, cryptography 50 floor, observability | `v0.11.0` | ❌ tag only |
+| v0.10.1 | 2026-09-05 | CLI startup cost fix | `v0.10.1` | ❌ tag only |
+| v0.10.0 | 2026-09-05 | Repeat correction upgrade | `v0.10.0` | ❌ tag only |
+| v0.9.9 | 2026-08-03 | Methodology docs (orthogonal classification, design space) | — | ❌ untagged |
+| v0.9.7 | 2026-07-26 | Tech debt cleanup (TD-003b/009/011b/002 follow-ups) | — | ❌ untagged |
+| v0.9.6 | 2026-07-26 | Nightly slow test threshold fix | — | ❌ untagged |
+| v0.9.5 | 2026-07-26 | Nightly slow test fix + release.yml consistency | — | ❌ untagged |
+| v0.9.4 | 2026-07-25 | TD-063/TD-064/TD-065 test skip cleanup | — | ❌ untagged |
+| v0.9.3rc1 | 2026-07-22 | TD-015 Password-based publish restored | `v0.9.3-rc1` | ✅ 0.9.3rc1 |
+| v0.9.2 | 2026-07-20 | P3 tech debt cleanup (TD-031/049/050/051/053/054) | `v0.9.2` | ❌ tag only |
+| v0.9.1 | 2026-07-20 | TD-055: mypy `src/` baseline errors cleared 9 → 0 | `v0.9.1` | ❌ tag only |
+| v0.9.0 | 2026-07-20 | UI/UX Overhaul — Morandi Aesthetic + Accessibility | `v0.9.0` | ❌ tag only |
+| v0.8.2 | 2026-07-18 | Tech debt cleanup — type hints + D-grade refactors | `v0.8.2` | ❌ tag only |
+| v0.8.0 | 2026-07-14 | Graphify — MCP Graph Query Tools + Edge Confidence Labels | `v0.8.0` | ✅ 0.8.0 |
+| v0.7.3 | 2026-07-12 | Security Hardening (Fernet-only, WAL throttle, input validation) | — | ❌ untagged |
+| v0.7.2 | 2026-07-11 | Memify Dynamic Refinement + Native Async I/O | — | ❌ untagged |
+| v0.7.1 | 2026-07-11 | Multi-Mode Retrieval API | — | ❌ untagged |
+| v0.7.0 | 2026-07-11 | Knowledge Graph + Session Dual-Layer Memory | — | ❌ untagged |
+| v0.6.2 | 2026-07-11 | Security Fix + Access Frequency Weighting | — | ❌ untagged |
+| v0.6.1 | 2026-07-10 | Architecture Cleanup — Phase 3.5 refactoring & decoupling | — | ❌ untagged |
+| v0.6.0 | 2026-07-09 | Deprecated API Removal (Breaking Change — Phase 3) | — | ❌ untagged |
+| v0.5.4 | 2026-07-09 | Batch API (store_batch/delete_batch) — Phase 2 | — | ❌ untagged |
+| v0.5.3 | 2026-07-08 | store_entry() Core API — Phase 1 | — | ❌ untagged |
+| v0.5.2 | 2026-07-02 | Summary Layer + Progressive Disclosure | — | ✅ 0.5.2 |
+| v0.5.1 | 2026-07-02 | Entity Normalization (Ontology-lite) | — | ✅ 0.5.1 |
+| v0.5.0 | 2026-07-01 | Rules Engine + Maturity Fixes | — | ✅ 0.5.0 |
+
+> **Correction (2026-09-21)**: this table previously marked v0.5.3 – v0.7.3 as
+> "✅ Released". They are **not on PyPI** — the release list jumps straight from
+> `0.5.2` to `0.8.0`. Only `0.1.2`, `0.1.6`, `0.2.0`, `0.2.4`, `0.4.0`, `0.4.1`,
+> `0.5.0`, `0.5.1`, `0.5.2`, `0.8.0`, `0.9.3rc1`, `0.11.1` and `0.11.2` have ever
+> been uploaded. Ten minor/patch lines were developed and documented but never
+> shipped as installable artifacts.
 
 ---
 
 ## Next Milestone
 
-**v0.11.2 shipped.** The next MINOR is not yet scoped. The post-release review's P1 items #7 (ghost feature switches) and #9 (i18n content drift) are closed, and the machine-readable half of #8 (version stamps) is closed and now guarded by `scripts/check_version_consistency.py`. Two follow-ups remain open and are not release-blocking:
+**v0.11.2 shipped.** The next MINOR is not yet scoped. The post-release review's
+P1 items #7 (ghost feature switches) and #9 (i18n content drift) are closed, and
+#8 (version drift) is now fully closed: the machine-readable half is guarded by
+`scripts/check_version_consistency.py`, and the root documents have been rebuilt
+against v0.9–v0.11 behaviour rather than re-stamped.
 
-- The root `docs/{README,API_REFERENCE,ARCHITECTURE,RULES_USER_MANUAL}.md` set still describes v0.8.0-era content, which is a content rebuild rather than a version-string fix. `docs/README.md` has been rebuilt as an accurate index; the documents it points at have not been rewritten yet.
-- `ARCHITECTURE` and `API_REFERENCE` exist twice in Chinese and never in English: `docs/ARCHITECTURE.md` is a 208-line Mixin-coupling document while `docs/i18n/ARCHITECTURE-CN.md` is a separate 879-line architecture design, and `docs/API_REFERENCE.md` (1492 lines) is a separate manual from `docs/i18n/API_REFERENCE-CN.md` (1274 lines). Which of each pair is canonical is an open decision, so the duplication is documented rather than silently merged.
+One follow-up remains open and is not release-blocking:
+
+- **Translated documents are not translations.** `docs/i18n/ARCHITECTURE-CN.md`
+  (879 lines) and `docs/i18n/API_REFERENCE-CN.md` (1274 lines) are separate
+  documents from their English counterparts, not renderings of them — which of
+  each pair is canonical is an open product decision, so the duplication is
+  documented rather than silently merged.
+  `docs/i18n/RULES_USER_MANUAL-CN.md` and `-JP.md` are worse: only their title
+  and version lines are localized and the body is the English original verbatim,
+  so they had silently drifted to the v0.4.0 generation while their headers said
+  v0.11.2. They are now byte-identical to `docs/RULES_USER_MANUAL.md` below line
+  4. Collapsing the three copies into one canonical manual plus localized pointer
+  pages is the recommended fix and is still undecided.
+
+**Newly recorded (2026-09-21)** — a release-hygiene gap, not a documentation one:
+only 13 versions have ever reached PyPI, and the gap `0.5.2 → 0.8.0` means the
+entire v0.6.x and v0.7.x lines were never installable. See the corrected
+[Version History](#version-history) table. If those lines matter to users, the
+cheapest remedy is a single current release that carries their changes forward —
+which `0.11.2` already does — rather than retro-publishing twelve artifacts.
 
 See [V0.11.0_PROJECT_REVIEW.md](design/V0.11.0_PROJECT_REVIEW.md) §8 for the full list.
 
-Potential areas for v0.10.0+ (per CARRYMEM_ARCHITECTURE_EVOLUTION_PLAN.md):
+Potential areas for the next MINOR (per CARRYMEM_ARCHITECTURE_EVOLUTION_PLAN.md):
 - Vector search enhancements (HNSW indexing, approximate nearest neighbor)
 - Cross-namespace knowledge transfer
 - LLM-assisted entity extraction (optional, capability-gated)
