@@ -4,6 +4,15 @@
 **更新日期**: 2026-05-03  
 **目标**: 通过业界标准 benchmark 获取可对比分数，展示 CarryMem 在质量与效率上的双重优势
 
+> ⚠️ **计划文档（2026-09-21 注记）**: 本文写于 v0.7.2 时期，记录的是**当时的评测规划**，
+> 不是可运行的接入指南，也未随 v0.9~v0.11 的 API 变更同步。第三节的代码片段是示意伪代码：
+> `cm.add_rule()` / `cm.match_rules()` 从来不是 `CarryMem` 门面方法（规则引擎在
+> `carrymem.rules` 下），`build_system_prompt()` 的第二个位置参数是 `max_memories: int`
+> 而不是 `memories`、也没有 `matched_rules=` 形参，`recall_memories()` 也没有
+> `memory_type=` 形参（按类型过滤要走 `filters={"memory_type": ...}`）。实际可执行的 runner 见
+> `benchmarks/` 与 [MSC_BENCHMARK_GUIDE.md](MSC_BENCHMARK_GUIDE.md)。本文保留原貌作为规划史料，
+> **不代表当前 API**。
+
 ---
 
 ## 一、评测优先级

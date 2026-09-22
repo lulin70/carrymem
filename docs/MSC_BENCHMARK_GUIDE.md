@@ -382,8 +382,8 @@ compare_results('results/default.json', 'results/aggressive.json')
 ## 联系支持
 
 如有问题，请：
-1. 查看 [FAQ](../docs/FAQ.md)
-2. 提交 [Issue](https://github.com/your-repo/carrymem/issues)
+1. 查看 [Quick Start Guide 的 FAQ 章节](QUICK_START_GUIDE.md#faq)
+2. 提交 [Issue](https://github.com/lulin70/carrymem/issues)
 3. 加入讨论组
 
 ---
