@@ -1,9 +1,9 @@
 # CarryMem - Development Dependencies
 # Source: setup.py install_requires + extras_require.dev
-# Generate lock: pip-compile requirements-dev.in -o requirements-dev.lock
+# Generate lock: pip-compile requirements-dev.in -o requirements-dev.txt
 #
-# TD-014: dev lock includes everything in requirements.lock plus dev tooling.
-# Use: pip install -r requirements-dev.lock (or pip-sync requirements-dev.lock)
+# TD-014: dev lock includes everything in requirements.txt plus dev tooling.
+# Use: pip install -r requirements-dev.txt (or pip-sync requirements-dev.txt)
 
 -r requirements.in
 

@@ -1,10 +1,13 @@
 # CarryMem - Production Dependencies (includes [full] extras for Docker image)
 # Source: setup.py install_requires + extras_require.full
-# Generate lock: pip-compile requirements.in -o requirements.lock
+# Generate lock: pip-compile requirements.in -o requirements.txt
 #
 # TD-014: dependency locking for reproducible builds.
 # This file declares the full runtime dependency set (core + [full] extras).
-# pip-compile resolves transitive deps and pins exact versions in requirements.lock.
+# pip-compile resolves transitive deps and pins exact versions in requirements.txt.
+# The compiled file is named .txt (not .lock) on purpose: Dependabot's pip
+# ecosystem only scans `.txt` manifests, so a `.lock` suffix would hide every
+# transitive dependency from vulnerability alerting.
 
 # install_requires (core runtime)
 PyYAML>=5.0

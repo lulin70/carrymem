@@ -367,7 +367,7 @@
 | **负责角色** | DevOps |
 | **验证标准** | 命令 `pip install -r requirements.lock` 可重现；`docker build .` 镜像层使用 lock 文件；`docker exec <container> pip list` 版本与 lock 一致 |
 | **依赖** | TD-001 (pip 升级后) |
-| **状态** | ✅ 已完成 (新增 requirements.in/requirements.lock 36 包锁定 + requirements-dev.in/lock；Dockerfile runtime 阶段改造为 `pip install --no-deps -r requirements.lock` + whl) |
+| **状态** | ✅ 已完成 (新增 requirements.in/requirements.lock 36 包锁定 + requirements-dev.in/lock；Dockerfile runtime 阶段改造为 `pip install --no-deps -r requirements.lock` + whl)。**2026-09-22 改名注记**：两个编译产物已更名为 `requirements.txt` / `requirements-dev.txt`——Dependabot 的 pip 生态只扫 `.txt`，`.lock` 后缀会让全部传递依赖对漏洞告警不可见（复现证据见 §8 #17 与 TD-068）。本条上文的旧文件名保留为历史记录，**当前生效的文件名是 `.txt`**。 |
 | **生命周期** | P10 部署发布 |
 
 #### TD-015: release.yml OIDC+密码矛盾（迁移步骤补全）⚠️ 修正后
@@ -922,12 +922,12 @@
 | 字段 | 值 |
 |------|-----|
 | **优先级** | P3 |
-| **位置** | `requirements.in` (`zhipuai>=2.0`) → `requirements.lock:118` / `requirements-dev.lock:212` (`pyjwt==2.8.0`) |
-| **问题描述** | Dependabot 报告 5 条 pyjwt 告警（2 high / 2 medium / 1 low，修复版本 2.13.0）。**根因是上游约束，不是本项目缺陷**：`pyjwt` 是 `zhipuai` 的传递依赖，`zhipuai` 声明 `pyjwt<2.9.0,>=2.8.0`，而镜像上 `zhipuai` 的最新版恰为当前钉住的 `2.1.5.20250825`——不存在放宽该上限的新版本。`pyjwt` 不被 `src/` 直接引用（无 `import jwt`），仅在用户显式配置 zhipuai 后端时经 `src/carrymem/llm/__init__.py:44` 间接加载。 |
-| **复现** | `pip-compile --upgrade-package pyjwt --output-file=requirements.lock requirements.in` → 两个 lock 的 pin **零变化**（唯一 diff 是头部命令行）；`pip index versions zhipuai` → `2.1.5.20250825`（= 当前钉住版本）；`pip index versions pyjwt` → 最新 `2.14.0` 可用但被上游上限拒绝 |
+| **位置** | `requirements.in` (`zhipuai>=2.0`) → `requirements.txt:118` / `requirements-dev.txt:212` (`pyjwt==2.8.0`) |
+| **问题描述** | Dependabot 报告 5 条 pyjwt 告警（2 high / 2 medium / 1 low，修复版本 2.13.0）。**根因是上游约束，不是本项目缺陷**：`pyjwt` 是 `zhipuai` 的传递依赖，`zhipuai` 声明 `pyjwt<2.9.0,>=2.8.0`，而镜像上 `zhipuai` 的最新版恰为当前钉住的 `2.1.5.20250825`——不存在放宽该上限的新版本。`pyjwt` 不被 `src/` 直接引用（无 `import jwt`），仅在用户显式配置 zhipuai 后端时经 `src/carrymem/llm/__init__.py:44` 间接加载。**注意**：这 5 条告警在 2026-09-22 显示为 `fixed`，但那是删除过期 freeze + 依赖图变更的结果，**pin 本身未动**，本条依然成立。 |
+| **复现** | `pip-compile --upgrade-package pyjwt --output-file=requirements.txt requirements.in` → 两个编译产物的 pin **零变化**（唯一 diff 是头部命令行）；`pip index versions zhipuai` → `2.1.5.20250825`（= 当前钉住版本）；`pip index versions pyjwt` → 最新 `2.14.0` 可用但被上游上限拒绝 |
 | **修复方案** | 无本地修复路径。可选：(a) 接受风险并保留证据（**当前选择**）；(b) 上游 zhipuai 放宽上限后，`pip-compile --upgrade-package pyjwt` 自动跟进；(c) 移除 zhipuai 后端（会失去一个可用的 LLM provider，不建议）。**禁止**强行 pin `pyjwt>=2.9.0`——那会产出违反上游声明元数据的 lock，属假修复 |
 | **负责角色** | DevOps / Security |
-| **验证标准** | `grep -n '^pyjwt==' requirements.lock requirements-dev.lock` 的取值与 `pip index versions zhipuai` 最新版声明的 pyjwt 上限一致；上游放宽后重跑 `pip-compile --upgrade-package pyjwt` 应产生非零 pin 变化 |
+| **验证标准** | `grep -n '^pyjwt==' requirements.txt requirements-dev.txt` 的取值与 `pip index versions zhipuai` 最新版声明的 pyjwt 上限一致；上游放宽后重跑 `pip-compile --upgrade-package pyjwt` 应产生非零 pin 变化 |
 | **依赖** | 上游 zhipuai 发版 |
 | **状态** | ⬜ 无法推进（上游约束，证据已留痕） |
 | **生命周期** | P6 安全审查 |

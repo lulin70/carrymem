@@ -105,23 +105,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   --no-audit --no-fund` finished with `added 179 packages in 7s` and no
   `ERESOLVE`/`EOVERRIDE` error, and `VSCode Extension Tests` went green with
   `mocha@10.8.2` running against the overridden `7.0.5`.
-- The five pyjwt advisories on `requirements.txt` are **not fixable here** and are
-  now recorded as TD-068 instead of being papered over: `pyjwt` is a transitive
-  dependency of `zhipuai`, which declares `pyjwt<2.9.0,>=2.8.0`, and
-  `2.1.5.20250825` — the version already pinned — is the newest `zhipuai`
-  published. Forcing `pyjwt>=2.9.0` would produce a lock that violates the
-  upstream metadata, which is a fake fix, not a fix.
+- The five pyjwt advisories are **not fixable here** and are now recorded as TD-068
+  instead of being papered over: `pyjwt` is a transitive dependency of `zhipuai`,
+  which declares `pyjwt<2.9.0,>=2.8.0`, and `2.1.5.20250825` — the version already
+  pinned — is the newest `zhipuai` published. Forcing `pyjwt>=2.9.0` would produce
+  a lock that violates the upstream metadata, which is a fake fix, not a fix. The
+  five alerts closed as `fixed` on 2026-09-22 only because the graph stopped
+  seeing the package, not because the pin moved — see the rename below.
 
 ### Removed
 
-- `requirements.txt`. It was a `pip freeze` snapshot taken before the TD-014 lock
-  files existed — 87 pinned lines including `torch` and the `nvidia-*` CUDA
-  wheels — it disagreed with `requirements.lock`, and neither CI nor the
-  Dockerfile read it, yet its own header still said
-  `pip install -r requirements.txt`. It was also the only manifest Dependabot
-  scanned for the five pyjwt advisories, so its removal clears that scanning
-  surface; it does **not** move the pin, which is upstream-constrained (TD-068).
-
+- The stale `requirements.txt` freeze. It was a `pip freeze` snapshot taken before
+  the TD-014 lock files existed — 87 pinned lines including `torch` and the
+  `nvidia-*` CUDA wheels — it disagreed with the compiled lock, and neither CI nor
+  the Dockerfile read it, yet its own header still said
+  `pip install -r requirements.txt`. The filename itself was then reused for the
+  compiled lock (see Changed).
 - `is_summary_enabled()` and `is_llm_summary_enabled()` in
   `src/carrymem/layers/summary_layer.py`, together with the four environment
   constants they read (`_SUMMARY_ENABLED_ENV`, `_LLM_SUMMARY_ENV`, `_TRAE_ENV_ENV`,
@@ -132,6 +131,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `requirements.lock` → `requirements.txt` and `requirements-dev.lock` →
+  `requirements-dev.txt`. Dependabot's pip ecosystem scans **only `.txt`
+  manifests** ("Dependabot supports updates to any `.txt` file"), so the `.lock`
+  suffix had been hiding every transitive pin from vulnerability alerting. This
+  was measured, not assumed: intersecting the lock's pins with
+  `GET /repos/lulin70/carrymem/dependency-graph/sbom` showed only **12 of 63**
+  runtime pins present — exactly the direct dependencies declared in `setup.py`
+  and `requirements.in` — with all 51 transitive ones (`pyjwt`, `pydantic`,
+  `httpx`, `numpy`, `scipy`, …) absent. Deleting the stale freeze without this
+  rename would have left the repository with **no** automated pip alerting at all.
+  `Dockerfile`, both `.in` files and the lock headers were updated with the rename;
+  no CI workflow referenced the old names.
 - `docs/design/V0.11.0_PROJECT_REVIEW.md` §3.2 retracts a finding that claimed the
   Chinese and Japanese architecture documents teach a removed plugin system.
   `src/carrymem/adapters/loader.py` still resolves the `carrymem.adapters` entry
