@@ -1,6 +1,6 @@
 # CarryMem Core 架构文档 — Mixin 耦合治理 (P0-1)
 
-> **版本**: v0.8.0 | **日期**: 2026-07-14 | **状态**: ✅ 已完成
+> **版本**: v0.11.2 | **日期**: 2026-09-21 | **状态**: ✅ 已完成
 
 ## 1. 概述
 
@@ -20,7 +20,9 @@ src/carrymem/core/
 ├── _recall.py               # RecallMixin — 检索操作
 ├── _profile_export.py       # ProfileExportMixin — 档案/导出/导入
 ├── _maintenance.py          # MaintenanceMixin — 质量/冲突/合并
-└── _prompt_delegate.py      # PromptDelegateMixin — 提示词构建/LLM
+├── _prompt_delegate.py      # PromptDelegateMixin — 提示词构建/LLM
+├── _correction_upgrade.py   # 辅助模块（非 Mixin）— 重复纠正自动升级
+└── recall_thresholds.py     # 辅助模块（非 Mixin）— 召回置信度阈值
 ```
 
 ## 3. Mixin 依赖图 (DAG)

@@ -1,7 +1,7 @@
 # CarryMem API 参考手册（中文版）
 
-**版本**: v0.8.0
-**最后更新**: 2026-07-14
+**版本**: v0.11.2
+**最后更新**: 2026-09-21
 **源码位置**: `src/carrymem/`
 
 ---
@@ -10,9 +10,10 @@
 
 1. [概述](#概述)
 2. [CarryMem 类公共方法](#carrymem-类公共方法)
-3. [错误码完整列表](#错误码完整列表)
-4. [常量列表](#常量列表)
-5. [类型定义](#类型定义)
+3. [异步 API（AsyncCarryMem）](#异步-apiasynccarrymem)
+4. [错误码完整列表](#错误码完整列表)
+5. [常量列表](#常量列表)
+6. [类型定义](#类型定义)
 
 ---
 
@@ -65,7 +66,7 @@ CarryMem 采用 **Mixin 组合模式**，由以下 8 个 Mixin 类组成：
 
 ### 构造函数
 
-#### `__init__(storage, db_path, knowledge_adapter, namespace, config, engine, encryption_key, auto_backup_interval)`
+#### `__init__(storage, db_path, knowledge_adapter, namespace, config, encryption_key, auto_backup_interval, engine)`
 
 初始化 CarryMem 实例。
 
@@ -78,9 +79,9 @@ CarryMem 采用 **Mixin 组合模式**，由以下 8 个 Mixin 类组成：
 | `knowledge_adapter` | `StorageAdapter \| None` | `None` | 知识库适配器（如 ObsidianAdapter） |
 | `namespace` | `str` | `"default"` | 命名空间，用于隔离不同用户的记忆 |
 | `config` | `Dict[str, Any] \| None` | `None` | 额外配置选项 |
-| `engine` | `MemoryClassificationEngine \| None` | `None` | 自定义分类引擎实例（默认自动创建） |
 | `encryption_key` | `str \| None` | `None` | 加密密钥（SQLite 专用） |
 | `auto_backup_interval` | `int` | `20` | 自动备份间隔（写入次数） |
+| `engine` | `MemoryClassificationEngine \| None` | `None` | 自定义分类引擎实例（默认自动创建） |
 
 **返回:** `None`
 
@@ -119,7 +120,7 @@ with CarryMem() as cm:
 
 ```python
 >>> cm.version
-'0.8.0'
+'0.11.2'
 ```
 
 #### `namespace` → `str`
@@ -150,7 +151,7 @@ with CarryMem() as cm:
 
 惰性初始化的提示词构建器实例。
 
-#### `access_policy` → `Optional[Any]`
+#### `access_policy` → `Optional[AccessPolicy]`
 
 访问控制策略（P1-8 MVP）。设置后启用权限检查。
 
@@ -315,10 +316,49 @@ print(result["storage_keys"])  # ["xxx"]
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `namespaces` | `List[str] \| None` | `None` | 要合并的命名空间列表 |
-| `strategy` | `str` | `"latest"` | 合并策略：`"latest"`, `"highest_confidence"`, `"merge_content"` |
+| `strategy` | `str` | `"latest_wins"` | 合并策略：`"latest_wins"`, `"highest_confidence"`, `"merge_all"` |
 | `conflict_callback` | `Callable \| None` | `None` | 冲突解决回调函数 |
 
 **返回:** `MergeMemoriesResult`
+
+---
+
+#### `store_messages(messages, force_type, session_id, user_id)` → `Dict[str, Any]`
+
+在单个事务中批量持久化多条消息（v0.6.0 由 `remember_batch()` 更名而来）。
+
+提供 `force_type` 时跳过逐条分类，直接以指定类型写入全部消息；相比在循环中调用
+`classify_and_remember()` 快 20-50 倍，因为它避免了重复的 LLM/向量推理。
+
+**参数:**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `messages` | `List[str]` | **必需** | 待存储的消息字符串列表 |
+| `force_type` | `str \| None` | `None` | 赋给所有消息的记忆类型。提供时跳过分类（快路径）；为 `None` 时逐条回退到 `classify_and_remember()`（慢路径） |
+| `session_id` | `str \| None` | `None` | 附加到所有条目的会话 ID |
+| `user_id` | `str \| None` | `None` | 用户 ID（权限检查） |
+
+**返回:** `Dict[str, Any]` - 包含 `stored_count`, `storage_keys`, `errors`, `elapsed_ms`
+
+**异常:**
+- `StorageNotConfiguredError`: 存储未配置
+- `CarryMemError(CM-403)`: 已配置访问策略但未提供 `user_id`，或该用户无 WRITE 权限
+
+**示例:**
+
+```python
+result = cm.store_messages(
+    ["我喜欢深色模式", "我用 Vim 编辑器"],
+    force_type="user_preference",
+    session_id="sess-001",
+)
+# 以下输出为实测样例（storage_keys 形如 cm_<ns_hash>_<timestamp>_<hash>）
+print(result["stored_count"])   # 2
+print(result["storage_keys"])   # ["cm_37a8ee_20260922003653_44997d44", "cm_37a8ee_20260922003653_9b347273"]
+print(result["errors"])         # []
+print(result["elapsed_ms"])     # 4.481875104829669（毫秒，float）
+```
 
 ---
 
@@ -418,9 +458,230 @@ print(result["total_count"]) # 总数
 
 **参数:**
 - `topic` (`str`): 主题关键词
-- `limit` (`int`): 最大结果数
+- `limit` (`int`): 最大结果数，默认 `20`
 
 **返回:** 按时间排序的记忆列表
+
+---
+
+#### `recall_by_time(start, end, filters, limit)` → `List[Dict[str, Any]]`
+
+按时间范围召回记忆。（v0.7.1 新增）
+
+**参数:**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `start` | `datetime` | **必需** | 起始时间（含）。建议使用带时区的 datetime |
+| `end` | `datetime \| None` | `None` | 结束时间（不含）。默认到当前时间 |
+| `filters` | `Dict[str, Any] \| None` | `None` | 可选的元数据过滤条件（同 `recall()`） |
+| `limit` | `int` | `50` | 最大结果数 |
+
+**返回:** `List[Dict[str, Any]]` - 按 `created_at` 降序排列的记忆字典列表
+
+**异常:**
+- `StorageNotConfiguredError`: 存储未配置
+- `ValueError`: `start` 为空
+
+**示例:**
+
+```python
+from datetime import datetime, timedelta, timezone
+
+since = datetime.now(timezone.utc) - timedelta(days=1)
+memories = cm.recall_by_time(since, limit=50)
+print(memories[0]["content"])  # 实测样例：'项目用 PostgreSQL'
+```
+
+---
+
+#### `recall_semantic(query, top_k, filters)` → `List[Dict[str, Any]]`
+
+纯向量相似度检索。（v0.7.1 新增）
+
+绕过 FTS5 与 RRF 融合，直接返回原始向量相似度结果。需要适配器开启向量检索
+（`capabilities["vector_search"] == True`）；未开启时返回空列表（不抛异常）。
+
+**参数:**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `query` | `str` | **必需** | 自然语言查询 |
+| `top_k` | `int` | `10` | 返回结果数 |
+| `filters` | `Dict[str, Any] \| None` | `None` | 可选的元数据过滤条件 |
+
+**返回:** `List[Dict[str, Any]]` - 按向量相似度降序排列的记忆字典列表
+
+**异常:**
+- `StorageNotConfiguredError`: 存储未配置
+- `ValueError`: `query` 为空或仅含空白字符
+
+**示例:**
+
+```python
+results = cm.recall_semantic("编辑器")
+# 默认 SQLiteAdapter 的 capabilities["vector_search"] 为 False，实测返回 []
+```
+
+---
+
+#### `recall_hybrid(query, fts_weight, vec_weight, rrf_k, limit, filters)` → `List[Dict[str, Any]]`
+
+显式混合检索，可配置 RRF 权重。（v0.7.1 新增）
+
+在现有 RRF 融合之上暴露逐次调用的权重覆盖；权重为 `None` 时使用适配器默认配置。
+
+**参数:**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `query` | `str` | **必需** | 搜索查询 |
+| `fts_weight` | `float \| None` | `None` | FTS 排名权重（默认：适配器配置） |
+| `vec_weight` | `float \| None` | `None` | 向量排名权重（默认：适配器配置） |
+| `rrf_k` | `int \| None` | `None` | RRF 常数 k（默认：适配器配置） |
+| `limit` | `int` | `20` | 最大结果数 |
+| `filters` | `Dict[str, Any] \| None` | `None` | 可选的元数据过滤条件 |
+
+**返回:** `List[Dict[str, Any]]` - 按融合后的 RRF 分数降序排列的记忆字典列表
+
+**异常:**
+- `StorageNotConfiguredError`: 存储未配置
+
+**示例:**
+
+```python
+memories = cm.recall_hybrid("编辑器", fts_weight=0.7, vec_weight=0.3, limit=20)
+print(len(memories))  # 实测样例：1
+```
+
+---
+
+#### `recall_multi_mode(query, modes, limit, filters, time_range, entity)` → `Dict[str, Any]`
+
+统一多模式检索接口。（v0.7.1 新增）
+
+依次执行多个检索模式，按模式分组返回结果，并额外给出按 `storage_key` 去重后的
+合并 `merged` 列表。
+
+**参数:**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `query` | `str` | **必需** | 搜索查询（用于 fts/vector/hybrid 模式） |
+| `modes` | `List[str] \| None` | `None` | 检索模式。默认 `["fts", "vector"]`（未启用向量时为 `["fts"]`）。可选：`"fts"`, `"vector"`, `"hybrid"`, `"graph"`, `"time"`, `"entity"` |
+| `limit` | `int` | `20` | 每个模式的最大结果数 |
+| `filters` | `Dict[str, Any] \| None` | `None` | 可选的元数据过滤条件 |
+| `time_range` | `tuple \| None` | `None` | `"time"` 模式使用的 `(start, end)` |
+| `entity` | `str \| None` | `None` | `"entity"`/`"graph"` 模式使用的实体文本 |
+
+**返回:** `Dict[str, Any]` - 包含 `modes`（模式名 → 结果列表）, `merged`, `mode_count`, `total_count`
+
+**异常:**
+- `StorageNotConfiguredError`: 存储未配置
+
+**示例:**
+
+```python
+result = cm.recall_multi_mode("编辑器", modes=["fts", "vector"])
+print(list(result.keys()))   # ['modes', 'merged', 'mode_count', 'total_count']（实测）
+print(result["mode_count"])  # 2
+print(result["total_count"]) # 1
+```
+
+---
+
+#### `recall_by_entity(entity_text, entity_type, limit)` → `List[Dict[str, Any]]`
+
+查找提及某个实体的记忆。（v0.7.0 新增）
+
+借助知识图谱找出所有提及该实体的记忆。需要适配器具备 `graph` 能力；
+不具备时直接返回空列表（不抛异常）。
+
+**参数:**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `entity_text` | `str` | **必需** | 要搜索的实体文本 |
+| `entity_type` | `str \| None` | `None` | 可选的实体类型过滤（acronym/concept/tool） |
+| `limit` | `int` | `10` | 最大结果数 |
+
+**返回:** `List[Dict[str, Any]]` - 包含该实体的记忆字典列表
+
+**异常:**
+- `StorageNotConfiguredError`: 存储未配置
+
+---
+
+#### `recall_by_relation(entity_text, relation_type, direction, limit)` → `List[Dict[str, Any]]`
+
+通过关系查找与实体相连的记忆。（v0.7.0 新增）
+
+遍历知识图谱，找出通过显式关系（如 `"prefers"`、`"works_on"`）与给定实体相连的记忆。
+需要适配器具备 `graph` 能力；不具备时返回空列表。
+
+**参数:**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `entity_text` | `str` | **必需** | 要查找关系的实体 |
+| `relation_type` | `str \| None` | `None` | 可选的关系类型过滤 |
+| `direction` | `str` | `"both"` | `"outgoing"`, `"incoming"` 或 `"both"` |
+| `limit` | `int` | `10` | 最大结果数 |
+
+**返回:** `List[Dict[str, Any]]` - 通过关系相连的记忆字典列表
+
+**异常:**
+- `StorageNotConfiguredError`: 存储未配置
+
+---
+
+#### `recall_graph(entity_text, max_hops, limit)` → `Dict[str, Any]`
+
+从实体出发的多跳图遍历。（v0.7.0 新增）
+
+以给定实体为起点对知识图谱做 BFS 遍历，收集 `max_hops` 跳以内所有相连的实体与记忆。
+需要适配器具备 `graph` 能力；不具备时返回 `{"entities": [], "memories": []}`。
+
+**参数:**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `entity_text` | `str` | **必需** | 起始实体 |
+| `max_hops` | `int` | `2` | 最大遍历深度 |
+| `limit` | `int` | `20` | 最多返回的记忆数 |
+
+**返回:** `Dict[str, Any]` - `{"entities": [...], "memories": [...]}`
+
+**异常:**
+- `StorageNotConfiguredError`: 存储未配置
+
+---
+
+#### `add_graph_relation(src_entity, dst_entity, relation_type, source_memory_key, weight, confidence)` → `bool`
+
+在知识图谱中为两个实体添加关系。（v0.7.0 新增）
+
+**参数:**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `src_entity` | `str` | **必需** | 源实体文本 |
+| `dst_entity` | `str` | **必需** | 目标实体文本 |
+| `relation_type` | `str` | **必需** | 关系类型（如 `"prefers"`, `"works_on"`） |
+| `source_memory_key` | `str \| None` | `None` | 可选：佐证该关系的记忆键 |
+| `weight` | `float` | `1.0` | 关系强度 |
+| `confidence` | `str` | `"EXTRACTED"` | 边的置信度标签（v0.8.0 新增）：`"EXTRACTED"`（默认）, `"INFERRED"`, `"AMBIGUOUS"` |
+
+**返回:** `bool` - 关系是否添加成功；适配器不具备 `graph` 能力时返回 `False`
+
+**异常:**
+- `StorageNotConfiguredError`: 存储未配置
+
+**示例:**
+
+```python
+print(cm.add_graph_relation("a", "b", "prefers"))  # 实测：True
+```
 
 ---
 
@@ -447,6 +708,77 @@ print(result["total_count"]) # 总数
 **返回:** `{"memory_id": str, "entity_count": N, "relation_count": N, "cross_namespace": bool, "impact_score": float}`
 
 **impact_score 公式**: `entity_count * 0.4 + relation_count * 0.4 + cross_namespace * 0.2`
+
+---
+
+### 会话双层记忆方法 (v0.7.0)
+
+会话激活后，召回操作会先查会话缓存（O(1)），未命中再回落到持久层（FTS5）；
+会话期间新写入的记忆也会进入会话缓存，便于后续快速检索。
+
+#### `set_session(session_id)` → `None`
+
+设置当前会话，启用双层记忆。
+
+**参数:**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `session_id` | `str` | **必需** | 唯一会话标识符 |
+
+**返回:** `None`
+
+**异常:**
+- `ValueError`: `session_id` 不是非空字符串
+
+---
+
+#### `end_session()` → `None`
+
+结束当前会话并清理会话缓存（会失效适配器缓存中该会话的条目，若适配器支持）。
+
+**返回:** `None`
+
+---
+
+#### `preload_session(limit)` → `int`
+
+把高频记忆预加载进会话缓存，以便会话内 O(1) 召回。
+
+从持久层按重要度取前 N 条记忆写入会话缓存。
+
+**参数:**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `limit` | `int` | `50` | 最多预加载的记忆数 |
+
+**返回:** `int` - 实际预加载的记忆数；未设置会话或适配器无缓存时返回 `0`
+
+**示例:**
+
+```python
+cm.set_session("sess-001")
+print(cm.preload_session())   # 实测样例：3
+cm.end_session()
+```
+
+---
+
+#### `promote_to_permanent(memory_key)` → `bool`
+
+提升某条记忆的重要度，使其长期保留。
+
+对指定记忆执行 `access_count + 1`、`importance_score = MIN(importance_score + 0.05, 1.0)`，
+并刷新 `last_accessed_at`，从而在缓存中存活更久、在召回结果中排名更高。
+
+**参数:**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `memory_key` | `str` | **必需** | 要提升的记忆 storage_key |
+
+**返回:** `bool` - 是否提升成功；记忆不存在、未配置存储或适配器不支持原生连接时返回 `False`
 
 ---
 
@@ -544,9 +876,13 @@ print(result["total_count"]) # 总数
 | `input_path` | `str \| None` | `None` | 输入文件路径 |
 | `data` | `Dict \| None` | `None` | 直接传入数据字典 |
 | `namespace` | `str \| None` | `None` | 目标命名空间 |
-| `merge_strategy` | `str` | `"skip_existing"` | 合并策略：`"skip_existing"`, `"overwrite"`, `"merge"` |
+| `merge_strategy` | `str` | `"skip_existing"` | 合并策略。当前仅 `"skip_existing"` 有实现（按 `content_hash` 跳过已存在的记忆）；传入其他值时不做去重检查，全部导入 |
 
 **返回:** `ImportMemoriesResult`
+
+**异常:**
+- `StorageNotConfiguredError`: 存储未配置
+- `ValueError`: `input_path` 与 `data` 均未提供
 
 ---
 
@@ -644,7 +980,7 @@ print(result["total_count"]) # 总数
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `dry_run` | `bool` | `False` | 试运行（不做实际修改） |
+| `dry_run` | `bool` | `True` | 试运行（不做实际修改） |
 | `run_p1` | `bool` | `True` | 运行 P1 阶段（去重） |
 | `run_p2` | `bool` | `True` | 运行 P2 阶段（衰减清理） |
 
@@ -654,30 +990,64 @@ print(result["total_count"]) # 总数
 
 #### `schedule_consolidation(interval_hours, dry_run, run_p1, run_p2)` → `ScheduleConsolidationResult`
 
-启动定期后台合并定时器。
+启动定期后台合并定时器。`interval_hours` 低于 `CONSOLIDATION_MIN_INTERVAL_HOURS`（0.1）时会被抬升到该下限。
 
 **参数:**
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `interval_hours` | `float` | `6.0` | 合并间隔（小时） |
+| `interval_hours` | `float` | `1.0` | 合并间隔（小时） |
 | `dry_run` | `bool` | `False` | 试运行 |
 | `run_p1` | `bool` | `True` | 运行 P1 |
-| `run_p2` | `bool` | `True` | 运行 P2 |
+| `run_p2` | `bool` | `False` | 运行 P2 |
 
-**返回:** `ScheduleConsolidationResult`
+**返回:** `ScheduleConsolidationResult` - 实测返回键为 `scheduled`, `interval_hours`, `dry_run`, `run_p1`, `run_p2`（`types.py` 中的 TypedDict 尚未同步 `run_p1`/`run_p2`，其中的 `message` 键不会被返回）
 
 ---
 
-#### `stop_consolidation()` → `None`
+#### `stop_consolidation()` → `Dict[str, Any]`
 
 停止后台合并定时器。
+
+**返回:** `Dict[str, Any]` - `{"stopped": True}`；当前没有活动调度时返回 `{"stopped": False, "reason": "no_active_schedule"}`
+
+---
+
+#### `consolidate_memories(namespace, min_co_occurrence, max_derived, stale_days, min_importance)` → `Dict[str, Any]`
+
+通过 Memify 三阶段精炼合并记忆。（v0.7.2 新增）
+
+- 阶段 1 `derive_facts`：基于共现实体派生新记忆。
+- 阶段 2 `reinforce_edges`：强化共现实体之间的图关系。
+- 阶段 3 `auto_decay`：降低陈旧、低访问记忆的重要度。
+
+**参数:**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `namespace` | `str \| None` | `None` | 命名空间范围（默认当前命名空间） |
+| `min_co_occurrence` | `int` | `3` | 派生/强化的最小共现次数 |
+| `max_derived` | `int` | `10` | 每次运行最多派生的事实数 |
+| `stale_days` | `int` | `90` | 判定衰减的未访问天数 |
+| `min_importance` | `float` | `0.3` | 衰减的重要度阈值 |
+
+**返回:** `Dict[str, Any]` - 包含 `derived_facts`（列表）, `edges_reinforced`（int）, `decayed`（int）
+
+**异常:**
+- `StorageNotConfiguredError`: 存储未配置
+
+**示例:**
+
+```python
+report = cm.consolidate_memories(min_co_occurrence=3, stale_days=90)
+print(report)  # 实测样例：{'derived_facts': [], 'edges_reinforced': 0, 'decayed': 0}
+```
 
 ---
 
 ### 提示词构建方法
 
-#### `build_context(context, max_memories, max_knowledge, max_rules, max_tokens, language)` → `ContextBuildResult`
+#### `build_context(context, max_memories, max_knowledge, max_rules, max_tokens, language, progressive)` → `ContextBuildResult`
 
 构建 LLM 注入用的上下文字典。
 
@@ -690,17 +1060,28 @@ print(result["total_count"]) # 总数
 | `max_knowledge` | `int` | `5` | 最大知识条目数 |
 | `max_rules` | `int` | `5` | 最大规则数量 |
 | `max_tokens` | `int` | `2000` | 最大 token 数 |
-| `language` | `str` | `"zh"` | 输出语言 |
+| `language` | `str` | `"en"` | 输出语言 |
+| `progressive` | `bool` | `False` | 是否使用渐进式（预算感知）上下文构建 |
 
 **返回:** `ContextBuildResult`
 
 ---
 
-#### `build_system_prompt(context, max_memories, max_knowledge, max_rules, max_tokens, language)` → `str`
+#### `build_system_prompt(context, max_memories, max_knowledge, max_rules, max_tokens, language, progressive)` → `str`
 
 构建包含注入上下文的系统提示词字符串。
 
-**参数同 `build_context`**
+**参数:**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `context` | `str \| None` | `None` | 当前对话上下文 |
+| `max_memories` | `int` | `10` | 最大记忆数量 |
+| `max_knowledge` | `int` | `5` | 最大知识条目数 |
+| `max_rules` | `int` | `5` | 最大规则数量 |
+| `max_tokens` | `int` | `4000` | 最大 token 数（对应 `CONTEXT_BUILD_DEFAULTS["max_tokens_system_prompt"]`，与 `build_context` 的 2000 不同） |
+| `language` | `str` | `"en"` | 输出语言 |
+| `progressive` | `bool` | `False` | 是否使用渐进式（预算感知）构建 |
 
 **返回:** `str` - 完整的系统提示词
 
@@ -718,43 +1099,43 @@ print(result["total_count"]) # 总数
 | `max_memories` | `int` | `10` | 最大记忆数量 |
 | `max_knowledge` | `int` | `5` | 最大知识条目数 |
 | `max_tokens` | `int` | `2000` | 最大 token 数 |
-| `language` | `str` | `"zh"` | 输出语言 |
-| `budget` | `Any \| None` | `None` | Token 预算对象 |
+| `language` | `str` | `"en"` | 输出语言 |
+| `budget` | `RecallBudget \| None` | `None` | Token 预算对象（`carrymem.scoring.RecallBudget`） |
 | `include_question` | `bool` | `True` | 是否在提示词中包含问题 |
 
 **返回:** `str` - 完整的 QA 提示词
 
 ---
 
-#### `summarize_session(session_id, language, store)` → `SessionSummaryResult`
+#### `summarize_session(session_id, language, store)` → `Optional[Dict[str, Any]]`
 
-LLM 驱动的会话摘要（实验性功能）。
+LLM 驱动的会话摘要（实验性功能，调用时会发出 `DeprecationWarning`）。
 
 **参数:**
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `session_id` | `str` | **必需** | 会话 ID |
-| `language` | `str` | `"zh"` | 输出语言 |
+| `language` | `str` | `"en"` | 输出语言 |
 | `store` | `bool` | `True` | 是否存储摘要 |
 
-**返回:** `SessionSummaryResult`
+**返回:** `Optional[Dict[str, Any]]` - 内容结构见 `SessionSummaryResult`；无 LLM 客户端时为 `None`
 
 ---
 
-#### `aggregate_memories(memory_type, language, store)` → `Dict[str, Any]`
+#### `aggregate_memories(memory_type, language, store)` → `List[Dict[str, Any]]`
 
-LLM 驱动的语义聚合（实验性功能）。
+LLM 驱动的语义聚合（实验性功能，调用时会发出 `DeprecationWarning`）。
 
 **参数:**
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `memory_type` | `str \| None` | `None` | 特定记忆类型 |
-| `language` | `str` | `"zh"` | 输出语言 |
+| `language` | `str` | `"en"` | 输出语言 |
 | `store` | `bool` | `True` | 是否存储聚合结果 |
 
-**返回:** 聚合结果字典
+**返回:** `List[Dict[str, Any]]` - 聚合结果列表
 
 ---
 
@@ -814,6 +1195,118 @@ LLM 驱动的语义聚合（实验性功能）。
 释放资源（适配器、规则引擎、知识库适配器）。
 
 **注意**: 支持上下文管理器协议，推荐使用 `with` 语句。
+
+---
+
+## 异步 API（AsyncCarryMem）
+
+`AsyncCarryMem` 是同步 `CarryMem` 的异步包装，面向高并发场景，从 `carrymem` 顶层导出
+（源码位置 `src/carrymem/async_carrymem.py`）。
+
+### 设计说明（v0.11.0 Breaking Change）
+
+- **只保留线程池包装**：`AsyncCarryMem` 内部持有一个同步 `CarryMem` 实例，所有异步方法
+  通过 `asyncio.get_running_loop().run_in_executor(None, ...)`（默认线程池执行器）转发，
+  因此签名与同步版保持一致，且只依赖 asyncio 标准库。
+- **`native_async=True` 模式已删除**：该模式（v0.7.2 引入，基于 `AsyncSQLiteAdapter` 支撑）
+  的 20 个公共方法中有 16 个会无条件抛出 `RuntimeError`，属于不可用的承诺，已在 v0.11.0
+  移除。上面这套 executor 包装是**唯一**的异步 API。
+- **需要真正的异步 I/O 时**，直接单独使用 `AsyncSQLiteAdapter`（见下文），它不再挂到
+  `AsyncCarryMem` 上。
+- `AsyncCarryMem` **不是** `CarryMem` 的子类，也不覆盖 `CarryMem` 的全部方法；它只暴露
+  下面列出的这一组方法。
+
+### 构造函数
+
+#### `__init__(storage, db_path, knowledge_adapter, namespace, config, encryption_key)`
+
+**参数:**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `storage` | `str \| StorageAdapter \| None` | `"sqlite"` | 与同步 `CarryMem` 同义，直接透传 |
+| `db_path` | `str \| None` | `None` | 数据库文件路径，直接透传 |
+| `knowledge_adapter` | `StorageAdapter \| None` | `None` | 知识库适配器，直接透传 |
+| `namespace` | `str` | `"default"` | 命名空间 |
+| `config` | `Dict \| None` | `None` | 额外配置选项 |
+| `encryption_key` | `str \| None` | `None` | 加密密钥，透传给同步 `CarryMem`（走同步 `SQLiteAdapter` 加密路径） |
+
+**返回:** `None`
+
+**说明:** 构造函数中所有参数都会原样传给内部的同步 `CarryMem`，因此异常行为与
+`CarryMem.__init__` 一致（如 `CarryMemError(CM-100)`）。
+
+### 异步方法
+
+以下方法均为 `async`，语义、参数含义与同名同步方法一致，仅多一层线程池转发。
+
+| 方法 | 签名（关键默认值） |
+|------|--------------------|
+| `classify_message` | `(message, context=None, language=None)` |
+| `classify_and_remember` | `(message, context=None, language=None)` |
+| `recall_memories` | `(query=None, filters=None, limit=20)` |
+| `forget_memory` | `(memory_id)` |
+| `get_stats` | `()` |
+| `declare` | `(message, context=None)` |
+| `get_memory_profile` | `()` |
+| `build_context` | `(context=None, max_memories=10, max_knowledge=5, max_rules=5, max_tokens=2000, language="en")` |
+| `build_system_prompt` | `(context=None, max_memories=10, max_knowledge=5, max_rules=5, max_tokens=2000, language="en")` |
+| `export_memories` | `(output_path=None, format="json", namespace=None)` |
+| `import_memories` | `(input_path=None, data=None, namespace=None, merge_strategy="skip_existing")` |
+| `update_memory` | `(storage_key, new_content, reason=None)` |
+| `get_memory_history` | `(storage_key)` |
+| `rollback_memory` | `(storage_key, version)` |
+| `backup` | `(backup_dir=None)` |
+| `get_audit_log` | `(operation=None, since=None, until=None, source=None, limit=100)` |
+| `close` | `()` |
+
+**注意**：异步包装的覆盖面比同步 API 窄，参数也略少。例如
+`recall_memories` 没有 `namespaces` / `update_access`，`build_context` /
+`build_system_prompt` 没有 `progressive`，`build_system_prompt` 的 `max_tokens`
+默认值是 `2000`（同步版为 `4000`）。需要这些能力时请直接使用同步 `CarryMem`。
+
+### 上下文管理器
+
+支持 `async with`：
+
+```python
+async with AsyncCarryMem(db_path="/tmp/mem.db") as acm:
+    ...
+# 退出时自动 await close()
+```
+
+### 示例
+
+```python
+import asyncio
+from carrymem import AsyncCarryMem
+
+async def main():
+    acm = AsyncCarryMem(db_path="/tmp/mem.db")
+    result = await acm.classify_and_remember("我喜欢深色模式")
+    print(result["type"])       # 'user_preference'（实测）
+    print(result["stored"])     # True（实测）
+    memories = await acm.recall_memories(query="深色")
+    print(len(memories))        # 1（实测）
+    await acm.close()
+
+asyncio.run(main())
+```
+
+### 相关：AsyncSQLiteAdapter
+
+`carrymem.adapters.async_sqlite.AsyncSQLiteAdapter`（v0.7.2 引入，源码
+`src/carrymem/adapters/async_sqlite.py`）提供基于 `aiosqlite` 的原生异步 I/O，
+需要 `pip install carrymem[async]`，且**不是** `StorageAdapter` 的子类。
+
+- 构造：`AsyncSQLiteAdapter(db_path=None, namespace="default", encryption_key=None)`
+- 核心异步方法：`connect()`, `store_entry(entry)`, `recall(query, limit=20, namespaces=None)`,
+  `forget_memory(storage_key)`, `count(namespace=None)`, `close()`；支持 `async with`。
+- `capabilities` 为 `{"fts": True, "graph": True, "vector_search": False, "async": True}`。
+- **`encryption_key` 为 fail-closed**：只要传入非 `None` 的值就抛 `NotImplementedError`。
+  该适配器不支持加密，静默忽略密钥会把调用方期望的"静态加密"变成明文落盘，因此这里选择
+  直接失败。需要加密存储时请使用同步 `SQLiteAdapter` 并传入 `encryption_key`。
+- 未安装 `aiosqlite` 时构造即抛 `ImportError`。
 
 ---
 
@@ -1489,4 +1982,4 @@ CarryMemError (base)
 ---
 
 *文档维护: CarryMem 开发团队*
-*最后更新: 2026-07-14*
+*最后更新: 2026-09-21*
