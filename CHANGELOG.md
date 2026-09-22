@@ -200,12 +200,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   zhipuai` lists `2.1.5.20250825` as the newest available — the version already
   pinned — while `pip index versions pyjwt` offers up to `2.14.0`. The cap is
   what blocks the upgrade, not the index.
-- The extension change is **structurally** checked only: `node` and `npm` are
-  both absent from this machine, so no `npm install`/`npm ci` was possible. The
-  lockfile was verified to be valid JSON with zero dangling dependency
-  references, `serialize-javascript` reading `7.0.5`, `randombytes` removed, and
-  `safe-buffer` retained because `readable-stream` and `string_decoder` still
-  require it. Whether npm accepts the `overrides` entry is unverified.
+- The extension change could not be checked on this machine — `node` and `npm` are
+  both absent — so it was checked structurally first (valid JSON, zero dangling
+  dependency references, `serialize-javascript` reading `7.0.5`, `randombytes`
+  removed, `safe-buffer` retained because `readable-stream` and `string_decoder`
+  still require it) and then by CI: `npm install --no-audit --no-fund` reported
+  `added 179 packages in 7s` with no `ERESOLVE`/`EOVERRIDE`, and
+  `VSCode Extension Tests` passed.
+- The lock rename was verified against the dependency graph itself, before and
+  after. Intersecting the pins with `GET
+  /repos/lulin70/carrymem/dependency-graph/sbom`: before, `12 of 63` runtime pins
+  and `26 of 111` dev pins were visible; after, `63 of 63` and `111 of 111`, with
+  `pyjwt` present again and the SBOM's pypi package count rising from 29 to 115.
+  Both renamed files also still parse under pip (`--dry-run --no-deps`, exit 0),
+  with pin counts unchanged at 63 and 111.
 
 ## [0.11.2] - 2026-09-21 — complete the recall metric correction (PATCH)
 
