@@ -100,9 +100,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   accepts `^6.0.2`, so the two Dependabot advisories (one high, one medium) could
   not be cleared by an ordinary bump. The lockfile entry was moved to `7.0.5`
   with the registry's real integrity hash and the now-unused `randombytes`
-  subtree was removed. **Not verified locally** — this machine has no
-  `node`/`npm`, so the `vscode-ext` CI job's `npm install` is the first real
-  check of the change.
+  subtree was removed. Not verifiable on this machine (no `node`/`npm`), so the
+  `vscode-ext` CI job was the first real check — and it passed: `npm install
+  --no-audit --no-fund` finished with `added 179 packages in 7s` and no
+  `ERESOLVE`/`EOVERRIDE` error, and `VSCode Extension Tests` went green with
+  `mocha@10.8.2` running against the overridden `7.0.5`.
 - The five pyjwt advisories on `requirements.txt` are **not fixable here** and are
   now recorded as TD-068 instead of being papered over: `pyjwt` is a transitive
   dependency of `zhipuai`, which declares `pyjwt<2.9.0,>=2.8.0`, and
