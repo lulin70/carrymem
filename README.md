@@ -63,7 +63,7 @@ CarryMem fixes this. It's a lightweight, zero-dependency memory system that stor
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-4891%20passed%2C%2010%20skipped-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-4907%20passed%2C%2010%20skipped-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="Coverage">
   <img src="https://img.shields.io/badge/mypy-0%20errors-brightgreen" alt="mypy">
   <img src="https://img.shields.io/badge/security-bandit%2Bpip--audit-blue" alt="Security">
@@ -211,8 +211,8 @@ These are what make CarryMem different from every other memory solution:
 - Single .db file — carry your identity anywhere
 - Works with Cursor, Claude Code, ChatGPT, any MCP client
 
-### 4. Industrial-Grade Engineering — 4891 Tests / mypy 0 / flake8 0
-- **4891 tests passed, 10 skipped** in the current full regression (optional vector/semantic dependencies account for the skips); E2E and TUI suites are included in the repository test run.
+### 4. Industrial-Grade Engineering — 4907 Tests / mypy 0 / flake8 0
+- **4907 tests passed, 10 skipped** in the current full regression (optional vector/semantic dependencies account for the skips); E2E and TUI suites are included in the repository test run.
 - **mypy 0 errors** across 160 source files — fully type-safe (CI blocking gate)
 - **flake8 0 errors** — clean codebase, no lint violations (black + isort formatted)
 - **24 sensitive-pattern redaction** — auto-detects API keys, passwords, tokens before storage
@@ -1031,11 +1031,12 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 ## Project Status
 
 **Current Version**: v0.11.2
-**Tests**: 4891 passed, 10 skipped in the current full regression; optional vector/semantic dependencies account for the skips; 97 TUI tests passing
-**Coverage**: 80%+
+**Tests**: 4907 passed, 10 skipped, 77 deselected in the current full regression; 265 E2E tests collected, with the latest realistic non-slow user-path run at 245 passed, 20 deselected, 2 warnings in 82.24s (the previous 77.08s run is retained as a historical baseline)
+**Coverage**: 83.19%
 **mypy**: 0 errors (160 source files, CI blocking gate)
 **flake8**: 0 errors (black + isort formatted)
 **radon**: 0 D/E/F functions (CI blocking gate)
+**Blocking gates**: eight local gates pass, including version-consistency and swallowed-assert
 **Maturity**: 80/100 (B) per 7-dimension DevSquad evaluation
 
 **Changelog**:

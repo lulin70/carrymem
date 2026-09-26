@@ -1,6 +1,6 @@
 # CarryMem 제품 로드맵
 
-**최종 업데이트**: 2026-09-21
+**최종 업데이트**: 2026-09-26
 **제품 포지셔닝**: AI 신원 레이어 — 기억 + 규칙 + 지식
 **버전 체계**: v0.2.x (증분) → v0.3.0 (GA 마일스톤) → v0.4.x (엔터프라이즈) → v0.5.x (안정 API) → v0.6.x (아키텍처 정리) → v0.7.x (지식 그래프 + 다중 모드 검색 + Memify) → v0.8.0 (Graphify — MCP 그래프 도구 + 엣지 신뢰도) → v0.9.x (UI/UX 개편) → v0.10.x (반복 수정 업그레이드) → v0.11.0 (async API 정리 + cryptography 50 하한 + 실제 관측성) → v0.11.1 (릴리스 게이트 수정 + recall 메트릭 최초 수정) → v0.11.2 (recall 메트릭 수정 완료)
 
@@ -60,7 +60,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 │  │  • Cross-language semantic recall (FTS5)          │    │
 │  │  • Session-aware storage + knowledge supersession (v0.1.7)   │    │
 │  │  • Time reasoning + structured prompt injection (v0.1.7)     │    │
-│  │|  •  4891 tests passing, 80%+ coverage           ││    │
+│  │|  •  4907 tests passing, 83.19% coverage         ││    │
 │  └──────────────────────────────────────────────────┘    │
 │              ↑ reads from          ↑ injects into         │
 │  Layer 1: Knowledge (WHAT you know) ← v0.3.0 계획         │
@@ -743,4 +743,4 @@ carrymem unpack team-identity.carry
 **Next Milestone**: next minor (planning TBD)
 
 Note: v0.11.2 released (2026-09-21, PyPI). See CHANGELOG.md for the v0.9.0 ~ v0.11.2 series.
-**Status**: ✅ **v0.11.2 released (4978 collected / 4891 passed, 83.08% coverage, Memory + Rules + Knowledge + Enterprise)**
+**Status**: ✅ **Current tree: 4994 collected / 4907 passed, 83.19% coverage; latest realistic user E2E: 245 passed, 20 deselected, 2 warnings in 82.24s; previous 77.08s run retained as a historical baseline; v0.11.2 released (PyPI)**

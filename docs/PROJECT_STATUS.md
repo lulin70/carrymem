@@ -1,7 +1,7 @@
 # CarryMem — Project Status
 
 **Version**: v0.11.2
-**Last Updated**: 2026-09-21
+**Last Updated**: 2026-09-26
 **Maintainer**: CarryMem Team
 
 ---
@@ -46,20 +46,21 @@ The v0.11.x line carries the breaking `native_async` removal, the `cryptography>
 > Only `0.11.2`, `0.11.1`, `0.9.3rc1`, `0.8.0` and `0.5.0`–`0.5.2` are on PyPI;
 > everything between them exists as source and CHANGELOG entries only.
 
-### Current Test & Quality Metrics (post-release tree, 2026-09-21)
+### Current Test & Quality Metrics (post-release tree, 2026-09-26)
 
-Measured on the tree after the ghost-switch removal, which is the tree the
-numbers below describe — not the v0.11.2 tag.
+Measured on the current tree after the CI honesty and false-green gate changes;
+these numbers describe the working tree, not the v0.11.2 tag.
 
-- **Tests**: `4891 passed, 10 skipped, 77 deselected` (4978 collected) — exactly 8
-  below the v0.11.2 figure of 4899, matching the 8 tests deleted with the two
-  unwired summary switches. (The v0.11.2 tree collected 4986; 4986 − 8 = 4978.)
-- **Coverage**: 83.08% (`fail_under = 80`)
+- **Tests**: `4907 passed, 10 skipped, 77 deselected` (4994 collected), including
+  265 collected E2E tests. A fresh realistic non-slow user-path E2E run on
+  2026-09-26 was `245 passed, 20 deselected, 2 warnings in 82.24s`; the
+  previous 77.08s run remains a historical baseline.
+- **Coverage**: 83.19% (`fail_under = 80`)
 - **Lint**: flake8 clean, black clean, isort clean, mypy `Success: no issues found in 160 source files`
 - **Complexity**: `radon: no functions with complexity >= 21`
 - **Version consistency**: all five machine-readable sources report `0.11.2`
-- **Gates**: seven blocking local gates (flake8, black, isort, mypy, pytest, radon,
-  version-consistency) via `python3 scripts/ci_local_check.py`
+- **Gates**: eight blocking local gates (flake8, black, isort, mypy, pytest, radon,
+  version-consistency, swallowed-assert) via `python3 scripts/ci_local_check.py`
 
 ### Test & Quality Metrics (v0.9.8, historical)
 

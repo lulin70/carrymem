@@ -2,7 +2,7 @@
 
 > **文档性质**: 活文档 (Living Document) — 每完成一项立即更新状态
 > **创建时间**: 2026-07-17
-> **最后更新**: 2026-09-21 (v0.11.2 事实复核：全部 TD 项 ✅ 已完成；测试 `4891 passed, 10 skipped, 77 deselected` (4978 collected) + e2e 265 passed；coverage 83.08%；mypy `160 source files`；radon 无 ≥21 函数。数字依据 `docs/PROJECT_STATUS.md` §"Current Test & Quality Metrics (post-release tree, 2026-09-21)" 与 `CHANGELOG.md` [Unreleased]/[0.11.2]。历史批次记录见 §9 更新日志)
+> **最后更新**: 2026-09-26 (v0.11.2 working tree 事实复核：全部 TD 项 ✅ 已完成；测试 `4907 passed, 10 skipped, 77 deselected` (4994 collected)；最新真实用户 E2E 为 `245 passed, 20 deselected, 2 warnings in 82.24s`（265 collected，前次 77.08s 作为历史基线保留）；coverage 83.19%；mypy `160 source files`；radon 无 ≥21 函数；八项阻塞门禁通过。数字依据 `docs/PROJECT_STATUS.md` §"Current Test & Quality Metrics (post-release tree, 2026-09-26)"。历史批次记录见 §9 更新日志)
 > **基于**: 7 维度项目整理评估 (2026-07-17, B+ 77/100) + DevSquad 7 角色并行审核
 > **配套文档**: [ROADMAP_P0_P3.md](ROADMAP_P0_P3.md) — 执行路线图 (Wave 推进表 + 7-Role 投票矩阵 + 11 阶段生命周期映射)
 >

@@ -16,6 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   do not. Wired in as the seventh blocking local gate in
   `scripts/ci_local_check.py` and as a `Version consistency` step in the `Lint`
   job of `.github/workflows/ci.yml`.
+- `scripts/check_swallowed_assert.py` — a blocking AST gate that fails when an
+  `assert` sits inside a `try` body whose broad handler (bare `except:`,
+  `except Exception`, `except BaseException`, directly or inside a tuple) cannot
+  let the AssertionError escape. Handlers that re-raise, and handlers that bind
+  the exception and reference it (the `errors.append(f"...{exc}")` plus later
+  aggregate assertion pattern), are exempt. Wired in as the eighth blocking local
+  gate in `scripts/ci_local_check.py`, as a step in the `Lint` job of
+  `.github/workflows/ci.yml`, and in the `pre-release-test` job of
+  `.github/workflows/release.yml`.
 
 ### Fixed
 
@@ -226,6 +235,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   on `requirements-dev.txt`. All 10 were then dismissed with
   `dismissed_reason=tolerable_risk` and the upstream constraint recorded on each
   alert. Final tally: `0 open, 10 dismissed, 5 fixed, 4 auto_dismissed`.
+- The `Lint` job of `.github/workflows/ci.yml` contained two steps that could not
+  fail. `Check secrets` and `Check bare except` both ended in
+  `&& echo "WARNING: ..." || echo "OK: ..."`, so the step exited 0 whether or not
+  anything matched — a real hardcoded secret would have been reported as a
+  passing step. Both are now fail-closed: matches are collected, printed, and
+  `exit 1`. Verified by injecting `api_key = "sk-live-..."` and a bare `except:`
+  into a scratch tree and watching each step fail with the offending line.
+- `ci.yml`'s optional-deps job installed
+  `.[dev,async,tui,encryption,llm,language]`, but `encryption` has not been an
+  extra since v0.7.3 made `cryptography` a hard dependency. pip printed
+  "does not provide the extra 'encryption'" and carried on, so the job looked
+  like it exercised an optional path that no longer exists. The name is gone from
+  the install line; the defined extras are `async`, `dev`, `full`, `language`,
+  `llm`, `semantic`, `tui`.
+- `release.yml` did not check version consistency at all. `ci.yml` also triggers
+  on `v*` tags, but a tag push does not wait for it, so a release could publish a
+  wheel while `Dockerfile` / `smithery.yaml` still carried an older version. The
+  `pre-release-test` job now runs `check_version_consistency.py` and
+  `check_swallowed_assert.py` before the test suite, so a mislabelled artifact
+  fails the release in seconds.
+- `.github/workflows/benchmark.yml` labelled both of its jobs "Hard Gate" while
+  neither can fail: the pytest command ends in `|| true` and the threshold step
+  emits `::warning::` only. Relabelled "Advisory (NOT a gate)". Behaviour is
+  unchanged — perf numbers on shared runners are noisy — but the label no longer
+  promises a gate that is not there.
+- `docs/design/V0.11.0_PROJECT_REVIEW.md` §2.2 claimed `quality_scorer.py`,
+  `layers/memify.py` and `ui/onboarding.py` were ghost modules with zero
+  production imports. Reproduced with a full-depth AST scan: the original scan
+  only saw module-level imports and therefore missed the function-scoped lazy
+  imports. All three have real `src/` call sites — `core/_maintenance.py:76`,
+  `adapters/sqlite/__init__.py:824`, `tui.py:53-54` — and an end-to-end probe
+  confirms each module is loaded by a public entry point (`check_quality()`,
+  `consolidate_memories()`, importing `carrymem.tui`). The finding was a false
+  positive; nothing was deleted and nothing needed wiring.
+- `scripts/generate_docs.py` still registered `src/carrymem/plugins/__init__.py`
+  in `EXTRA_MODULES` and told readers to run `python docs/generate_docs.py`.
+  Neither path exists since the plugin system was removed and the script moved to
+  `scripts/`.
 
 ## [0.11.2] - 2026-09-21 — complete the recall metric correction (PATCH)
 

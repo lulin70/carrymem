@@ -2,7 +2,7 @@
 
 > **文档性质**: 活文档 (Living Document) — 每完成一个 Wave 立即更新状态
 > **创建时间**: 2026-07-17
-> **最后更新**: 2026-09-21 (v0.11.2 事实复核：全部 TD 项已完成；测试 `4891 passed, 10 skipped, 77 deselected` (4978 collected) + e2e 265 passed；coverage 83.08%；mypy `160 source files`；radon 无 ≥21 函数。数字依据 `docs/PROJECT_STATUS.md` §"Current Test & Quality Metrics (post-release tree, 2026-09-21)" 与 `CHANGELOG.md` [Unreleased]/[0.11.2]；历史批次记录见 §3/§4)
+> **最后更新**: 2026-09-26 (v0.11.2 working tree 事实复核：全部 TD 项已完成；测试 `4907 passed, 10 skipped, 77 deselected` (4994 collected)；本次真实用户 E2E 为 `245 passed, 20 deselected, 2 warnings in 82.24s`（265 collected，前次 77.08s 作为历史基线保留）；coverage 83.19%；mypy `160 source files`；radon 无 ≥21 函数；八项阻塞门禁通过。数字依据 `docs/PROJECT_STATUS.md` §"Current Test & Quality Metrics (post-release tree, 2026-09-26)"；历史批次记录见 §3/§4)
 > **基于**: TECH_DEBT_PLAN.md (技术债目录) + DevSquad V4.1.0 7-Role 共识机制 + 11 阶段生命周期
 > **用户规则映射**:
 >   - 推进 P0-P1 按项目生命周期，文档先行，充分验证，推送 Git

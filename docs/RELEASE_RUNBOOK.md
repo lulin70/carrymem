@@ -54,7 +54,7 @@
 
 ### 2.2 测试验证
 
-- [ ] 本地运行 `python3 scripts/ci_local_check.py` 六门禁全过（flake8 / black / isort / mypy / **pytest** / radon）
+- [ ] 本地运行 `python3 scripts/ci_local_check.py` 八项阻塞门禁全过（flake8 / black / isort / mypy / **pytest** / radon / version-consistency / swallowed-assert）
       —— 该脚本用与 `release.yml` 完全相同的口径跑测试
       （`--cov=carrymem --timeout=120 -m "not slow"`），**不要**用不带 `--cov` 的命令代替：
       覆盖插桩会把首次核心调用从 7.5ms 拖到 106ms（实测 14 倍），

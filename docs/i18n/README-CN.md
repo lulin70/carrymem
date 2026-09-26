@@ -10,7 +10,7 @@
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI 版本"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-4891%20passed%2C%2010%20skipped-brightgreen" alt="测试">
+  <img src="https://img.shields.io/badge/tests-4907%20passed%2C%2010%20skipped-brightgreen" alt="测试">
   <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="覆盖率">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval 学术基准"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
@@ -650,8 +650,9 @@ cm.import_memories(input_path="backup.json")
 ## 项目状态
 
 **当前版本**：v0.11.2
-**测试**：4891 passed, 10 skipped
-**质量门禁**：flake8 / Black / isort / mypy / radon 全部通过
+**测试**：4907 passed, 10 skipped, 77 deselected；最新真实用户 E2E：245 passed, 20 deselected, 2 warnings（82.24 秒；此前 77.08 秒作为历史基线保留）
+**覆盖率**：83.19%
+**质量门禁**：八项阻塞门禁全部通过（flake8 / Black / isort / mypy / pytest / radon / version-consistency / swallowed-assert）
 
 **更新日志**：
 - **v0.11.0**：破坏性异步 API 清理 —— `AsyncCarryMem` 现在仅是 executor 包装的异步门面；需要独立的原生异步 SQLite I/O 请直接使用 `AsyncSQLiteAdapter`。核心加密库下限提升到 `cryptography>=50.0.0`。详见 [CHANGELOG.md](../../CHANGELOG.md) 与 [ADR-009](../architecture/decisions/ADR-009-async-pipeline.md)。

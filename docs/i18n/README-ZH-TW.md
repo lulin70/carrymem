@@ -651,8 +651,9 @@ cm.import_memories(input_path="backup.json")
 ## 專案狀態
 
 **目前版本**：v0.11.2
-**測試**：4891 passed, 10 skipped
-**品質門檻**：flake8 / Black / isort / mypy / radon 全部通過
+**測試**：4907 passed, 10 skipped, 77 deselected；最新真實使用者 E2E：245 passed, 20 deselected, 2 則警告（82.24 秒；此前 77.08 秒執行保留為歷史基線）
+**覆蓋率**：83.19%
+**品質門檻**：八項阻塞門檻全部通過（flake8 / Black / isort / mypy / pytest / radon / version-consistency / swallowed-assert）
 
 **更新日誌**：
 - **v0.11.0**：破壞性非同步 API 清理 —— `AsyncCarryMem` 現在僅是 executor 包裝的非同步門面；需要獨立的原生非同步 SQLite I/O 請直接使用 `AsyncSQLiteAdapter`。核心加密函式庫下限提升至 `cryptography>=50.0.0`。詳見 [CHANGELOG.md](../../CHANGELOG.md) 與 [ADR-009](../architecture/decisions/ADR-009-async-pipeline.md)。
