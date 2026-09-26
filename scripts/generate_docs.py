@@ -5,7 +5,7 @@ Scans src/carrymem/core/ for all _*.py modules, extracts class docstrings
 and public method signatures, and generates a comprehensive API_REFERENCE.md.
 
 Usage:
-    python docs/generate_docs.py
+    python scripts/generate_docs.py
 
 Output:
     docs/API_REFERENCE.md  (overwritten)
@@ -29,7 +29,6 @@ OUTPUT_FILE = PROJECT_ROOT / "docs" / "API_REFERENCE.md"
 # Additional modules to document (beyond core/_*.py)
 EXTRA_MODULES = [
     ("src/carrymem/monitoring/__init__.py", "monitoring"),
-    ("src/carrymem/plugins/__init__.py", "plugins"),
     ("src/carrymem/security/permissions.py", "security.permissions"),
     ("src/carrymem/adapters/base.py", "adapters.base"),
     ("src/carrymem/adapters/json_adapter.py", "adapters.json_adapter"),

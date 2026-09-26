@@ -199,6 +199,10 @@ jobs:
       - name: Version consistency
         run: python3 scripts/check_version_consistency.py
 
+      - name: "Swallowed assert check (blocking, no false-green)"
+        continue-on-error: false
+        run: python3 scripts/check_swallowed_assert.py
+
   # ═══════════════════════════════════════
   # ADVISORY: i18n Compliance (non-blocking)
   # ═══════════════════════════════════════
@@ -262,16 +266,30 @@ jobs:
       - name: Install security tools
         run: pip install bandit pip-audit
 
-      - name: Check secrets
+      - name: Check secrets (fail-closed)
         run: |
-          grep -rnE "(api_key|secret_key|password|token)\s*=\s*['\"][^']{8,}" src/ --include="*.py" | \
-            grep -v "test_" | grep -v "# " | grep -v "os.environ" | grep -v "getenv" && \
-            echo "WARNING: potential hardcoded secret" || echo "OK: no obvious secrets"
+          # Fail-closed: a match must fail the job. The previous form
+          # (`grep ... && echo WARNING || echo OK`) always exited 0, so a real
+          # hardcoded secret would have been reported as a passing step.
+          HITS=$(grep -rnE "(api_key|secret_key|password|token)\s*=\s*['\"][^']{8,}" src/ --include="*.py" \
+            | grep -v "test_" | grep -v "# " | grep -v "os.environ" | grep -v "getenv" || true)
+          if [ -n "$HITS" ]; then
+            echo "FAIL: potential hardcoded secret found:"
+            echo "$HITS"
+            exit 1
+          fi
+          echo "OK: no obvious secrets"
 
-      - name: Check bare except
+      - name: Check bare except (fail-closed)
         run: |
-          grep -rn "except:" src/ --include="*.py" | grep -v "except Exception" | grep -v "except (" && \
-            echo "WARNING: bare except found" || echo "OK: no bare except"
+          # Fail-closed for the same reason as the secret check above.
+          HITS=$(grep -rn "except:" src/ --include="*.py" | grep -v "except Exception" | grep -v "except (" || true)
+          if [ -n "$HITS" ]; then
+            echo "FAIL: bare except found:"
+            echo "$HITS"
+            exit 1
+          fi
+          echo "OK: no bare except"
 
       - name: bandit scan (blocking for HIGH severity)
         run: bandit -r src/ -lll --format=txt
@@ -327,10 +345,11 @@ jobs:
       - name: Install with optional deps (excl. semantic)
         run: |
           python -m pip install --upgrade "pip>=26.1.2"
-          pip install -e ".[dev,async,tui,encryption,llm,language]" || {
-            echo "WARNING: optional-deps install failed; skipping job"
-            exit 1
-          }
+          # No "encryption" extra: cryptography is a hard dependency since v0.7.3
+          # (setup.py install_requires). Naming a non-existent extra made pip
+          # print "does not provide the extra 'encryption'" and carry on, so the
+          # step looked like it exercised an optional path that no longer exists.
+          pip install -e ".[dev,async,tui,llm,language]"
 
       - name: Run optional-dep tests
         run: |

@@ -33,7 +33,10 @@ env:
 
 jobs:
   # ═══════════════════════════════════════
-  # Performance Benchmark Suite (P1-5) - Hard Gate
+  # Performance Benchmark Suite (P1-5) - Advisory (NOT a gate)
+  #   Threshold violations emit ::warning:: only; the job cannot fail. Perf
+  #   numbers on shared runners are noisy, so this stays advisory — but it must
+  #   not be labelled a "Hard Gate" while behaving as a warning.
   # ═══════════════════════════════════════
   benchmark:
     name: Performance Benchmarks (py${{ matrix.python-version }})
@@ -125,7 +128,8 @@ jobs:
           if-no-files-found: ignore
 
   # ═══════════════════════════════════════
-  # Memory Optimization Tests (P1-6) - Hard Gate
+  # Memory Optimization Tests (P1-6) - Advisory (NOT a gate)
+  #   Same as the benchmark job above: violations are ::warning:: only.
   # ═══════════════════════════════════════
   memory-optimization:
     name: Memory Optimization Tests (py${{ matrix.python-version }})

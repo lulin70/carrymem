@@ -32,6 +32,20 @@ jobs:
           # TD-025: pin linter versions to match .pre-commit-config.yaml
           pip install flake8==7.3.0 black==26.5.1 isort==6.1.0 mypy==2.3.0 bandit==1.7.10 pip-audit==2.7.0
 
+      # Static repo gates run before the 30-minute suite so a mislabelled
+      # artifact or a false-green test fails the release in seconds.
+      - name: Version consistency (blocking)
+        run: |
+          # Root VERSION is the canonical anchor; this asserts VERSION ==
+          # __version__.py == server.json == Dockerfile == smithery.yaml.
+          # Without this step a tag push could publish a wheel whose container
+          # image and MCP registry entry still carried an older version: ci.yml
+          # also triggers on tags but release.yml does not wait for it.
+          python3 scripts/check_version_consistency.py
+
+      - name: Swallowed assert check (blocking)
+        run: python3 scripts/check_swallowed_assert.py
+
       - name: Lint — flake8
         run: |
           # Rely on .flake8 config (extend-ignore includes E203/W503/F403/F405/E402/E731/E712/F541/W391 etc.)

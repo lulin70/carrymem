@@ -86,14 +86,13 @@ def install_environment(python: Path) -> None:
 def check_versions(python: Path) -> bool:
     """Fail if the disposable environment did not receive the requested versions."""
     expected = repr(TOOLS)
-    result = run(
-        [
-            str(python),
-            "-c",
-            "import importlib.metadata as m, sys; expected = %s; actual = {n: m.version(n) for n in expected}; print(actual); sys.exit(actual != expected)"
-            % expected,
-        ]
+    version_check = (
+        "import importlib.metadata as m, sys; "
+        "expected = %s; "
+        "actual = {n: m.version(n) for n in expected}; "
+        "print(actual); sys.exit(actual != expected)"
     )
+    result = run([str(python), "-c", version_check % expected])
     return result.returncode == 0
 
 
@@ -147,6 +146,10 @@ def main() -> int:
                 ],
             ),
             ("version-consistency", [str(python), str(ROOT / "scripts" / "check_version_consistency.py")]),
+            (
+                "swallowed-assert",
+                [str(python), str(ROOT / "scripts" / "check_swallowed_assert.py")],
+            ),
         ]
 
         failures: list[str] = []
@@ -169,8 +172,8 @@ def main() -> int:
             print("\nFAILED gates: " + ", ".join(failures))
             return 1
         print(
-            "\nAll seven blocking local CI gates passed "
-            "(flake8, black, isort, mypy, pytest, radon, version-consistency)."
+            "\nAll eight blocking local CI gates passed "
+            "(flake8, black, isort, mypy, pytest, radon, version-consistency, swallowed-assert)."
         )
         return 0
 
