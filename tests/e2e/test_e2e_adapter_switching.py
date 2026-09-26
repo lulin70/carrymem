@@ -11,7 +11,13 @@ import json
 import os
 import shutil
 import sqlite3
-import tempfile
+
+try:
+    import pysqlite3.dbapi2 as pysqlite3
+except ImportError:
+    pysqlite3 = None
+
+_SQLITE_ERRORS = (sqlite3.Error,) if pysqlite3 is None else (sqlite3.Error, pysqlite3.Error)
 
 import pytest
 
@@ -319,7 +325,7 @@ class TestE2EAdapterErrorHandling:
                 # each explicitly rather than swallowing the assertion.
                 try:
                     write_result = cm_ro.classify_and_remember("Attempted write")
-                except (sqlite3.OperationalError, sqlite3.DatabaseError, OSError) as exc:
+                except (*_SQLITE_ERRORS, OSError) as exc:
                     assert "readonly" in str(exc).lower() or "read-only" in str(exc).lower(), exc
                 else:
                     assert isinstance(write_result, dict), write_result

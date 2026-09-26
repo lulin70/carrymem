@@ -10,6 +10,7 @@ from ...scoring import calculate_importance
 from ...utils.helpers import escape_like
 from ...utils.language import _STOP_WORDS, has_cjk
 from ...utils.logger import logger
+from ...utils.validators import detect_sql_injection
 from ..base import StoredMemory
 
 
@@ -123,20 +124,24 @@ class RecallEngine:
 
     def recall(
         self,
-        query: str,
+        query: Optional[str] = None,
         filters: Optional[Dict[str, Any]] = None,
         limit: int = 20,
         namespaces: Optional[List[str]] = None,
         update_access: bool = True,
     ) -> List[StoredMemory]:
         """Run multi-phase recall with caching, returning matching stored memories."""
+        if query and detect_sql_injection(query):
+            logger.warning("Rejected potentially malicious recall query")
+            return []
+
         if self._adapter.enable_cache and self._cache:
             cached = self._cache.get(self._adapter.namespace, query, filters, limit)
             if cached is not None:
                 return [self._serializer.dict_to_stored(d) or StoredMemory() for d in cached]
 
         with self._conn_mgr.lock:
-            results = self._recall_impl(query, filters, limit, namespaces, update_access=update_access)
+            results = self._recall_impl(query or "", filters, limit, namespaces, update_access=update_access)
 
         if self._adapter.enable_cache and self._cache and results:
             self._cache.put(

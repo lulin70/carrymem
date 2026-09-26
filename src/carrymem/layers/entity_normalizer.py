@@ -16,6 +16,16 @@ import json
 import os
 import re
 import sqlite3
+
+try:
+    import pysqlite3.dbapi2 as _pysqlite3
+
+    _SQLITE_ERRORS: tuple = (sqlite3.Error, _pysqlite3.Error)
+except ImportError:
+    _SQLITE_ERRORS = (sqlite3.Error,)
+
+_ENTITY_DB_ERRORS = _SQLITE_ERRORS + (KeyError, IndexError)
+
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
@@ -280,7 +290,7 @@ class EntityNormalizer:
                 }
                 for row in rows
             ]
-        except (sqlite3.Error, KeyError, IndexError) as e:
+        except _ENTITY_DB_ERRORS as e:
             logger.warning("list_entities failed: %s", e)
             return []
 
@@ -333,7 +343,7 @@ class EntityNormalizer:
                         ),
                     )
                     repointed += 1
-                except sqlite3.Error as e:
+                except _SQLITE_ERRORS as e:
                     logger.debug("merge_entities insert skipped: %s", e)
             # Remove old source aliases
             conn.execute(
@@ -341,7 +351,7 @@ class EntityNormalizer:
                 (source, safe_ns),
             )
             conn.commit()
-        except sqlite3.Error as e:
+        except _SQLITE_ERRORS as e:
             logger.warning("merge_entities failed: %s", e)
             return 0
 
@@ -439,7 +449,7 @@ class EntityNormalizer:
                     "entity_type": row["entity_type"],
                     "similarity_score": row["similarity_score"],
                 }
-        except (sqlite3.Error, KeyError, IndexError) as e:
+        except _ENTITY_DB_ERRORS as e:
             logger.debug("exact lookup failed: %s", e)
         return None
 
@@ -460,7 +470,7 @@ class EntityNormalizer:
                 "LIMIT ?",
                 (namespace, entity_type, f"{prefix}%", _FUZZY_CANDIDATE_LIMIT),
             ).fetchall()
-        except (sqlite3.Error, KeyError, IndexError) as e:
+        except _ENTITY_DB_ERRORS as e:
             logger.debug("fuzzy lookup failed: %s", e)
             return None
 
@@ -512,7 +522,8 @@ class EntityNormalizer:
                 ),
             )
             conn.commit()
-        except sqlite3.Error as e:
+        except _SQLITE_ERRORS as e:
+            # Handle errors from both supported SQLite drivers.
             logger.debug("persist_alias skipped: %s", e)
 
     # ── Internal: sanitization & validation ───────────────────────────
