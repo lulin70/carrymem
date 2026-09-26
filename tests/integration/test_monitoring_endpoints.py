@@ -188,39 +188,64 @@ class TestInstrumentedMetricsEndToEnd:
         await _wait_for_server("127.0.0.1", port)
 
         try:
+            # Warm the real MCP/CarryMem path before measuring SLO latency. The
+            # first real calls include one-time initialization and backend
+            # inference warm-up, so they must not be treated as steady-state
+            # samples used by this wiring assertion.
+            for warmup_id in range(8):
+                warmup = await _http_post(
+                    "127.0.0.1",
+                    port,
+                    "/message",
+                    {
+                        "jsonrpc": "2.0",
+                        "id": warmup_id,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "classify_and_remember",
+                            "arguments": {"message": f"Warm up the monitoring path {warmup_id}"},
+                        },
+                    },
+                )
+                assert "200 OK" in warmup, f"warm-up tool call did not succeed:\n{warmup}"
+
             collector = get_metrics_collector()
             collector.reset()
 
-            # Control group: before the operation runs, the series must not exist.
+            # Control group: before the measured operation runs, the series must not exist.
             before = await _http_get("127.0.0.1", port, "/metrics")
             assert 'operation="classify_and_remember"' not in before, (
                 "the series must not be published before any operation ran; " f"got:\n{before}"
             )
 
-            raw = await _http_post(
-                "127.0.0.1",
-                port,
-                "/message",
-                {
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "classify_and_remember",
-                        "arguments": {"message": "I prefer dark mode for coding"},
+            measured_calls = 101
+            for request_id in range(measured_calls):
+                raw = await _http_post(
+                    "127.0.0.1",
+                    port,
+                    "/message",
+                    {
+                        "jsonrpc": "2.0",
+                        "id": request_id + 100,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "classify_and_remember",
+                            "arguments": {"message": ("I prefer dark mode for coding; " f"measurement {request_id}")},
+                        },
                     },
-                },
-            )
-            assert "200 OK" in raw, f"tool call did not succeed:\n{raw}"
-            payload = json.loads(_body_of(raw))
-            tool_result = json.loads(payload["result"]["content"][0]["text"])
-            assert tool_result.get("success") is True, f"tool call returned an error: {tool_result}"
+                )
+                assert "200 OK" in raw, f"tool call did not succeed:\n{raw}"
+                payload = json.loads(_body_of(raw))
+                tool_result = json.loads(payload["result"]["content"][0]["text"])
+                assert tool_result.get("success") is True, f"tool call returned an error: {tool_result}"
 
             after = await _http_get("127.0.0.1", port, "/metrics")
-            assert 'carrymem_total{operation="classify_and_remember"} 1' in after, f"missing counter in:\n{after}"
             assert (
-                'carrymem_latency_ms_count{operation="classify_and_remember"} 1' in after
-            ), f"missing latency sample in:\n{after}"
+                f'carrymem_total{{operation="classify_and_remember"}} {measured_calls}' in after
+            ), f"missing counter in:\n{after}"
+            assert (
+                f'carrymem_latency_ms_count{{operation="classify_and_remember"}} {measured_calls}' in after
+            ), f"missing latency samples in:\n{after}"
             assert "None" not in after, f"exposition must stay parseable:\n{after}"
 
             health_raw = await _http_get("127.0.0.1", port, "/healthz")
