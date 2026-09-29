@@ -1,8 +1,8 @@
 # ADR-018: 记忆演进 SQLite 迁移策略（additive + ledger + fail-closed）
 
-## 状态: 提议（Proposed）— 待 Gate 0 批准
+## 状态: 已采纳（Accepted 2026-09-28，Gate 0 批准）
 ## 日期: 2026-09-28
-## 决策者: 待项目负责人批准
+## 决策者: 项目负责人（Gate 0 批准）
 ## 操作手册: [MEMORY_EVOLUTION_MIGRATION_RECOVERY.md](../../runbooks/MEMORY_EVOLUTION_MIGRATION_RECOVERY.md)
 
 ---

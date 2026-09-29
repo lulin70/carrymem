@@ -1,10 +1,10 @@
 # CarryMem 记忆演进方法论与全面优化方案
 
-> **版本**：v1.0-draft  
+> **版本**：v1.0  
 > **日期**：2026-09-28  
-> **状态**：方案草案，已完成多角色预审，等待项目负责人批准  
+> **状态**：**Gate 0 已批准（2026-09-28）**，Phase 1 Provenance 实现已授权；Phase 0 契约文档集见 §16  
 > **适用范围**：CarryMem 核心记忆、召回、反思、规则、图谱、异步、SQLite 迁移、可观测性与发布质量  
-> **重要边界**：本文只定义方法论、目标架构和交付门槛；在 Gate 0 未批准前，不进入大规模代码实现。
+> **重要边界**：Phase 1 仅实现 Provenance 基础（evidence links）；Phase 2+ 能力（Observation/Conflict/Proposal/RecallPlan）按生命周期逐 Gate 推进，禁止跨阶段实现。
 
 ---
 
@@ -1022,23 +1022,13 @@ budget exhausted → deterministic fallback
 
 本方案结论为：
 
-> **有条件通过方案预研，不批准一次性全量实现。**
+> **Gate 0 已批准（2026-09-28）：8 项决策按契约文档建议默认执行，Phase 1 Provenance 基础实现已授权。**
 
-允许继续推进：
+按生命周期推进：
 
-- 固化领域模型和契约；
-- 编写 ADR、测试计划和迁移策略；
-- 建立 recall 质量与 token budget 基线；
-- 为现有 Memify/consolidation 增加 proposal 设计；
-- 在用户批准后从 Provenance 基础开始分阶段实现。
-
-在项目负责人明确批准前，禁止：
-
-- 修改 `recall_engine.py`、`schema.py` 等核心实现以落地本方案；
-- 执行全量 schema backfill；
-- 改变 Stable API 返回结构；
-- 开启自动高风险 reflect/apply；
-- 执行 B2 版本发布动作。
+- Phase 1（当前）：evidence links + source_kind + snapshot hash + unsupported 级联，现有 Memify/SemanticAggregator 接入 provenance；
+- Phase 2+：Observation/Conflict → Fact/Experience/Profile → Reflect Proposal → Task Recall/预算 → 入口产品化，逐 Gate 推进；
+- 仍然禁止：跨阶段实现（Phase 2+ 内容提前做）、全量 backfill、Stable API 返回结构破坏、B2 版本发布动作（tag/Release/PyPI）。
 
 相关既有文档：
 

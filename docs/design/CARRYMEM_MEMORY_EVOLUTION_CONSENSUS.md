@@ -4,7 +4,7 @@
 > **评审范围**：全面记忆演进方法论、目标架构、交付路线、质量与安全门禁  
 > **评审角色**：产品经理、架构师、安全专家、测试专家、开发负责人、DevOps/可观测性负责人  
 > **评审方式**：基于现有代码、设计文档、CI、E2E 和发布约束的并行预审与联合归纳  
-> **状态**：有条件通过方案预研；等待项目负责人批准 Gate 0
+> **状态**：**Gate 0 已批准（2026-09-28，项目负责人批准 8 项决策按契约文档建议默认执行）**，Phase 1 Provenance 实现已授权
 
 ---
 
@@ -180,16 +180,16 @@
 
 ## 4. 必须拍板的决策
 
-以下决策未完成前，不能通过 Gate 0：
+以下决策已完成 Gate 0 拍板（**2026-09-28 项目负责人批准，按各契约文档"建议默认"执行**）：
 
-1. **Reflect 自动化级别**：建议“低风险自动，高风险确认”。
-2. **Evidence 保留策略**：默认保留多久、是否参与导出、源数据删除后的派生处理。
-3. **Observation 语义**：默认 TTL、是否进入长期 recall、何时聚合为 Memory。
-4. **冲突裁决顺序**：建议用户纠正 > 当前作用域明确陈述 > 有来源的近期观察 > 历史观察 > 系统推断。
-5. **Token budget 边界**：建议采用 retrieval/evidence/reflection/output 四层预算。
-6. **异步保证级别**：建议接受 at-least-once + 幂等，不承诺 exactly-once。
-7. **SQLite 迁移范围**：是否承诺全部历史版本直升、是否支持跨版本跳跃、是否允许旧程序打开新数据库。
-8. **Audit/Metrics 隐私**：禁止记录原文和高基数标识，确认保留周期和导出能力。
+1. **Reflect 自动化级别** ✅：低风险白名单自动应用，高风险人工确认（高风险清单代码硬编码）——见 [ADR-016](../architecture/decisions/ADR-016-reflection-proposal-lifecycle.md)。
+2. **Evidence 保留策略** ✅：evidence link 行永久保留（仅元数据不含原文）；彻底删除需用户显式要求并审计——见 [ADR-015](../architecture/decisions/ADR-015-evidence-observation-model.md)。
+3. **Observation 语义** ✅：默认 TTL 表生效；默认**不进入**普通长期 recall，仅 conflict_resolution/reflection 任务按需读取——见 Evidence/Observation 契约 §3.5。
+4. **冲突裁决顺序** ✅：采用 P1-P6 信任层级优先级链，否决 latest-wins——见 [ADR-017](../architecture/decisions/ADR-017-conflict-resolution-policy.md)。
+5. **Token budget 边界** ✅：采用 retrieval/evidence/reflection/output 四层预算，`build_context` 默认 `max_tokens=2000` 不变——见预算契约 §2。
+6. **异步保证级别** ✅：at-least-once + 幂等执行 + 可重试，不承诺 exactly-once；单提案重试 ≤ 3 次后转人工——见 Reflection Proposal 契约 §5.3。
+7. **SQLite 迁移范围** ✅：additive + migration ledger + fail-closed；旧版本程序可打开新库（新表对旧代码透明）；ledger checksum 防篡改——见 [ADR-018](../architecture/decisions/ADR-018-memory-evolution-migration.md)。
+8. **Audit/Metrics 隐私** ✅：metrics 零原文、封闭枚举低基数标签；evidence/observation 写入前与 memories 同策略脱敏；导出 allowlist 默认不含——见可观测性规范 §4 与 Evidence/Observation 契约 §3.6。
 
 ---
 

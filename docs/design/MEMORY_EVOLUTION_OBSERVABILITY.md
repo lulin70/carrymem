@@ -1,8 +1,8 @@
 # 记忆演进可观测性规范（Memory Evolution Observability Spec）
 
-> **版本**：v0.1-draft
+> **版本**：v1.0
 > **日期**：2026-09-28
-> **状态**：Phase 0 规范草案，待 Gate 0 批准
+> **状态**：已批准（Gate 0，2026-09-28；D8 按本文 §4 隐私约束执行）
 > **权威关系**：在 [V0.11.0_OBSERVABILITY_INSTRUMENTATION.md](V0.11.0_OBSERVABILITY_INSTRUMENTATION.md) 既有契约之上扩展演进能力指标；既有 series 契约不变，本文只新增。
 > **实现边界**：Gate 0 批准前不修改 `monitoring/` 或任何埋点代码。
 

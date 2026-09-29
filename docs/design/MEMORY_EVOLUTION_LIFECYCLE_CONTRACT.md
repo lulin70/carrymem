@@ -1,8 +1,8 @@
 # 记忆生命周期契约：retain / recall / reflect
 
-> **版本**：v0.1-draft
+> **版本**：v1.0
 > **日期**：2026-09-28
-> **状态**：Phase 0 契约草案，待 Gate 0 批准
+> **状态**：已批准（Gate 0，2026-09-28 项目负责人批准）
 > **权威关系**：本文细化并落实 [CARRYMEM_MEMORY_EVOLUTION_METHOD.md](CARRYMEM_MEMORY_EVOLUTION_METHOD.md) §4 的三阶段契约；细节以本文为准，总纲以主方案为准。两者冲突时，以项目负责人批准版本为准。
 > **实现边界**：Gate 0 批准前，本文不触发任何代码修改。
 

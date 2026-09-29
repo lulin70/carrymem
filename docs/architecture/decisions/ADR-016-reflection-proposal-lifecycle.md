@@ -1,8 +1,8 @@
 # ADR-016: Reflection Proposal 生命周期与审批分级
 
-## 状态: 提议（Proposed）— 待 Gate 0 批准
+## 状态: 已采纳（Accepted 2026-09-28，Gate 0 批准）
 ## 日期: 2026-09-28
-## 决策者: 待项目负责人批准
+## 决策者: 项目负责人（Gate 0 批准）
 ## 契约细节: [MEMORY_EVOLUTION_REFLECTION_PROPOSAL.md](../../design/MEMORY_EVOLUTION_REFLECTION_PROPOSAL.md)
 
 ---

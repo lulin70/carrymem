@@ -1,8 +1,8 @@
 # Evidence 与 Observation 模型契约
 
-> **版本**：v0.1-draft
+> **版本**：v1.0
 > **日期**：2026-09-28
-> **状态**：Phase 0 契约草案，待 Gate 0 批准
+> **状态**：已批准（Gate 0，2026-09-28；D2/D3/D8 按本文建议默认执行）
 > **权威关系**：细化 [CARRYMEM_MEMORY_EVOLUTION_METHOD.md](CARRYMEM_MEMORY_EVOLUTION_METHOD.md) §5.2、§5.3 与 §6.4；字段定义以本文为准。
 > **实现边界**：Gate 0 批准前不修改 `schema.py` 或任何存储代码。
 

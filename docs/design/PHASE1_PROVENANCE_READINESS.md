@@ -22,11 +22,11 @@ Phase 1 **不包含**：Observation 写入路径（Phase 2）、ConflictRecord�
 
 ## 2. 启动前置条件（全部勾选后才可动代码）
 
-- [ ] Gate 0 获项目负责人明确批准（8 项决策逐项拍板，见共识文档 §4）；
-- [ ] 8 项决策结论回写到四份契约文档的"待批准"标记处，去除 draft 状态；
-- [ ] 相关 ADR（014/015/018）状态从 Proposed 改为 Accepted；
-- [ ] [测试计划](../testing/MEMORY_EVOLUTION_TEST_PLAN.md) 中 Phase 1 相关 INV 的测试用例已评审（不必先写代码，但用例要点须冻结）；
-- [ ] 当前 `new-main` CI 全绿，无未发布 tag 遗留（发布纪律见 RELEASE_RUNBOOK 铁律）。
+- [x] Gate 0 获项目负责人明确批准（**2026-09-28 批准，8 项决策按契约文档建议默认执行**，见共识文档 §4）；
+- [x] 8 项决策结论回写到四份契约文档的"待批准"标记处，去除 draft 状态（2026-09-28 完成）；
+- [x] 相关 ADR（014/015/016/017/018）状态从 Proposed 改为 Accepted（2026-09-28 完成）；
+- [x] [测试计划](../testing/MEMORY_EVOLUTION_TEST_PLAN.md) 中 Phase 1 相关 INV 的测试要点已冻结（§3.1/3.2/3.6）；
+- [ ] 当前 `new-main` CI 全绿，无未发布 tag 遗留（实现提交前复核）。
 
 ---
 

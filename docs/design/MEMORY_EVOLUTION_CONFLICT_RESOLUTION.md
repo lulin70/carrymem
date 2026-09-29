@@ -1,8 +1,8 @@
 # 冲突裁决契约
 
-> **版本**：v0.1-draft
+> **版本**：v1.0
 > **日期**：2026-09-28
-> **状态**：Phase 0 契约草案，待 Gate 0 批准（含待拍板决策 D4）
+> **状态**：已批准（Gate 0，2026-09-28；D4 按本文 P1-P6 链执行）
 > **权威关系**：细化 [CARRYMEM_MEMORY_EVOLUTION_METHOD.md](CARRYMEM_MEMORY_EVOLUTION_METHOD.md) §6；裁决流程与状态机以本文为准。
 > **实现边界**：Gate 0 批准前不修改 `_recall.py`、`recall_engine.py` 或任何裁决代码。
 

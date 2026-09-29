@@ -1,8 +1,8 @@
 # Reflection Proposal 生命周期契约
 
-> **版本**：v0.1-draft
+> **版本**：v1.0
 > **日期**：2026-09-28
-> **状态**：Phase 0 契约草案，待 Gate 0 批准（含待拍板决策 D1、D6）
+> **状态**：已批准（Gate 0，2026-09-28；D1/D6 按本文建议默认执行）
 > **权威关系**：细化 [CARRYMEM_MEMORY_EVOLUTION_METHOD.md](CARRYMEM_MEMORY_EVOLUTION_METHOD.md) §8；状态机与幂等规范以本文为准。
 > **实现边界**：Gate 0 批准前不修改 `consolidation.py`、`memify.py` 或规则晋升代码。
 

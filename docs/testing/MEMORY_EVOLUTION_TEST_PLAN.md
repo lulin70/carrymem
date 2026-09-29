@@ -1,8 +1,8 @@
 # 记忆演进测试计划（Memory Evolution Test Plan）
 
-> **版本**：v0.1-draft
+> **版本**：v1.0
 > **日期**：2026-09-28
-> **状态**：Phase 0 计划草案，待 Gate 0 批准
+> **状态**：已批准（Gate 0，2026-09-28），随各 Phase 交付逐项执行
 > **权威关系**：落实 [主方案](../design/CARRYMEM_MEMORY_EVOLUTION_METHOD.md) §11 与四份契约文档中的全部 INV 不变量；本文是演进能力的**验收权威**。
 > **实现边界**：Gate 0 批准前不新增任何测试代码。
 

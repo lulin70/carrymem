@@ -1,8 +1,8 @@
 # 分层预算契约（Recall / Reflection Budget）
 
-> **版本**：v0.1-draft
+> **版本**：v1.0
 > **日期**：2026-09-28
-> **状态**：Phase 0 契约草案，待 Gate 0 批准（含待拍板决策 D5）
+> **状态**：已批准（Gate 0，2026-09-28；D5 按本文四层结构与默认值执行）
 > **权威关系**：细化 [CARRYMEM_MEMORY_EVOLUTION_METHOD.md](CARRYMEM_MEMORY_EVOLUTION_METHOD.md) §7；预算结构、截断顺序与原因码以本文为准。
 > **实现边界**：Gate 0 批准前不修改 `build_context()`、`recall_engine.py` 或预算相关代码。
 
