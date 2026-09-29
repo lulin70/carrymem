@@ -1,7 +1,9 @@
 # CarryMem 方法论：记忆工程设计空间
 
-> **版本**: v0.9.9 | **日期**: 2026-08-03 | **状态**: 新增
+> **版本**: v0.9.9 | **日期**: 2026-08-03 | **状态**: 基础方法论（历史基线）
 > **来源**: issue #42 — 基于 ai-agent-book (bojieli) 第 3 章「三套正交分类」方法论
+>
+> **全面演进方案**：本文件保留三维设计空间和历史基线；关于 Raw Memory、Evidence、Observation、Fact、Experience、Profile、Mental Model、Reflect、任务型召回和分阶段实施的现行方案，以 [`CARRYMEM_MEMORY_EVOLUTION_METHOD.md`](CARRYMEM_MEMORY_EVOLUTION_METHOD.md) 为准。
 
 ---
 

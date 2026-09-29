@@ -1,9 +1,11 @@
 # CarryMem 架构演进方案
 
+> **文档状态说明**：本文保留历史架构规划、已完成能力和产品初心约束。面向当前版本的全面记忆演进方案，以 [`docs/design/CARRYMEM_MEMORY_EVOLUTION_METHOD.md`](design/CARRYMEM_MEMORY_EVOLUTION_METHOD.md) 为准；两者冲突时，实际代码状态和全面方案优先。
+
 **版本**: v1.0
 **日期**: 2026-07-11
 **参与者**: PM + Architect 共识
-**状态**: 规划中
+**状态**: 历史规划基线
 
 ---
 
