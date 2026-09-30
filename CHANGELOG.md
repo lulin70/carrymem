@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **CI/runtime isolation for all blocking gates** (Phase 1 verification closure,
+  2026-09-30): `scripts/ci_local_check.py` now runs every gate subprocess inside
+  a temporary runtime root — `HOME`, `CARRYMEM_CONFIG_DIR`, `CARRYMEM_CONFIG_FILE`,
+  `CARRYMEM_DB_PATH`, `CARRYMEM_DATA_PATH`, `CARRYMEM_CACHE_DIR`,
+  `CARRYMEM_LOG_DIR`, `CARRYMEM_BACKUP_DIR`, `CARRYMEM_LOCK_FILE` all point into
+  the disposable `TemporaryDirectory` (deleted on exit, together with the venv).
+  This removes the previously observed failure class where a corrupted or
+  polluted default user database (`~/.carrymem/memories.db`) leaked into local
+  gate results. The runtime root is `Path(temp_dir).resolve()` so `HOME` never
+  sits behind the macOS `/var -> /private/var` symlink (which made
+  `expanduser('~')` and `Path.resolve()` disagree under isolation), and the
+  host pip index URL (e.g. a regional mirror from `pip.conf`) is re-injected as
+  `PIP_INDEX_URL` because overriding `HOME` otherwise hides the user's pip
+  configuration from the disposable install. The same nine-variable convention
+  is applied to the `test` job
+  in `.github/workflows/ci.yml`, the `pre-release-test` job in
+  `.github/workflows/release.yml`, and the `slow-tests` / `vector-tests` jobs in
+  `.github/workflows/nightly.yml` via `${{ runner.temp }}` paths.
+- **Phase 1 provenance blocking test step**: `tests/migration/` and
+  `tests/evidence/` now run as a dedicated blocking step (before the full suite)
+  in both the ci.yml `test` job and the release.yml `pre-release-test` job, so
+  the Phase 1 invariants are explicitly gated instead of being covered only
+  incidentally by the full run.
 - **Phase 1 Provenance foundation** (memory evolution program, Gate 0 approved
   2026-09-28; see `docs/design/CARRYMEM_MEMORY_EVOLUTION_METHOD.md`):
   - `migrate_v200` — migration ledger (`carrymem_migrations`, checksum-tracked,

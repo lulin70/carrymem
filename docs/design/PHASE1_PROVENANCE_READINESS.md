@@ -82,10 +82,27 @@ Phase 1 **不包含**：Observation 写入路径（Phase 2）、ConflictRecord�
 - [x] derive_facts 与 SemanticAggregator 产出均有 evidence link（受控证伪：删除写入点 → 测试 FAIL）；
 - [x] 删除来源记忆 → 派生对象转 unsupported 的端到端验证；
 - [x] 新 metrics 有真实 HTTP/MCP E2E 对照证据（对照组 → 动作 → series 出现）；
-- [ ] 八项本地门禁全绿（`ci_local_check` 的临时环境完整执行受依赖安装网络阻塞；等价现有环境门禁中仅剩既有环境/可选依赖问题，见 §5.1）；
+- [x] 八项本地门禁全绿（见 §5.1：2026-09-30 runtime isolation 落地后，`ci_local_check.py` 全部门禁在临时 venv + 隔离 runtime 下真实执行通过）；
 - [x] 文档同步：主方案 §12 Phase 1 状态、CHANGELOG（Unreleased 段）、契约文档回填实现位置。
 
-### 5.1 当前质量证据与未闭环项（2026-09-30）
+### 5.1 当前质量证据与未闭环项（2026-09-30 更新：CI/runtime 隔离已闭环）
+
+**Runtime isolation（本节新增，2026-09-30 落地）：**
+
+- `scripts/ci_local_check.py` 新增临时 runtime root：所有 gate 子进程统一继承 `HOME`、`CARRYMEM_CONFIG_DIR`、`CARRYMEM_CONFIG_FILE`、`CARRYMEM_DB_PATH`、`CARRYMEM_DATA_PATH`、`CARRYMEM_CACHE_DIR`、`CARRYMEM_LOG_DIR`、`CARRYMEM_BACKUP_DIR`、`CARRYMEM_LOCK_FILE`，与 venv 一起随 `TemporaryDirectory` 退出清理；隔离失败时 gate 照常暴露失败，不存在假绿路径。
+- 隔离实现期修复两个真实问题（均以日志为证）：
+  1. **pip 镜像继承**：覆盖 `HOME` 会让 pip 读不到用户级 `pip.conf`（本机为清华 TUNA 镜像），disposable venv 安装回退官方 PyPI 后 `rich` 下载失败。修复为 `resolve_pip_index_url()` 把宿主 index-url 显式注入 `PIP_INDEX_URL`；
+  2. **HOME symlink 归一**：macOS 系统临时目录位于 `/var → /private/var` 符号链接之后，未 resolve 的 HOME 会让 `expanduser('~')` 与 `Path.resolve()` 对同一目录产生两种拼写，3 个路径校验测试失败（`test_tilde_expansion`、`test_safe_path_passes`、`test_valid_temp_path`）。修复为 runtime root 取 `Path(temp_dir).resolve()`（真实路径；GitHub `runner.temp` 本就是真实路径，no-op）。修复后 3 项单独复核通过，未改任何测试断言。
+- `.github/workflows/ci.yml` test job、`release.yml` pre-release-test job、`nightly.yml` slow-tests / vector-tests job 使用同一套 `${{ runner.temp }}` 隔离变量约定（GitHub-hosted runner 每次运行均为全新 VM，`runner.temp` 天然一次性）。
+- ci.yml / release.yml 的 test 步骤前新增「Run Phase 1 provenance blocking tests」阻塞步骤（`tests/migration/ tests/evidence/`），Phase 1 专项不再混在全量里被动覆盖。
+- 隔离环境验证（`mktemp -d` + 上述九个变量，现有 `.venv` 执行）：
+  - `tests/migration/ tests/evidence/`：**32 passed**；
+  - `tests/e2e/`（not slow）：**245 passed**；
+  - 曾受默认数据库污染的 `tests/test_core_protocols.py` + `tests/test_main_entry.py`：**54 passed**（readiness 旧记录中的 4 个失败项在隔离下全部消失，确认根因是环境污染而非 Phase 1 代码）。
+- **完整独立门禁闭环（2026-09-30 实测，`ci_local_check.py` 全量输出存档）**：disposable venv + 隔离 runtime 下八项阻塞门禁全部通过——`4939 passed, 10 skipped, 77 deselected`（13m30s），coverage `83.27%`（floor 80%），flake8/black/isort/mypy/radon/version-consistency/swallowed-assert 均 OK。
+- 遗留观察项（不阻塞 Phase 1 出口）：ci.yml 安装 fallback 中 `--no-deps ... || true` 仍可能掩盖 fallback 安装失败（主安装成功时不触发，风险有限）；已记入后续收紧项。
+
+**此前质量证据（保留）：**
 
 - 隔离专项结果：迁移/evidence/真实用户生命周期与并发 E2E `57 passed`；预算与上下文回归 `110 passed`；HTTP/MCP metrics E2E `4 passed`。
 - 隔离非慢全量结果：`4944 passed, 1 skipped, 77 deselected`；4 个失败集中在既有默认数据库损坏路径（`test_core_protocols.py` 3 项、`test_main_entry.py` 1 项）。同类测试在临时 `HOME`、`CARRYMEM_CONFIG_DIR`、`CARRYMEM_DB_PATH`、`CARRYMEM_DATA_PATH` 下单独复核均通过，因此不归因于 Phase 1 变更。

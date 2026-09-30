@@ -43,6 +43,16 @@ jobs:
     needs: [syntax]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    env:
+      HOME: ${{ runner.temp }}/carrymem-home
+      CARRYMEM_CONFIG_DIR: ${{ runner.temp }}/carrymem-config
+      CARRYMEM_CONFIG_FILE: ${{ runner.temp }}/carrymem-config/config.yaml
+      CARRYMEM_DB_PATH: ${{ runner.temp }}/carrymem-data/memories.db
+      CARRYMEM_DATA_PATH: ${{ runner.temp }}/carrymem-data
+      CARRYMEM_CACHE_DIR: ${{ runner.temp }}/carrymem-cache
+      CARRYMEM_LOG_DIR: ${{ runner.temp }}/carrymem-logs
+      CARRYMEM_BACKUP_DIR: ${{ runner.temp }}/carrymem-backups
+      CARRYMEM_LOCK_FILE: ${{ runner.temp }}/carrymem-config/carrymem.lock
     strategy:
         fail-fast: false
         matrix:
@@ -75,6 +85,13 @@ jobs:
             pip install pytest pytest-cov pytest-mock pytest-timeout pytest-asyncio coverage[toml] build twine black isort flake8 mypy aiosqlite textual
             pip install pycld2 langdetect 2>/dev/null || echo "NOTE: pycld2/langdetect skipped (need libicu-dev)"
           }
+
+      - name: Run Phase 1 provenance blocking tests
+        run: |
+          python -m pytest tests/migration/ tests/evidence/ \
+            --no-cov \
+            --timeout=120 \
+            -q
 
       - name: Run tests
         run: |
