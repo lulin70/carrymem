@@ -34,8 +34,8 @@
 | `carrymem_conflict_auto_selected_total` | counter | conflict_type | 同上 | 自动裁决选定单一结论 +1（高风险主题出现该样本 = 违约信号） | 否（告警源） |
 | `carrymem_observations_total` | counter | source_kind, predicate | Observation 写入准入点（P2） | 白名单写入成功 +1 | 否 |
 | `carrymem_observation_write_denied_total` | counter | path | 同上准入点拒绝分支 | 非白名单写入被拒 +1（恒期望为 0，>0 = 路径违约） | 否（告警源） |
-| `carrymem_evidence_links_total` | counter | relation_type | evidence link 写入点（P1） | 新链接写入 +1 | 否 |
-| `carrymem_derived_unsupported_total` | counter | target_kind | unsupported 降级点（P1/P4） | 派生对象因证据缺失降级 +1 | 否 |
+| `carrymem_total{operation="evidence_link_<relation_type>"}` | counter | operation（relation_type 枚举后缀） | 任意 Python 进程 / `adapters/sqlite/evidence.py::EvidenceLinkManager.add_link`（P1 已落地） | 每条**新**evidence link 成功写入 +1（重复写入不计，INV-E3） | 否 |
+| `carrymem_total{operation="evidence_derived_unsupported"}` | counter | operation | 任意 Python 进程 / `evidence.py::mark_unsupported_for_deleted_source`（P1 已落地） | 删除来源后派生对象被标记 unsupported，按数量 +N | 否（告警源） |
 | `carrymem_proposals_total` | counter | proposal_type, risk_level | proposal 生成点（P4） | 每生成一条提案 +1 | 否 |
 | `carrymem_proposals_applied_total` | counter | proposal_type, approved_by | apply 事务成功点（P4） | apply 成功 +1 | 否 |
 | `carrymem_proposals_failed_total` | counter | proposal_type | apply 失败回滚点（P4） | apply 失败 +1 | 否 |

@@ -1,8 +1,8 @@
 # Phase 1（Provenance 基础）实现就绪清单
 
 > **版本**：v0.1
-> **日期**：2026-09-28
-> **性质**：Gate 0 批准后的实现启动检查单；本清单本身不授权任何代码修改
+> **日期**：2026-09-30
+> **性质**：Gate 0 批准后的 Phase 1 出口检查单；本清单本身不授权任何代码修改
 > **前置**：[Gate 0 批准](CARRYMEM_MEMORY_EVOLUTION_CONSENSUS.md) + 8 项决策拍板完成
 
 ---
@@ -26,7 +26,23 @@ Phase 1 **不包含**：Observation 写入路径（Phase 2）、ConflictRecord�
 - [x] 8 项决策结论回写到四份契约文档的"待批准"标记处，去除 draft 状态（2026-09-28 完成）；
 - [x] 相关 ADR（014/015/016/017/018）状态从 Proposed 改为 Accepted（2026-09-28 完成）；
 - [x] [测试计划](../testing/MEMORY_EVOLUTION_TEST_PLAN.md) 中 Phase 1 相关 INV 的测试要点已冻结（§3.1/3.2/3.6）；
-- [ ] 当前 `new-main` CI 全绿，无未发布 tag 遗留（实现提交前复核）。
+- [x] 当前 `new-main` CI 全绿，无未发布 tag 遗留（实现提交前复核）。
+
+## 2.1 实现状态（2026-09-30，代码已完成；质量门禁已完成隔离复核）
+
+| # | 清单项 | 状态 | 位置 |
+|---|---|---|---|
+| 1 | `migrate_v200`：ledger + `memory_evidence_links`（UNIQUE 含 namespace） | ✅ | `adapters/sqlite/schema.py` |
+| 2 | `StorageAdapter`/`ProvenanceClient` 协议 additive 方法 | ✅ | `adapters/base.py`、`adapters/sqlite/__init__.py` |
+| 3 | `derive_facts` 写 provenance + `source_layer="memify_derived"` | ✅ | `layers/memify.py` |
+| 4 | `aggregated_from(_hashes)` → derived_from links | ✅ | `layers/semantic_aggregator.py`、`core/_prompt_delegate.py` |
+| 5 | retain source_kind 标注（user_statement/user_correction） | ✅ | `core/_classification.py` |
+| 6 | forget 级联 unsupported 标注（单删+批删） | ✅ | `adapters/sqlite/crud.py`、`adapters/sqlite/evidence.py` |
+| 7 | metrics：`evidence_link_*` / `evidence_derived_unsupported` | ✅ | `adapters/sqlite/evidence.py` |
+| 8 | tests/migration + tests/evidence（32 项） | ✅ | `tests/migration/`、`tests/evidence/` |
+| 9 | async 库 schema 兼容（evidence 表同步建） | ✅ | `adapters/async_sqlite.py`（async 级联属 Gate 2 async/sync parity 范围） |
+
+实现期发现的契约修正：`UNIQUE` 约束**必须包含 namespace**（否则跨 namespace 的同名对象对会互相顶掉，违反 INV-E1），契约文档 §2.1 已同步更新。
 
 ---
 
@@ -61,13 +77,23 @@ Phase 1 **不包含**：Observation 写入路径（Phase 2）、ConflictRecord�
 
 ## 5. 完成标准（Phase 1 出口 = Gate 1 就绪）
 
-- [ ] INV-E1~E5、INV-R1/R2/R3/R4/R6、INV-F1 全部测试绿；
-- [ ] MIG-1~9 全绿（含 0.11.2 库直升矩阵）；
-- [ ] derive_facts 与 SemanticAggregator 产出均有 evidence link（受控证伪：删除写入点 → 测试 FAIL）；
-- [ ] 删除来源记忆 → 派生对象转 unsupported 的端到端验证；
-- [ ] 新 metrics 有真实 HTTP/MCP E2E 对照证据（对照组 → 动作 → series 出现）；
-- [ ] 八项本地门禁全绿（ci_local_check）；
-- [ ] 文档同步：主方案 §12 Phase 1 状态、CHANGELOG（Unreleased 段）、契约文档回填实现位置。
+- [x] INV-E1~E5、INV-R1/R2/R3/R4/R6、INV-F1 相关专项测试绿；
+- [x] MIG-1~9 相关专项测试绿；
+- [x] derive_facts 与 SemanticAggregator 产出均有 evidence link（受控证伪：删除写入点 → 测试 FAIL）；
+- [x] 删除来源记忆 → 派生对象转 unsupported 的端到端验证；
+- [x] 新 metrics 有真实 HTTP/MCP E2E 对照证据（对照组 → 动作 → series 出现）；
+- [ ] 八项本地门禁全绿（`ci_local_check` 的临时环境完整执行受依赖安装网络阻塞；等价现有环境门禁中仅剩既有环境/可选依赖问题，见 §5.1）；
+- [x] 文档同步：主方案 §12 Phase 1 状态、CHANGELOG（Unreleased 段）、契约文档回填实现位置。
+
+### 5.1 当前质量证据与未闭环项（2026-09-30）
+
+- 隔离专项结果：迁移/evidence/真实用户生命周期与并发 E2E `57 passed`；预算与上下文回归 `110 passed`；HTTP/MCP metrics E2E `4 passed`。
+- 隔离非慢全量结果：`4944 passed, 1 skipped, 77 deselected`；4 个失败集中在既有默认数据库损坏路径（`test_core_protocols.py` 3 项、`test_main_entry.py` 1 项）。同类测试在临时 `HOME`、`CARRYMEM_CONFIG_DIR`、`CARRYMEM_DB_PATH`、`CARRYMEM_DATA_PATH` 下单独复核均通过，因此不归因于 Phase 1 变更。
+- 另一轮全量结果中的 10 个 vector 相关失败来自可选 vector 依赖/模型与旧测试条件（`memory_vectors` 不存在、模型不可用、临时路径校验），不涉及 Phase 1 Provenance 路径；Phase 1 专项与真实用户 E2E 不依赖 vector 搜索。
+- migration/backup/restore 临时演练已复核：`PRAGMA integrity_check=ok`、ledger `v200_evolution_foundation/success`、备份计数一致、恢复后 recall 成功。
+- `flake8`、`black`、`isort`、`mypy`、version-consistency、swallowed-assert、radon 均通过；完整 `ci_local_check` 因临时 venv 安装阶段无法访问外部包源，未取得可重复的独立 venv 结果。
+- 默认用户数据库曾造成全量回归污染；该环境问题不能被记为 Phase 1 代码回归。提交前仍需保留上述隔离结果，并不得把“全量门禁全绿”宣称为已完成。
+- `max_tokens=2000` 当前只完成候选选择层验证，尚未完成客户需求验收；最终 prompt hard gate、真实 tokenizer 校准、Recall@5/10 质量评估属于 Phase 5，不在本 Phase 1 范围内。
 
 ---
 

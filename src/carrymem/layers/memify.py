@@ -54,6 +54,12 @@ class MemifyEngine:
         >=min_co_occurrence memories. For each pair, creates a derived
         "relationship" memory via store_entry.
 
+        Phase 1 Provenance (ADR-015): each derived memory is marked
+        ``source_layer="memify_derived"`` (INV-R2 — a derivation must
+        never look like a user statement) and receives ``derived_from``
+        evidence links pointing to the co-occurring source memories with
+        their content hashes (INV-F1 — traceable to >=1 original source).
+
         Args:
             namespace: Namespace scope.
             min_co_occurrence: Minimum co-occurrence count (default 3).
@@ -77,16 +83,58 @@ class MemifyEngine:
                 content=content,
                 raw_text=content,
                 confidence=min(0.6, 0.3 + count * 0.05),
+                source_layer="memify_derived",
                 metadata={"derived": True, "co_occurrence": count, "entities": [e1, e2]},
             )
             try:
                 stored = self._adapter.store_entry(entry)
-                derived.append(stored.to_dict())
             except (ValueError, RuntimeError, sqlite3.Error) as e:
                 logger.warning("derive_facts: failed to store derived fact for %s+%s: %s", e1, e2, e)
+                continue
+            self._link_derivation_evidence(namespace, e1, e2, stored.storage_key)
+            derived.append(stored.to_dict())
 
         logger.info("derive_facts: created %d derived facts (namespace=%s)", len(derived), namespace)
         return derived
+
+    def _link_derivation_evidence(self, namespace: str, e1: str, e2: str, target_key: str) -> None:
+        """Write derived_from evidence links for one derived memory.
+
+        Sources are the memories where both entities co-occur (the actual
+        basis of the derivation), capped at 20 like aggregated_from.
+        Failures are logged and never fatal: a missing link degrades the
+        derivation to unsupported rather than corrupting provenance.
+        """
+        conn = self._adapter.get_raw_connection()  # Public API (TD-007)
+        try:
+            rows = conn.execute(
+                """SELECT DISTINCT a.memory_key AS key, m.content_hash AS hash
+                   FROM memory_entities a
+                   JOIN memory_entities b
+                     ON a.memory_key = b.memory_key AND a.namespace = b.namespace
+                   JOIN memories m ON m.storage_key = a.memory_key
+                   WHERE a.namespace = ? AND a.entity_text = ? AND b.entity_text = ?
+                     AND a.memory_key IS NOT NULL
+                   LIMIT 20""",
+                (namespace, e1, e2),
+            ).fetchall()
+        except Exception as e:  # noqa: BLE001 — provenance must never break derivation
+            logger.warning("derive_facts: evidence lookup failed for %s+%s: %s", e1, e2, e)
+            return
+
+        for row in rows:
+            try:
+                self._adapter.add_evidence_link(
+                    namespace=namespace,
+                    source_kind="memory",
+                    source_id=row["key"],
+                    source_snapshot_hash=row["hash"],
+                    target_kind="memory",
+                    target_id=target_key,
+                    relation_type="derived_from",
+                )
+            except (ValueError, RuntimeError, sqlite3.Error) as e:
+                logger.warning("derive_facts: evidence link failed for %s: %s", target_key, e)
 
     # ── Phase 2: Reinforce Edges ──────────────────────────────────
 

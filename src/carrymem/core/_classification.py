@@ -228,6 +228,11 @@ class ClassificationMixin:
         for entry_dict in classify_result["entries"]:
             entry = MemoryEntry.from_dict(entry_dict)
             self._apply_entry_overrides(entry, force_type, coreference_resolved, message, session_id, entity_meta)
+            # Phase 1 Provenance (ADR-014/INV-R2): retain-side source
+            # annotation. A user-initiated retain is a statement (or a
+            # correction); derived paths must never reuse these markers.
+            if entry.source_layer in ("unknown", ""):
+                entry.source_layer = "user_correction" if entry.type == "correction" else "user_statement"
             if entry.suggested_action == "store":
                 stored_dict, storage_key, updated = self._store_single_entry(entry, resolved_message)
                 if updated:

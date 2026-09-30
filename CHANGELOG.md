@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Phase 1 Provenance foundation** (memory evolution program, Gate 0 approved
+  2026-09-28; see `docs/design/CARRYMEM_MEMORY_EVOLUTION_METHOD.md`):
+  - `migrate_v200` — migration ledger (`carrymem_migrations`, checksum-tracked,
+    fail-closed) plus the `memory_evidence_links` table (immutable, idempotent
+    provenance links; UNIQUE includes namespace).
+  - `SQLiteAdapter.add_evidence_link()` / `list_evidence_links()` with the
+    `ProvenanceClient` ISP Protocol on `StorageAdapter` (no-op defaults keep
+    other adapters compatible).
+  - `MemifyEngine.derive_facts()` now stamps derived memories with
+    `source_layer="memify_derived"` and writes `derived_from` evidence links
+    pointing at the real co-occurrence source memories (with their content
+    hashes) — derived facts are traceable to their sources (INV-F1) and can
+    never masquerade as user statements (INV-R2).
+  - `SemanticAggregator` output records `aggregated_from_hashes`; stored
+    aggregation results receive the same `derived_from` links.
+  - Retain-side source annotation: user-initiated stores are stamped
+    `source_layer="user_statement"` / `"user_correction"` at the row level.
+  - Forget cascade: deleting a memory flags derived memories that lost their
+    last valid evidence source with `metadata.provenance_unsupported`
+    (single and batch delete), with `evidence_derived_unsupported` metrics.
+  - New test suites `tests/migration/` (MIG-1/2/9) and `tests/evidence/`
+    (INV-E1..E5, INV-F1, INV-R2 wiring).
+  - Preference budget filtering now applies both type quotas/max-results and the
+    preference token cap; this closes the previously observed path where a large
+    preference set bypassed the intended result cap.
 - `scripts/check_version_consistency.py` — asserts that all five machine-readable
   version sources (`VERSION`, `src/carrymem/__version__.py`, `server.json`,
   `Dockerfile` `ARG VERSION`, `smithery.yaml`) report the same version, and prints
@@ -28,6 +53,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The current `max_tokens=2000` behavior is documented as a compatibility
+  candidate-selection budget, not as a customer-validated final prompt hard
+  limit. Final output gating, real tokenizer calibration, and the 16K budget
+  evaluation remain Phase 5 work; no Phase 1 runtime budget behavior was
+  changed.
 - Three real version drifts in machine-readable and user-facing files, all of
   which survived the v0.11.2 release because nothing checked them: `Dockerfile`
   built images stamped `0.9.8`, `smithery.yaml` declared `0.10.1`, and the

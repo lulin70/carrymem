@@ -213,9 +213,39 @@ class PromptDelegateMixin:
                 try:
                     entry = MemoryEntry.from_dict(r)
                     stored = self._adapter.store_entry(entry)
+                    self._link_aggregation_evidence(r, stored.storage_key)
                     stored_results.append(stored.to_dict())
                 except (ValueError, KeyError, TypeError) as e:
                     logger.warning("Failed to store aggregated memory: %s", e)
             return stored_results
 
         return results
+
+    def _link_aggregation_evidence(self, aggregated: Dict[str, Any], target_key: str) -> None:
+        """Write derived_from evidence links for one aggregated memory.
+
+        Phase 1 Provenance (ADR-015, INV-F1): pairs each ``aggregated_from``
+        source with its snapshot hash recorded by the aggregator. Failures
+        are logged and never fatal — the aggregated memory stays usable,
+        provenance degrades honestly.
+        """
+        adapter = self._adapter
+        if adapter is None:
+            return
+        metadata = aggregated.get("metadata") or {}
+        source_ids = metadata.get("aggregated_from") or []
+        source_hashes = metadata.get("aggregated_from_hashes") or []
+        namespace = getattr(adapter, "namespace", "default")
+        for source_id, source_hash in zip(source_ids, source_hashes):
+            try:
+                adapter.add_evidence_link(
+                    namespace=namespace,
+                    source_kind="memory",
+                    source_id=source_id,
+                    source_snapshot_hash=source_hash,
+                    target_kind="memory",
+                    target_id=target_key,
+                    relation_type="derived_from",
+                )
+            except (ValueError, TypeError, RuntimeError) as e:
+                logger.warning("Aggregation evidence link failed for %s: %s", target_key, e)

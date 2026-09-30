@@ -25,7 +25,13 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from carrymem.adapters.base import MemoryEntry, StoredMemory
-from carrymem.adapters.sqlite.schema import _SCHEMA_SQL, _V051_MIGRATION_SQL, _V062_GRAPH_SQL, _V080_MIGRATION_SQL
+from carrymem.adapters.sqlite.schema import (
+    _SCHEMA_SQL,
+    _V051_MIGRATION_SQL,
+    _V062_GRAPH_SQL,
+    _V080_MIGRATION_SQL,
+    _V200_EVOLUTION_SQL,
+)
 from carrymem.utils.helpers import TIER_TTL, content_hash
 from carrymem.utils.logger import logger
 
@@ -143,6 +149,15 @@ class AsyncSQLiteAdapter:
                 logger.warning("AsyncSQLiteAdapter: v0.8.0 migration step failed: %s", e)
             except Exception as e:
                 logger.warning("AsyncSQLiteAdapter: v0.8.0 migration unexpected error: %s", e)
+
+        # Phase 1 Provenance (ADR-015): evidence links table. Additive and
+        # idempotent (CREATE IF NOT EXISTS), so async databases stay
+        # schema-compatible with the sync adapter.
+        for sql in _V200_EVOLUTION_SQL:
+            try:
+                await self._conn.execute(sql)
+            except sqlite3.OperationalError as e:
+                logger.warning("AsyncSQLiteAdapter: v200 evolution step failed: %s", e)
 
     async def store_entry(self, entry: MemoryEntry) -> StoredMemory:
         """Store a MemoryEntry and return the complete StoredMemory."""

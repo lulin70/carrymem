@@ -1,5 +1,6 @@
 """Schema initialization and migration for SQLiteAdapter."""
 
+import hashlib
 import sqlite3
 from datetime import datetime, timezone
 
@@ -250,6 +251,36 @@ CREATE INDEX IF NOT EXISTS idx_mv_memory_id ON memory_versions(memory_id);
 CREATE INDEX IF NOT EXISTS idx_mv_memory_version ON memory_versions(memory_id, version);
 """
 
+# v2.x evolution foundation (Phase 1 Provenance, ADR-015/ADR-018):
+# migration ledger (fail-closed bookkeeping) + evidence links (provenance).
+_V200_EVOLUTION_SQL = [
+    """CREATE TABLE IF NOT EXISTS carrymem_migrations (
+    migration_id TEXT PRIMARY KEY,
+    checksum TEXT NOT NULL,
+    status TEXT NOT NULL,
+    started_at TEXT NOT NULL,
+    completed_at TEXT,
+    error_text TEXT
+)""",
+    """CREATE TABLE IF NOT EXISTS memory_evidence_links (
+    id TEXT PRIMARY KEY,
+    namespace TEXT NOT NULL,
+    source_kind TEXT NOT NULL,
+    source_id TEXT NOT NULL,
+    source_snapshot_hash TEXT NOT NULL,
+    target_kind TEXT NOT NULL,
+    target_id TEXT NOT NULL,
+    relation_type TEXT NOT NULL,
+    support_weight REAL NOT NULL DEFAULT 1.0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (namespace, source_kind, source_id, target_kind, target_id, relation_type)
+)""",
+    "CREATE INDEX IF NOT EXISTS idx_evidence_target ON memory_evidence_links(namespace, target_kind, target_id)",
+    "CREATE INDEX IF NOT EXISTS idx_evidence_source ON memory_evidence_links(namespace, source_kind, source_id)",
+]
+
+_V200_MIGRATION_ID = "v200_evolution_foundation"
+
 
 class SchemaManager:
     """Manages database schema creation and migrations."""
@@ -282,6 +313,7 @@ class SchemaManager:
         self.migrate_v100()
         self.migrate_v051()
         self.migrate_v052()
+        self.migrate_v200()
 
     def migrate_namespace(self):
         """Add the namespace column to the memories table if missing."""
@@ -540,3 +572,57 @@ class SchemaManager:
                 except _OpError:
                     pass
             conn.commit()
+
+    def migrate_v200(self):
+        """Create the evolution foundation: migration ledger + evidence links.
+
+        Phase 1 Provenance (ADR-015/ADR-018). Fail-closed semantics:
+
+        - DDL and ledger insert run in a single transaction; any failure
+          rolls back and raises :class:`DatabaseError` (the service must not
+          start with a half-migrated schema).
+        - On re-run, a successful ledger row short-circuits the migration.
+        - A ledger row whose checksum no longer matches the migration SQL
+          aborts with ``DatabaseError`` (tamper detection, MIG-9).
+        """
+        conn = self._conn_mgr.get_connection()
+        checksum = hashlib.sha256("\n".join(_V200_EVOLUTION_SQL).encode("utf-8")).hexdigest()
+        try:
+            row = conn.execute(
+                "SELECT checksum, status FROM carrymem_migrations WHERE migration_id = ?",
+                (_V200_MIGRATION_ID,),
+            ).fetchone()
+        except _OpError:
+            row = None  # ledger table missing — first run
+        if row is not None:
+            recorded_checksum, recorded_status = str(row["checksum"]), str(row["status"])
+            if recorded_status == "success":
+                if recorded_checksum != checksum:
+                    raise DatabaseError(
+                        f"Migration {_V200_MIGRATION_ID} checksum mismatch "
+                        f"(ledger={recorded_checksum[:12]}, expected={checksum[:12]}). "
+                        "Refusing to proceed (fail-closed)."
+                    )
+                return  # already applied — idempotent short-circuit
+
+        now_iso = datetime.now(timezone.utc).isoformat()
+        try:
+            if not conn.in_transaction:
+                conn.execute("BEGIN IMMEDIATE")
+            for sql in _V200_EVOLUTION_SQL:
+                conn.execute(sql)
+            conn.execute(
+                "INSERT INTO carrymem_migrations (migration_id, checksum, status, started_at, completed_at) "
+                "VALUES (?, ?, 'success', ?, ?) "
+                "ON CONFLICT(migration_id) DO UPDATE SET "
+                "checksum = excluded.checksum, status = 'success', "
+                "completed_at = excluded.completed_at, error_text = NULL",
+                (_V200_MIGRATION_ID, checksum, now_iso, now_iso),
+            )
+            conn.commit()
+        except sqlite3.Error as e:
+            try:
+                conn.rollback()
+            except sqlite3.Error:
+                pass
+            raise DatabaseError(f"Migration {_V200_MIGRATION_ID} failed (fail-closed): {e}") from e

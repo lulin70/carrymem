@@ -46,7 +46,7 @@ created_at           TEXT NOT NULL    写入时间
 
 ```text
 PRIMARY KEY (id)
-UNIQUE (source_kind, source_id, target_kind, target_id, relation_type)   -- 幂等
+UNIQUE (namespace, source_kind, source_id, target_kind, target_id, relation_type)   -- 幂等（namespace 在键内，保证跨域同名对象各自的 provenance）
 INDEX idx_evidence_target (namespace, target_kind, target_id)
 INDEX idx_evidence_source (namespace, source_kind, source_id)
 ```

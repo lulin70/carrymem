@@ -18,9 +18,13 @@ Public API is fully backward compatible with the monolithic sqlite_adapter.
 import os
 import sqlite3
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 from ..base import MemoryEntry, StorageAdapter, StoredMemory
+
+if TYPE_CHECKING:  # pragma: no cover
+    from .evidence import EvidenceLinkManager
+
 from .connection import ConnectionManager
 from .crud import CRUDOperations
 from .query_builder import QueryBuilderWithContext
@@ -269,6 +273,7 @@ class SQLiteAdapter(StorageAdapter):
         # --- Knowledge graph (v0.7.0: lazy init on first access) ---
         self._knowledge_graph: Optional[Any] = None
         self._memify: Optional[Any] = None  # v0.7.2: lazy init MemifyEngine
+        self._evidence: Optional["EvidenceLinkManager"] = None  # Phase 1: lazy init
 
     def _init_audit_logger(self) -> Optional[Any]:
         """Initialize audit logger with SQLite persistence, falling back to in-memory."""
@@ -825,6 +830,75 @@ class SQLiteAdapter(StorageAdapter):
 
         self._memify = MemifyEngine(adapter=self)
         return self._memify
+
+    def _get_evidence(self) -> "EvidenceLinkManager":
+        """Lazily initialize the EvidenceLinkManager (Phase 1 Provenance)."""
+        if self._evidence is not None:
+            return self._evidence
+        from .evidence import EvidenceLinkManager
+
+        self._evidence = EvidenceLinkManager(adapter=self)
+        return self._evidence
+
+    # ── Evidence Links (Phase 1 Provenance, ADR-015) ────────────────────
+
+    def add_evidence_link(
+        self,
+        namespace: str,
+        source_kind: str,
+        source_id: str,
+        source_snapshot_hash: str,
+        target_kind: str,
+        target_id: str,
+        relation_type: str,
+        support_weight: float = 1.0,
+    ) -> Optional[str]:
+        """Record one provenance link (idempotent) and return its id.
+
+        Links are immutable (INV-E2) and deduplicated by
+        ``(source_kind, source_id, target_kind, target_id, relation_type)``
+        (INV-E3). Returns ``None`` for duplicates or on storage failure.
+        Raises ``ValueError`` on invalid enum values.
+        """
+        return self._get_evidence().add_link(
+            namespace=namespace,
+            source_kind=source_kind,
+            source_id=source_id,
+            source_snapshot_hash=source_snapshot_hash,
+            target_kind=target_kind,
+            target_id=target_id,
+            relation_type=relation_type,
+            support_weight=support_weight,
+        )
+
+    def list_evidence_links(
+        self,
+        namespace: str,
+        target_kind: Optional[str] = None,
+        target_id: Optional[str] = None,
+        source_kind: Optional[str] = None,
+        source_id: Optional[str] = None,
+        relation_type: Optional[str] = None,
+        include_stale: bool = True,
+        limit: int = 100,
+    ) -> list:
+        """List evidence links scoped to ``namespace`` (INV-E1).
+
+        With ``include_stale=False``, only links whose source still exists
+        are returned (valid evidence for INV-E4 support checks).
+        """
+        return list(
+            self._get_evidence().list_links(
+                namespace=namespace,
+                target_kind=target_kind,
+                target_id=target_id,
+                source_kind=source_kind,
+                source_id=source_id,
+                relation_type=relation_type,
+                include_stale=include_stale,
+                limit=limit,
+            )
+        )
 
     def consolidate_memories(
         self,

@@ -570,6 +570,55 @@ class StorageAdapter(ABC):
         """
         return False
 
+    def add_evidence_link(
+        self,
+        namespace: str,
+        source_kind: str,
+        source_id: str,
+        source_snapshot_hash: str,
+        target_kind: str,
+        target_id: str,
+        relation_type: str,
+        support_weight: float = 1.0,
+    ) -> Optional[str]:
+        """Record one provenance link (Phase 1 Provenance, ADR-015).
+
+        Default implementation returns None (not supported). Override in
+        adapters with provenance support (SQLiteAdapter v2.x+).
+
+        Args:
+            namespace: Namespace scope (must match source and target).
+            source_kind: Source object kind (memory/observation/fact/...).
+            source_id: Source object id (memory storage_key).
+            source_snapshot_hash: Hash of source content at link time.
+            target_kind: Target object kind.
+            target_id: Target object id.
+            relation_type: supports/contradicts/derived_from/observed_in/
+                confirmed_by/supersedes.
+            support_weight: Strength in (0, 2].
+
+        Returns:
+            Link id, or None for duplicates / unsupported adapters.
+        """
+        return None
+
+    def list_evidence_links(
+        self,
+        namespace: str,
+        target_kind: Optional[str] = None,
+        target_id: Optional[str] = None,
+        source_kind: Optional[str] = None,
+        source_id: Optional[str] = None,
+        relation_type: Optional[str] = None,
+        include_stale: bool = True,
+        limit: int = 100,
+    ) -> list:
+        """List evidence links for a namespace (Phase 1 Provenance).
+
+        Default implementation returns an empty list (not supported).
+        """
+        return []
+
     def shortest_path(
         self,
         src_entity: str,
@@ -1451,6 +1500,43 @@ class GraphClient(Protocol):
         ...
 
 
+@runtime_checkable
+class ProvenanceClient(Protocol):
+    """ISP Protocol: evidence-link provenance operations (Phase 1, ADR-015).
+
+    Groups provenance recording and querying. Supported by adapters with
+    the v200 evolution schema (SQLiteAdapter v2.x+).
+    """
+
+    def add_evidence_link(
+        self,
+        namespace: str,
+        source_kind: str,
+        source_id: str,
+        source_snapshot_hash: str,
+        target_kind: str,
+        target_id: str,
+        relation_type: str,
+        support_weight: float = 1.0,
+    ) -> Optional[str]:
+        """Record one immutable, idempotent provenance link."""
+        ...
+
+    def list_evidence_links(
+        self,
+        namespace: str,
+        target_kind: Optional[str] = None,
+        target_id: Optional[str] = None,
+        source_kind: Optional[str] = None,
+        source_id: Optional[str] = None,
+        relation_type: Optional[str] = None,
+        include_stale: bool = True,
+        limit: int = 100,
+    ) -> List[Dict[str, Any]]:
+        """List evidence links scoped to a namespace."""
+        ...
+
+
 __all__ = [
     # Data classes
     "MemoryEntry",
@@ -1471,4 +1557,5 @@ __all__ = [
     "StorageClient",
     "RecallClient",
     "GraphClient",
+    "ProvenanceClient",
 ]

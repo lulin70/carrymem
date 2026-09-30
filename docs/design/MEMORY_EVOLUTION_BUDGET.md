@@ -10,11 +10,13 @@
 
 ## 1. 目的
 
-当前 `build_context()` 以 `max_tokens=2000` 做总量控制，但存在三个缺口：
+当前 `build_context()` 以 `max_tokens=2000` 做兼容性预算控制，但该参数目前主要影响候选选择，尚不是最终模型请求的真实 token 硬上限。当前存在三个缺口：
 
 1. 只有总预算，没有分层——候选扩展、证据展开、反思开销与最终输出互相挤占，不可观测；
 2. 截断无原因码——调用方无法知道"少了什么、为什么少"；
 3. 无关键内容保护——理论上 correction 与安全事实可能被普通截断挤掉。
+
+截至 2026-09-30，`max_tokens=2000` 已验证可以约束部分候选选择路径，但尚未完成客户需求验收：最终 prompt 组装后可能超过 2000，且当前估算器不是目标模型的真实 tokenizer。因此不得将 `2000` 宣称为最终输出硬上限。
 
 本文定义四层预算结构、硬约束与确定性降级行为。总原则：
 
@@ -49,7 +51,7 @@ request budget（单次请求总控）
 | evidence | evidence_chars_total | 2000 字符 |
 | reflection | inline_max_candidates | 50 |
 | reflection | inline_timeout_ms | 100（超出转后台提案，不阻塞 recall） |
-| output | build_context max_tokens | 2000（现有 Stable 默认不变） |
+| output | build_context max_tokens | 2000（现有 Stable 兼容默认；Phase 5 实现最终 hard gate 后才可作为输出预算验收值） |
 
 ---
 
@@ -177,7 +179,9 @@ queue_max_size        后台队列容量上限（超限拒绝入队并计 metric
 
 - 初版采用字符比例估算（无外部依赖），估算器与真实 tokenizer 的偏差需定期校准；
 - 校准方式：固定基准集（版本化）上，估算值与真实 tokenizer 值的偏差 > 10% 时输出 `TOKENIZER_DRIFT_WARNING` 并要求更新估算系数；
-- 校准结果记录在测试基线中（真实 tokenizer 校准属 Phase 5 交付，见主方案 §12）。
+- 校准结果记录在测试基线中（真实 tokenizer 校准属 Phase 5 交付，见主方案 §12）；
+- `16383` 仅作为接近 16K 上下文窗口的压力测试边界，不作为默认生产预算。若目标模型上下文窗口为 16K，必须从窗口中预留用户输入、工具/协议开销、历史消息和输出空间；初始客户配置应通过 `request_budget`、`input_budget`、`output_reserve` 分离表达，而不是把 `max_tokens` 直接设置为 `context_window - 1`；
+- 面向 16K 模型的待验证起始区间为：`request_budget=12000~14000`、`input_budget=9000~12000`、`output_reserve=2048~4096`。该区间是 Phase 5 的评估起点，不是当前已实现或已验收的默认值。
 
 不变量 INV-TK1：`output budget` 的判定必须基于统一估算器；同一进程内不得混用两种估算口径。
 

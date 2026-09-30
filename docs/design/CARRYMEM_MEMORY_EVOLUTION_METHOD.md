@@ -847,7 +847,7 @@ user operation / internal operation / background job
 
 出口：Gate 0 通过，项目负责人批准进入实现。
 
-### Phase 1：Provenance 基础
+### Phase 1：Provenance 基础（**实现完成 2026-09-28**，详见 [`PHASE1_PROVENANCE_READINESS.md`](PHASE1_PROVENANCE_READINESS.md) §2.1）
 
 交付：
 

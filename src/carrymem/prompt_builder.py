@@ -267,7 +267,9 @@ class PromptBuilder:
             mtype = m.get("type", "unknown")
             if m.get("storage_key") in pref_keys:
                 tok = _estimate_tokens(m.get("content", ""))
-                if pref_token_total + tok <= pref_token_budget:
+                quota = min(budget.quota_for(mtype), budget.max_results)
+                type_counts[mtype] = type_counts.get(mtype, 0) + 1
+                if type_counts[mtype] <= quota and pref_token_total + tok <= pref_token_budget:
                     budget_filtered.append(m)
                     pref_token_total += tok
                 continue

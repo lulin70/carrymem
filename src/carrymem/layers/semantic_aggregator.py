@@ -120,8 +120,18 @@ class SemanticAggregator:
         source_ids = [m.get("storage_key", m.get("id", "")) for m in cluster]
         types_in_cluster = list(set(m.get("type", "") for m in cluster))
 
+        # Phase 1 Provenance (ADR-015): source snapshot hashes let evidence
+        # links detect source-content drift (stale detection, INV-E5).
+        import hashlib
+
+        source_hashes = [
+            hashlib.sha256(str(m.get("content") or m.get("raw_text") or "").encode("utf-8")).hexdigest()
+            for m in cluster[:20]
+        ]
+
         meta = {
             "aggregated_from": source_ids[:20],
+            "aggregated_from_hashes": source_hashes,
             "cluster_size": len(cluster),
             "cluster_types": types_in_cluster,
             "aggregation_method": "llm" if (self._llm and self._llm.is_available()) else "rule",
