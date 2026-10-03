@@ -283,6 +283,7 @@ class SQLiteAdapter(StorageAdapter):
         self._evidence: Optional["EvidenceLinkManager"] = None  # Phase 1: lazy init
         self._observations: Optional[ObservationManager] = None
         self._conflicts: Optional[ConflictManager] = None
+        self._reflections: Optional[Any] = None  # Phase 4: lazy init ReflectionManager
 
     def _init_audit_logger(self) -> Optional[Any]:
         """Initialize audit logger with SQLite persistence, falling back to in-memory."""
@@ -440,6 +441,8 @@ class SQLiteAdapter(StorageAdapter):
             "namespace_filtering": True,
             "observation": True,
             "conflict_records": True,
+            "reflection_runs": True,
+            "reflection_proposals": True,
         }
 
     @property
@@ -942,6 +945,69 @@ class SQLiteAdapter(StorageAdapter):
 
     def resolve_conflict_candidates(self, namespace, subject_key, candidates, conflict_type):
         return self._get_conflicts().resolve_candidates(namespace, subject_key, candidates, conflict_type)
+
+    # ── Reflection Runs & Proposals (Phase 4, ADR-016) ──────────────────
+
+    def _get_reflections(self):
+        if self._reflections is None:
+            from .reflection import ReflectionManager
+
+            self._reflections = ReflectionManager(adapter=self)
+        return self._reflections
+
+    def start_reflection_run(
+        self,
+        namespace,
+        reflection_type,
+        strategy_version,
+        input_snapshot,
+        config_snapshot,
+        input_cursor=None,
+    ):
+        return self._get_reflections().start_run(
+            namespace, reflection_type, strategy_version, input_snapshot, config_snapshot, input_cursor
+        )
+
+    def update_reflection_cursor(self, run_id, input_cursor):
+        return self._get_reflections().update_cursor(run_id, input_cursor)
+
+    def complete_reflection_run(self, run_id, input_cursor=None):
+        return self._get_reflections().complete_run(run_id, input_cursor)
+
+    def fail_reflection_run(self, run_id, error_text):
+        return self._get_reflections().fail_run(run_id, error_text)
+
+    def cancel_reflection_run(self, run_id):
+        return self._get_reflections().cancel_run(run_id)
+
+    def list_reflection_runs(self, namespace, status=None, limit=100):
+        return self._get_reflections().list_runs(namespace, status, limit)
+
+    def create_reflection_proposal(self, namespace, run_id, proposal_type, payload, reasoning, confidence, **kwargs):
+        return self._get_reflections().create_proposal(
+            namespace, run_id, proposal_type, payload, reasoning, confidence, **kwargs
+        )
+
+    def get_reflection_proposal(self, namespace, proposal_id):
+        return self._get_reflections().get_proposal(namespace, proposal_id)
+
+    def list_reflection_proposals(self, namespace, status=None, proposal_type=None, run_id=None, limit=100):
+        return self._get_reflections().list_proposals(namespace, status, proposal_type, run_id, limit)
+
+    def approve_reflection_proposal(self, namespace, proposal_id, approved_by):
+        return self._get_reflections().approve_proposal(namespace, proposal_id, approved_by)
+
+    def reject_reflection_proposal(self, namespace, proposal_id, approved_by):
+        return self._get_reflections().reject_proposal(namespace, proposal_id, approved_by)
+
+    def apply_reflection_proposal(self, namespace, proposal_id):
+        return self._get_reflections().apply_proposal(namespace, proposal_id)
+
+    def rollback_reflection_proposal(self, namespace, proposal_id):
+        return self._get_reflections().rollback_proposal(namespace, proposal_id)
+
+    def apply_auto_low_risk_reflections(self, namespace, run_id):
+        return self._get_reflections().apply_auto_low_risk(namespace, run_id)
 
     # ── Evidence Links (Phase 1 Provenance, ADR-015) ────────────────────
 

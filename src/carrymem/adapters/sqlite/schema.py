@@ -323,6 +323,64 @@ _V210_PHASE2_SQL = [
 
 _V210_MIGRATION_ID = "v210_phase2_observation_conflict"
 
+# Phase 4 reflection run/proposal ledger (ADR-016, contract
+# MEMORY_EVOLUTION_REFLECTION_PROPOSAL.md §2/§3). Keep v210 SQL and checksum immutable.
+_V220_PHASE4_SQL = [
+    """CREATE TABLE IF NOT EXISTS memory_reflection_runs (
+    run_id TEXT PRIMARY KEY,
+    namespace TEXT NOT NULL,
+    reflection_type TEXT NOT NULL CHECK (reflection_type IN (
+        'dedup', 'conflict_scan', 'decay', 'fact_derivation',
+        'profile_rebuild', 'aggregation', 'graph_maintenance')),
+    strategy_version TEXT NOT NULL,
+    input_cursor TEXT,
+    input_snapshot TEXT NOT NULL,
+    config_snapshot TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN (
+        'running', 'completed', 'failed', 'cancelled', 'interrupted')),
+    started_at TEXT NOT NULL,
+    completed_at TEXT,
+    error_text TEXT,
+    idempotency_key TEXT NOT NULL,
+    UNIQUE (namespace, reflection_type, input_snapshot, config_snapshot)
+)""",
+    "CREATE INDEX IF NOT EXISTS idx_reflection_runs_status ON memory_reflection_runs(namespace, status)",
+    "CREATE INDEX IF NOT EXISTS idx_reflection_runs_idem ON memory_reflection_runs(idempotency_key)",
+    """CREATE TABLE IF NOT EXISTS memory_reflection_outputs (
+    proposal_id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL,
+    namespace TEXT NOT NULL,
+    proposal_type TEXT NOT NULL CHECK (proposal_type IN (
+        'fact_candidate', 'profile_rebuild', 'model_claim', 'rule_candidate',
+        'graph_update', 'dedup_merge', 'supersede', 'expire_projection')),
+    target_kind TEXT,
+    target_id TEXT,
+    payload_json TEXT NOT NULL,
+    source_observation_ids TEXT NOT NULL,
+    source_evidence_ids TEXT NOT NULL,
+    confidence REAL NOT NULL CHECK (confidence >= 0.0 AND confidence <= 1.0),
+    reasoning TEXT NOT NULL,
+    risk_level TEXT NOT NULL CHECK (risk_level IN ('low', 'high')),
+    status TEXT NOT NULL CHECK (status IN (
+        'proposed', 'approved', 'rejected', 'applied', 'failed',
+        'rolled_back', 'expired')),
+    approved_by TEXT,
+    applied_at TEXT,
+    rollback_ref TEXT,
+    error_text TEXT,
+    idempotency_key TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE (namespace, proposal_type, idempotency_key),
+    CHECK ((status = 'applied' AND rollback_ref IS NOT NULL AND applied_at IS NOT NULL)
+           OR status != 'applied'),
+    CHECK ((status = 'rejected' AND approved_by IS NOT NULL) OR status != 'rejected')
+)""",
+    "CREATE INDEX IF NOT EXISTS idx_reflection_outputs_status ON memory_reflection_outputs(namespace, status)",
+    "CREATE INDEX IF NOT EXISTS idx_reflection_outputs_run ON memory_reflection_outputs(run_id)",
+]
+
+_V220_MIGRATION_ID = "v220_phase4_reflection_proposal"
+
 
 class SchemaManager:
     """Manages database schema creation and migrations."""
@@ -359,6 +417,7 @@ class SchemaManager:
             self.migrate_v052()
             self.migrate_v200()
             self.migrate_v210()
+            self.migrate_v220()
 
     def migrate_namespace(self):
         """Add the namespace column to the memories table if missing."""
@@ -712,3 +771,37 @@ class SchemaManager:
         except sqlite3.Error as e:
             conn.rollback()
             raise DatabaseError(f"Migration {_V210_MIGRATION_ID} failed (fail-closed): {e}") from e
+
+    def migrate_v220(self):
+        """Create Phase 4 reflection run/proposal tables with a tamper-evident ledger."""
+        conn = self._conn_mgr.get_connection()
+        checksum = hashlib.sha256("\n".join(_V220_PHASE4_SQL).encode("utf-8")).hexdigest()
+        row = conn.execute(
+            "SELECT checksum, status FROM carrymem_migrations WHERE migration_id = ?",
+            (_V220_MIGRATION_ID,),
+        ).fetchone()
+        if row is not None:
+            if row["checksum"] != checksum:
+                raise DatabaseError(f"Migration {_V220_MIGRATION_ID} checksum mismatch (fail-closed)")
+            if row["status"] != "success":
+                raise DatabaseError(
+                    f"Migration {_V220_MIGRATION_ID} has ledger status "
+                    f"{row['status']!r}; refusing to proceed (fail-closed)."
+                )
+            return
+        now_iso = datetime.now(timezone.utc).isoformat()
+        try:
+            if not conn.in_transaction:
+                conn.execute("BEGIN IMMEDIATE")
+            for sql in _V220_PHASE4_SQL:
+                conn.execute(sql)
+            conn.execute(
+                "INSERT INTO carrymem_migrations (migration_id, checksum, status, started_at, completed_at) "
+                "VALUES (?, ?, 'success', ?, ?) ON CONFLICT(migration_id) DO UPDATE SET "
+                "checksum=excluded.checksum, status='success', completed_at=excluded.completed_at, error_text=NULL",
+                (_V220_MIGRATION_ID, checksum, now_iso, now_iso),
+            )
+            conn.commit()
+        except sqlite3.Error as e:
+            conn.rollback()
+            raise DatabaseError(f"Migration {_V220_MIGRATION_ID} failed (fail-closed): {e}") from e

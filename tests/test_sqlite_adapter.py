@@ -155,6 +155,8 @@ class TestSchemaManagement:
             "namespace_filtering",
             "observation",
             "conflict_records",
+            "reflection_runs",
+            "reflection_proposals",
         }
         assert set(caps.keys()) == expected_keys
         assert caps["fts"] is True
