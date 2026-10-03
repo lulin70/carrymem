@@ -1,7 +1,7 @@
 # CarryMem — Project Status
 
 **Version**: v0.11.2
-**Last Updated**: 2026-09-26
+**Last Updated**: 2026-10-03
 **Maintainer**: CarryMem Team
 
 ---
@@ -46,21 +46,31 @@ The v0.11.x line carries the breaking `native_async` removal, the `cryptography>
 > Only `0.11.2`, `0.11.1`, `0.9.3rc1`, `0.8.0` and `0.5.0`–`0.5.2` are on PyPI;
 > everything between them exists as source and CHANGELOG entries only.
 
-### Current Test & Quality Metrics (post-release tree, 2026-09-26)
+### Current Test & Quality Metrics (working tree, 2026-10-03)
 
-Measured on the current tree after the CI honesty and false-green gate changes;
-these numbers describe the working tree, not the v0.11.2 tag.
+Measured on the current working tree (memory evolution Phase 2 complete);
+these numbers describe the tree, not the v0.11.2 tag.
 
-- **Tests**: `4907 passed, 10 skipped, 77 deselected` (4994 collected), including
-  265 collected E2E tests. A fresh realistic non-slow user-path E2E run on
+- **Memory evolution status**: Phase 1 (Provenance) and Phase 2
+  (Observation/ConflictRecord) complete; the project-level full release gate
+  went green on 2026-10-03 — see
+  [PHASE2_OBSERVATION_CONFLICT_READINESS.md](design/PHASE2_OBSERVATION_CONFLICT_READINESS.md)
+  §6.1. Phase 4 (Reflection Proposal) and Phase 5 (RecallPlan / token hard
+  gate) are not started, per the approved phase boundary.
+- **Tests (full suite, default addopts incl. coverage, incl. slow)**:
+  `5070 passed, 4 skipped, 29 subtests passed` in 2201.79s (authoritative
+  exclusive run, 2026-10-03). A fresh realistic non-slow user-path E2E run on
   2026-09-26 was `245 passed, 20 deselected, 2 warnings in 82.24s`; the
   previous 77.08s run remains a historical baseline.
-- **Coverage**: 83.19% (`fail_under = 80`)
-- **Lint**: flake8 clean, black clean, isort clean, mypy `Success: no issues found in 160 source files`
+- **Coverage**: 83.96% (`fail_under = 80`)
+- **Lint**: flake8 clean, black clean, isort clean, mypy `Success: no issues found in 163 source files`
 - **Complexity**: `radon: no functions with complexity >= 21`
 - **Version consistency**: all five machine-readable sources report `0.11.2`
 - **Gates**: eight blocking local gates (flake8, black, isort, mypy, pytest, radon,
   version-consistency, swallowed-assert) via `python3 scripts/ci_local_check.py`
+- **Tech debt**: TD-001~TD-067 complete (TD-067 fixed 2026-10-03);
+  TD-068 blocked upstream (zhipuai pins pyjwt<2.9.0, dismissed with evidence) —
+  see [TECH_DEBT_PLAN.md](TECH_DEBT_PLAN.md).
 
 ### Test & Quality Metrics (v0.9.8, historical)
 

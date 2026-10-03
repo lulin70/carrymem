@@ -24,6 +24,9 @@ class TestScheduleConsolidation:
         assert result["scheduled"] is True
         assert result["interval_hours"] == 1.0
         assert "dry_run" in result
+        # TD-067 regression: returned keys must match ScheduleConsolidationResult
+        # in carrymem/types.py exactly, so the declared contract cannot drift.
+        assert set(result.keys()) == {"scheduled", "interval_hours", "dry_run", "run_p1", "run_p2"}
 
     def test_schedule_minimum_interval(self, cm):
         """Interval below minimum should be clamped to 0.1h."""

@@ -57,17 +57,17 @@ def cmd_consolidate(args):
         return 0
 
     if parsed.schedule > 0:
-        result = cm.schedule_consolidation(
+        sched = cm.schedule_consolidation(
             interval_hours=parsed.schedule,
             dry_run=parsed.dry_run,
             run_p1=not parsed.no_p1,
             run_p2=not parsed.no_p2,
         )
         formatter.success("Consolidation scheduled")
-        print(f"    Interval: {result['interval_hours']}h")
-        print(f"    Dry run:  {result['dry_run']}")
-        print(f"    P1:       {result['run_p1']}")
-        print(f"    P2:       {result['run_p2']}")
+        print(f"    Interval: {sched['interval_hours']}h")
+        print(f"    Dry run:  {sched['dry_run']}")
+        print(f"    P1:       {sched['run_p1']}")
+        print(f"    P2:       {sched['run_p2']}")
         print(f"\n  {_dim('Use --stop to cancel')}")
         # Keep process alive for scheduled mode
         try:

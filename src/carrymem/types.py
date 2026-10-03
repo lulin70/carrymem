@@ -354,7 +354,8 @@ class ScheduleConsolidationResult(TypedDict):
     scheduled: bool
     interval_hours: float
     dry_run: bool
-    message: str
+    run_p1: bool
+    run_p2: bool
 
 
 # ---------------------------------------------------------------------------

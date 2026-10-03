@@ -2,7 +2,7 @@
 
 > **文档性质**: 活文档 (Living Document) — 每完成一项立即更新状态
 > **创建时间**: 2026-07-17
-> **最后更新**: 2026-09-26 (v0.11.2 working tree 事实复核：全部 TD 项 ✅ 已完成；测试 `4907 passed, 10 skipped, 77 deselected` (4994 collected)；最新真实用户 E2E 为 `245 passed, 20 deselected, 2 warnings in 82.24s`（265 collected，前次 77.08s 作为历史基线保留）；coverage 83.19%；mypy `160 source files`；radon 无 ≥21 函数；八项阻塞门禁通过。数字依据 `docs/PROJECT_STATUS.md` §"Current Test & Quality Metrics (post-release tree, 2026-09-26)"。历史批次记录见 §9 更新日志)
+> **最后更新**: 2026-10-03 (TD-067 修复：`ScheduleConsolidationResult` 契约与实现对齐 + mypy 返回类型收窄 + 键集合回归断言，详见该条状态；全量门禁最新事实见 `docs/design/PHASE2_OBSERVATION_CONFLICT_READINESS.md` §6.1：`5070 passed, 4 skipped`、coverage 83.96%。历史批次记录见 §9 更新日志)
 > **基于**: 7 维度项目整理评估 (2026-07-17, B+ 77/100) + DevSquad 7 角色并行审核
 > **配套文档**: [ROADMAP_P0_P3.md](ROADMAP_P0_P3.md) — 执行路线图 (Wave 推进表 + 7-Role 投票矩阵 + 11 阶段生命周期映射)
 >
@@ -32,9 +32,9 @@
 | P2 中优先级 | 13 项 | ~18h | 方案+共识后推进 |
 | P3 低优先级 | 10 项 | ~4h | 日常维护渐进 |
 
-> **复核说明（2026-09-21, v0.11.2）**：上表为 v2 创建时的统计。经逐项复核，§2~§5 中所有 TD 条目
-> （含后续新增的 TD-055~TD-066）均为 ✅ 已完成；遗留两项为本次新发现的 **TD-067**（见 §5，状态 ⬜ 待开始）
-> 与 **TD-068**（状态 ⬜ 无法推进——上游 zhipuai 把传递依赖 pyjwt 钉在 2.8.0，无本地修复路径，证据见该条）。
+> **复核说明（2026-10-03 更新）**：上表为 v2 创建时的统计。经逐项复核，§2~§5 中所有 TD 条目
+> （含后续新增的 TD-055~TD-067）均为 ✅ 已完成（TD-067 于 2026-10-03 修复）；遗留一项为 **TD-068**
+> （状态 ⬜ 无法推进——上游 zhipuai 把传递依赖 pyjwt 钉在 2.8.0，无本地修复路径，证据见该条）。
 
 ### 用户价值映射 (PM 建议)
 
@@ -914,7 +914,7 @@
 | **负责角色** | Coder |
 | **验证标准** | `types.py` 与 `core/_maintenance.py:254-260` 的字段集合一致；`mypy src/` 0 错误；全测试通过 |
 | **依赖** | 无 |
-| **状态** | ⬜ 待开始 (2026-09-21 新发现) |
+| **状态** | ✅ 已完成 (2026-10-03 采用方案 a：TypedDict 字段改为 `run_p1`/`run_p2` 并删除零消费的 `message`；`schedule_consolidation` 返回类型收窄为 `ScheduleConsolidationResult`（mypy 实测并抓出并修复了 status 字面量被联合推断为 `dict[str, float]` 的隐性问题，需显式标注）；回归断言 `set(result.keys()) == {...}` 锁定键集合防再漂移。验证：`pytest tests/test_consolidation_schedule.py tests/test_carrymem_full.py tests/core/test_maintenance.py` 97 passed；mypy 两文件 `Success: no issues found`；black/isort/flake8 通过) |
 | **生命周期** | P8 实现 |
 
 ### TD-068: PyJWT 被上游 zhipuai 钉在 2.8.0，Dependabot 告警无本地修复路径 ⚠️ 新增 (2026-09-21)

@@ -20,6 +20,7 @@ from carrymem.constants import (
     SECONDS_PER_HOUR,
 )
 from carrymem.core._lifecycle import StorageNotConfiguredError
+from carrymem.types import ScheduleConsolidationResult
 
 if TYPE_CHECKING:
     from carrymem.adapters.base import StorageAdapter
@@ -246,7 +247,7 @@ class MaintenanceMixin:
         dry_run: bool = False,
         run_p1: bool = True,
         run_p2: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> "ScheduleConsolidationResult":
         """Start periodic memory consolidation on a background timer."""
         import threading
 
@@ -257,7 +258,7 @@ class MaintenanceMixin:
         self.stop_consolidation()
 
         interval_sec = interval_hours * SECONDS_PER_HOUR
-        status = {
+        status: ScheduleConsolidationResult = {
             "scheduled": True,
             "interval_hours": interval_hours,
             "dry_run": dry_run,
