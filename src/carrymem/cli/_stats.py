@@ -10,8 +10,6 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from carrymem.cli._base import (
-    _DEFAULT_CONFIG_DIR,
-    _DEFAULT_DB,
     _TIER_LABELS,
     _TYPE_ICONS,
     CarryMem,
@@ -31,6 +29,7 @@ from carrymem.cli._base import (
     _yellow,
 )
 from carrymem.cli._format import formatter
+from carrymem.constants import get_config_dir, get_db_path
 
 
 def _show_value_report(cm, parsed) -> int:
@@ -413,6 +412,7 @@ class _DoctorContext:
     db_path: str
     fix: bool
     db: Path
+    config_dir: Path
 
 
 def _check_python_version(ctx: _DoctorContext) -> _DoctorCheck:
@@ -433,11 +433,11 @@ def _check_carrymem_import(ctx: _DoctorContext) -> _DoctorCheck:
 
 
 def _check_config_dir(ctx: _DoctorContext) -> _DoctorCheck:
-    if _DEFAULT_CONFIG_DIR.exists():
-        return _DoctorCheck("config_dir", "ok", f"Config directory: {_DEFAULT_CONFIG_DIR}")
+    if ctx.config_dir.exists():
+        return _DoctorCheck("config_dir", "ok", f"Config directory: {ctx.config_dir}")
     if ctx.fix:
-        _DEFAULT_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    return _DoctorCheck("config_dir", "warn", f"Config directory missing: {_DEFAULT_CONFIG_DIR}")
+        ctx.config_dir.mkdir(parents=True, exist_ok=True)
+    return _DoctorCheck("config_dir", "warn", f"Config directory missing: {ctx.config_dir}")
 
 
 def _check_database_file(ctx: _DoctorContext) -> _DoctorCheck:
@@ -520,8 +520,12 @@ def _check_db_lock(ctx: _DoctorContext) -> _DoctorCheck:
 
 
 def _check_write_permissions(ctx: _DoctorContext) -> _DoctorCheck:
+    if not ctx.config_dir.exists():
+        return _DoctorCheck(
+            "write_permissions", "warn", f"Write permissions: config directory missing: {ctx.config_dir}"
+        )
     try:
-        test_file = _DEFAULT_CONFIG_DIR / ".doctor_test"
+        test_file = ctx.config_dir / ".doctor_test"
         test_file.touch()
         test_file.unlink()
         return _DoctorCheck("write_permissions", "ok", "Write permissions OK")
@@ -786,8 +790,8 @@ def cmd_doctor(args):
     parser.add_argument("--json", action="store_true", help=_t("cli.arg.json"))
 
     parsed = parser.parse_args(args)
-    db_path = parsed.db or str(_DEFAULT_DB)
-    ctx = _DoctorContext(db_path=db_path, fix=parsed.fix, db=Path(db_path))
+    db_path = parsed.db or str(get_db_path())
+    ctx = _DoctorContext(db_path=db_path, fix=parsed.fix, db=Path(db_path), config_dir=get_config_dir())
 
     check_results = [check(ctx) for check in _DOCTOR_CHECKS]
     return _format_doctor_output(check_results, parsed)

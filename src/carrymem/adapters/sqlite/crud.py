@@ -267,6 +267,7 @@ class CRUDOperations:
                 for key in storage_keys:
                     if results.get(key):
                         self._mark_derived_unsupported(conn, key)
+                        self._mark_observations_unsupported(conn, key)
                 conn.commit()
             except sqlite3.Error as e:
                 conn.rollback()
@@ -310,9 +311,11 @@ class CRUDOperations:
                 except sqlite3.Error as e:
                     logger.warning("Failed to delete vector for memory %s: %s", memory_id, e)
             self._cleanup_graph_data(conn, storage_key, entity_ids)
-            self._mark_derived_unsupported(conn, storage_key)
-            conn.commit()
             result = cursor.rowcount > 0
+            if result:
+                self._mark_derived_unsupported(conn, storage_key)
+                self._mark_observations_unsupported(conn, storage_key)
+            conn.commit()
         if self._adapter.enable_cache and self._cache and result:
             self._cache.invalidate_keys(self._adapter.namespace, {storage_key})
         if self._audit:
@@ -351,6 +354,14 @@ class CRUDOperations:
         except (AttributeError, ImportError):  # pragma: no cover — adapter always provides it
             return
         evidence.mark_unsupported_for_deleted_source(conn, self._adapter.namespace, storage_key)
+
+    def _mark_observations_unsupported(self, conn: sqlite3.Connection, storage_key: str) -> None:
+        try:
+            self._adapter._get_observations().mark_unsupported_for_deleted_source(
+                conn, self._adapter.namespace, storage_key
+            )
+        except (AttributeError, ImportError):
+            return
 
     def _cleanup_graph_data(
         self,
@@ -399,10 +410,17 @@ class CRUDOperations:
         with self._conn_mgr.file_lock:
             conn = self._conn_mgr.get_connection()
             now = datetime.now(timezone.utc).isoformat()
+            rows = conn.execute(
+                "SELECT storage_key FROM memories WHERE namespace = ? AND expires_at IS NOT NULL AND expires_at < ?",
+                (self._adapter.namespace, now),
+            ).fetchall()
             cursor = conn.execute(
                 "DELETE FROM memories WHERE namespace = ? AND expires_at IS NOT NULL AND expires_at < ?",
                 (self._adapter.namespace, now),
             )
+            for row in rows:
+                self._mark_derived_unsupported(conn, row["storage_key"])
+                self._mark_observations_unsupported(conn, row["storage_key"])
             conn.commit()
             count = cursor.rowcount
         if self._adapter.enable_cache and self._cache and count > 0:

@@ -12,10 +12,11 @@ Uses real SQLiteAdapter (in-memory) per testing philosophy — no mocks.
 from __future__ import annotations
 
 import sqlite3
+from contextlib import nullcontext
 
 import pytest
 
-from carrymem.adapters.sqlite.schema import _V200_MIGRATION_ID, SchemaManager
+from carrymem.adapters.sqlite.schema import _V200_MIGRATION_ID, _V210_MIGRATION_ID, SchemaManager
 from carrymem.exceptions import DatabaseError
 
 
@@ -24,6 +25,7 @@ class _FakeConnManager:
 
     def __init__(self, conn: sqlite3.Connection):
         self._conn = conn
+        self.file_lock = nullcontext()
 
     def get_connection(self) -> sqlite3.Connection:
         return self._conn
@@ -116,6 +118,31 @@ class TestMigrationV200FailClosed:
 
         with pytest.raises(DatabaseError, match="checksum mismatch"):
             schema.migrate_v200()
+
+    @pytest.mark.parametrize("status", ["failed", "started"])
+    def test_non_success_ledger_status_fails_closed(self, schema, conn, status):
+        schema.migrate_v200()
+        conn.execute(
+            "UPDATE carrymem_migrations SET status = ? WHERE migration_id = ?",
+            (status, _V200_MIGRATION_ID),
+        )
+        conn.commit()
+
+        with pytest.raises(DatabaseError, match="fail-closed"):
+            schema.migrate_v200()
+
+    @pytest.mark.parametrize("status", ["failed", "started"])
+    def test_v210_non_success_ledger_status_fails_closed(self, schema, conn, status):
+        schema.migrate_v200()
+        schema.migrate_v210()
+        conn.execute(
+            "UPDATE carrymem_migrations SET status = ? WHERE migration_id = ?",
+            (status, _V210_MIGRATION_ID),
+        )
+        conn.commit()
+
+        with pytest.raises(DatabaseError, match="fail-closed"):
+            schema.migrate_v210()
 
     def test_ddl_failure_rolls_back_and_raises(self, schema, conn, monkeypatch):
         from carrymem.adapters.sqlite import schema as schema_mod

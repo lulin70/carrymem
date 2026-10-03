@@ -44,7 +44,7 @@ else:
     from typing import Any, Callable, Dict, List, Mapping, Optional
 
     from carrymem import CarryMem
-    from carrymem.constants import DB_PATH
+    from carrymem.constants import DB_PATH, get_db_path
     from carrymem.errors import CarryMemError
     from carrymem.ui.themes import MorandiDarkTheme, get_theme, list_themes
 
@@ -897,7 +897,7 @@ else:
             # Textual App.CSS is class-level; per-instance override requires type: ignore[misc]
             self.CSS = _build_app_css(self._morandi)  # type: ignore[misc]
             super().__init__()
-            self.db_path = db_path or str(_DEFAULT_DB)
+            self.db_path = db_path or str(get_db_path())
             self.namespace = namespace
             self.cm = CarryMem(db_path=self.db_path, namespace=self.namespace)
             self.memories: List[Dict[str, Any]] = []

@@ -194,9 +194,9 @@ class TestLoadJsonFile:
         result = load_json_file(str(json_file))
         assert result == test_data
 
-    def test_load_nonexistent_file(self):
+    def test_load_nonexistent_file(self, tmp_path):
         """Test loading nonexistent file returns empty dict"""
-        result = load_json_file("/nonexistent/file.json")
+        result = load_json_file(str(tmp_path / "missing.json"))
         assert result == {}
 
     def test_load_invalid_json(self, tmp_path):
@@ -235,9 +235,11 @@ class TestSaveJsonFile:
         assert "中文" in content
         assert "😀" in content
 
-    def test_save_to_invalid_path(self):
+    def test_save_to_invalid_path(self, tmp_path):
         """Test saving to invalid path does not raise"""
-        save_json_file("/invalid/path/file.json", {"data": "test"})
+        parent_file = tmp_path / "not-a-directory"
+        parent_file.write_text("not a directory")
+        save_json_file(str(parent_file / "file.json"), {"data": "test"})
 
 
 class TestConstants:

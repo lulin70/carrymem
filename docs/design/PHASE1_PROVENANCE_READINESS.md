@@ -40,7 +40,7 @@ Phase 1 **不包含**：Observation 写入路径（Phase 2）、ConflictRecord�
 | 6 | forget 级联 unsupported 标注（单删+批删） | ✅ | `adapters/sqlite/crud.py`、`adapters/sqlite/evidence.py` |
 | 7 | metrics：`evidence_link_*` / `evidence_derived_unsupported` | ✅ | `adapters/sqlite/evidence.py` |
 | 8 | tests/migration + tests/evidence（32 项） | ✅ | `tests/migration/`、`tests/evidence/` |
-| 9 | async 库 schema 兼容（evidence 表同步建） | ✅ | `adapters/async_sqlite.py`（async 级联属 Gate 2 async/sync parity 范围） |
+| 9 | async provenance schema/API/级联 parity（evidence 表、查询、unsupported cascade） | ✅ | `adapters/async_sqlite.py` |
 
 实现期发现的契约修正：`UNIQUE` 约束**必须包含 namespace**（否则跨 namespace 的同名对象对会互相顶掉，违反 INV-E1），契约文档 §2.1 已同步更新。
 

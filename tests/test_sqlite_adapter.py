@@ -153,6 +153,8 @@ class TestSchemaManagement:
             "backup",
             "audit",
             "namespace_filtering",
+            "observation",
+            "conflict_records",
         }
         assert set(caps.keys()) == expected_keys
         assert caps["fts"] is True

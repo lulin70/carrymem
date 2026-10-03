@@ -110,7 +110,8 @@ class TestBackupCreation:
 
     def test_missing_database_raises(self, tmp_path):
         """Missing database raises FileNotFoundError."""
-        manager = BackupManager("/nonexistent/path.db", str(tmp_path / "backups"))
+        missing_db = tmp_path / "missing.db"
+        manager = BackupManager(str(missing_db), str(tmp_path / "backups"))
 
         with pytest.raises(FileNotFoundError, match="Database not found"):
             manager.create_backup()

@@ -474,8 +474,9 @@ class TestLegacyBackwardCompatibility:
 class TestFileNotFound:
     """Error handling for missing files."""
 
-    def test_unpack_nonexistent_file(self, temp_db_target, capsys):
-        result = cmd_unpack(["/nonexistent/path/file.carry", "--db", temp_db_target])
+    def test_unpack_nonexistent_file(self, temp_db_target, tmp_path, capsys):
+        missing_path = tmp_path / "missing.carry"
+        result = cmd_unpack([str(missing_path), "--db", temp_db_target])
         assert result == 1
 
         captured = capsys.readouterr()

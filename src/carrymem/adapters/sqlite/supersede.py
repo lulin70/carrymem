@@ -93,6 +93,48 @@ class SupersedeManager:
             if self._apply_supersede_db_update(conn, row, new_storage_key, entry, jaccard, has_update_marker):
                 break
 
+    def supersede_by_keys(self, old_storage_key: str, new_storage_key: str) -> bool:
+        """Explicitly supersede one active memory with a successor (INV-X3).
+
+        Called by the correction resolver: the old conclusion keeps its
+        original content as immutable history and is excluded from default
+        recall (``superseded_at IS NULL`` filters). Only ``superseded_at``
+        and ``supersedes`` are written — version fields are deliberately
+        left untouched because ``_count_correction_chain`` derives the
+        repeat-correction metric from ``version_number - 1`` and must not
+        inflate.
+
+        Returns True when the old row was found (active, same namespace)
+        and marked; False when the key is unknown, already superseded, or
+        the update failed.
+        """
+        try:
+            conn = self._adapter.get_raw_connection()
+        except AttributeError:
+            return False
+        now_iso = datetime.now(timezone.utc).isoformat()
+        try:
+            row = conn.execute(
+                "SELECT id FROM memories " "WHERE storage_key = ? AND namespace = ? AND superseded_at IS NULL",
+                (old_storage_key, self._adapter.namespace),
+            ).fetchone()
+            if row is None:
+                return False
+            conn.execute(
+                "UPDATE memories SET superseded_at = ?, supersedes = ? WHERE id = ?",
+                (now_iso, new_storage_key, row["id"]),
+            )
+            conn.commit()
+        except sqlite3.Error as e:
+            logger.debug("Explicit supersede failed: %s", e)
+            return False
+        logger.debug(
+            "Explicitly superseded memory %s with successor %s",
+            old_storage_key[:16],
+            new_storage_key[:16],
+        )
+        return True
+
     @staticmethod
     def _has_update_marker(content_lower: str) -> bool:
         """Check if content contains an update marker word."""

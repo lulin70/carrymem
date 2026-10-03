@@ -125,7 +125,9 @@ namespace     TEXT NOT NULL    安全上下文
 subject       TEXT NOT NULL    观察主体（规范化实体，经 EntityNormalizer）
 predicate     TEXT NOT NULL    观察谓词（封闭枚举，见 3.3）
 value_json    TEXT NOT NULL    观察值（JSON）
-source_kind   TEXT NOT NULL    user_feedback / task_result / correction / lifecycle_event / recall_signal
+source_kind   TEXT NOT NULL    user_feedback / task_result / correction / lifecycle_event / explicit_api
+                               （2026-10-01 实现裁定：原 recall_signal 与 §3.4「内部 recall 不写
+                               Observation」自相矛盾，落地为 explicit_api，对应白名单第 5 项）
 source_ref    TEXT NOT NULL    来源引用（memory key / task id / proposal id）
 confidence    REAL NOT NULL DEFAULT 0.5
 observed_at   TEXT NOT NULL    观察发生时间

@@ -56,6 +56,7 @@ try:
         DANGEROUS_SYSTEM_DIRS,
         DB_PATH,
         DEFAULT_CONFIG_DIR,
+        get_db_path,
     )
 except ImportError:
     print("Error: CarryMem not properly installed")
@@ -135,7 +136,7 @@ def _bold(t):
 
 
 def _get_carrymem(db_path: Optional[str] = None, namespace: str = "default") -> CarryMem:
-    path = db_path or str(_DEFAULT_DB)
+    path = db_path or str(get_db_path())
     return CarryMem(db_path=path, namespace=namespace)
 
 
@@ -226,7 +227,7 @@ def _add_common_args(parser, *, db: bool = True) -> None:
 def _get_rule_engine(db_path: Optional[str] = None):
     from carrymem.rules import RuleEngine
 
-    path = db_path or str(_DEFAULT_DB)
+    path = db_path or str(get_db_path())
     return RuleEngine(path)
 
 

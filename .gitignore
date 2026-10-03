@@ -4,6 +4,9 @@
 .test_smart_cache/
 .benchmarks/
 
+# Local debug artifacts
+.dbg/
+
 # Model downloads (large, ~1GB+)
 models/
 

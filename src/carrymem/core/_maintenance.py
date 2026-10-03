@@ -45,8 +45,14 @@ class MaintenanceMixin:
             raise StorageNotConfiguredError()
 
         all_conflicts: List[Dict[str, Any]] = []
+        if isinstance(self._adapter, SQLiteAdapter):
+            persisted = self._adapter.list_conflicts(self._namespace, unresolved_only=False)
+            for conflict in persisted:
+                conflict["source"] = "phase2_persisted"
+            all_conflicts.extend(persisted)
 
-        # Include superseded memories so contradictions between old and new can be detected
+        # Always run the legacy detector as well; persisted records do not replace
+        # detection of contradictions in the current memory set.
         all_memories = self._adapter.recall("", limit=BATCH_RECALL_LIMIT, filters={"include_superseded": True})
         if all_memories:
             detector = ConflictDetector()

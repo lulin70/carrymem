@@ -955,12 +955,12 @@ class TestCarryMemExtra:
         assert result.get("error") is not None
         cm.close()
 
-    def test_restore_backup_non_sqlite(self):
+    def test_restore_backup_non_sqlite(self, tmp_path):
         """Lines 205-206: restore_backup with non-SQLite adapter returns error."""
         from carrymem import CarryMem
 
         cm = CarryMem(storage=None)
-        result = cm.restore_backup("/tmp/nonexistent.bak")
+        result = cm.restore_backup(str(tmp_path / "nonexistent.bak"))
         assert "error" in result
         cm.close()
 

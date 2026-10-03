@@ -25,8 +25,10 @@ from ..base import MemoryEntry, StorageAdapter, StoredMemory
 if TYPE_CHECKING:  # pragma: no cover
     from .evidence import EvidenceLinkManager
 
+from .conflicts import ConflictManager
 from .connection import ConnectionManager
 from .crud import CRUDOperations
+from .observations import ObservationManager
 from .query_builder import QueryBuilderWithContext
 from .recall_engine import RecallEngine
 from .schema import SchemaManager
@@ -150,10 +152,14 @@ class SQLiteAdapter(StorageAdapter):
         rrf_config: Optional[Dict[str, Any]] = None,
     ):
         # --- Connection management ---
+        # Select the SQLite driver before opening the first connection.  Mixing
+        # stdlib sqlite3 and pysqlite3 connections against the same WAL database
+        # can leave pysqlite3 reporting misleading disk I/O errors.
+        vector_driver_requested = enable_vector_search and SQLITE_VEC_AVAILABLE and PYSQLITE3_AVAILABLE
         self._conn_mgr = ConnectionManager(
             db_path=db_path or _default_db_path(),
             namespace=namespace,
-            enable_vector=False,
+            enable_vector=vector_driver_requested,
         )
 
         # --- Security ---
@@ -206,18 +212,19 @@ class SQLiteAdapter(StorageAdapter):
             },
         )
 
-        # --- Initialize schema ---
-        self._conn_mgr.get_connection()
-        self._schema.init_schema()
-
-        # --- Vector search setup (may switch connection) ---
+        # --- Initialize schema, vector support, and migrations atomically per database ---
         self._embedding_model_name = embedding_model
-        self._enable_vector, self._embedding_model, self._embedding_dim = self._setup_vector_search(
-            enable_vector_search, embedding_model, _external_embedding_model
-        )
+        with self._conn_mgr.file_lock:
+            self._conn_mgr.get_connection()
+            self._schema.init_schema()
 
-        # --- Run migrations (vector schema first if enabled) ---
-        self._schema.migrate_all(enable_vector=self._enable_vector)
+            # --- Vector search setup (may switch connection) ---
+            self._enable_vector, self._embedding_model, self._embedding_dim = self._setup_vector_search(
+                enable_vector_search, embedding_model, _external_embedding_model
+            )
+
+            # --- Run migrations (vector schema first if enabled) ---
+            self._schema.migrate_all(enable_vector=self._enable_vector)
 
         # --- Semantic recall components ---
         self._enable_semantic, self._expander, self._merger = self._init_semantic_components(
@@ -274,6 +281,8 @@ class SQLiteAdapter(StorageAdapter):
         self._knowledge_graph: Optional[Any] = None
         self._memify: Optional[Any] = None  # v0.7.2: lazy init MemifyEngine
         self._evidence: Optional["EvidenceLinkManager"] = None  # Phase 1: lazy init
+        self._observations: Optional[ObservationManager] = None
+        self._conflicts: Optional[ConflictManager] = None
 
     def _init_audit_logger(self) -> Optional[Any]:
         """Initialize audit logger with SQLite persistence, falling back to in-memory."""
@@ -429,6 +438,8 @@ class SQLiteAdapter(StorageAdapter):
             "backup": True,
             "audit": True,
             "namespace_filtering": True,
+            "observation": True,
+            "conflict_records": True,
         }
 
     @property
@@ -764,6 +775,15 @@ class SQLiteAdapter(StorageAdapter):
         """Update an existing memory's content, recording the change reason."""
         return self._crud.update_memory(storage_key, new_content, reason)
 
+    def supersede_memory(self, old_storage_key: str, new_storage_key: str) -> bool:
+        """Mark an active memory as superseded by a successor (INV-X3).
+
+        Used by the correction resolver: the old conclusion keeps its
+        original content as immutable history and is excluded from default
+        recall. Returns False when the key is unknown or already superseded.
+        """
+        return self._supersede.supersede_by_keys(old_storage_key, new_storage_key)
+
     def get_by_key(self, storage_key: str):
         """Retrieve a stored memory by its storage_key (or None if missing)."""
         return self._crud.get_by_key(storage_key)
@@ -839,6 +859,89 @@ class SQLiteAdapter(StorageAdapter):
 
         self._evidence = EvidenceLinkManager(adapter=self)
         return self._evidence
+
+    def _get_observations(self):
+        if self._observations is None:
+            from .observations import ObservationManager
+
+            self._observations = ObservationManager(adapter=self)
+        return self._observations
+
+    def _get_conflicts(self):
+        if self._conflicts is None:
+            self._conflicts = ConflictManager(adapter=self)
+        return self._conflicts
+
+    def record_observation(
+        self,
+        namespace,
+        subject,
+        predicate,
+        value,
+        source_kind,
+        source_ref,
+        confidence,
+        observed_at,
+        expires_at,
+        admission="explicit_api",
+    ):
+        return self._get_observations().record_observation(
+            namespace,
+            subject,
+            predicate,
+            value,
+            source_kind,
+            source_ref,
+            confidence,
+            observed_at,
+            expires_at,
+            admission,
+        )
+
+    def list_observations(
+        self,
+        namespace,
+        subject=None,
+        predicate=None,
+        source_kind=None,
+        include_expired=False,
+        include_unsupported=False,
+        limit=100,
+    ):
+        return self._get_observations().list_observations(
+            namespace, subject, predicate, source_kind, include_expired, include_unsupported, limit
+        )
+
+    def create_conflict(
+        self,
+        namespace,
+        subject_key,
+        candidate_ids,
+        conflict_type,
+        resolution_status="unresolved",
+        resolution_policy="chain-v1",
+        selected_id=None,
+        reasoning=None,
+    ):
+        return self._get_conflicts().create_conflict(
+            namespace,
+            subject_key,
+            candidate_ids,
+            conflict_type,
+            resolution_status,
+            resolution_policy,
+            selected_id,
+            reasoning,
+        )
+
+    def list_conflicts(self, namespace, subject_key=None, unresolved_only=False, limit=100):
+        return self._get_conflicts().list_conflicts(namespace, subject_key, unresolved_only, limit)
+
+    def resolve_conflict(self, conflict_id, selected_id, status="resolved", reasoning=None):
+        return self._get_conflicts().resolve_conflict(conflict_id, selected_id, status, reasoning)
+
+    def resolve_conflict_candidates(self, namespace, subject_key, candidates, conflict_type):
+        return self._get_conflicts().resolve_candidates(namespace, subject_key, candidates, conflict_type)
 
     # ── Evidence Links (Phase 1 Provenance, ADR-015) ────────────────────
 

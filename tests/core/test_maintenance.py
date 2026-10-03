@@ -27,6 +27,16 @@ class TestCheckConflicts(unittest.TestCase):
         result = self.cm.check_conflicts()
         self.assertIsInstance(result, list)
 
+    def test_check_conflicts_keeps_persisted_and_legacy_results(self):
+        self.cm.declare("I like using Vim")
+        self.cm.declare("I dislike using Vim")
+        self.cm._adapter.create_conflict("default", "vim", ["persisted-a", "persisted-b"], "preference")
+
+        result = self.cm.check_conflicts()
+        sources = {item.get("source") for item in result}
+        self.assertIn("phase2_persisted", sources)
+        self.assertTrue(any(item.get("conflict_type") == "contradiction" for item in result))
+
     def test_check_conflicts_no_adapter_raises(self):
         """check_conflicts() raises StorageNotConfiguredError without adapter."""
         cm = CarryMem(storage=None, auto_backup_interval=0)

@@ -14,11 +14,12 @@ from .constants import SQLITE_BUSY_TIMEOUT_MS, SQLITE_CACHE_SIZE_KIB, SQLITE_DB_
 logger = logging.getLogger(__name__)
 
 # Global write locks per database file
-_db_write_locks: Dict[str, threading.Lock] = {}
+_db_write_locks: Dict[str, threading.RLock] = {}
 _db_write_locks_guard = threading.Lock()
 
 # Slow query threshold (ms), 0 = disabled. Configurable via CARRYMEM_SLOW_QUERY_MS env var
 _SLOW_QUERY_THRESHOLD_MS = int(os.environ.get("CARRYMEM_SLOW_QUERY_MS", "100"))
+
 
 try:
     import pysqlite3 as _pysqlite3
@@ -26,6 +27,12 @@ try:
     PYSQLITE3_AVAILABLE = True
 except ImportError:
     PYSQLITE3_AVAILABLE = False
+
+_SQLITE_ERROR_TYPES: tuple[type[BaseException], ...] = (sqlite3.Error,)
+_SQLITE_OPERATIONAL_ERROR_TYPES: tuple[type[BaseException], ...] = (sqlite3.OperationalError,)
+if PYSQLITE3_AVAILABLE:
+    _SQLITE_ERROR_TYPES = (sqlite3.Error, _pysqlite3.Error)
+    _SQLITE_OPERATIONAL_ERROR_TYPES = (sqlite3.OperationalError, _pysqlite3.OperationalError)
 
 try:
     import sqlite_vec
@@ -53,7 +60,7 @@ class ConnectionManager:
         resolved = str(os.path.realpath(self._db_path))
         with _db_write_locks_guard:
             if resolved not in _db_write_locks:
-                _db_write_locks[resolved] = threading.Lock()
+                _db_write_locks[resolved] = threading.RLock()
             self._file_lock = _db_write_locks[resolved]
 
         self._local = threading.local()
@@ -117,7 +124,7 @@ class ConnectionManager:
             return self._memory_conn
 
         if not hasattr(self._local, "conn") or self._local.conn is None:
-            with self._init_lock:
+            with self._file_lock, self._init_lock:
                 if hasattr(self._local, "conn") and self._local.conn is not None:
                     return self._local.conn  # type: ignore[no-any-return]
                 max_retries = 5
@@ -147,14 +154,14 @@ class ConnectionManager:
                         with self._conn_lock:
                             self._all_connections[id(conn)] = conn
                         break
-                    except sqlite3.OperationalError as e:
+                    except _SQLITE_OPERATIONAL_ERROR_TYPES as e:
                         if "database is locked" in str(e).lower() and attempt < max_retries - 1:
                             import time as _time
 
                             _time.sleep(0.5 * (attempt + 1))
                             continue
                         raise DBConnectionError(f"Failed to connect to database: {e}") from e
-                    except sqlite3.Error as e:
+                    except _SQLITE_ERROR_TYPES as e:
                         raise DBConnectionError(f"Failed to connect to database: {e}") from e
 
         return self._local.conn  # type: ignore[no-any-return]
@@ -178,8 +185,8 @@ class ConnectionManager:
             try:
                 conn.execute("SELECT 1 FROM memories_fts LIMIT 1").fetchone()
                 return
-            except sqlite3.OperationalError as e:
-                last_err = e
+            except _SQLITE_OPERATIONAL_ERROR_TYPES as e:
+                last_err = e if isinstance(e, sqlite3.OperationalError) else None
                 msg_lower = str(e).lower()
                 if "no such table" in msg_lower:
                     # Expected before init_schema() runs — not an error

@@ -771,16 +771,20 @@ class TestCmdCheckRulesJson:
 
 
 class TestCmdExportRulesError:
-    def test_export_rules_bad_path(self, temp_db, capsys):
+    def test_export_rules_bad_path(self, temp_db, tmp_path, capsys):
         cmd_add_rule(["test rule", "--trigger", "test", "--db", temp_db])
         capsys.readouterr()
-        result = cmd_export_rules(["/nonexistent/dir/rules.json", "--db", temp_db])
+        parent_file = tmp_path / "not-a-directory"
+        parent_file.write_text("not a directory")
+        output_path = parent_file / "rules.json"
+        result = cmd_export_rules([str(output_path), "--db", temp_db])
         assert result == 1
 
 
 class TestCmdImportRulesError:
-    def test_import_rules_file_not_found(self, temp_db, capsys):
-        result = cmd_import_rules(["/nonexistent/file.json", "--db", temp_db])
+    def test_import_rules_file_not_found(self, temp_db, tmp_path, capsys):
+        missing_path = tmp_path / "missing.json"
+        result = cmd_import_rules([str(missing_path), "--db", temp_db])
         assert result == 1
 
     def test_import_rules_invalid_json(self, temp_db, tmp_path, capsys):

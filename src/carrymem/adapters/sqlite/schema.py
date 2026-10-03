@@ -281,6 +281,48 @@ _V200_EVOLUTION_SQL = [
 
 _V200_MIGRATION_ID = "v200_evolution_foundation"
 
+# Phase 2 observation/conflict ledger. Keep v200 SQL and checksum immutable.
+_V210_PHASE2_SQL = [
+    """CREATE TABLE IF NOT EXISTS memory_observations (
+        id TEXT PRIMARY KEY,
+        namespace TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        predicate TEXT NOT NULL,
+        value_json TEXT NOT NULL,
+        source_kind TEXT NOT NULL,
+        source_ref TEXT NOT NULL,
+        confidence REAL NOT NULL DEFAULT 0.5 CHECK (confidence >= 0.0 AND confidence <= 1.0),
+        observed_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'valid' CHECK (status IN ('valid', 'unsupported')),
+        UNIQUE (namespace, subject, predicate, source_kind, source_ref, observed_at)
+    )""",
+    "CREATE INDEX IF NOT EXISTS idx_observations_subject ON memory_observations(namespace, subject, predicate)",
+    "CREATE INDEX IF NOT EXISTS idx_observations_expires ON memory_observations(expires_at)",
+    "CREATE INDEX IF NOT EXISTS idx_observations_source ON memory_observations(namespace, source_kind)",
+    """CREATE TABLE IF NOT EXISTS memory_conflicts (
+        conflict_id TEXT PRIMARY KEY,
+        namespace TEXT NOT NULL,
+        subject_key TEXT NOT NULL,
+        candidate_ids TEXT NOT NULL,
+        conflict_type TEXT NOT NULL,
+        resolution_status TEXT NOT NULL,
+        resolution_policy TEXT NOT NULL,
+        selected_id TEXT,
+        reasoning TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        resolved_at TEXT,
+        CHECK (resolution_status IN ('unresolved', 'resolved', 'user_decided', 'expired')),
+        CHECK ((resolution_status = 'unresolved' AND selected_id IS NULL) OR
+               (resolution_status IN ('resolved', 'user_decided') AND selected_id IS NOT NULL) OR
+               resolution_status = 'expired')
+    )""",
+    "CREATE INDEX IF NOT EXISTS idx_conflicts_subject ON memory_conflicts(namespace, subject_key, resolution_status)",
+]
+
+_V210_MIGRATION_ID = "v210_phase2_observation_conflict"
+
 
 class SchemaManager:
     """Manages database schema creation and migrations."""
@@ -290,37 +332,42 @@ class SchemaManager:
 
     def init_schema(self):
         """Create the core tables and version schema."""
-        conn = self._conn_mgr.get_connection()
-        try:
-            conn.executescript(_SCHEMA_SQL)
-            conn.executescript(_VERSION_SCHEMA_SQL)
-            conn.commit()
-            self._migrate_fts_tokenizer()
-        except sqlite3.Error as e:
-            raise DatabaseError(f"Failed to initialize schema: {e}") from e
+        with self._conn_mgr.file_lock:
+            conn = self._conn_mgr.get_connection()
+            try:
+                conn.executescript(_SCHEMA_SQL)
+                conn.executescript(_VERSION_SCHEMA_SQL)
+                conn.commit()
+                self._migrate_fts_tokenizer()
+            except sqlite3.Error as e:
+                raise DatabaseError(f"Failed to initialize schema: {e}") from e
 
     def migrate_all(self, enable_vector: bool = False):
         """Run all migrations in order."""
-        self.migrate_namespace()
-        self.migrate_v050()
-        self.migrate_v060()
-        self.migrate_v062()
-        if enable_vector:
-            self.init_vec_schema()
-            self.migrate_v070()
-        self.migrate_v080()
-        self.migrate_v090()
-        self.migrate_v100()
-        self.migrate_v051()
-        self.migrate_v052()
-        self.migrate_v200()
+        with self._conn_mgr.file_lock:
+            self.migrate_namespace()
+            self.migrate_v050()
+            self.migrate_v060()
+            self.migrate_v062()
+            if enable_vector:
+                self.init_vec_schema()
+                self.migrate_v070()
+            self.migrate_v080()
+            self.migrate_v090()
+            self.migrate_v100()
+            self.migrate_v051()
+            self.migrate_v052()
+            self.migrate_v200()
+            self.migrate_v210()
 
     def migrate_namespace(self):
         """Add the namespace column to the memories table if missing."""
         conn = self._conn_mgr.get_connection()
         try:
             conn.execute("SELECT namespace FROM memories LIMIT 1")
-        except _OpError:
+        except _OpError as check_error:
+            if "no such column" not in str(check_error).lower():
+                raise
             try:
                 conn.executescript(_MIGRATION_SQL)
                 conn.executescript(_CREATE_INDEX_SQL)
@@ -451,17 +498,18 @@ class SchemaManager:
 
     def init_vec_schema(self, embedding_dim: int = 384):
         """Create the vector search virtual table."""
-        conn = self._conn_mgr.get_connection()
-        try:
-            conn.execute(f"""
-                CREATE VIRTUAL TABLE IF NOT EXISTS memory_vectors USING vec0(
-                    memory_id TEXT PRIMARY KEY,
-                    embedding float[{embedding_dim}]
-                )
-            """)
-            conn.commit()
-        except sqlite3.Error as e:
-            logger.warning("Failed to create memory_vectors table: %s", e)
+        with self._conn_mgr.file_lock:
+            conn = self._conn_mgr.get_connection()
+            try:
+                conn.execute(f"""
+                    CREATE VIRTUAL TABLE IF NOT EXISTS memory_vectors USING vec0(
+                        memory_id TEXT PRIMARY KEY,
+                        embedding float[{embedding_dim}]
+                    )
+                """)
+                conn.commit()
+            except sqlite3.Error as e:
+                logger.warning("Failed to create memory_vectors table: %s", e)
 
     def migrate_v070(self):
         """Ensure the vector table exists for v0.7.0."""
@@ -596,14 +644,18 @@ class SchemaManager:
             row = None  # ledger table missing — first run
         if row is not None:
             recorded_checksum, recorded_status = str(row["checksum"]), str(row["status"])
-            if recorded_status == "success":
-                if recorded_checksum != checksum:
-                    raise DatabaseError(
-                        f"Migration {_V200_MIGRATION_ID} checksum mismatch "
-                        f"(ledger={recorded_checksum[:12]}, expected={checksum[:12]}). "
-                        "Refusing to proceed (fail-closed)."
-                    )
-                return  # already applied — idempotent short-circuit
+            if recorded_checksum != checksum:
+                raise DatabaseError(
+                    f"Migration {_V200_MIGRATION_ID} checksum mismatch "
+                    f"(ledger={recorded_checksum[:12]}, expected={checksum[:12]}). "
+                    "Refusing to proceed (fail-closed)."
+                )
+            if recorded_status != "success":
+                raise DatabaseError(
+                    f"Migration {_V200_MIGRATION_ID} has ledger status "
+                    f"{recorded_status!r}; refusing to proceed (fail-closed)."
+                )
+            return  # already applied — idempotent short-circuit
 
         now_iso = datetime.now(timezone.utc).isoformat()
         try:
@@ -626,3 +678,37 @@ class SchemaManager:
             except sqlite3.Error:
                 pass
             raise DatabaseError(f"Migration {_V200_MIGRATION_ID} failed (fail-closed): {e}") from e
+
+    def migrate_v210(self):
+        """Create Phase 2 observation/conflict tables with a tamper-evident ledger."""
+        conn = self._conn_mgr.get_connection()
+        checksum = hashlib.sha256("\n".join(_V210_PHASE2_SQL).encode("utf-8")).hexdigest()
+        row = conn.execute(
+            "SELECT checksum, status FROM carrymem_migrations WHERE migration_id = ?",
+            (_V210_MIGRATION_ID,),
+        ).fetchone()
+        if row is not None:
+            if row["checksum"] != checksum:
+                raise DatabaseError(f"Migration {_V210_MIGRATION_ID} checksum mismatch (fail-closed)")
+            if row["status"] != "success":
+                raise DatabaseError(
+                    f"Migration {_V210_MIGRATION_ID} has ledger status "
+                    f"{row['status']!r}; refusing to proceed (fail-closed)."
+                )
+            return
+        now_iso = datetime.now(timezone.utc).isoformat()
+        try:
+            if not conn.in_transaction:
+                conn.execute("BEGIN IMMEDIATE")
+            for sql in _V210_PHASE2_SQL:
+                conn.execute(sql)
+            conn.execute(
+                "INSERT INTO carrymem_migrations (migration_id, checksum, status, started_at, completed_at) "
+                "VALUES (?, ?, 'success', ?, ?) ON CONFLICT(migration_id) DO UPDATE SET "
+                "checksum=excluded.checksum, status='success', completed_at=excluded.completed_at, error_text=NULL",
+                (_V210_MIGRATION_ID, checksum, now_iso, now_iso),
+            )
+            conn.commit()
+        except sqlite3.Error as e:
+            conn.rollback()
+            raise DatabaseError(f"Migration {_V210_MIGRATION_ID} failed (fail-closed): {e}") from e

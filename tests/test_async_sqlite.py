@@ -14,7 +14,9 @@ Uses real aiosqlite (in-memory) per testing philosophy.
 from __future__ import annotations
 
 import asyncio
+import json
 import os
+import sqlite3
 import tempfile
 import time
 from datetime import timezone
@@ -26,6 +28,8 @@ pytest.importorskip("aiosqlite")
 
 from carrymem.adapters.async_sqlite import AsyncSQLiteAdapter  # noqa: E402
 from carrymem.adapters.base import MemoryEntry  # noqa: E402
+from carrymem.adapters.sqlite.schema import _V200_MIGRATION_ID, _V210_MIGRATION_ID
+from carrymem.exceptions import DatabaseError
 
 pytestmark = pytest.mark.asyncio
 
@@ -56,6 +60,27 @@ def sample_entry() -> MemoryEntry:
         raw_text="I prefer dark mode",
         confidence=0.9,
     )
+
+
+class TestAsyncMigrationFailClosed:
+    @pytest.mark.parametrize("migration_id", [_V200_MIGRATION_ID, _V210_MIGRATION_ID])
+    @pytest.mark.parametrize("status", ["failed", "started"])
+    async def test_non_success_ledger_status_fails_closed(self, tmp_path, migration_id, status):
+        db_path = str(tmp_path / f"migration-{migration_id}-{status}.db")
+        adapter = AsyncSQLiteAdapter(db_path)
+        await adapter.connect()
+        await adapter.close()
+
+        conn = sqlite3.connect(db_path)
+        conn.execute(
+            "UPDATE carrymem_migrations SET status = ? WHERE migration_id = ?",
+            (status, migration_id),
+        )
+        conn.commit()
+        conn.close()
+
+        with pytest.raises(DatabaseError, match="fail-closed"):
+            await AsyncSQLiteAdapter(db_path).connect()
 
 
 # ── Happy Path (6 tests) ──────────────────────────────────────────────────
@@ -291,6 +316,250 @@ class TestConfiguration:
             assert await adapter.count() == 1
             await adapter.close()
             assert os.path.exists(db_path)
+
+
+# ── Provenance parity ─────────────────────────────────────────────────────
+
+
+async def _store_async_memory(adapter: AsyncSQLiteAdapter, id_: str, content: str):
+    return await adapter.store_entry(
+        MemoryEntry(
+            id=id_,
+            type="fact_declaration",
+            content=content,
+            raw_text=content,
+            confidence=0.8,
+        )
+    )
+
+
+async def _add_async_link(adapter: AsyncSQLiteAdapter, source_id: str, target_id: str, **kwargs):
+    return await adapter.add_evidence_link(
+        namespace=kwargs.pop("namespace", adapter.namespace),
+        source_kind=kwargs.pop("source_kind", "memory"),
+        source_id=source_id,
+        source_snapshot_hash=kwargs.pop("source_snapshot_hash", "h"),
+        target_kind=kwargs.pop("target_kind", "memory"),
+        target_id=target_id,
+        relation_type=kwargs.pop("relation_type", "derived_from"),
+        support_weight=kwargs.pop("support_weight", 1.0),
+    )
+
+
+class TestAsyncProvenanceParity:
+    async def test_add_evidence_link_validation(self, connected_adapter):
+        base = {
+            "namespace": "default",
+            "source_kind": "memory",
+            "source_id": "s1",
+            "source_snapshot_hash": "h",
+            "target_kind": "memory",
+            "target_id": "t1",
+            "relation_type": "derived_from",
+        }
+        for field, value in (
+            ("relation_type", "invalid"),
+            ("source_kind", "invalid"),
+            ("target_kind", "invalid"),
+        ):
+            args = {**base, field: value}
+            with pytest.raises(ValueError, match=field):
+                await connected_adapter.add_evidence_link(**args)
+        with pytest.raises(ValueError, match="support_weight"):
+            await connected_adapter.add_evidence_link(**base, support_weight=0)
+        empty_source = {**base, "source_id": ""}
+        with pytest.raises(ValueError, match="non-empty"):
+            await connected_adapter.add_evidence_link(**empty_source)
+        empty_hash = {**base, "source_snapshot_hash": ""}
+        with pytest.raises(ValueError, match="source_snapshot_hash"):
+            await connected_adapter.add_evidence_link(**empty_hash)
+
+    async def test_add_evidence_link_before_connect_raises(self, async_adapter):
+        with pytest.raises(RuntimeError, match="not connected"):
+            await async_adapter.add_evidence_link("default", "memory", "s", "h", "memory", "t", "derived_from")
+
+    async def test_duplicate_idempotency_and_support_weight(self, connected_adapter):
+        first = await _add_async_link(connected_adapter, "s1", "t1", support_weight=1.5)
+        second = await _add_async_link(connected_adapter, "s1", "t1", support_weight=1.5)
+        assert first is not None
+        assert second is None
+        links = await connected_adapter.list_evidence_links("default", target_id="t1")
+        assert len(links) == 1
+        assert links[0]["support_weight"] == 1.5
+
+    async def test_namespace_isolation(self, connected_adapter):
+        await _add_async_link(connected_adapter, "s1", "t1", namespace="ns_a")
+        await _add_async_link(connected_adapter, "s1", "t1", namespace="ns_b")
+        assert len(await connected_adapter.list_evidence_links("ns_a")) == 1
+        assert len(await connected_adapter.list_evidence_links("ns_b")) == 1
+        assert await connected_adapter.list_evidence_links("ns_c") == []
+
+    async def test_stale_filtering_and_unsupported_targets(self, connected_adapter):
+        target = await _store_async_memory(connected_adapter, "target", "target")
+        source = await _store_async_memory(connected_adapter, "source", "source")
+        await _add_async_link(connected_adapter, source.storage_key, target.storage_key)
+        assert (
+            len(
+                await connected_adapter.list_evidence_links(
+                    "default", target_id=target.storage_key, include_stale=False
+                )
+            )
+            == 1
+        )
+        assert await connected_adapter.get_unsupported_targets("default", [target.storage_key]) == []
+        assert await connected_adapter.forget_memory(source.storage_key) is True
+        assert (
+            len(
+                await connected_adapter.list_evidence_links("default", target_id=target.storage_key, include_stale=True)
+            )
+            == 1
+        )
+        assert (
+            await connected_adapter.list_evidence_links("default", target_id=target.storage_key, include_stale=False)
+            == []
+        )
+        assert await connected_adapter.get_unsupported_targets("default", [target.storage_key]) == [target.storage_key]
+
+    async def test_single_source_cascade_marks_unsupported(self, connected_adapter):
+        source = await _store_async_memory(connected_adapter, "source", "source")
+        target = await _store_async_memory(connected_adapter, "target", "target")
+        await _add_async_link(connected_adapter, source.storage_key, target.storage_key)
+        assert await connected_adapter.forget_memory(source.storage_key) is True
+        row = await (
+            await connected_adapter._conn.execute(
+                "SELECT metadata FROM memories WHERE storage_key = ?", (target.storage_key,)
+            )
+        ).fetchone()
+        metadata = json.loads(row["metadata"])
+        assert metadata["provenance_unsupported"] == 1
+        assert metadata["provenance_unsupported_at"]
+
+    async def test_multi_source_and_ordinary_memory_preservation(self, connected_adapter):
+        source_one = await _store_async_memory(connected_adapter, "source1", "source1")
+        source_two = await _store_async_memory(connected_adapter, "source2", "source2")
+        target = await _store_async_memory(connected_adapter, "target", "target")
+        ordinary = await _store_async_memory(connected_adapter, "ordinary", "ordinary")
+        await _add_async_link(connected_adapter, source_one.storage_key, target.storage_key)
+        await _add_async_link(connected_adapter, source_two.storage_key, target.storage_key)
+        assert await connected_adapter.forget_memory(source_one.storage_key) is True
+        row = await (
+            await connected_adapter._conn.execute(
+                "SELECT metadata FROM memories WHERE storage_key = ?", (target.storage_key,)
+            )
+        ).fetchone()
+        assert json.loads(row["metadata"]).get("provenance_unsupported") is None
+        assert await connected_adapter.forget_memory(source_two.storage_key) is True
+        row = await (
+            await connected_adapter._conn.execute(
+                "SELECT metadata FROM memories WHERE storage_key = ?", (target.storage_key,)
+            )
+        ).fetchone()
+        assert json.loads(row["metadata"])["provenance_unsupported"] == 1
+        row = await (
+            await connected_adapter._conn.execute(
+                "SELECT metadata FROM memories WHERE storage_key = ?", (ordinary.storage_key,)
+            )
+        ).fetchone()
+        assert json.loads(row["metadata"]).get("provenance_unsupported") is None
+
+    async def test_delete_marks_source_observation_unsupported(self, connected_adapter):
+        source = await _store_async_memory(connected_adapter, "source-observation", "source observation")
+        await connected_adapter._conn.execute(
+            """INSERT INTO memory_observations
+               (id, namespace, subject, predicate, value_json, source_kind, source_ref,
+                confidence, observed_at, expires_at, created_at, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'valid')""",
+            (
+                "obs-1",
+                "default",
+                "subject",
+                "preference_detected",
+                "{}",
+                "explicit_api",
+                source.storage_key,
+                0.9,
+                "2026-01-01T00:00:00+00:00",
+                "2099-01-01T00:00:00+00:00",
+                "2026-01-01T00:00:00+00:00",
+            ),
+        )
+        await connected_adapter._conn.commit()
+        assert await connected_adapter.forget_memory(source.storage_key) is True
+        row = await (
+            await connected_adapter._conn.execute("SELECT status FROM memory_observations WHERE id = 'obs-1'")
+        ).fetchone()
+        assert row["status"] == "unsupported"
+        visible = await (
+            await connected_adapter._conn.execute(
+                "SELECT id FROM memory_observations WHERE namespace = ? AND status = 'valid'", ("default",)
+            )
+        ).fetchall()
+        assert visible == []
+        all_rows = await (
+            await connected_adapter._conn.execute(
+                "SELECT id FROM memory_observations WHERE namespace = ?", ("default",)
+            )
+        ).fetchall()
+        assert [row["id"] for row in all_rows] == ["obs-1"]
+
+    async def test_delete_nonexistent_key_does_not_update_observation(self, connected_adapter):
+        await connected_adapter._conn.execute(
+            """INSERT INTO memory_observations
+               (id, namespace, subject, predicate, value_json, source_kind, source_ref,
+                confidence, observed_at, expires_at, created_at, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'valid')""",
+            (
+                "obs-missing",
+                "default",
+                "subject",
+                "preference_detected",
+                "{}",
+                "explicit_api",
+                "missing",
+                0.9,
+                "2026-01-01T00:00:00+00:00",
+                "2099-01-01T00:00:00+00:00",
+                "2026-01-01T00:00:00+00:00",
+            ),
+        )
+        await connected_adapter._conn.commit()
+        assert await connected_adapter.forget_memory("missing") is False
+        row = await (
+            await connected_adapter._conn.execute("SELECT status FROM memory_observations WHERE id = 'obs-missing'")
+        ).fetchone()
+        assert row["status"] == "valid"
+
+    async def test_delete_nonexistent_key_does_not_cascade(self, connected_adapter):
+        source = await _store_async_memory(connected_adapter, "source", "source")
+        target = await _store_async_memory(connected_adapter, "target", "target")
+        await _add_async_link(connected_adapter, source.storage_key, target.storage_key)
+        assert await connected_adapter.forget_memory("missing") is False
+        row = await (
+            await connected_adapter._conn.execute(
+                "SELECT metadata FROM memories WHERE storage_key = ?", (target.storage_key,)
+            )
+        ).fetchone()
+        assert json.loads(row["metadata"]).get("provenance_unsupported") is None
+
+    async def test_file_backed_reopen_and_recovery_parity(self, tmp_path):
+        db_path = str(tmp_path / "provenance.db")
+        adapter = AsyncSQLiteAdapter(db_path, namespace="default")
+        await adapter.connect()
+        source = await _store_async_memory(adapter, "source", "source")
+        target = await _store_async_memory(adapter, "target", "target")
+        await _add_async_link(adapter, source.storage_key, target.storage_key)
+        await adapter.close()
+
+        reopened = AsyncSQLiteAdapter(db_path, namespace="default")
+        await reopened.connect()
+        assert len(await reopened.list_evidence_links("default", target_id=target.storage_key)) == 1
+        assert await reopened.forget_memory(source.storage_key) is True
+        assert await reopened.list_evidence_links("default", target_id=target.storage_key, include_stale=False) == []
+        row = await (
+            await reopened._conn.execute("SELECT metadata FROM memories WHERE storage_key = ?", (target.storage_key,))
+        ).fetchone()
+        assert json.loads(row["metadata"])["provenance_unsupported"] == 1
+        await reopened.close()
 
 
 # ── Integration (4 tests) ────────────────────────────────────────────────

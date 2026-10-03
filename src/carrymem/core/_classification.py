@@ -246,7 +246,8 @@ class ClassificationMixin:
                 # integration seam between classify_and_remember and the new
                 # detect_repeat_correction / upgrade_to_rule pipeline.
                 if entry.type == "correction":
-                    # ``MemoryEntry.from_dict`` does not preserve
+                    self._record_phase2_correction(entry, storage_key, updated, resolved_message)
+                    # ``MemoryEntry.from_dict`` does not preserve ``storage_key``
                     # ``storage_key`` (it lives on the StoredMemory
                     # subclass), so pass the persisted dict + key as a
                     # small bag rather than reconstructing the entry.
@@ -534,15 +535,22 @@ class ClassificationMixin:
     ) -> Tuple[Optional[Dict[str, Any]], Optional[str], Optional[CorrectionUpdateInfo]]:
         """Store a single entry, returning (stored_dict, storage_key, updated_info).
 
-        On storage failure, returns (None, None, updated_info) where updated_info
-        may still be populated from a successful correction-handling step.
+        For corrections the superseded target is identified before storing
+        and superseded after (INV-X3), so on storage failure no correction
+        handling happens at all: returns (None, None, None).
         """
         updated: Optional[CorrectionUpdateInfo] = None
         try:
+            correction_target: Optional[Dict[str, Any]] = None
             if entry.type == "correction":
-                updated = self._handle_correction(entry)
+                # INV-X3: identify the superseded target BEFORE storing so
+                # the freshly stored correction can supersede it right after
+                # (no in-place content overwrite of the old conclusion).
+                correction_target = self._find_correctable_memory(entry.content, entry.content.lower().split())
             stored = self._adapter.store_entry(entry)  # type: ignore[union-attr]
             storage_key = stored.storage_key
+            if entry.type == "correction":
+                updated = self._handle_correction(entry, storage_key, correction_target)
             # v0.7.0: Populate knowledge graph entities
             adapter = self._adapter
             if adapter and adapter.capabilities.get("graph", False):
@@ -555,7 +563,78 @@ class ClassificationMixin:
             logger.warning("Failed to store memory: %s", e)
             return None, None, updated
 
-    def _handle_correction(self, correction_entry: MemoryEntry) -> Optional[CorrectionUpdateInfo]:
+    def _record_phase2_correction(
+        self,
+        entry: MemoryEntry,
+        storage_key: Optional[str],
+        updated: Optional[CorrectionUpdateInfo],
+        resolved_message: str,
+    ) -> None:
+        adapter = self._adapter
+        if adapter is None or not storage_key or not hasattr(adapter, "record_observation"):
+            return
+        try:
+            from datetime import datetime, timedelta, timezone
+
+            observed_at = datetime.now(timezone.utc)
+            observation_id = adapter.record_observation(
+                namespace=self._namespace,
+                subject=resolved_message[:100],
+                predicate="correction_detected",
+                value={"content": entry.content, "updated": bool(updated)},
+                source_kind="correction",
+                source_ref=storage_key,
+                confidence=max(0.0, min(1.0, entry.confidence)),
+                observed_at=observed_at,
+                expires_at=observed_at + timedelta(days=180),
+                admission="correction",
+            )
+            if updated:
+                old_id = str(updated.get("storage_key", ""))
+                candidates = [
+                    {
+                        "id": storage_key,
+                        "source_kind": "correction",
+                        "explicit_correction": True,
+                        "priority": 6,
+                        "confidence": entry.confidence,
+                        "support_count": 0,
+                        "contradiction_count": 0,
+                    },
+                    {
+                        "id": old_id,
+                        "source_kind": "user_statement",
+                        "priority": 5,
+                        "confidence": 0.5,
+                        "support_count": 0,
+                        "contradiction_count": 1,
+                        # INV-X3: the old conclusion has been superseded by
+                        # this correction; record the fact state so the
+                        # ranking factors reflect reality.
+                        "superseded": True,
+                    },
+                ]
+                resolver = getattr(adapter, "resolve_conflict_candidates", None)
+                if callable(resolver):
+                    resolver(self._namespace, resolved_message[:100], candidates, "fact")
+            logger.debug("Phase 2 correction observation recorded: %s", observation_id)
+        except (AttributeError, KeyError, TypeError, ValueError, RuntimeError) as exc:
+            logger.warning("Phase 2 correction evidence skipped: %s", exc)
+
+    def _handle_correction(
+        self,
+        correction_entry: MemoryEntry,
+        new_storage_key: Optional[str] = None,
+        correction_target: Optional[Dict[str, Any]] = None,
+    ) -> Optional[CorrectionUpdateInfo]:
+        """Resolve a correction against existing memories and rules.
+
+        INV-X3: the identified memory target is superseded by the freshly
+        stored correction (chain supersession, old content kept as
+        immutable history) instead of being overwritten in place. Rule
+        targets are updated in place — rules are executable config, not
+        facts.
+        """
         if not self._adapter:
             return None
 
@@ -564,17 +643,21 @@ class ClassificationMixin:
             return None
 
         keywords = content.lower().split()
-        updated_info = self._find_correctable_memory(content, keywords)
-        updated_info = self._find_correctable_rule(content, keywords, updated_info)
+        if correction_target is None:
+            correction_target = self._find_correctable_memory(content, keywords)
 
-        return updated_info
+        updated_info: Optional[CorrectionUpdateInfo] = None
+        if correction_target is not None:
+            updated_info = self._supersede_correctable_memory(correction_target, content, new_storage_key)
+
+        return self._find_correctable_rule(content, keywords, updated_info)
 
     def _find_correctable_memory(
         self,
         content: str,
         keywords: List[str],
-    ) -> Optional[CorrectionUpdateInfo]:
-        """Find and update a memory matching correction keywords."""
+    ) -> Optional[Dict[str, Any]]:
+        """Find the most recent correctable memory matching correction keywords."""
         try:
             # Uninstrumented: side effect of storing, not a user recall.
             related = self._recall_memories_uninstrumented(limit=CORRECTION_RECALL_LIMIT)
@@ -584,31 +667,42 @@ class ClassificationMixin:
                 if mem_type in ("user_preference", "decision", "fact_declaration"):
                     overlap = sum(1 for kw in keywords if kw in mem_content and len(kw) > 1)
                     if overlap >= CORRECTION_KEYWORD_OVERLAP:
-                        return self._try_update_correctable_memory(mem, content)
+                        return mem
         except (ValueError, KeyError, TypeError, RuntimeError) as e:
             logger.warning("Correction handling failed: %s", e)
         return None
 
-    def _try_update_correctable_memory(
+    def _supersede_correctable_memory(
         self,
         mem: Dict[str, Any],
         content: str,
+        new_storage_key: Optional[str],
     ) -> Optional[CorrectionUpdateInfo]:
-        """Attempt to update a single memory; returns the update info or None."""
+        """Supersede the corrected memory with the freshly stored correction (INV-X3)."""
         storage_key = mem.get("storage_key", "")
-        if storage_key and hasattr(self._adapter, "update_memory"):
-            try:
-                reason = f"Corrected by: {content[:CONTENT_PREVIEW_LENGTH]}"
-                self._adapter.update_memory(storage_key, content, reason)  # type: ignore[union-attr]
-                return {
-                    "storage_key": storage_key,
-                    "old_content": mem.get("content", "")[:CONTENT_PREVIEW_LENGTH],
-                    "new_content": content[:CONTENT_PREVIEW_LENGTH],
-                    "reason": reason,
-                }
-            except (ValueError, KeyError, TypeError) as e:
-                logger.warning("Correction update failed: %s", e)
-        return None
+        if not storage_key or not new_storage_key:
+            return None
+        superseder = getattr(self._adapter, "supersede_memory", None)
+        if not callable(superseder):
+            # Adapter without chain supersession (JSON/Obsidian): nothing to
+            # supersede; the correction stays as its own P1 evidence row.
+            return None
+        try:
+            if not superseder(storage_key, new_storage_key):
+                logger.warning(
+                    "Correction supersede found no active target: %s",
+                    storage_key,
+                )
+                return None
+        except (ValueError, KeyError, TypeError) as e:
+            logger.warning("Correction supersede failed: %s", e)
+            return None
+        return {
+            "storage_key": storage_key,
+            "old_content": mem.get("content", "")[:CONTENT_PREVIEW_LENGTH],
+            "new_content": content[:CONTENT_PREVIEW_LENGTH],
+            "reason": f"Corrected by: {content[:CONTENT_PREVIEW_LENGTH]}",
+        }
 
     def _find_correctable_rule(
         self,

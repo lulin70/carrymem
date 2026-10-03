@@ -427,8 +427,9 @@ class RecallEngine:
         always update (backward compat / test mode).
         """
         filters = filters or {}
-        conn = self._conn_mgr.get_connection()
-        now = datetime.now(timezone.utc)
+        with self._conn_mgr.file_lock:
+            conn = self._conn_mgr.get_connection()
+            now = datetime.now(timezone.utc)
         now_iso = now.isoformat()
         results: list = []
         seen_keys: set = set()
@@ -437,25 +438,29 @@ class RecallEngine:
         if is_stored:
             self._collect_stored_access_updates(rows, update_access, now, now_iso, seen_keys, batch_updates, results)
             if update_access and batch_updates:
-                conn.executemany(
-                    "UPDATE memories SET access_count = ?, "
-                    "importance_score = ?, last_accessed_at = ? "
-                    "WHERE storage_key = ?",
-                    batch_updates,
-                )
+                with self._conn_mgr.file_lock:
+                    conn.executemany(
+                        "UPDATE memories SET access_count = ?, "
+                        "importance_score = ?, last_accessed_at = ? "
+                        "WHERE storage_key = ?",
+                        batch_updates,
+                    )
         else:
             self._collect_row_access_updates(
                 rows, update_access, now, now_iso, limit, seen_keys, batch_updates, results
             )
             if update_access and batch_updates:
-                conn.executemany(
-                    "UPDATE memories SET access_count = access_count + 1, "
-                    "importance_score = ?, last_accessed_at = ? "
-                    "WHERE storage_key = ?",
-                    [(score, ts, key) for (_, score, ts, key) in batch_updates],
-                )
+                with self._conn_mgr.file_lock:
+                    conn.executemany(
+                        "UPDATE memories SET access_count = access_count + 1, "
+                        "importance_score = ?, last_accessed_at = ? "
+                        "WHERE storage_key = ?",
+                        [(score, ts, key) for (_, score, ts, key) in batch_updates],
+                    )
 
-        conn.commit()
+        if update_access and batch_updates:
+            with self._conn_mgr.file_lock:
+                conn.commit()
 
         if not is_stored and filters.get("_order_oldest") and results:
             results.sort(key=lambda m: m.created_at or datetime.min.replace(tzinfo=timezone.utc))
