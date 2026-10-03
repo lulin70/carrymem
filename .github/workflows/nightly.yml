@@ -14,19 +14,30 @@ jobs:
     name: Slow Test Suite
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    env:
-      HOME: ${{ runner.temp }}/carrymem-home
-      CARRYMEM_CONFIG_DIR: ${{ runner.temp }}/carrymem-config
-      CARRYMEM_CONFIG_FILE: ${{ runner.temp }}/carrymem-config/config.yaml
-      CARRYMEM_DB_PATH: ${{ runner.temp }}/carrymem-data/memories.db
-      CARRYMEM_DATA_PATH: ${{ runner.temp }}/carrymem-data
-      CARRYMEM_CACHE_DIR: ${{ runner.temp }}/carrymem-cache
-      CARRYMEM_LOG_DIR: ${{ runner.temp }}/carrymem-logs
-      CARRYMEM_BACKUP_DIR: ${{ runner.temp }}/carrymem-backups
-      CARRYMEM_LOCK_FILE: ${{ runner.temp }}/carrymem-config/carrymem.lock
 
     steps:
       - uses: actions/checkout@v7
+
+      # Job-level `env:` cannot use the `runner` context — a workflow carrying
+      # `runner.*` in a job env block is rejected at parse time (startup_failure,
+      # 0s, zero jobs). Inject the isolated runtime via $GITHUB_ENV instead;
+      # RUNNER_TEMP is the step-level equivalent of runner.temp.
+      - name: Set up isolated runtime
+        run: |
+          for d in carrymem-home carrymem-config carrymem-data carrymem-cache carrymem-logs carrymem-backups; do
+            mkdir -p "${RUNNER_TEMP}/${d}"
+          done
+          {
+            echo "HOME=${RUNNER_TEMP}/carrymem-home"
+            echo "CARRYMEM_CONFIG_DIR=${RUNNER_TEMP}/carrymem-config"
+            echo "CARRYMEM_CONFIG_FILE=${RUNNER_TEMP}/carrymem-config/config.yaml"
+            echo "CARRYMEM_DB_PATH=${RUNNER_TEMP}/carrymem-data/memories.db"
+            echo "CARRYMEM_DATA_PATH=${RUNNER_TEMP}/carrymem-data"
+            echo "CARRYMEM_CACHE_DIR=${RUNNER_TEMP}/carrymem-cache"
+            echo "CARRYMEM_LOG_DIR=${RUNNER_TEMP}/carrymem-logs"
+            echo "CARRYMEM_BACKUP_DIR=${RUNNER_TEMP}/carrymem-backups"
+            echo "CARRYMEM_LOCK_FILE=${RUNNER_TEMP}/carrymem-config/carrymem.lock"
+          } >> "${GITHUB_ENV}"
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -103,19 +114,30 @@ jobs:
     name: Vector/Semantic Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      HOME: ${{ runner.temp }}/carrymem-home
-      CARRYMEM_CONFIG_DIR: ${{ runner.temp }}/carrymem-config
-      CARRYMEM_CONFIG_FILE: ${{ runner.temp }}/carrymem-config/config.yaml
-      CARRYMEM_DB_PATH: ${{ runner.temp }}/carrymem-data/memories.db
-      CARRYMEM_DATA_PATH: ${{ runner.temp }}/carrymem-data
-      CARRYMEM_CACHE_DIR: ${{ runner.temp }}/carrymem-cache
-      CARRYMEM_LOG_DIR: ${{ runner.temp }}/carrymem-logs
-      CARRYMEM_BACKUP_DIR: ${{ runner.temp }}/carrymem-backups
-      CARRYMEM_LOCK_FILE: ${{ runner.temp }}/carrymem-config/carrymem.lock
 
     steps:
       - uses: actions/checkout@v7
+
+      # Job-level `env:` cannot use the `runner` context — a workflow carrying
+      # `runner.*` in a job env block is rejected at parse time (startup_failure,
+      # 0s, zero jobs). Inject the isolated runtime via $GITHUB_ENV instead;
+      # RUNNER_TEMP is the step-level equivalent of runner.temp.
+      - name: Set up isolated runtime
+        run: |
+          for d in carrymem-home carrymem-config carrymem-data carrymem-cache carrymem-logs carrymem-backups; do
+            mkdir -p "${RUNNER_TEMP}/${d}"
+          done
+          {
+            echo "HOME=${RUNNER_TEMP}/carrymem-home"
+            echo "CARRYMEM_CONFIG_DIR=${RUNNER_TEMP}/carrymem-config"
+            echo "CARRYMEM_CONFIG_FILE=${RUNNER_TEMP}/carrymem-config/config.yaml"
+            echo "CARRYMEM_DB_PATH=${RUNNER_TEMP}/carrymem-data/memories.db"
+            echo "CARRYMEM_DATA_PATH=${RUNNER_TEMP}/carrymem-data"
+            echo "CARRYMEM_CACHE_DIR=${RUNNER_TEMP}/carrymem-cache"
+            echo "CARRYMEM_LOG_DIR=${RUNNER_TEMP}/carrymem-logs"
+            echo "CARRYMEM_BACKUP_DIR=${RUNNER_TEMP}/carrymem-backups"
+            echo "CARRYMEM_LOCK_FILE=${RUNNER_TEMP}/carrymem-config/carrymem.lock"
+          } >> "${GITHUB_ENV}"
 
       - name: Set up Python
         uses: actions/setup-python@v7
