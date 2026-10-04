@@ -10,11 +10,13 @@ import os
 # Busy timeout in milliseconds for lock contention handling.
 # Sets how long SQLite waits when encountering a lock before returning
 # SQLITE_BUSY. Used in: PRAGMA busy_timeout=N
-# 30s: aligned with SQLITE_DB_TIMEOUT_SECONDS (the driver-level timeout).
-# Under concurrent FTS/vector write churn, WAL checkpoint/reset windows make
-# even readers hit transient SQLITE_BUSY; a short timeout surfaces as flaky
-# "database is locked" in the concurrent e2e suite.
-SQLITE_BUSY_TIMEOUT_MS = 30000
+# 10s, deliberately NOT higher: a single statement may legitimately block for
+# the full timeout, and e2e concurrency tests join their worker threads with
+# a 30s window — a 30s busy_timeout let one stalled statement outlive the
+# join, and fixture teardown then closed the connection under the leaked
+# thread (use-after-free segfault). Transient WAL read-side busy is absorbed
+# by the operation-level retry in core/_memory_crud._retry_on_busy instead.
+SQLITE_BUSY_TIMEOUT_MS = 10000
 
 # WAL auto-checkpoint threshold in pages. The SQLite default (1000 pages,
 # ~4MB) is crossed every few writes when FTS + vector-blob writes inflate the

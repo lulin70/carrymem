@@ -11,7 +11,7 @@ from carrymem.adapters.base import RawConnectionProvider
 from carrymem.adapters.obsidian_adapter import ObsidianAdapter
 from carrymem.constants import DEFAULT_RECALL_LIMIT, RULE_MATCH_LIMIT_CAP
 from carrymem.core._lifecycle import KnowledgeNotConfiguredError, StorageNotConfiguredError
-from carrymem.core._memory_crud import _retry_on_busy
+from carrymem.core._memory_crud import _reset_busy_connection, _retry_on_busy
 from carrymem.monitoring import get_metrics_collector
 from carrymem.types import StoredMemoryDict
 from carrymem.utils.validators import validate_limit, validate_query
@@ -149,6 +149,7 @@ class RecallMixin:
                     update_access=update_access,
                 ),
                 what="recall_memories",
+                reset=lambda: _reset_busy_connection(self._adapter),
             )
         except Exception:
             metrics.increment("recall_errors")

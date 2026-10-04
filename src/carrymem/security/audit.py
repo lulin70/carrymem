@@ -185,20 +185,24 @@ class AuditLogger:
 
         if self._db_conn is not None:
             with self._db_lock:
-                self._db_conn.execute(
-                    "INSERT INTO audit_log (timestamp, action, resource, user_id, result, details, ip_address) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (
-                        event.timestamp.isoformat(),
-                        event.action,
-                        event.resource,
-                        event.user_id,
-                        event.result,
-                        json.dumps(event.details, ensure_ascii=False),
-                        event.ip_address,
-                    ),
-                )
-                self._db_conn.commit()
+                # Re-check under the lock: close() may have run between the
+                # outer check and lock acquisition — executing against a
+                # closed connection is use-after-free (segfault).
+                if self._db_conn is not None:
+                    self._db_conn.execute(
+                        "INSERT INTO audit_log (timestamp, action, resource, user_id, result, details, ip_address) "
+                        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        (
+                            event.timestamp.isoformat(),
+                            event.action,
+                            event.resource,
+                            event.user_id,
+                            event.result,
+                            json.dumps(event.details, ensure_ascii=False),
+                            event.ip_address,
+                        ),
+                    )
+                    self._db_conn.commit()
 
         _audit_logger.debug(
             "Audit log: %s %s %s -> %s [%s]",
@@ -433,6 +437,22 @@ class AuditLogger:
                 self._db_conn.commit()
 
         return count
+
+    def close(self) -> None:
+        """Close the persistent SQLite connection (idempotent, thread-safe).
+
+        Hold ``_db_lock`` so a concurrent ``log()`` cannot execute against a
+        connection that is being closed (use-after-free segfault), and set
+        ``_db_conn = None`` so later ``log()`` calls fall back to the
+        in-memory list instead of touching the closed connection.
+        """
+        with self._db_lock:
+            if self._db_conn is not None:
+                try:
+                    self._db_conn.close()
+                except sqlite3.Error:
+                    pass
+                self._db_conn = None
 
     @property
     def event_count(self) -> int:

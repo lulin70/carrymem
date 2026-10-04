@@ -170,6 +170,18 @@ Phase 4 两次全量门禁分别失败于 `test_concurrent_mixed_read_write` 与
 
 验证：并发 e2e 修复前 6 轮 1 挂 → 修复后 **6/6 全绿**；evolution/reflection/concurrent/adapter 专项 212 passed；knowledge_graph 专项修复 `FakeConnMgr` 测试替身缺 `file_lock` 属性（生产契约扩展同步替身，断言未动）后 35 passed。全量门禁终态见 §7。
 
+### 6.2 段错误与中毒快照闭环（2026-10-04，第三次门禁运行发现）
+
+全量门禁第三次运行在 `test_concurrent_writes_from_multiple_threads` teardown 阶段 **SIGSEGV（exit 139）**，语句级定位：主线程执行 `cm.close()` 的同时，join(30) 超时后仍存活的 writer 线程正在 `AuditLogger.log()` 内对已关闭连接执行 INSERT。三个叠加因素与修复：
+
+1. **audit 连接 use-after-free（段错误直接原因）**：`SQLiteAdapter.close()` 原实现不持 `AuditLogger._db_lock` 直接 `close()` 原始连接且不置 None。修复：新增线程安全的 `AuditLogger.close()`（持锁关闭 + 置 None）；`log()` 的连接判空检查移入 `_db_lock` 临界区内复检（消除 check-then-act 窗口）；adapter close 改走 `AuditLogger.close()`。
+2. **busy_timeout 30s 使单语句最坏等待超过测试 join(30) 窗口**（泄漏线程存在的前提）：回退 10s，注释说明"不得高于 join 窗口"的约束。
+3. **`ConnectionManager.close()` 关闭其他线程正在使用的连接**（同类 use-after-free 的根源，本次由构造上消除）：close 只显式关闭当前线程连接，其他线程连接交由线程死亡/GC 释放——teardown 永远不会在活动语句下方抽掉连接。
+
+**中毒快照（busy 重试死循环）**：10s busy_timeout 下，busy 失败后驱动隐式事务保持打开且带失败时刻的过期读快照，同连接重试的 INSERT 对同一快照做写升级 → 必然再失败（快照永不刷新），表现为**单线程连续失败而其他线程正常**（10 轮循环中 Thread-1 的 op1-9 全挂）。修复：`_retry_on_busy` 重试间隔插入 `_reset_busy_connection`（`rollback()` 结束事务并重置全部 pending 语句，刷新快照）。
+
+验证：并发 e2e **10/10 全绿（0 失败）**；sqlite 连接池/adapter/concurrent 单测 137 passed；audit 专项 173 passed。
+
 ## 7. 测试与门禁计划
 
 - 专项：`tests/evolution/test_reflection_proposal_phase4.py`（不变量矩阵）

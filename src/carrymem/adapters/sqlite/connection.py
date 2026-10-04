@@ -263,17 +263,30 @@ class ConnectionManager:
             )
 
     def close(self):
-        """Close all connections and mark this manager as closed."""
+        """Close this manager's connections and mark it closed.
+
+        Only the CURRENT thread's connection is closed explicitly. A worker
+        thread that outlived its caller (e.g. an e2e writer whose join()
+        window expired) may still be executing a statement on its own
+        thread-local connection — closing that connection from here is
+        use-after-free (segfault). Its connection is instead released when
+        the owning thread dies or the last reference drops (sqlite3
+        connections close themselves on GC).
+        """
         self._closed = True
+        current_conn = getattr(self._local, "conn", None)
+        if current_conn is not None:
+            try:
+                current_conn.close()
+            except Exception as e:
+                # Catch all exceptions during cleanup, including pysqlite3
+                # thread-safety errors (pysqlite3.dbapi2.ProgrammingError is
+                # a different class than sqlite3.ProgrammingError).
+                logger.debug("Failed to close current-thread connection: %s", e)
         with self._conn_lock:
-            for conn_id, conn in self._all_connections.items():
-                try:
-                    conn.close()
-                except Exception as e:
-                    # Catch all exceptions during cleanup, including pysqlite3
-                    # thread-safety errors (pysqlite3.dbapi2.ProgrammingError is
-                    # a different class than sqlite3.ProgrammingError).
-                    logger.debug("Failed to close connection %s: %s", conn_id, e)
+            # Drop manager-held references; conns owned by live threads stay
+            # alive through their thread-local reference until that thread
+            # finishes, then are closed by GC.
             self._all_connections.clear()
         if hasattr(self._local, "conn"):
             self._local.conn = None

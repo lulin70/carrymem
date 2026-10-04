@@ -729,16 +729,13 @@ class SQLiteAdapter(StorageAdapter):
     def close(self):
         """Close the underlying connection manager and release resources."""
         # Close audit logger's SQLite connection (if persistent) so pending
-        # writes are flushed before the adapter goes away. In-memory audit
-        # loggers have no DB connection and skip this path.
-        if self._audit is not None:
-            audit_db_conn = getattr(self._audit, "_db_conn", None)
-            if audit_db_conn is not None:
-                try:
-                    audit_db_conn.close()
-                except sqlite3.Error:
-                    # Best-effort cleanup; ignore errors during teardown.
-                    pass
+        # writes are flushed before the adapter goes away. AuditLogger.close()
+        # takes the logger's own _db_lock: a writer thread that outlived a
+        # test's join() window may still be inside log() — closing the raw
+        # connection without that lock is use-after-free (segfault).
+        close_audit = getattr(self._audit, "close", None)
+        if callable(close_audit):
+            close_audit()
         self._conn_mgr.close()
 
     # ── Cache Management (overrides base no-op) ──────────────────────

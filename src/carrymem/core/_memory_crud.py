@@ -53,8 +53,29 @@ def _is_transient_busy(exc: BaseException) -> bool:
     return "locked" in message or "busy" in message
 
 
-def _retry_on_busy(operation: Callable[[], _T], *, what: str) -> _T:
-    """Run ``operation``, retrying transient SQLite busy failures with backoff."""
+def _reset_busy_connection(adapter: Any) -> None:
+    """Roll back any open transaction so a retry starts from a fresh snapshot.
+
+    A failed statement leaves the driver's implicit transaction open with the
+    read snapshot taken at failure time; retrying on that connection upgrades
+    against the same stale snapshot and fails forever (thread-local lockout).
+    ``rollback()`` ends the transaction AND resets all pending statements.
+    """
+    try:
+        conn = adapter.get_raw_connection()
+        if conn.in_transaction:
+            conn.rollback()
+    except Exception:  # NOTE intentional: reset is best-effort before retry
+        pass
+
+
+def _retry_on_busy(operation: Callable[[], _T], *, what: str, reset: Optional[Callable[[], None]] = None) -> _T:
+    """Run ``operation``, retrying transient SQLite busy failures with backoff.
+
+    ``reset`` runs between attempts (typically a connection rollback) so each
+    retry observes a fresh WAL snapshot instead of the failed attempt's stale
+    one.
+    """
     attempt = 0
     while True:
         try:
@@ -63,6 +84,8 @@ def _retry_on_busy(operation: Callable[[], _T], *, what: str) -> _T:
             attempt += 1
             if not _is_transient_busy(exc) or attempt >= BUSY_RETRY_ATTEMPTS:
                 raise
+            if reset is not None:
+                reset()
             delay = _BUSY_RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
             logger.warning(
                 "Transient SQLite busy in %s (attempt %d/%d), retrying in %.1fs: %s",
@@ -187,6 +210,7 @@ class MemoryCRUDMixin:
             result = _retry_on_busy(
                 lambda: self._classify_and_remember_impl(message, context, language, session_id, force_type, user_id),
                 what="classify_and_remember",
+                reset=lambda: _reset_busy_connection(self._adapter),
             )
         except Exception:
             metrics.increment("classify_and_remember_errors")
