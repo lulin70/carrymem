@@ -1023,6 +1023,10 @@ class SQLiteAdapter(StorageAdapter):
             namespace, stale_days, min_importance, batch_size, grace_days, auto_apply
         )
 
+    def reflect_consolidation(self, namespace, grace_days=30, auto_apply=True):
+        """Run consolidation detection in proposal mode (Phase 4, contract §6)."""
+        return self._get_reflections().run_consolidation_reflection(namespace, grace_days, auto_apply)
+
     # ── Evidence Links (Phase 1 Provenance, ADR-015) ────────────────────
 
     def add_evidence_link(

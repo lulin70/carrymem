@@ -26,6 +26,31 @@
 | S5 | 适配器接线（capabilities `reflection_runs` / `reflection_proposals` + 门面 14 个方法）+ metrics（runs started/reused/resumed/completed/failed；proposals created/reused/approved/rejected/applied/apply_failed/rolled_back） | ✅ 已实现 |
 | S6 | 测试：不变量单测（INV-RR1-3、INV-P1-4、INV-D1 矩阵、INV-B1/F3）+ 真实用户 E2E（propose → inspect → approve → apply → recall 生效 → rollback → recall 恢复） | ✅ **40 passed**（`tests/evolution/test_reflection_proposal_phase4.py` 34 项 + `tests/e2e/test_e2e_reflection_proposal.py` 2 项 + memify 回归 32 项） |
 | S7 | **decay 策略提案化（契约 §6 第一个迁移策略）**：抽取共享三重门 `find_decay_candidates()`（memify 与 reflection 单一事实源）；`ReflectionManager.run_decay_reflection()` + 门面 `reflect_decay()`（候选 → expire_projection 提案 → 低风险白名单自动应用）；`expires_at = run.started_at + grace_days`（从 run 身份派生，重放 payload hash 稳定 → INV-P2 幂等）；resume 不再重置 started_at（否则破坏重放幂等，已修） | ✅ 已实现 + **对拍通过** |
+| S8 | **consolidate() 检测提案化（契约 §6 第二个迁移策略）**：检测层原样复用 legacy `consolidate()` 引擎（零漂移，含 `entries_to_dicts()` 共享规范化）；输出转提案——`to_supersede` → `supersede` 提案（**恒高风险，人工审批**）、`to_forget` + below-floor `to_decay` → `expire_projection` 提案（低风险，可自动应用）、非 below-floor `to_decay` 无提案（legacy 实为 no-op，对拍保持一致）；门面 `reflect_consolidation()` | ✅ 已实现 + **对拍通过** |
+
+### S8 修复的两个真实产品缺陷（测试驱动发现）
+
+1. **INV-P2 幂等键缺 target（设计缺陷）**：幂等键原为 `sha256(payload_json)`；consolidation 场景下多个不同 target 共享同一 `{"expires_at": ...}` payload → 第 2 个起全部被误判为重复提案（多候选只建 1 个提案）。已改为 `sha256(payload|target_kind|target_id)`——同 payload 应用到不同 target 是不同提案。
+2. **legacy consolidate 的 to_supersede 从未生效（静默失效）**：`hasattr(adapter, "supersede")` 在 Phase 2 将原语改名为 `supersede_memory(old, new)` 后恒为 False，dedup 检测结果被静默跳过。已修复为优先调用 `supersede_memory(older_key, newer_key)`（保留旧单参方法 fallback）。
+
+### S8 对拍证据（孪生库，按内容对齐——storage_key 含插入时间戳，跨库 key 必然不同）
+
+```text
+test_dup_pair_supersede_proposals_are_high_risk: 重复对 → supersede 提案且恒 high/proposed；偏好重复被保留（不提案）
+test_forget_becomes_expire_proposal_not_delete: to_forget → expire 提案；below-floor to_decay → expire 提案；
+  非 below-floor to_decay 无提案（对齐 legacy no-op）；检测阶段零删除
+test_auto_apply_expires_low_risk_and_keeps_high_risk_proposed: expire 自动应用（expires_at 落库）、
+  supersede 提案保持 proposed（INV-P1）；全程零物理删除
+test_idempotent_replay_reuses_runs_and_proposals: 二次运行复用双 run（INV-RR1）、提案数不变（INV-P2）、applied 为空
+test_twin_db_legacy_and_proposal_paths_agree: 孪生库对拍——legacy 实际 superseded 集 == 提案 supersede 目标集；
+  legacy 物理删除集 == 提案 expire 目标集；效果按契约 §6 有意不同（删除 vs 可回滚 expiry）
+验证：tests/evolution/test_reflection_proposal_phase4.py 46 passed + maintenance/consolidation/memify 回归全绿；
+black/isort/flake8/mypy（164 source files）/radon 全绿
+```
+
+遗留策略（dedup_merge 语义合并、consolidate_p1/p2 提案化）按 §6 纪律逐个迁移，见 §6 显式延期项。
+
+> **审计诚实记录（S8 调试过程排除项）**：对拍测试一度失败，探针依次证伪了"陈旧 WAL 快照""连接池轮换""删除未提交"三个假设（文件级裸连接读证实删除已正确提交）。最终根因是测试自身的比较错误——对"已物理删除的 legacy 行"事后查 content 恒为空；已改为 seed 时快照 key→content 映射再比较。产品删除/提交路径无缺陷。
 
 ### S7 对拍证据（新旧路径，双库孪生种子）
 

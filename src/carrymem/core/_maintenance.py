@@ -137,7 +137,7 @@ class MaintenanceMixin:
 
     def consolidate(self, dry_run: bool = True, run_p1: bool = True, run_p2: bool = True) -> Dict[str, Any]:
         """Run memory consolidation: dedup, decay, and cleanup."""
-        from carrymem.consolidation import consolidate, consolidate_p1, consolidate_p2
+        from carrymem.consolidation import consolidate, consolidate_p1, consolidate_p2, entries_to_dicts
 
         if not self._adapter:
             raise StorageNotConfiguredError()
@@ -148,22 +148,7 @@ class MaintenanceMixin:
             limit=10000,
             filters={"include_superseded": True},
         )
-        all_memories = []
-        for entry in all_entries:
-            if hasattr(entry, "__dict__"):
-                all_memories.append(
-                    {
-                        "storage_key": getattr(entry, "storage_key", ""),
-                        "type": getattr(entry, "memory_type", ""),
-                        "content": getattr(entry, "content", ""),
-                        "confidence": getattr(entry, "confidence", DEFAULT_CONFIDENCE_SCORE),
-                        "created_at": getattr(entry, "created_at", ""),
-                        "superseded_at": getattr(entry, "superseded_at", None),
-                        "access_count": getattr(entry, "access_count", 0),
-                    }
-                )
-            elif isinstance(entry, dict):
-                all_memories.append(entry)
+        all_memories = entries_to_dicts(all_entries)
 
         report = consolidate(all_memories)
 
@@ -174,9 +159,16 @@ class MaintenanceMixin:
         superseded_count = 0
         for item in report["to_supersede"]:
             older_key = item.get("older_key")
+            newer_key = item.get("newer_key")
             if older_key:
                 try:
-                    if hasattr(adapter, "supersede"):
+                    # Phase 2 renamed the primitive to supersede_memory(old,
+                    # new); the old single-arg adapter.supersede() no longer
+                    # exists, which silently disabled this branch before.
+                    if hasattr(adapter, "supersede_memory"):
+                        adapter.supersede_memory(older_key, newer_key)
+                        superseded_count += 1
+                    elif hasattr(adapter, "supersede"):
                         adapter.supersede(older_key)
                         superseded_count += 1
                 except (AttributeError, ValueError, KeyError, RuntimeError) as e:

@@ -468,7 +468,12 @@ class ReflectionManager:
             raise ValueError(f"run not found in namespace: {run_id}")
         if run["status"] != "running":
             raise ValueError("proposals can only be created inside a running run")
-        payload_hash = hashlib.sha256(payload_json.encode("utf-8")).hexdigest()
+        # INV-P2 identity: the same payload applied to a DIFFERENT target is
+        # a different proposal, so the idempotency hash must cover the target
+        # as well as the payload (e.g. identical expire payloads across many
+        # candidates in one consolidation run).
+        idem_source = f"{payload_json}|{target_kind or ''}|{target_id or ''}"
+        payload_hash = hashlib.sha256(idem_source.encode("utf-8")).hexdigest()
         existing = conn.execute(
             "SELECT proposal_id FROM memory_reflection_outputs "
             "WHERE namespace = ? AND proposal_type = ? AND idempotency_key = ?",
@@ -792,3 +797,136 @@ class ReflectionManager:
             "proposals_total": proposals_total,
             "applied": applied,
         }
+
+    def run_consolidation_reflection(
+        self,
+        namespace: str,
+        grace_days: int = 30,
+        auto_apply: bool = True,
+    ) -> Dict[str, Any]:
+        """Contract §6 migration slice: consolidation detection in proposal mode.
+
+        Detection reuses the legacy ``consolidate()`` engine verbatim (zero
+        drift), but its output becomes proposals instead of side effects:
+
+        - ``to_supersede`` → ``supersede`` proposals (high risk: they retire
+          conclusions, so they stay ``proposed`` for user approval; INV-D1).
+        - ``to_forget`` and below-floor ``to_decay`` items → ``expire_projection``
+          proposals (low risk, auto-apply eligible). The legacy path physically
+          deletes these; the proposal path only sets an expiry and stays
+          reversible (contract §6: 不物理删除高价值事实).
+        - Non-below-floor ``to_decay`` items are proposals-free: the legacy
+          path treats them as a no-op (it computes a new confidence but never
+          writes it), so 对拍 keeps them out.
+
+        ``expires_at`` is derived from the decay run's ``started_at`` so
+        replays produce identical payload hashes (INV-P2).
+        """
+        from carrymem.consolidation import consolidate, entries_to_dicts
+        from carrymem.constants import DECAY_CONFIDENCE_FLOOR, DECAY_ROUNDING_PRECISION
+
+        self._require_namespace(namespace)
+        report = consolidate(
+            entries_to_dicts(self._adapter.recall(query="", limit=10000, filters={"include_superseded": True}))
+        )
+
+        config = {"grace_days": grace_days}
+        config_json = json.dumps(config, sort_keys=True)
+
+        # Run A (dedup): retire duplicate/updated conclusions via supersede.
+        supersede_items = report["to_supersede"]
+        dedup_snapshot = hashlib.sha256(
+            "\n".join(sorted(str(item.get("older_key")) for item in supersede_items)).encode("utf-8")
+        ).hexdigest()
+        dedup_run_id = self.start_run(namespace, "dedup", "consolidation-proposal-v1", dedup_snapshot, config_json)
+
+        # Run B (decay): end-of-life expiry for forget + below-floor decay.
+        expire_keys: List[str] = [str(item["storage_key"]) for item in report["to_forget"]]
+        for item in report["to_decay"]:
+            confidence = float(item.get("current_confidence", 0.0))
+            new_conf = round(confidence * float(item.get("decay", 1.0)), DECAY_ROUNDING_PRECISION)
+            if new_conf < DECAY_CONFIDENCE_FLOOR:
+                expire_keys.append(str(item["storage_key"]))
+        decay_snapshot = hashlib.sha256("\n".join(sorted(set(expire_keys))).encode("utf-8")).hexdigest()
+        decay_run_id = self.start_run(namespace, "decay", "consolidation-proposal-v1", decay_snapshot, config_json)
+
+        decay_run = (
+            self._adapter.get_raw_connection()
+            .execute(
+                "SELECT started_at, status FROM memory_reflection_runs WHERE run_id = ?",
+                (decay_run_id,),
+            )
+            .fetchone()
+        )
+        started_at = datetime.fromisoformat(str(decay_run["started_at"]))
+        if started_at.tzinfo is None:
+            started_at = started_at.replace(tzinfo=timezone.utc)
+        expires_at = (started_at + timedelta(days=grace_days)).isoformat()
+
+        supersede_created = 0
+        expire_created = 0
+        try:
+            if self._run_status(dedup_run_id) == "running":
+                for item in supersede_items:
+                    self.create_proposal(
+                        namespace,
+                        dedup_run_id,
+                        "supersede",
+                        {"new_storage_key": str(item["newer_key"])},
+                        {
+                            "strategy": "consolidation",
+                            "reason": item.get("reason"),
+                            "similarity": item.get("similarity"),
+                            "evidence": {"support": 0, "contradiction": 0},
+                        },
+                        0.8,
+                        target_kind="memory",
+                        target_id=str(item["older_key"]),
+                    )
+                    supersede_created += 1
+                self.complete_run(dedup_run_id)
+            if decay_run["status"] == "running":
+                for key in dict.fromkeys(expire_keys):  # dedup, order-preserving
+                    self.create_proposal(
+                        namespace,
+                        decay_run_id,
+                        "expire_projection",
+                        {"expires_at": expires_at},
+                        {
+                            "strategy": "consolidation",
+                            "reason": "decay_below_threshold_or_forget",
+                            "evidence": {"support": 0, "contradiction": 0},
+                        },
+                        0.8,
+                        target_kind="memory",
+                        target_id=key,
+                    )
+                    expire_created += 1
+                self.complete_run(decay_run_id)
+        except Exception as exc:
+            for run_id in (dedup_run_id, decay_run_id):
+                try:
+                    if self._run_status(run_id) == "running":
+                        self.fail_run(run_id, str(exc))
+                except (sqlite3.Error, ValueError):
+                    pass
+            raise
+
+        applied = self.apply_auto_low_risk(namespace, decay_run_id) if auto_apply else []
+        return {
+            "dedup_run_id": dedup_run_id,
+            "decay_run_id": decay_run_id,
+            "supersede_proposals": supersede_created,
+            "supersede_total": len(self.list_proposals(namespace, run_id=dedup_run_id, limit=1000)),
+            "expire_proposals": expire_created,
+            "expire_total": len(self.list_proposals(namespace, run_id=decay_run_id, limit=1000)),
+            "applied": applied,
+        }
+
+    def _run_status(self, run_id: str) -> Optional[str]:
+        row = (
+            self._adapter.get_raw_connection()
+            .execute("SELECT status FROM memory_reflection_runs WHERE run_id = ?", (run_id,))
+            .fetchone()
+        )
+        return None if row is None else str(row["status"])

@@ -15,6 +15,7 @@ import re
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
+from carrymem.constants import DEFAULT_CONFIDENCE_SCORE
 from carrymem.utils.logger import Logger
 
 if TYPE_CHECKING:
@@ -23,6 +24,34 @@ if TYPE_CHECKING:
 logger = Logger("carrymem.consolidation")
 
 DEDUP_WINDOW_HOURS = 24
+
+
+def entries_to_dicts(entries: List[Any]) -> List[Dict[str, Any]]:
+    """Normalize adapter recall results into consolidation input dicts.
+
+    Single source of truth for BOTH the legacy side-effect path
+    (MaintenanceMixin.consolidate) and the Phase 4 proposal path
+    (ReflectionManager.run_consolidation_reflection) — the 对拍 baseline.
+    """
+    result: List[Dict[str, Any]] = []
+    for entry in entries:
+        if hasattr(entry, "__dict__"):
+            result.append(
+                {
+                    "storage_key": getattr(entry, "storage_key", ""),
+                    "type": getattr(entry, "memory_type", ""),
+                    "content": getattr(entry, "content", ""),
+                    "confidence": getattr(entry, "confidence", DEFAULT_CONFIDENCE_SCORE),
+                    "created_at": getattr(entry, "created_at", ""),
+                    "superseded_at": getattr(entry, "superseded_at", None),
+                    "access_count": getattr(entry, "access_count", 0),
+                }
+            )
+        elif isinstance(entry, dict):
+            result.append(entry)
+    return result
+
+
 DECAY_HALF_LIFE_DAYS = 90
 MIN_CONFIDENCE_FOR_DECAY = 0.3
 PREFERENCE_DECAY_MULTIPLIER = 3.0

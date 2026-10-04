@@ -9,6 +9,7 @@ import pytest
 from carrymem.adapters.base import MemoryEntry
 from carrymem.adapters.sqlite import SQLiteAdapter
 from carrymem.adapters.sqlite.reflection import classify_risk
+from carrymem.carrymem import CarryMem
 from carrymem.layers.memify import MemifyEngine, find_decay_candidates
 from carrymem.monitoring import get_metrics_collector
 
@@ -439,7 +440,17 @@ class TestRiskClassification:
         assert classify_risk(proposal_type, payload, evidence) == expected
 
 
-def _tune(adapter, key, importance=None, access_count=None, last_accessed=None, metadata=None, superseded_at=None):
+def _tune(
+    adapter,
+    key,
+    importance=None,
+    access_count=None,
+    last_accessed=None,
+    metadata=None,
+    superseded_at=None,
+    created_at=None,
+    confidence=None,
+):
     """Explicitly steer the decay-gate inputs of one seeded memory."""
     conn = adapter.get_raw_connection()
     conn.execute(
@@ -447,9 +458,11 @@ def _tune(adapter, key, importance=None, access_count=None, last_accessed=None, 
         "access_count = COALESCE(?, access_count), "
         "last_accessed_at = COALESCE(?, last_accessed_at), "
         "metadata = COALESCE(?, metadata), "
-        "superseded_at = COALESCE(?, superseded_at) "
+        "superseded_at = COALESCE(?, superseded_at), "
+        "created_at = COALESCE(?, created_at), "
+        "confidence = COALESCE(?, confidence) "
         "WHERE storage_key = ?",
-        (importance, access_count, last_accessed, metadata, superseded_at, key),
+        (importance, access_count, last_accessed, metadata, superseded_at, created_at, confidence, key),
     )
     conn.commit()
 
@@ -583,3 +596,195 @@ class TestDecayReflectionParity:
         finally:
             adapter_old.close()
             adapter_new.close()
+
+
+def _seed_consolidation_scenario(adapter):
+    """Seed memories covering every consolidate() outcome branch."""
+    now = datetime.now(timezone.utc)
+
+    def seed(content, mtype="personal_fact"):
+        stored = adapter.store_entry(MemoryEntry(content=content, type=mtype))
+        return stored.storage_key
+
+    keys = {
+        # Near-duplicate pair (Jaccard 7/8 >= 0.85) → to_supersede.
+        "dup_old": seed("My deployment target is the staging cluster"),
+        "dup_new": seed("My deployment target is the staging cluster today"),
+        # Preference duplicates are preserved by design → no proposal.
+        "pref_old": seed("I deploy on weekdays", mtype="user_preference"),
+        "pref_new": seed("I deploy on weekdays usually", mtype="user_preference"),
+        # Ancient + low confidence → decay < 0.1 → to_forget → expire proposal.
+        "ancient": seed("ancient scratch note about caching layers"),
+        # Mid decay band, new confidence above floor → legacy no-op → no proposal.
+        "mid_decay": seed("mid decay note about caching layers"),
+        # Below-floor decay (confidence 0.15 * decay ~0.10 < 0.1) → expire proposal.
+        "below_floor": seed("below floor note about caching layers"),
+        # Recent accesses keep it out of every branch.
+        "accessed": seed("accessed note about caching layers"),
+    }
+    _tune(adapter, keys["ancient"], created_at="2020-01-01T00:00:00+00:00", importance=0.9)
+    _tune(
+        adapter,
+        keys["mid_decay"],
+        created_at=(now - timedelta(days=150)).isoformat(),
+        importance=0.9,
+        confidence=0.9,
+    )
+    _tune(
+        adapter,
+        keys["below_floor"],
+        created_at=(now - timedelta(days=250)).isoformat(),
+        confidence=0.15,
+        importance=0.9,
+    )
+    _tune(
+        adapter,
+        keys["accessed"],
+        created_at=(now - timedelta(days=250)).isoformat(),
+        confidence=0.9,
+        importance=0.9,
+        access_count=5,
+        last_accessed=now.isoformat(),
+    )
+    return keys
+
+
+def _all_keys(adapter):
+    return {
+        row["storage_key"]
+        for row in adapter.get_raw_connection().execute("SELECT storage_key FROM memories").fetchall()
+    }
+
+
+def _contents_of(adapter, keys):
+    """Content set for keys — cross-db parity must align on content because
+    storage_key embeds the insert timestamp, which differs between twins."""
+    contents = set()
+    conn = adapter.get_raw_connection()
+    for key in keys:
+        row = conn.execute("SELECT content FROM memories WHERE storage_key = ?", (key,)).fetchone()
+        if row is not None:
+            contents.add(row["content"])
+    return contents
+
+
+def _content_map(adapter):
+    """key -> content for every memory (snapshot helper for deleted rows)."""
+    return {
+        row["storage_key"]: row["content"]
+        for row in adapter.get_raw_connection().execute("SELECT storage_key, content FROM memories").fetchall()
+    }
+
+
+class TestConsolidationReflectionParity:
+    """Contract §6 migration slice: consolidate() detection → proposals."""
+
+    def test_dup_pair_supersede_proposals_are_high_risk(self, adapter):
+        keys = _seed_consolidation_scenario(adapter)
+        result = adapter.reflect_consolidation("default", auto_apply=False)
+        assert result["supersede_proposals"] >= 1
+        proposals = adapter.list_reflection_proposals("default", run_id=result["dedup_run_id"])
+        targets = {p["target_id"] for p in proposals}
+        assert keys["dup_old"] in targets or keys["dup_new"] in targets
+        # Preference duplicates preserved → never proposed.
+        assert keys["pref_old"] not in targets and keys["pref_new"] not in targets
+        assert all(p["risk_level"] == "high" and p["status"] == "proposed" for p in proposals)
+
+    def test_forget_becomes_expire_proposal_not_delete(self, adapter):
+        keys = _seed_consolidation_scenario(adapter)
+        before = _all_keys(adapter)
+        result = adapter.reflect_consolidation("default", auto_apply=False)
+        assert result["expire_proposals"] >= 1
+        expire_targets = {
+            p["target_id"] for p in adapter.list_reflection_proposals("default", run_id=result["decay_run_id"])
+        }
+        assert keys["ancient"] in expire_targets
+        assert keys["below_floor"] in expire_targets
+        # Non-below-floor to_decay is a legacy no-op → no proposal (对拍).
+        assert keys["mid_decay"] not in expire_targets
+        assert keys["accessed"] not in expire_targets
+        # Nothing deleted, nothing applied without approval.
+        assert _all_keys(adapter) == before
+
+    def test_auto_apply_expires_low_risk_and_keeps_high_risk_proposed(self, adapter):
+        keys = _seed_consolidation_scenario(adapter)
+        before = _all_keys(adapter)
+        result = adapter.reflect_consolidation("default", auto_apply=True)
+        assert result["applied"], "expire proposals should auto-apply"
+        conn = adapter.get_raw_connection()
+        for key in (keys["ancient"], keys["below_floor"]):
+            row = conn.execute("SELECT expires_at FROM memories WHERE storage_key = ?", (key,)).fetchone()
+            assert row["expires_at"] is not None
+        # High-risk supersede proposals stay proposed for user approval (INV-P1).
+        for p in adapter.list_reflection_proposals("default", run_id=result["dedup_run_id"]):
+            assert p["status"] == "proposed"
+        # Nothing physically deleted (contract §6).
+        assert _all_keys(adapter) == before
+
+    def test_idempotent_replay_reuses_runs_and_proposals(self, adapter):
+        _seed_consolidation_scenario(adapter)
+        first = adapter.reflect_consolidation("default", auto_apply=True)
+        second = adapter.reflect_consolidation("default", auto_apply=True)
+        assert second["dedup_run_id"] == first["dedup_run_id"]  # INV-RR1
+        assert second["decay_run_id"] == first["decay_run_id"]
+        assert second["supersede_total"] == first["supersede_total"]  # INV-P2
+        assert second["expire_total"] == first["expire_total"]
+        assert second["applied"] == []
+
+    def test_twin_db_legacy_and_proposal_paths_agree(self, tmp_path):
+        cm_old = CarryMem(storage="sqlite", db_path=str(tmp_path / "old.db"), namespace="default")
+        cm_new = CarryMem(storage="sqlite", db_path=str(tmp_path / "new.db"), namespace="default")
+        try:
+            keys_old = _seed_consolidation_scenario(cm_old._adapter)
+            keys_new = _seed_consolidation_scenario(cm_new._adapter)
+            before_old = _all_keys(cm_old._adapter)
+            # key -> content snapshot taken BEFORE consolidation: deleted rows
+            # cannot be looked up afterwards.
+            content_by_key_old = _content_map(cm_old._adapter)
+
+            report = cm_old.consolidate(dry_run=False, run_p1=False, run_p2=False)
+            # Read post-consolidate state through a FRESH raw connection so
+            # the comparison does not depend on adapter connection state.
+            import sqlite3 as _sqlite3
+
+            raw_old = _sqlite3.connect(str(tmp_path / "old.db"))
+            raw_old.row_factory = _sqlite3.Row
+            try:
+                after_rows = raw_old.execute("SELECT storage_key, superseded_at FROM memories").fetchall()
+            finally:
+                raw_old.close()
+            after_keys = {row["storage_key"] for row in after_rows}
+            legacy_superseded = {row["storage_key"] for row in after_rows if row["superseded_at"] is not None}
+            legacy_deleted = before_old - after_keys
+
+            result = cm_new._adapter.reflect_consolidation("default", auto_apply=True)
+            proposal_supersede = {
+                p["target_id"]
+                for p in cm_new._adapter.list_reflection_proposals("default", run_id=result["dedup_run_id"])
+            }
+            proposal_expire = {
+                p["target_id"]
+                for p in cm_new._adapter.list_reflection_proposals("default", run_id=result["decay_run_id"])
+            }
+
+            # 对拍: candidates must agree on both twins — aligned by content
+            # because storage_key embeds the insert timestamp, and deleted
+            # legacy rows are resolved through the pre-consolidation snapshot.
+            legacy_supersede_contents = {content_by_key_old[k] for k in legacy_superseded}
+            legacy_expire_contents = {content_by_key_old[k] for k in legacy_deleted}
+            proposal_supersede_contents = _contents_of(cm_new._adapter, proposal_supersede)
+            proposal_expire_contents = _contents_of(cm_new._adapter, proposal_expire)
+            assert legacy_supersede_contents == proposal_supersede_contents, (
+                f"supersede mismatch: legacy={legacy_supersede_contents} " f"proposals={proposal_supersede_contents}"
+            )
+            assert legacy_expire_contents == proposal_expire_contents, (
+                f"expire mismatch: legacy={legacy_expire_contents} " f"proposals={proposal_expire_contents}"
+            )
+            # Effects differ by design: legacy physically deletes, the
+            # proposal path keeps every row and only sets an expiry.
+            assert keys_new["ancient"] in _all_keys(cm_new._adapter)
+            assert keys_old["ancient"] not in _all_keys(cm_old._adapter)
+            assert report["to_forget"], "seed must exercise the forget branch"
+        finally:
+            cm_old.close()
+            cm_new.close()
