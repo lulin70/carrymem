@@ -778,7 +778,9 @@ class ReflectionManager:
                     )
                     created += 1
                 self.complete_run(run_id)
-        except Exception as exc:
+        # INV-RR3: any strategy failure must transition the run to failed and
+        # never escape as an untracked crash.
+        except Exception as exc:  # NOTE intentional: INV-RR3, rationale above
             try:
                 status_row = conn.execute(
                     "SELECT status FROM memory_reflection_runs WHERE run_id = ?", (run_id,)
@@ -903,7 +905,9 @@ class ReflectionManager:
                     )
                     expire_created += 1
                 self.complete_run(decay_run_id)
-        except Exception as exc:
+        # INV-RR3: any strategy failure must transition both runs to failed and
+        # never escape as an untracked crash.
+        except Exception as exc:  # NOTE intentional: INV-RR3, rationale above
             for run_id in (dedup_run_id, decay_run_id):
                 try:
                     if self._run_status(run_id) == "running":
