@@ -1245,6 +1245,16 @@ class RawConnectionProvider(Protocol):
         """Return the underlying sqlite3.Connection (or compatible)."""
         ...
 
+    @property
+    def write_lock(self):
+        """Process-wide reentrant lock serializing raw-connection write transactions.
+
+        Every write path that executes statements through
+        ``get_raw_connection()`` must hold this lock for the whole
+        transaction (see SQLiteAdapter.write_lock).
+        """
+        ...
+
 
 @runtime_checkable
 class EncryptionProvider(Protocol):

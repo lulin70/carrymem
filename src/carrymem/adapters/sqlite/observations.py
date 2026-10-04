@@ -82,30 +82,33 @@ class ObservationManager:
 
         observation_id = f"obs_{uuid.uuid4().hex}"
         conn = self._adapter.get_raw_connection()
-        try:
-            conn.execute(
-                """INSERT INTO memory_observations
-                   (id, namespace, subject, predicate, value_json, source_kind, source_ref,
-                    confidence, observed_at, expires_at, created_at, status)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'valid')""",
-                (
-                    observation_id,
-                    namespace,
-                    subject,
-                    predicate,
-                    value_json,
-                    source_kind,
-                    source_ref,
-                    confidence,
-                    _iso(observed_at),
-                    _iso(expires_at),
-                    datetime.now(timezone.utc).isoformat(),
-                ),
-            )
-            conn.commit()
-        except sqlite3.Error:
-            conn.rollback()
-            raise
+        # file_lock invariant: raw-connection writers must serialize with the
+        # CRUD/recall write paths (flaky SQLITE_BUSY under concurrent classify).
+        with self._adapter.write_lock:
+            try:
+                conn.execute(
+                    """INSERT INTO memory_observations
+                       (id, namespace, subject, predicate, value_json, source_kind, source_ref,
+                        confidence, observed_at, expires_at, created_at, status)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'valid')""",
+                    (
+                        observation_id,
+                        namespace,
+                        subject,
+                        predicate,
+                        value_json,
+                        source_kind,
+                        source_ref,
+                        confidence,
+                        _iso(observed_at),
+                        _iso(expires_at),
+                        datetime.now(timezone.utc).isoformat(),
+                    ),
+                )
+                conn.commit()
+            except sqlite3.Error:
+                conn.rollback()
+                raise
         return observation_id
 
     def list_observations(

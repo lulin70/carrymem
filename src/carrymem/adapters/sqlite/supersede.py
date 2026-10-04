@@ -113,19 +113,26 @@ class SupersedeManager:
         except AttributeError:
             return False
         now_iso = datetime.now(timezone.utc).isoformat()
+        # file_lock invariant: raw-connection writers must serialize with the
+        # CRUD/recall write paths (flaky SQLITE_BUSY under concurrent classify).
         try:
-            row = conn.execute(
-                "SELECT id FROM memories " "WHERE storage_key = ? AND namespace = ? AND superseded_at IS NULL",
-                (old_storage_key, self._adapter.namespace),
-            ).fetchone()
-            if row is None:
-                return False
-            conn.execute(
-                "UPDATE memories SET superseded_at = ?, supersedes = ? WHERE id = ?",
-                (now_iso, new_storage_key, row["id"]),
-            )
-            conn.commit()
+            with self._adapter.write_lock:
+                row = conn.execute(
+                    "SELECT id FROM memories " "WHERE storage_key = ? AND namespace = ? AND superseded_at IS NULL",
+                    (old_storage_key, self._adapter.namespace),
+                ).fetchone()
+                if row is None:
+                    return False
+                conn.execute(
+                    "UPDATE memories SET superseded_at = ?, supersedes = ? WHERE id = ?",
+                    (now_iso, new_storage_key, row["id"]),
+                )
+                conn.commit()
         except sqlite3.Error as e:
+            try:
+                conn.rollback()
+            except sqlite3.Error:
+                pass
             logger.debug("Explicit supersede failed: %s", e)
             return False
         logger.debug(
@@ -217,6 +224,13 @@ class SupersedeManager:
                 (chain_id, new_version, new_storage_key),
             )
         except sqlite3.Error as e:
+            # The first UPDATE may have succeeded before this failure; leaving
+            # the implicit tx open leaks the WAL write lock and stalls every
+            # other writer (flaky SQLITE_BUSY under concurrency).
+            try:
+                conn.rollback()
+            except sqlite3.Error:
+                pass
             logger.debug("Auto-supersede update failed: %s", e)
             return False
         logger.debug(

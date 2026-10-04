@@ -146,6 +146,12 @@ class CRUDOperations:
         try:
             conn.commit()
         except sqlite3.Error as e:
+            # Swallowing a failed commit leaves the open tx holding the WAL
+            # write lock and stalls every other writer; roll back instead.
+            try:
+                conn.rollback()
+            except sqlite3.Error:
+                pass
             logger.debug("Post-supersede commit failed: %s", e)
 
         self._init_state_version_chain(conn, storage_key, entry)
@@ -167,6 +173,10 @@ class CRUDOperations:
                 )
                 conn.commit()
             except sqlite3.Error as e:
+                try:
+                    conn.rollback()
+                except sqlite3.Error:
+                    pass
                 logger.debug("Failed to update raw_text for existing memory: %s", e)
         stored = self._serializer.row_to_stored(
             conn.execute(
@@ -193,6 +203,10 @@ class CRUDOperations:
             if not _skip_commit:
                 conn.commit()
         except (sqlite3.Error, struct.error, ValueError, TypeError) as e:
+            try:
+                conn.rollback()
+            except sqlite3.Error:
+                pass
             logger.warning("Failed to store embedding: %s", e)
 
     def _init_state_version_chain(self, conn, storage_key, entry) -> None:
@@ -206,6 +220,10 @@ class CRUDOperations:
             )
             conn.commit()
         except sqlite3.Error as e:
+            try:
+                conn.rollback()
+            except sqlite3.Error:
+                pass
             logger.debug("Failed to set initial version_chain_id: %s", e)
 
     def store_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:
@@ -218,7 +236,11 @@ class CRUDOperations:
             conn = self._conn_mgr.get_connection()
             results = []
             try:
-                conn.execute("BEGIN")
+                # BEGIN IMMEDIATE: acquire the write lock up front (matches
+                # schema.py/reflection.py convention) so a read inside the
+                # batch can never hit the deferred read-upgrade snapshot
+                # conflict (immediate SQLITE_BUSY, busy_timeout not honored).
+                conn.execute("BEGIN IMMEDIATE")
                 for entry in entries:
                     result = self._remember_impl(entry, _skip_commit=True)
                     results.append(result)
@@ -242,7 +264,9 @@ class CRUDOperations:
         with self._conn_mgr.file_lock:
             conn = self._conn_mgr.get_connection()
             try:
-                conn.execute("BEGIN")
+                # BEGIN IMMEDIATE: see store_batch — avoids the deferred
+                # read-upgrade snapshot conflict inside the batch.
+                conn.execute("BEGIN IMMEDIATE")
                 for key in storage_keys:
                     memory_id = None
                     row = conn.execute(

@@ -92,30 +92,37 @@ class EvidenceLinkManager:
 
         conn = self._adapter.get_raw_connection()
         link_id = f"ev_{uuid.uuid4().hex}"
-        try:
-            cursor = conn.execute(
-                """INSERT OR IGNORE INTO memory_evidence_links
-                   (id, namespace, source_kind, source_id, source_snapshot_hash,
-                    target_kind, target_id, relation_type, support_weight, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (
-                    link_id,
-                    namespace,
-                    source_kind,
-                    source_id,
-                    source_snapshot_hash,
-                    target_kind,
-                    target_id,
-                    relation_type,
-                    support_weight,
-                    _utc_now_iso(),
-                ),
-            )
-            inserted = cursor.rowcount > 0
-            conn.commit()
-        except _OpError as e:
-            logger.warning("add_evidence_link failed (%s): %s", relation_type, e)
-            return None
+        # file_lock invariant: raw-connection writers must serialize with the
+        # CRUD/recall write paths (flaky SQLITE_BUSY under concurrent classify).
+        with self._adapter.write_lock:
+            try:
+                cursor = conn.execute(
+                    """INSERT OR IGNORE INTO memory_evidence_links
+                       (id, namespace, source_kind, source_id, source_snapshot_hash,
+                        target_kind, target_id, relation_type, support_weight, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        link_id,
+                        namespace,
+                        source_kind,
+                        source_id,
+                        source_snapshot_hash,
+                        target_kind,
+                        target_id,
+                        relation_type,
+                        support_weight,
+                        _utc_now_iso(),
+                    ),
+                )
+                inserted = cursor.rowcount > 0
+                conn.commit()
+            except _OpError as e:
+                try:
+                    conn.rollback()
+                except _OpError:
+                    pass
+                logger.warning("add_evidence_link failed (%s): %s", relation_type, e)
+                return None
 
         if inserted:
             get_metrics_collector().increment(f"evidence_link_{relation_type}")

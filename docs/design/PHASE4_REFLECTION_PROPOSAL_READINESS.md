@@ -157,6 +157,18 @@ memory_reflection_outputs
 | 后台队列（容量/超时/重试计数） | 后续切片 | 最小闭环为同步显式触发；队列属运维项（契约 §5.3） |
 | 异步侧 run/proposal parity | Backlog | 与 Phase 2 异步写入 API 同批 |
 | target 存在性/snapshot 匹配校验的完整矩阵 | 本切片实现 target 存在性；snapshot 匹配完整矩阵 Backlog | 最小闭环先保证不 apply 到已消失目标 |
+| reflection.py 全部写方法补 file_lock | 后续切片（Phase 4 并发收尾） | 现用 BEGIN IMMEDIATE（前置取写锁 + busy_timeout）已是安全形态，调用方当前单线程；全量不变量"所有 raw-connection 写事务持 file_lock"在下一切片补齐 |
+
+### 6.1 全量门禁并发失败根因闭环（2026-10-04）
+
+Phase 4 两次全量门禁分别失败于 `test_concurrent_mixed_read_write` 与 `test_concurrent_writes_from_multiple_threads`（`OperationalError: database is locked`，code=5 SQLITE_BUSY）。按 Phase 2 readiness §6.1 承诺独立立项，**未放宽任何断言**。三轮受控探针（`/tmp/probe_concurrent_lock*.py`、`/tmp/probe_trace.py`，含 sqlite errorcode 捕获、连接 `in_transaction` 转储、`set_trace_callback` 语句级追踪）定位出**两个叠加机制**：
+
+**机制一：file_lock 不变量被 Phase 2/3 新增写路径绕过**。设计上 `_db_write_locks[path]`（进程级 RLock）应串行化同库全部写事务，但 observations/conflicts/evidence/knowledge_graph/`_bump_repetition_count`/`supersede_by_keys` 等经 `get_raw_connection()` 的写路径未持锁，与 file_lock 持有者并发竞争。探针 3 实锤：round 结束仍有连接 `in_transaction=True`（泄漏写事务持有 WAL 写锁），首个等待者耗尽 10s busy_timeout 后，**后续写者 26~500ms 即失败**（WAL shm 锁路径不咨询 busy handler）。部分失败路径吞掉 sqlite3.Error 后既不 commit 也不 rollback（如 `_apply_supersede_db_update` 第一条 UPDATE 成功、第二条失败），泄漏事务由此固化。
+修复：adapter 新增公共 `write_lock` 属性；上述全部写事务持 `file_lock`（RLock 可重入，嵌套安全）；所有吞掉点补 rollback；`store_batch`/`delete_batch` 的 deferred `BEGIN` 对齐为 `BEGIN IMMEDIATE`（与 schema/reflection 惯例一致，杜绝 deferred 读-升级写快照冲突形态）。
+
+**机制二：WAL 读侧瞬时 BUSY（语句级追踪定位）**。classify 内部召回（冲突候选搜索）的 `SELECT * FROM memories ...` 在并发写入（FTS+vector BLOB 使 WAL 每 1000 页默认阈值反复触发 checkpoint/重置）下，`walTryBeginRead` 无法锁定稳定 read-mark 而瞬时 BUSY——此路径 busy_timeout 不生效。修复（SQLite 官方实践，分层）：`busy_timeout` 10s→30s（与 connect timeout 对齐）；`wal_autocheckpoint` 1000→4000 页（env 可调 `CARRYMEM_WAL_AUTOCHECKPOINT_PAGES`）降低 checkpoint churn；`classify_and_remember`/`recall_memories` 入口加有界重试（3 次、指数退避，仅对类名为 OperationalError 且含 locked/busy 的瞬时错误，其余原样上抛；按异常类名匹配因 vector 路径使用 pysqlite3 驱动、异常类与 stdlib 不同）。
+
+验证：并发 e2e 修复前 6 轮 1 挂 → 修复后 **6/6 全绿**；evolution/reflection/concurrent/adapter 专项 212 passed；knowledge_graph 专项修复 `FakeConnMgr` 测试替身缺 `file_lock` 属性（生产契约扩展同步替身，断言未动）后 35 passed。全量门禁终态见 §7。
 
 ## 7. 测试与门禁计划
 

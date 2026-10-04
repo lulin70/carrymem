@@ -517,6 +517,22 @@ class SQLiteAdapter(StorageAdapter):
         return self._conn_mgr.get_connection()
 
     @property
+    def write_lock(self):
+        """Process-wide reentrant lock serializing write transactions on this DB file.
+
+        Every write path that executes statements through
+        ``get_raw_connection()`` must hold this lock for the whole
+        transaction; the CRUD/recall internals already do. Without it,
+        an unsynchronized writer can hold the SQLite write lock (or,
+        in deferred transactions, invalidate a reader snapshot) while a
+        file_lock holder is mid-transaction, surfacing as flaky
+        ``OperationalError: database is locked`` (SQLITE_BUSY).
+        Reentrant: nesting is safe for batch ops that call locked helpers
+        on the same thread.
+        """
+        return self._conn_mgr.file_lock
+
+    @property
     def security(self):
         """Public accessor for the SecurityOps instance.
 

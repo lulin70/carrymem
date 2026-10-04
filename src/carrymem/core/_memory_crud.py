@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, TypeVar
 
 from carrymem.adapters.base import MemoryEntry, VersioningProvider
 from carrymem.constants import BATCH_RECALL_LIMIT, MAX_MESSAGE_LENGTH
@@ -31,6 +31,48 @@ if TYPE_CHECKING:
     from carrymem.security.permissions import AccessPolicy
 
 logger = logging.getLogger(__name__)
+
+#: Transient SQLite busy/locked failures are retried at the operation level.
+#: The driver's busy_timeout covers database-file lock waits, but the WAL
+#: wal-index shm lock path (reader racing a checkpoint/reset) returns
+#: SQLITE_BUSY *without* consulting the busy handler, so a bounded retry with
+#: backoff is the standard remedy. Matched by exception class NAME because the
+#: vector path runs on the pysqlite3 driver, whose exception classes are
+#: distinct from stdlib sqlite3.
+BUSY_RETRY_ATTEMPTS = 3
+_BUSY_RETRY_BASE_DELAY_SECONDS = 0.2
+
+_T = TypeVar("_T")
+
+
+def _is_transient_busy(exc: BaseException) -> bool:
+    """True for transient SQLite busy/locked OperationalErrors."""
+    if type(exc).__name__ != "OperationalError":
+        return False
+    message = str(exc).lower()
+    return "locked" in message or "busy" in message
+
+
+def _retry_on_busy(operation: Callable[[], _T], *, what: str) -> _T:
+    """Run ``operation``, retrying transient SQLite busy failures with backoff."""
+    attempt = 0
+    while True:
+        try:
+            return operation()
+        except Exception as exc:  # NOTE intentional: re-raises everything non-transient
+            attempt += 1
+            if not _is_transient_busy(exc) or attempt >= BUSY_RETRY_ATTEMPTS:
+                raise
+            delay = _BUSY_RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
+            logger.warning(
+                "Transient SQLite busy in %s (attempt %d/%d), retrying in %.1fs: %s",
+                what,
+                attempt,
+                BUSY_RETRY_ATTEMPTS,
+                delay,
+                exc,
+            )
+            time.sleep(delay)
 
 
 class MemoryCRUDMixin:
@@ -142,7 +184,10 @@ class MemoryCRUDMixin:
         metrics = get_metrics_collector()
         started = time.perf_counter()
         try:
-            result = self._classify_and_remember_impl(message, context, language, session_id, force_type, user_id)
+            result = _retry_on_busy(
+                lambda: self._classify_and_remember_impl(message, context, language, session_id, force_type, user_id),
+                what="classify_and_remember",
+            )
         except Exception:
             metrics.increment("classify_and_remember_errors")
             raise

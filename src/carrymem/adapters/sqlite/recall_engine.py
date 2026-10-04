@@ -439,28 +439,42 @@ class RecallEngine:
             self._collect_stored_access_updates(rows, update_access, now, now_iso, seen_keys, batch_updates, results)
             if update_access and batch_updates:
                 with self._conn_mgr.file_lock:
-                    conn.executemany(
-                        "UPDATE memories SET access_count = ?, "
-                        "importance_score = ?, last_accessed_at = ? "
-                        "WHERE storage_key = ?",
-                        batch_updates,
-                    )
+                    try:
+                        conn.executemany(
+                            "UPDATE memories SET access_count = ?, "
+                            "importance_score = ?, last_accessed_at = ? "
+                            "WHERE storage_key = ?",
+                            batch_updates,
+                        )
+                    except sqlite3.Error:
+                        # Roll back so a partial executemany cannot leak the
+                        # open tx's WAL write lock to every other writer.
+                        conn.rollback()
+                        raise
         else:
             self._collect_row_access_updates(
                 rows, update_access, now, now_iso, limit, seen_keys, batch_updates, results
             )
             if update_access and batch_updates:
                 with self._conn_mgr.file_lock:
-                    conn.executemany(
-                        "UPDATE memories SET access_count = access_count + 1, "
-                        "importance_score = ?, last_accessed_at = ? "
-                        "WHERE storage_key = ?",
-                        [(score, ts, key) for (_, score, ts, key) in batch_updates],
-                    )
+                    try:
+                        conn.executemany(
+                            "UPDATE memories SET access_count = access_count + 1, "
+                            "importance_score = ?, last_accessed_at = ? "
+                            "WHERE storage_key = ?",
+                            [(score, ts, key) for (_, score, ts, key) in batch_updates],
+                        )
+                    except sqlite3.Error:
+                        conn.rollback()
+                        raise
 
         if update_access and batch_updates:
             with self._conn_mgr.file_lock:
-                conn.commit()
+                try:
+                    conn.commit()
+                except sqlite3.Error:
+                    conn.rollback()
+                    raise
 
         if not is_stored and filters.get("_order_oldest") and results:
             results.sort(key=lambda m: m.created_at or datetime.min.replace(tzinfo=timezone.utc))

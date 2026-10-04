@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
+import sqlite3
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union, cast
 
-from carrymem.adapters.base import MemoryEntry
+from carrymem.adapters.base import MemoryEntry, RawConnectionProvider
 from carrymem.constants import (
     ACTIVE_RULES_LIST_LIMIT,
     CONTENT_PREVIEW_LENGTH,
@@ -480,24 +481,36 @@ class ClassificationMixin:
             return
         try:
             conn = adapter.get_raw_connection()
-            row = conn.execute(
-                "SELECT metadata FROM memories WHERE storage_key = ? AND namespace = ?",
-                (storage_key, self._namespace),
-            ).fetchone()
-            if not row:
-                return
-            try:
-                meta = json.loads(row["metadata"] or "{}")
-            except (TypeError, ValueError):
-                meta = {}
-            if not isinstance(meta, dict):
-                meta = {}
-            meta["repetition_count"] = int(new_count)
-            conn.execute(
-                "UPDATE memories SET metadata = ? WHERE storage_key = ? AND namespace = ?",
-                (json.dumps(meta), storage_key, self._namespace),
-            )
-            conn.commit()
+            # file_lock invariant: raw-connection writers must serialize with the
+            # CRUD/recall write paths (flaky SQLITE_BUSY under concurrent classify).
+            # cast: the attr set mirrors RawConnectionProvider; self._adapter's
+            # declared type is the broader StorageAdapter ABC.
+            with cast("RawConnectionProvider", adapter).write_lock:
+                try:
+                    row = conn.execute(
+                        "SELECT metadata FROM memories WHERE storage_key = ? AND namespace = ?",
+                        (storage_key, self._namespace),
+                    ).fetchone()
+                    if not row:
+                        return
+                    try:
+                        meta = json.loads(row["metadata"] or "{}")
+                    except (TypeError, ValueError):
+                        meta = {}
+                    if not isinstance(meta, dict):
+                        meta = {}
+                    meta["repetition_count"] = int(new_count)
+                    conn.execute(
+                        "UPDATE memories SET metadata = ? WHERE storage_key = ? AND namespace = ?",
+                        (json.dumps(meta), storage_key, self._namespace),
+                    )
+                    conn.commit()
+                except sqlite3.Error:
+                    # sqlite3.Error is outside the outer except tuple (it must
+                    # propagate); roll back first so the open tx cannot leak
+                    # the WAL write lock to every other writer.
+                    conn.rollback()
+                    raise
         except (AttributeError, KeyError, TypeError, ValueError, RuntimeError):
             return
 

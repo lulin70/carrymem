@@ -96,25 +96,37 @@ class KnowledgeGraph:
 
         conn = self._conn_mgr.get_connection()
         stored = 0
+        attempted = 0
         now = datetime.now(timezone.utc).isoformat()
-        for entity in result.entities:
-            canonical = self._sanitize(entity.get("canonical", ""))
-            if not canonical:
-                continue
-            entity_type = entity.get("type", "concept")
-            score = float(entity.get("score", 0.5))
-            try:
-                conn.execute(
-                    "INSERT OR IGNORE INTO memory_entities "
-                    "(memory_key, entity_type, entity_text, confidence, namespace, created_at) "
-                    "VALUES (?, ?, ?, ?, ?, ?)",
-                    (storage_key, entity_type, canonical, score, safe_ns, now),
-                )
-                stored += 1
-            except sqlite3.Error as e:
-                logger.debug("KnowledgeGraph entity insert skipped: %s", e)
-        if stored > 0:
-            conn.commit()
+        # file_lock invariant: raw-connection writers must serialize with the
+        # CRUD/recall write paths (flaky SQLITE_BUSY under concurrent classify).
+        with self._conn_mgr.file_lock:
+            for entity in result.entities:
+                canonical = self._sanitize(entity.get("canonical", ""))
+                if not canonical:
+                    continue
+                entity_type = entity.get("type", "concept")
+                score = float(entity.get("score", 0.5))
+                attempted += 1
+                try:
+                    conn.execute(
+                        "INSERT OR IGNORE INTO memory_entities "
+                        "(memory_key, entity_type, entity_text, confidence, namespace, created_at) "
+                        "VALUES (?, ?, ?, ?, ?, ?)",
+                        (storage_key, entity_type, canonical, score, safe_ns, now),
+                    )
+                    stored += 1
+                except sqlite3.Error as e:
+                    logger.debug("KnowledgeGraph entity insert skipped: %s", e)
+            if stored > 0:
+                conn.commit()
+            elif attempted > 0:
+                # All inserts failed: close the (possibly write-holding) tx
+                # instead of leaking it.
+                try:
+                    conn.rollback()
+                except sqlite3.Error:
+                    pass
         return stored
 
     # ── Graph query APIs ──────────────────────────────────────────

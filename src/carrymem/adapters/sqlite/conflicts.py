@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -73,26 +74,33 @@ class ConflictManager:
             if blocked:
                 raise ValueError(f"ConflictRecord {field_name} blocked by redaction: {reason}")
         conn = self._adapter.get_raw_connection()
-        conn.execute(
-            """INSERT INTO memory_conflicts
-               (conflict_id, namespace, subject_key, candidate_ids, conflict_type,
-                resolution_status, resolution_policy, selected_id, reasoning, created_at, resolved_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                conflict_id,
-                namespace,
-                subject_key,
-                json.dumps(candidate_ids, ensure_ascii=False),
-                conflict_type,
-                resolution_status,
-                resolution_policy,
-                selected_id,
-                reasoning_json,
-                _now(),
-                _now() if resolution_status in {"resolved", "user_decided"} else None,
-            ),
-        )
-        conn.commit()
+        # file_lock invariant: raw-connection writers must serialize with the
+        # CRUD/recall write paths (flaky SQLITE_BUSY under concurrent classify).
+        with self._adapter.write_lock:
+            try:
+                conn.execute(
+                    """INSERT INTO memory_conflicts
+                       (conflict_id, namespace, subject_key, candidate_ids, conflict_type,
+                        resolution_status, resolution_policy, selected_id, reasoning, created_at, resolved_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        conflict_id,
+                        namespace,
+                        subject_key,
+                        json.dumps(candidate_ids, ensure_ascii=False),
+                        conflict_type,
+                        resolution_status,
+                        resolution_policy,
+                        selected_id,
+                        reasoning_json,
+                        _now(),
+                        _now() if resolution_status in {"resolved", "user_decided"} else None,
+                    ),
+                )
+                conn.commit()
+            except sqlite3.Error:
+                conn.rollback()
+                raise
         return conflict_id
 
     def list_conflicts(

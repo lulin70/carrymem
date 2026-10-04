@@ -9,7 +9,12 @@ from contextlib import contextmanager
 from typing import Dict, Optional
 
 from ...exceptions import DBConnectionError
-from .constants import SQLITE_BUSY_TIMEOUT_MS, SQLITE_CACHE_SIZE_KIB, SQLITE_DB_TIMEOUT_SECONDS
+from .constants import (
+    SQLITE_BUSY_TIMEOUT_MS,
+    SQLITE_CACHE_SIZE_KIB,
+    SQLITE_DB_TIMEOUT_SECONDS,
+    SQLITE_WAL_AUTOCHECKPOINT_PAGES,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -218,6 +223,7 @@ class ConnectionManager:
         """
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute(f"PRAGMA wal_autocheckpoint={SQLITE_WAL_AUTOCHECKPOINT_PAGES}")
         conn.execute(f"PRAGMA cache_size=-{SQLITE_CACHE_SIZE_KIB}")
         conn.execute("PRAGMA foreign_keys=ON")
         conn.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")
