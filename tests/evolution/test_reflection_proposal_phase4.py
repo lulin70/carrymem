@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 import pytest
 
 from carrymem.adapters.base import MemoryEntry
 from carrymem.adapters.sqlite import SQLiteAdapter
 from carrymem.adapters.sqlite.reflection import classify_risk
+from carrymem.layers.memify import MemifyEngine, find_decay_candidates
 from carrymem.monitoring import get_metrics_collector
 
 
@@ -434,3 +437,149 @@ class TestRiskClassification:
     )
     def test_matrix(self, proposal_type, payload, evidence, expected):
         assert classify_risk(proposal_type, payload, evidence) == expected
+
+
+def _tune(adapter, key, importance=None, access_count=None, last_accessed=None, metadata=None, superseded_at=None):
+    """Explicitly steer the decay-gate inputs of one seeded memory."""
+    conn = adapter.get_raw_connection()
+    conn.execute(
+        "UPDATE memories SET importance_score = COALESCE(?, importance_score), "
+        "access_count = COALESCE(?, access_count), "
+        "last_accessed_at = COALESCE(?, last_accessed_at), "
+        "metadata = COALESCE(?, metadata), "
+        "superseded_at = COALESCE(?, superseded_at) "
+        "WHERE storage_key = ?",
+        (importance, access_count, last_accessed, metadata, superseded_at, key),
+    )
+    conn.commit()
+
+
+def _seed_decay_scenario(adapter):
+    """Seed five memories covering every decay-gate outcome."""
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    def seed(content):
+        stored = adapter.store_entry(MemoryEntry(content=content, type="fact_declaration"))
+        return stored.storage_key
+
+    keys = {
+        "stale": seed("stale unused note about caches"),
+        "fresh": seed("fresh important note about caches"),
+        "accessed": seed("accessed low-importance note about caches"),
+        "decayed": seed("already decayed note about caches"),
+    }
+    _tune(adapter, keys["stale"], importance=0.1)
+    _tune(adapter, keys["fresh"], importance=0.9)
+    _tune(adapter, keys["accessed"], importance=0.1, access_count=1, last_accessed=now_iso)
+    _tune(adapter, keys["decayed"], importance=0.1, metadata='{"decayed": 1}')
+    superseded_key = seed("superseded stale note about caches")
+    _tune(adapter, superseded_key, importance=0.1, superseded_at=now_iso)
+    keys["superseded"] = superseded_key
+    candidates = find_decay_candidates(adapter.get_raw_connection(), "default")
+    return keys, candidates
+
+
+class TestDecayReflectionParity:
+    """Contract §6 migration slice: memify decay gate → expire proposals."""
+
+    def test_shared_gate_matches_auto_decay_effect(self, adapter):
+        keys, candidates = _seed_decay_scenario(adapter)
+        assert candidates == [keys["stale"]]
+        MemifyEngine(adapter=adapter).auto_decay()
+        decayed_rows = (
+            adapter.get_raw_connection()
+            .execute("SELECT storage_key FROM memories WHERE json_extract(metadata, '$.decayed') = 1")
+            .fetchall()
+        )
+        # Exclude the pre-seeded already-decayed memory: the gate must not
+        # have touched it again.
+        newly_decayed = {row["storage_key"] for row in decayed_rows} - {keys["decayed"]}
+        assert newly_decayed == set(candidates)
+
+    def test_reflect_decay_proposes_for_exactly_gate_candidates(self, adapter):
+        keys, candidates = _seed_decay_scenario(adapter)
+        result = adapter.reflect_decay("default", auto_apply=False)
+        assert result["candidates"] == len(candidates)
+        assert result["proposals_created"] == len(candidates)
+        proposals = adapter.list_reflection_proposals("default", run_id=result["run_id"])
+        assert {p["target_id"] for p in proposals} == set(candidates)
+        assert all(p["status"] == "proposed" and p["risk_level"] == "low" for p in proposals)
+
+    def test_reflect_decay_auto_apply_then_idempotent_replay(self, adapter):
+        keys, candidates = _seed_decay_scenario(adapter)
+        first = adapter.reflect_decay("default", auto_apply=True)
+        assert set(first["applied"]) == {p for p in first["applied"]}
+        assert len(first["applied"]) == len(candidates)
+        stale_row = (
+            adapter.get_raw_connection()
+            .execute("SELECT expires_at FROM memories WHERE storage_key = ?", (keys["stale"],))
+            .fetchone()
+        )
+        run_row = (
+            adapter.get_raw_connection()
+            .execute("SELECT started_at FROM memory_reflection_runs WHERE run_id = ?", (first["run_id"],))
+            .fetchone()
+        )
+        expected_expiry = (
+            datetime.fromisoformat(run_row["started_at"]).replace(tzinfo=timezone.utc) + timedelta(days=30)
+        ).isoformat()
+        assert stale_row["expires_at"] == expected_expiry
+
+        second = adapter.reflect_decay("default", auto_apply=True)
+        assert second["run_id"] == first["run_id"]  # INV-RR1: reuse
+        assert second["proposals_total"] == first["proposals_total"]  # INV-P2: no duplicates
+        assert second["applied"] == []  # nothing left proposed
+
+    def test_reflect_decay_rollback_restores_previous_expiry(self, adapter):
+        keys, _candidates = _seed_decay_scenario(adapter)
+        original = (
+            adapter.get_raw_connection()
+            .execute("SELECT expires_at FROM memories WHERE storage_key = ?", (keys["stale"],))
+            .fetchone()["expires_at"]
+        )
+        result = adapter.reflect_decay("default", auto_apply=True)
+        proposal_id = result["applied"][0]
+        adapter.rollback_reflection_proposal("default", proposal_id)
+        restored = (
+            adapter.get_raw_connection()
+            .execute("SELECT expires_at FROM memories WHERE storage_key = ?", (keys["stale"],))
+            .fetchone()["expires_at"]
+        )
+        assert restored == original
+
+    def test_twin_db_legacy_and_proposal_paths_agree_on_candidates(self, tmp_path):
+        adapter_old = SQLiteAdapter(str(tmp_path / "old.db"), enable_vector_search=False, enable_semantic_recall=False)
+        adapter_new = SQLiteAdapter(str(tmp_path / "new.db"), enable_vector_search=False, enable_semantic_recall=False)
+        try:
+            keys_old, _candidates = _seed_decay_scenario(adapter_old)
+            keys_new, _candidates = _seed_decay_scenario(adapter_new)
+
+            MemifyEngine(adapter=adapter_old).auto_decay()
+            legacy_decayed = {
+                row["storage_key"]
+                for row in adapter_old.get_raw_connection()
+                .execute("SELECT storage_key FROM memories WHERE json_extract(metadata, '$.decayed') = 1")
+                .fetchall()
+            } - {
+                keys_old["decayed"]
+            }  # exclude the pre-seeded already-decayed memory
+
+            result = adapter_new.reflect_decay("default", auto_apply=True)
+            proposal_targets = {
+                p["target_id"]
+                for p in adapter_new.list_reflection_proposals("default", run_id=result["run_id"], status="applied")
+            }
+
+            assert proposal_targets == legacy_decayed, "对拍: both paths must select the same candidates"
+            assert keys_new["stale"] in proposal_targets
+            # Effects intentionally differ (contract §6): legacy halves
+            # importance, the proposal path sets an expiry — neither deletes.
+            assert (
+                adapter_new.get_raw_connection()
+                .execute("SELECT COUNT(*) AS c FROM memories WHERE storage_key = ?", (keys_new["stale"],))
+                .fetchone()["c"]
+                == 1
+            )
+        finally:
+            adapter_old.close()
+            adapter_new.close()

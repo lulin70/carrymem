@@ -1009,6 +1009,20 @@ class SQLiteAdapter(StorageAdapter):
     def apply_auto_low_risk_reflections(self, namespace, run_id):
         return self._get_reflections().apply_auto_low_risk(namespace, run_id)
 
+    def reflect_decay(
+        self,
+        namespace,
+        stale_days=90,
+        min_importance=0.3,
+        batch_size=100,
+        grace_days=30,
+        auto_apply=True,
+    ):
+        """Run the decay gate in proposal mode (Phase 4, contract §6)."""
+        return self._get_reflections().run_decay_reflection(
+            namespace, stale_days, min_importance, batch_size, grace_days, auto_apply
+        )
+
     # ── Evidence Links (Phase 1 Provenance, ADR-015) ────────────────────
 
     def add_evidence_link(

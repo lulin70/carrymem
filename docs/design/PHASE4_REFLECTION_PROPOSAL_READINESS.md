@@ -24,7 +24,23 @@
 | S3 | apply / rollback 单事务语义（INV-P3 rollback_ref 必填、INV-B1 只撤销派生投影）：apply 处理器注册表，首发 3 个真实处理器 `expire_projection` / `graph_update(reinforce, max_weight≤10)` / `supersede`；其余 proposal_type apply 一律 fail-closed 拒绝（`no apply handler ... (fail-closed)`） | ✅ 已实现 |
 | S4 | 风险分级（INV-D1：高风险清单代码硬编码 `classify_risk()`）：低风险白名单 = expire_projection / graph_update(reinforce+上限) / dedup_merge(≥2 证据)；高风险恒人工（rule_candidate、model_claim、fact_candidate、supersede、profile_rebuild）；未知形状 fail-closed 为 high；调用方只能调高不能调低 | ✅ 已实现 |
 | S5 | 适配器接线（capabilities `reflection_runs` / `reflection_proposals` + 门面 14 个方法）+ metrics（runs started/reused/resumed/completed/failed；proposals created/reused/approved/rejected/applied/apply_failed/rolled_back） | ✅ 已实现 |
-| S6 | 测试：不变量单测（INV-RR1-3、INV-P1-4、INV-D1 矩阵、INV-B1/F3）+ 真实用户 E2E（propose → inspect → approve → apply → recall 生效 → rollback → recall 恢复） | ✅ **37 passed**（`tests/evolution/test_reflection_proposal_phase4.py` 29 项 + `tests/e2e/test_e2e_reflection_proposal.py` 2 项 + 邻近回归 253 passed） |
+| S6 | 测试：不变量单测（INV-RR1-3、INV-P1-4、INV-D1 矩阵、INV-B1/F3）+ 真实用户 E2E（propose → inspect → approve → apply → recall 生效 → rollback → recall 恢复） | ✅ **40 passed**（`tests/evolution/test_reflection_proposal_phase4.py` 34 项 + `tests/e2e/test_e2e_reflection_proposal.py` 2 项 + memify 回归 32 项） |
+| S7 | **decay 策略提案化（契约 §6 第一个迁移策略）**：抽取共享三重门 `find_decay_candidates()`（memify 与 reflection 单一事实源）；`ReflectionManager.run_decay_reflection()` + 门面 `reflect_decay()`（候选 → expire_projection 提案 → 低风险白名单自动应用）；`expires_at = run.started_at + grace_days`（从 run 身份派生，重放 payload hash 稳定 → INV-P2 幂等）；resume 不再重置 started_at（否则破坏重放幂等，已修） | ✅ 已实现 + **对拍通过** |
+
+### S7 对拍证据（新旧路径，双库孪生种子）
+
+```text
+test_shared_gate_matches_auto_decay_effect: 共享门候选 == auto_decay 实际衰减集（排除预置已衰减）
+test_reflect_decay_proposes_for_exactly_gate_candidates: 提案目标集 == 门候选集，全部 low/proposed
+test_reflect_decay_auto_apply_then_idempotent_replay: 二次运行复用同 run（INV-RR1）、提案数不变（INV-P2）、applied 为空
+test_reflect_decay_rollback_restores_previous_expiry: 回滚恢复原 expires_at（INV-B1）
+test_twin_db_legacy_and_proposal_paths_agree_on_candidates: 孪生库对拍，legacy 衰减集 == 提案应用目标集；
+  效果按契约 §6 有意不同——legacy 折半 importance，提案路径设 expires_at，两者均不物理删除
+验证：tests/evolution/test_reflection_proposal_phase4.py 40 passed + tests/test_memify.py 32 passed；
+black/isort/flake8/mypy（164 source files）/radon 全绿
+```
+
+遗留策略（dedup_merge / consolidate() 的 to_supersede/to_forget）按 §6 纪律逐个迁移，见 §6 显式延期项。
 
 ### 2.1 实现过程中由测试揭示并修复的两个真实缺陷
 

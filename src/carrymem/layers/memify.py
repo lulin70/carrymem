@@ -23,6 +23,37 @@ from carrymem.utils.logger import logger
 if TYPE_CHECKING:
     from carrymem.adapters.sqlite import SQLiteAdapter
 
+# Shared three-way decay gate (stale + low importance + zero access + not
+# already decayed). Single source of truth for BOTH the legacy direct-mutation
+# path (MemifyEngine.auto_decay) and the Phase 4 proposal path
+# (ReflectionManager.run_decay_reflection) — the 对拍 baseline.
+_DECAY_GATE_SQL = """SELECT storage_key FROM memories
+   WHERE namespace = ?
+     AND superseded_at IS NULL
+     AND (last_accessed_at IS NULL OR last_accessed_at < ?)
+     AND importance_score < ?
+     AND access_count = 0
+     AND (metadata IS NULL
+          OR json_extract(metadata, '$.decayed') IS NULL
+          OR json_extract(metadata, '$.decayed') != 1)
+   LIMIT ?"""
+
+
+def find_decay_candidates(
+    conn,
+    namespace: str,
+    stale_days: int = 90,
+    min_importance: float = 0.3,
+    batch_size: int = 100,
+) -> List[str]:
+    """Return storage keys matching the shared decay gate (deterministic order)."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=stale_days)).isoformat()
+    rows = conn.execute(
+        _DECAY_GATE_SQL,
+        (namespace, cutoff, min_importance, batch_size),
+    ).fetchall()
+    return [row["storage_key"] for row in rows]
+
 
 class MemifyEngine:
     """Dynamic memory refinement engine (v0.7.2).
@@ -238,30 +269,16 @@ class MemifyEngine:
         Returns:
             Number of memories decayed.
         """
-        cutoff = (datetime.now(timezone.utc) - timedelta(days=stale_days)).isoformat()
         conn = self._adapter.get_raw_connection()  # Public API (TD-007)
 
-        stale_keys = conn.execute(
-            """SELECT storage_key FROM memories
-               WHERE namespace = ?
-                 AND superseded_at IS NULL
-                 AND (last_accessed_at IS NULL OR last_accessed_at < ?)
-                 AND importance_score < ?
-                 AND access_count = 0
-                 AND (metadata IS NULL
-                      OR json_extract(metadata, '$.decayed') IS NULL
-                      OR json_extract(metadata, '$.decayed') != 1)
-               LIMIT ?""",
-            (namespace, cutoff, min_importance, batch_size),
-        ).fetchall()
+        stale_keys = find_decay_candidates(conn, namespace, stale_days, min_importance, batch_size)
 
         if not stale_keys:
             return 0
 
         decayed = 0
         now_iso = datetime.now(timezone.utc).isoformat()
-        for row in stale_keys:
-            key = row["storage_key"]
+        for key in stale_keys:
             conn.execute(
                 """UPDATE memories
                    SET importance_score = importance_score * 0.5,

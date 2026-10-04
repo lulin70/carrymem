@@ -16,7 +16,7 @@ import hashlib
 import json
 import sqlite3
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Optional
 
 from carrymem.monitoring import get_metrics_collector
@@ -268,9 +268,12 @@ class ReflectionManager:
             if status == "cancelled":
                 raise ValueError("run was cancelled; start a new reflection with a different identity")
             conn.execute(
+                # Do NOT reset started_at on resume: run identity (and the
+                # payload hashes derived from it) must stay stable so
+                # replayed proposals dedup via INV-P2.
                 "UPDATE memory_reflection_runs SET status = 'running', error_text = NULL, "
-                "started_at = ?, completed_at = NULL WHERE run_id = ?",
-                (_now(), run_id),
+                "completed_at = NULL WHERE run_id = ?",
+                (run_id,),
             )
             conn.commit()
             get_metrics_collector().increment("reflection_runs_resumed")
@@ -707,3 +710,85 @@ class ReflectionManager:
             except ValueError:
                 continue
         return applied
+
+    def run_decay_reflection(
+        self,
+        namespace: str,
+        stale_days: int = 90,
+        min_importance: float = 0.3,
+        batch_size: int = 100,
+        grace_days: int = 30,
+        auto_apply: bool = True,
+    ) -> Dict[str, Any]:
+        """Contract §6 migration slice: run the memify decay gate in proposal
+        mode instead of direct mutation.
+
+        Candidate selection uses the SAME shared three-way gate as
+        ``MemifyEngine.auto_decay`` (对拍 baseline). The applied effect is the
+        contract-approved expire semantics: each candidate gets an
+        ``expire_projection`` proposal with ``expires_at = run.started_at +
+        grace_days``. The timestamp is derived from the run's started_at, not
+        wall clock, so replays produce identical payload hashes and dedup via
+        INV-P2.
+        """
+        from carrymem.layers.memify import find_decay_candidates
+
+        self._require_namespace(namespace)
+        conn = self._adapter.get_raw_connection()
+        candidate_keys = find_decay_candidates(conn, namespace, stale_days, min_importance, batch_size)
+        config = {
+            "stale_days": stale_days,
+            "min_importance": min_importance,
+            "batch_size": batch_size,
+            "grace_days": grace_days,
+        }
+        config_json = json.dumps(config, sort_keys=True)
+        snapshot = hashlib.sha256("\n".join(sorted(candidate_keys)).encode("utf-8")).hexdigest()
+        run_id = self.start_run(namespace, "decay", "decay-proposal-v1", snapshot, config_json)
+        run = conn.execute(
+            "SELECT started_at, status FROM memory_reflection_runs WHERE run_id = ?",
+            (run_id,),
+        ).fetchone()
+        started_at = datetime.fromisoformat(str(run["started_at"]))
+        if started_at.tzinfo is None:
+            started_at = started_at.replace(tzinfo=timezone.utc)
+        expires_at = (started_at + timedelta(days=grace_days)).isoformat()
+        created = 0
+        try:
+            if run["status"] == "running":
+                for key in candidate_keys:
+                    self.create_proposal(
+                        namespace,
+                        run_id,
+                        "expire_projection",
+                        {"expires_at": expires_at},
+                        {
+                            "strategy": "decay-gate",
+                            "gate": config,
+                            "evidence": {"support": 0, "contradiction": 0},
+                        },
+                        0.8,
+                        target_kind="memory",
+                        target_id=key,
+                    )
+                    created += 1
+                self.complete_run(run_id)
+        except Exception as exc:
+            try:
+                status_row = conn.execute(
+                    "SELECT status FROM memory_reflection_runs WHERE run_id = ?", (run_id,)
+                ).fetchone()
+                if status_row is not None and status_row["status"] == "running":
+                    self.fail_run(run_id, str(exc))
+            except (sqlite3.Error, ValueError):
+                pass
+            raise
+        applied = self.apply_auto_low_risk(namespace, run_id) if auto_apply else []
+        proposals_total = len(self.list_proposals(namespace, run_id=run_id, limit=1000))
+        return {
+            "run_id": run_id,
+            "candidates": len(candidate_keys),
+            "proposals_created": created,
+            "proposals_total": proposals_total,
+            "applied": applied,
+        }
