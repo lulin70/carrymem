@@ -1,6 +1,6 @@
 # Phase 4 Readiness — Reflection Proposal
 
-> 状态日期：2026-10-03
+> 状态日期：2026-10-04
 > 阶段边界：本文件只覆盖 Phase 4（Reflection Run + Proposal 同步最小闭环）。
 > 契约来源：[MEMORY_EVOLUTION_REFLECTION_PROPOSAL.md](MEMORY_EVOLUTION_REFLECTION_PROPOSAL.md)
 >（Gate 0 已批准）；实现以该契约为准，本文只做落地计划与证据记录。
@@ -12,7 +12,7 @@
 |---|---|
 | Phase 1 async provenance parity | 完成 |
 | Phase 2 Observation/ConflictRecord | 完成（全量门禁 green，2026-10-03） |
-| Phase 4 Reflection Run + Proposal 同步最小闭环 | **核心切片已实现，专项 37 passed；待独占全量门禁收尾** |
+| Phase 4 Reflection Run + Proposal 同步最小闭环 | **完成（专项、E2E、邻近回归、静态门禁、全量门禁均通过）** |
 | Phase 5 RecallPlan / token 硬门禁 | 未开始 |
 
 ## 2. 交付物切片
@@ -182,10 +182,14 @@ Phase 4 两次全量门禁分别失败于 `test_concurrent_mixed_read_write` 与
 
 验证：并发 e2e **10/10 全绿（0 失败）**；sqlite 连接池/adapter/concurrent 单测 137 passed；audit 专项 173 passed。
 
-## 7. 测试与门禁计划
+## 7. 测试与门禁结果
 
 - 专项：`tests/evolution/test_reflection_proposal_phase4.py`（不变量矩阵）
 - E2E：`tests/e2e/test_e2e_reflection_proposal.py`（真实用户 propose→apply→rollback 旅程 + INV-B1/F4）
 - 回归：Phase 2 专项 + async/maintenance 邻近文件
 - 静态：black / isort / flake8 / mypy（受影响文件）；radon 无 ≥21
-- 全量门禁：Phase 4 收尾时独占重跑（同 Phase 2 口径）
+- 全量门禁：✅ 独占重跑通过（提交 `4ecca0c`）
+
+全量结果：`5117 passed, 4 skipped, 244 warnings, 29 subtests passed`；总覆盖率 `83.70%`，超过 `80.0%` 门槛；耗时 `3273.88s`。本轮未发生失败、SIGSEGV 或并发锁错误。
+
+结论：Phase 4 最小闭环验收完成。Phase 5 RecallPlan / token 硬门禁仍未开始。
