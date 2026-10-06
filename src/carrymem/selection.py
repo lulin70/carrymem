@@ -7,6 +7,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+from .token_budget import estimate_tokens
 from .utils.language import has_cjk
 
 ACCESS_BOOST_PER_ACCESS = 0.01
@@ -59,9 +60,8 @@ def _days_since_last_access(last_accessed_at: Any) -> Optional[float]:
 
 
 def _estimate_tokens(text: str) -> int:
-    cjk_count = sum(1 for c in text if has_cjk(c))
-    other_count = len(text) - cjk_count
-    return max(1, cjk_count + other_count // 4)
+    """Backward-compatible alias for the unified token estimator."""
+    return estimate_tokens(text)
 
 
 def _tokenize_text(text: str) -> set:

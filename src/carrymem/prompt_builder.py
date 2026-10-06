@@ -19,13 +19,51 @@ from carrymem.context import (
     select_knowledge,
     select_memories,
 )
+from carrymem.monitoring import get_metrics_collector
 from carrymem.scoring import RecallBudget, recalculate_confidence
-from carrymem.selection import (
-    _estimate_tokens,
-    _has_aggregation_signal,
-)
+from carrymem.selection import _estimate_tokens, _has_aggregation_signal
+from carrymem.token_budget import PromptBlock, enforce_output_budget, estimate_tokens
 
 logger = logging.getLogger(__name__)
+
+
+def _prompt_line_is_protected(
+    line: str,
+    stripped: str,
+    section: str,
+    protected_contents: set,
+    rule_lines: set,
+) -> bool:
+    """Decide whether one prompt line must survive output-budget truncation."""
+    return (
+        section.startswith(("### Mandatory", "### User Preferences", "### Updated preferences"))
+        or "[MANDATORY]" in line
+        or "Do NOT repeat:" in line
+        or "Always follow:" in line
+        or "[IMPORTANT]" in line
+        or any(content in line for content in protected_contents)
+        or stripped in rule_lines
+        or "security" in line.lower()
+        or "strategy" in line.lower()
+        or "安全" in line
+        or "策略" in line
+        or "Question:" in line
+        or "Always provide" in line
+        or stripped == "Answer:"
+    )
+
+
+def _prompt_drop_priority(section: str) -> int:
+    """Assign the deterministic drop order for one prompt section."""
+    if section.startswith(("### Context", "### Additional context")):
+        return 100
+    if section.startswith(("## Knowledge", "### Knowledge")):
+        return 90
+    if section.startswith("## Guidelines"):
+        return 80
+    if section.startswith("### Outdated"):
+        return 50
+    return 10
 
 
 class PromptBuilder:
@@ -266,7 +304,7 @@ class PromptBuilder:
         for m in all_memories:
             mtype = m.get("type", "unknown")
             if m.get("storage_key") in pref_keys:
-                tok = _estimate_tokens(m.get("content", ""))
+                tok = estimate_tokens(m.get("content", ""))
                 quota = min(budget.quota_for(mtype), budget.max_results)
                 type_counts[mtype] = type_counts.get(mtype, 0) + 1
                 if type_counts[mtype] <= quota and pref_token_total + tok <= pref_token_budget:
@@ -328,6 +366,69 @@ class PromptBuilder:
         except (ImportError, KeyError, ValueError, TypeError, AttributeError, RuntimeError) as e:
             logger.warning("Rule injection failed: %s", e)
             return ""
+
+    def _record_budget_metrics(
+        self, budgeted_prompt, max_tokens: Optional[int] = None, ratio: Optional[float] = None
+    ) -> None:
+        """Publish structured hard-gate events without changing prompt APIs."""
+        metrics = get_metrics_collector()
+        for truncation in budgeted_prompt.truncations:
+            metrics.record_recall_truncation(
+                truncation.reason_code,
+                truncation.layer,
+                count=truncation.dropped_count,
+            )
+        if ratio is None:
+            if max_tokens is None or max_tokens <= 0:
+                raise ValueError("max_tokens must be a positive integer")
+            ratio = budgeted_prompt.token_count / max_tokens
+        metrics.set_recall_budget_utilization("output", max(0.0, min(1.0, float(ratio))))
+
+    @staticmethod
+    def _validate_max_tokens(max_tokens: int) -> None:
+        """Validate the public budget before doing retrieval work."""
+        enforce_output_budget(prefix="", blocks=(), max_tokens=max_tokens)
+
+    @staticmethod
+    def _prompt_blocks(
+        prompt: str,
+        memories: List[Dict[str, Any]],
+        key_prefix: str,
+        rules: str = "",
+    ) -> tuple[PromptBlock, ...]:
+        """Split a rendered prompt into deterministic, budgetable line blocks."""
+        protected_contents = {
+            str(memory.get("content", ""))
+            for memory in memories
+            if memory.get("type") in ("correction", "decision", "user_preference") and memory.get("content")
+        }
+        rule_lines = {line.strip() for line in rules.splitlines() if line.strip()}
+        blocks: List[PromptBlock] = []
+        rules_in_prompt = bool(rules and rules.strip() in prompt)
+        if rules and not rules_in_prompt:
+            blocks.append(
+                PromptBlock(
+                    text=rules + "\n",
+                    protected=True,
+                    key=f"{key_prefix}:rules",
+                )
+            )
+
+        section = ""
+        for index, line in enumerate(prompt.splitlines(keepends=True)):
+            stripped = line.strip()
+            if stripped.startswith("##"):
+                section = stripped
+
+            blocks.append(
+                PromptBlock(
+                    text=line,
+                    drop_priority=_prompt_drop_priority(section),
+                    protected=_prompt_line_is_protected(line, stripped, section, protected_contents, rule_lines),
+                    key=f"{key_prefix}:{index}",
+                )
+            )
+        return tuple(blocks)
 
     # ------------------------------------------------------------------
     # Public: build_context
@@ -444,6 +545,7 @@ class PromptBuilder:
                 system_prompt. When True, lower-priority memory buckets render
                 as summaries instead of full raw_text, reducing token consumption.
         """
+        self._validate_max_tokens(max_tokens)
         rules_budget = int(max_tokens * 0.2)
         memories_budget = int(max_tokens * 0.6)
         knowledge_budget = int(max_tokens * 0.2)
@@ -467,6 +569,14 @@ class PromptBuilder:
         if rules_section:
             system_prompt = rules_section + "\n\n" + system_prompt
 
+        budgeted_prompt = enforce_output_budget(
+            prefix="",
+            blocks=self._prompt_blocks(system_prompt, memories_section, "context", rules=rules_section),
+            max_tokens=max_tokens,
+        )
+        system_prompt = budgeted_prompt.text
+        self._record_budget_metrics(budgeted_prompt, max_tokens=max_tokens)
+
         # Applied rules info
         applied_rules_info = self._collect_applied_rules_info(context, max_rules)
 
@@ -481,7 +591,10 @@ class PromptBuilder:
             "memory_count": len(memories_section),
             "knowledge_count": len(knowledge_section),
             "total_count": total,
-            "token_estimate": _estimate_tokens(system_prompt),
+            "token_estimate": estimate_tokens(system_prompt),
+            "truncations": budgeted_prompt.truncations,
+            "degradation": budgeted_prompt.degradation,
+            "budget_utilization": budgeted_prompt.token_count / max_tokens,
             "language": language,
         }
 
@@ -658,6 +771,7 @@ class PromptBuilder:
                 max_results=max_memories,
                 max_tokens=max_tokens,
             )
+        self._validate_max_tokens(budget.max_tokens)
 
         memories_budget = int(budget.max_tokens * 0.65)
         knowledge_budget = int(budget.max_tokens * 0.2)
@@ -671,7 +785,7 @@ class PromptBuilder:
         # Knowledge
         knowledge_section = self._build_qa_knowledge_section(question, max_knowledge, knowledge_budget)
 
-        return _build_qa_prompt(
+        prompt = _build_qa_prompt(
             memories=memories_section,
             knowledge=knowledge_section,
             question=question,
@@ -679,3 +793,10 @@ class PromptBuilder:
             include_question=include_question,
             rules=rules_section,
         )
+        budgeted_prompt = enforce_output_budget(
+            prefix="",
+            blocks=self._prompt_blocks(prompt, memories_section, "qa", rules=rules_section),
+            max_tokens=budget.max_tokens,
+        )
+        self._record_budget_metrics(budgeted_prompt, max_tokens=budget.max_tokens)
+        return budgeted_prompt.text

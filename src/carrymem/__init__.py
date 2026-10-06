@@ -37,6 +37,21 @@ from carrymem.adapters.obsidian_adapter import ObsidianAdapter
 from carrymem.adapters.sqlite_adapter import SQLiteAdapter
 from carrymem.carrymem import CarryMem, KnowledgeNotConfiguredError, StorageNotConfiguredError
 from carrymem.engine import MemoryClassificationEngine
+from carrymem.recall_plan import (
+    BudgetSpec,
+    ConflictPolicy,
+    EvidenceBudget,
+    OutputBudget,
+    RecallPlan,
+    RecallPlanSnapshot,
+    ReflectionBudget,
+    RetrievalBudget,
+    RetrievalMode,
+    SensitivityPolicy,
+    TaskMode,
+    build_recall_plan,
+)
+from carrymem.types import BudgetUsage, ConflictView, ModeFailure, RecallItem, RecallResult
 
 
 def _make_lazy_import(module_path, class_name):
@@ -135,4 +150,21 @@ __all__ = [
     "KnowledgeNoteDict",
     "RecallAllResultDict",
     "BuildContextResultDict",
+    "BudgetSpec",
+    "ConflictPolicy",
+    "EvidenceBudget",
+    "OutputBudget",
+    "RecallPlan",
+    "RecallPlanSnapshot",
+    "ReflectionBudget",
+    "RetrievalBudget",
+    "RetrievalMode",
+    "SensitivityPolicy",
+    "TaskMode",
+    "build_recall_plan",
+    "RecallItem",
+    "BudgetUsage",
+    "ConflictView",
+    "ModeFailure",
+    "RecallResult",
 ]

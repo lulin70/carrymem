@@ -24,6 +24,8 @@ from typing import Any, Dict, List, Optional, Union
 
 from .adapters.base import StorageAdapter
 from .carrymem import CarryMem
+from .recall_plan import RecallPlan
+from .types import RecallResult
 
 
 class AsyncCarryMem:
@@ -70,6 +72,14 @@ class AsyncCarryMem:
         return await self._run(  # type: ignore[no-any-return]
             self._sync.classify_and_remember, message, context, language
         )
+
+    async def build_recall_plan(self, **kwargs: Any) -> RecallPlan:
+        """Build a validated recall plan (pure CPU, no executor dispatch)."""
+        return self._sync.build_recall_plan(**kwargs)
+
+    async def recall_with_plan(self, plan: RecallPlan) -> RecallResult:
+        """Execute a recall plan asynchronously."""
+        return await self._run(self._sync.recall_with_plan, plan)  # type: ignore[no-any-return]
 
     async def recall_memories(
         self,

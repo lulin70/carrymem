@@ -146,6 +146,17 @@ class TestMetricsCollectorPrometheus(unittest.TestCase):
         output = self.mc.to_prometheus()
         self.assertIn("# TYPE carrymem_counter counter", output)
 
+    def test_prometheus_contains_recall_metrics(self):
+        """Recall budget metrics are exported in Prometheus format."""
+        self.mc.set_recall_budget_utilization("output", 0.25)
+        self.mc.record_recall_truncation("OUTPUT_BUDGET_EXCEEDED", "output")
+
+        output = self.mc.to_prometheus()
+
+        self.assertIn("carrymem_recall_budget_utilization_ratio", output)
+        self.assertIn('layer="output"', output)
+        self.assertIn("carrymem_recall_truncations_total", output)
+
 
 class TestMetricsCollectorReset(unittest.TestCase):
     """Test reset functionality."""

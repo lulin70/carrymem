@@ -10,13 +10,27 @@ SLO Targets:
 - startup time < 2s
 """
 
+import math
 import threading
 import time
 from collections import deque
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 _LATENCY_MAX_SAMPLES = 10_000
+_RECALL_BUDGET_LAYERS = ("retrieval", "evidence", "reflection", "output")
+_RECALL_TRUNCATION_REASONS = (
+    "OUTPUT_BUDGET_EXCEEDED",
+    "EVIDENCE_BUDGET_EXCEEDED",
+    "RETRIEVAL_TIMEOUT",
+    "RETRIEVAL_CANDIDATE_CAP",
+    "VECTOR_UNAVAILABLE_FALLBACK",
+    "SENSITIVITY_FILTERED",
+    "SUPERSEDED_FILTERED",
+    "CONFLICT_DEPRIORITIZED",
+    "NAMESPACE_DENIED",
+    "TOKENIZER_DRIFT_WARNING",
+)
 
 # ── Data Classes ──────────────────────────────────────────────────────────
 
@@ -66,6 +80,8 @@ class MetricsCollector:
         self._counters: Dict[str, int] = {}
         self._latency_buckets: Dict[str, deque] = {}
         self._gauges: Dict[str, float] = {}
+        self._recall_truncations: Dict[Tuple[str, str], int] = {}
+        self._recall_budget_utilization: Dict[str, float] = {}
         self._start_time: float = time.time()
 
     def increment(self, operation: str, value: int = 1) -> None:
@@ -88,6 +104,40 @@ class MetricsCollector:
         """Set a gauge value."""
         with self._lock:
             self._gauges[name] = value
+
+    def record_recall_truncation(self, reason_code: str, layer: str, count: int = 1) -> None:
+        """Record a low-cardinality recall truncation event."""
+        reason = getattr(reason_code, "value", reason_code)
+        layer_value = getattr(layer, "value", layer)
+        if reason not in _RECALL_TRUNCATION_REASONS:
+            raise ValueError(f"unknown recall truncation reason_code: {reason}")
+        if layer_value not in _RECALL_BUDGET_LAYERS:
+            raise ValueError(f"unknown recall budget layer: {layer_value}")
+        if not isinstance(count, int) or isinstance(count, bool) or count <= 0:
+            raise ValueError("count must be a positive integer")
+        with self._lock:
+            key = (reason, layer_value)
+            self._recall_truncations[key] = self._recall_truncations.get(key, 0) + count
+
+    def set_recall_budget_utilization(self, layer: str, ratio: float) -> None:
+        """Set final utilization for one of the four fixed recall budget layers."""
+        layer_value = getattr(layer, "value", layer)
+        if layer_value not in _RECALL_BUDGET_LAYERS:
+            raise ValueError(f"unknown recall budget layer: {layer_value}")
+        if not isinstance(ratio, (int, float)) or isinstance(ratio, bool) or not math.isfinite(ratio):
+            raise ValueError("ratio must be a finite number")
+        if ratio < 0 or ratio > 1:
+            raise ValueError("ratio must be between 0 and 1")
+        with self._lock:
+            self._recall_budget_utilization[layer_value] = float(ratio)
+
+    def set_tokenizer_drift_ratio(self, ratio: float) -> None:
+        """Set calibrated tokenizer drift; no sample is emitted until called."""
+        if not isinstance(ratio, (int, float)) or isinstance(ratio, bool) or not math.isfinite(ratio):
+            raise ValueError("ratio must be a finite number")
+        if ratio < 0:
+            raise ValueError("ratio must be non-negative")
+        self.set_gauge("carrymem_tokenizer_drift_ratio", float(ratio))
 
     def get_snapshot(self) -> Dict[str, Any]:
         """Export current metrics snapshot as a dict."""
@@ -115,6 +165,10 @@ class MetricsCollector:
                 "counters": dict(self._counters),
                 "latency": latency_stats,
                 "gauges": dict(self._gauges),
+                "recall_truncations": {
+                    f"{reason_code}|{layer}": count for (reason_code, layer), count in self._recall_truncations.items()
+                },
+                "recall_budget_utilization": dict(self._recall_budget_utilization),
                 "uptime_seconds": round(time.time() - self._start_time, 2),
             }
 
@@ -145,6 +199,19 @@ class MetricsCollector:
                 lines.append(f'carrymem_latency_ms_sum{{operation="{safe_op}"}} {latency_sum}')
                 lines.append(f'carrymem_latency_ms_count{{operation="{safe_op}"}} {stats["count"]}')
 
+        if snapshot["recall_truncations"]:
+            lines.append("\n# TYPE carrymem_recall_truncations_total counter")
+            for key, count in snapshot["recall_truncations"].items():
+                reason_code, layer = key.split("|", 1)
+                lines.append(
+                    f'carrymem_recall_truncations_total{{reason_code="{reason_code}",layer="{layer}"}} {count}'
+                )
+
+        if snapshot["recall_budget_utilization"]:
+            lines.append("\n# TYPE carrymem_recall_budget_utilization_ratio gauge")
+            for layer, ratio in snapshot["recall_budget_utilization"].items():
+                lines.append(f'carrymem_recall_budget_utilization_ratio{{layer="{layer}"}} {ratio}')
+
         # Gauges — one TYPE line per family. Emitting a single
         # "# TYPE carrymem_gauge" header while publishing differently-named
         # series does not declare those series, so each gauge declares itself.
@@ -164,6 +231,8 @@ class MetricsCollector:
             self._counters.clear()
             self._latency_buckets.clear()
             self._gauges.clear()
+            self._recall_truncations.clear()
+            self._recall_budget_utilization.clear()
 
 
 # ── Health Checker ────────────────────────────────────────────────────────

@@ -29,7 +29,9 @@ if TYPE_CHECKING:
     from carrymem.core import CarryMem
     from carrymem.engine import MemoryClassificationEngine
     from carrymem.prompt_builder import PromptBuilder
+    from carrymem.recall_plan import RecallPlan
     from carrymem.rules import RuleEngine
+    from carrymem.types import RecallResult
 
 
 # ---------------------------------------------------------------------------
@@ -169,6 +171,12 @@ class BackupOps(Protocol):
 
 class RecallOps(Protocol):
     """Contract for RecallMixin — search across memories, knowledge, rules."""
+
+    def build_recall_plan(self, **kwargs: Any) -> RecallPlan: ...
+
+    def recall_with_plan(self, plan: RecallPlan) -> RecallResult:
+        """Execute an immutable recall plan."""
+        ...
 
     def index_knowledge(self) -> Dict[str, Any]:
         """Index knowledge base (e.g. Obsidian vault)."""

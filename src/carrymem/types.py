@@ -6,7 +6,27 @@ module to improve type annotation coverage and provide better IDE support.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, TypedDict
+import json
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple, TypedDict
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, Enum):
+        return value.value
+    if hasattr(value, "to_dict") and callable(value.to_dict):
+        return _json_safe(value.to_dict())
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_json_safe(item) for item in value]
+    try:
+        json.dumps(value)
+        return value
+    except (TypeError, ValueError):
+        return str(value)
+
 
 # ---------------------------------------------------------------------------
 # Base memory types
@@ -163,6 +183,145 @@ class RecallAggregatedResult(TypedDict):
 
     # Keys are memory types, values are lists of memory dicts
     __extra__: Dict[str, List[StoredMemoryDict]]
+
+
+@dataclass(frozen=True, slots=True)
+class RecallItem:
+    """One deterministic recall candidate with its contributing modes."""
+
+    memory: Dict[str, Any]
+    source_mode: str
+    score: float = 0.0
+    evidence: Tuple[Any, ...] = ()
+    source_modes: Tuple[str, ...] = ()
+
+    def to_dict(self) -> Dict[str, Any]:
+        result = _json_safe(
+            {
+                "memory": dict(self.memory),
+                "source_mode": self.source_mode,
+                "source_modes": list(self.source_modes or (self.source_mode,)),
+                "score": self.score,
+                "evidence": list(self.evidence),
+            }
+        )
+        return dict(result)
+
+
+@dataclass(frozen=True, slots=True)
+class BudgetUsage:
+    """Observed usage of the recall budgets."""
+
+    candidates: int = 0
+    results: int = 0
+    max_candidates: int = 0
+    max_results: int = 0
+    evidence: int = 0
+    reflection: int = 0
+    output: int = 0
+    max_evidence: int = 0
+    max_reflection: int = 0
+    max_output: int = 0
+
+    def to_dict(self) -> Dict[str, int]:
+        return {
+            "candidates": self.candidates,
+            "results": self.results,
+            "max_candidates": self.max_candidates,
+            "max_results": self.max_results,
+            "evidence": self.evidence,
+            "reflection": self.reflection,
+            "output": self.output,
+            "max_evidence": self.max_evidence,
+            "max_reflection": self.max_reflection,
+            "max_output": self.max_output,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class ConflictView:
+    """Structured view of candidates believed to represent one conflict."""
+
+    conflict_key: str
+    storage_keys: Tuple[str, ...]
+    items: Tuple[Dict[str, Any], ...]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "conflict_key": self.conflict_key,
+            "storage_keys": list(self.storage_keys),
+            "items": [dict(item) for item in self.items],
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class ModeFailure:
+    """Failure or explicit skip for one requested retrieval mode."""
+
+    mode: str
+    reason: str
+    error_type: Optional[str] = None
+    skipped: bool = False
+    reason_code: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "mode": self.mode,
+            "reason": self.reason,
+            "error_type": self.error_type,
+            "skipped": self.skipped,
+            "reason_code": self.reason_code,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class RecallPlanSnapshot:
+    """JSON-safe snapshot of the executed recall plan."""
+
+    data: Dict[str, Any]
+
+    def to_dict(self) -> Dict[str, Any]:
+        result = _json_safe(dict(self.data))
+        return dict(result)
+
+
+@dataclass(frozen=True, slots=True)
+class RecallResult:
+    """Stable, serializable result of executing a RecallPlan."""
+
+    items: Tuple[RecallItem, ...]
+    plan_fingerprint: str
+    namespace: str
+    task: str
+    modes: Tuple[str, ...]
+    budget_usage: BudgetUsage
+    mode_failures: Tuple[ModeFailure, ...] = ()
+    conflicts: Tuple[ConflictView, ...] = ()
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    plan: Optional[RecallPlanSnapshot] = None
+    truncations: Tuple[Any, ...] = ()
+    degraded: Optional[Any] = None
+    status: str = "ok"
+
+    def to_legacy_list(self) -> List[Dict[str, Any]]:
+        return [dict(item.memory) for item in self.items]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "items": [item.to_dict() for item in self.items],
+            "plan_fingerprint": self.plan_fingerprint,
+            "namespace": self.namespace,
+            "task": self.task,
+            "modes": list(self.modes),
+            "budget_usage": self.budget_usage.to_dict(),
+            "mode_failures": [failure.to_dict() for failure in self.mode_failures],
+            "conflicts": [conflict.to_dict() for conflict in self.conflicts],
+            "metadata": _json_safe(dict(self.metadata)),
+            "plan": self.plan.to_dict() if self.plan is not None else None,
+            "truncations": [_json_safe(item) for item in self.truncations],
+            "degraded": _json_safe(self.degraded) if self.degraded is not None else None,
+            "status": self.status,
+        }
 
 
 # ---------------------------------------------------------------------------

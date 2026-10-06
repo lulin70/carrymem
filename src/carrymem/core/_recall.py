@@ -2,10 +2,18 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+)
 
 from carrymem.adapters.base import RawConnectionProvider
 from carrymem.adapters.obsidian_adapter import ObsidianAdapter
@@ -13,7 +21,20 @@ from carrymem.constants import DEFAULT_RECALL_LIMIT, RULE_MATCH_LIMIT_CAP
 from carrymem.core._lifecycle import KnowledgeNotConfiguredError, StorageNotConfiguredError
 from carrymem.core._memory_crud import _reset_busy_connection, _retry_on_busy
 from carrymem.monitoring import get_metrics_collector
-from carrymem.types import StoredMemoryDict
+from carrymem.recall_plan import RecallPlan, build_recall_plan
+from carrymem.security.redaction import should_redact
+from carrymem.token_budget import BudgetLayer, Degradation, Truncation, TruncationReason, estimate_tokens
+from carrymem.types import (
+    BudgetUsage,
+    ConflictView,
+    ModeFailure,
+    RecallItem,
+)
+from carrymem.types import RecallPlanSnapshot as ResultPlanSnapshot
+from carrymem.types import (
+    RecallResult,
+    StoredMemoryDict,
+)
 from carrymem.utils.validators import validate_limit, validate_query
 
 if TYPE_CHECKING:
@@ -21,6 +42,400 @@ if TYPE_CHECKING:
     from carrymem.rules import RuleEngine
 
 logger = logging.getLogger(__name__)
+
+
+def _memory_score(memory: Dict[str, Any]) -> float:
+    for key in ("score", "similarity", "importance_score", "confidence"):
+        value = memory.get(key)
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return float(value)
+    return 0.0
+
+
+def _memory_in_namespace(memory: Dict[str, Any], namespace: str) -> bool:
+    value = memory.get("namespace")
+    return value is None or value == namespace
+
+
+def _conflict_subject(memory: Dict[str, Any]) -> str:
+    metadata = memory.get("metadata")
+    if isinstance(metadata, dict):
+        for key in ("subject_key", "conflict_key", "conflict_id"):
+            if metadata.get(key):
+                return str(metadata[key])
+    return str(memory.get("storage_key") or memory.get("id") or "")
+
+
+def _top_conflict_candidates(
+    ranked: List[Tuple[str, Dict[str, Any]]],
+) -> List[Tuple[str, Dict[str, Any]]]:
+    selected: List[Tuple[str, Dict[str, Any]]] = []
+    seen_groups: set[str] = set()
+    for mode_name, memory in ranked:
+        group = str(memory.get("version_chain_id") or _conflict_subject(memory))
+        if group not in seen_groups:
+            selected.append((mode_name, memory))
+            seen_groups.add(group)
+    return selected
+
+
+def _count_output_tokens(items: List[RecallItem]) -> int:
+    """Estimate the serialized token cost of a list of recall items."""
+    return estimate_tokens(json.dumps([item.to_dict() for item in items], sort_keys=True, default=str))
+
+
+def _rows_for_mode(
+    adapter: StorageAdapter,
+    mode_name: str,
+    query: str,
+    remaining: int,
+    filters: Dict[str, Any],
+    plan: RecallPlan,
+    failures: List[ModeFailure],
+) -> Optional[List[Any]]:
+    """Fetch raw rows for one resolved mode, or None when the mode is skipped."""
+    if mode_name == "semantic":
+        if not adapter.capabilities.get("semantic_recall", adapter.capabilities.get("vector_search", False)):
+            failures.append(
+                ModeFailure(
+                    "semantic",
+                    "semantic search unavailable",
+                    skipped=True,
+                    reason_code="VECTOR_UNAVAILABLE_FALLBACK",
+                )
+            )
+            return None
+        return adapter.recall_semantic(query, remaining, dict(filters), [plan.namespace])
+    if mode_name == "vector":
+        return adapter.recall_semantic(query, remaining, dict(filters), [plan.namespace])
+    if mode_name == "fts":
+        if not adapter.capabilities.get("fts", True):
+            failures.append(ModeFailure("fts", "fts search unavailable", skipped=True, reason_code="UNSUPPORTED_MODE"))
+            return None
+        return adapter.recall(
+            query, filters=dict(filters), limit=remaining, namespaces=[plan.namespace], update_access=False
+        )
+    failures.append(ModeFailure(mode_name, "unsupported plan mode", skipped=True, reason_code="UNSUPPORTED_MODE"))
+    return None
+
+
+def _retrieve_plan_candidates(
+    adapter: StorageAdapter,
+    plan: RecallPlan,
+    query: str,
+    filters: Dict[str, Any],
+    candidate_cap: int,
+    metrics: Any,
+    failures: List[ModeFailure],
+    truncations: List[Truncation],
+) -> Tuple[List[Tuple[str, Dict[str, Any]]], bool]:
+    """Collect candidates from each plan mode under the retrieval budget."""
+    candidates: List[Tuple[str, Dict[str, Any]]] = []
+    remaining = candidate_cap
+    cap_hit = False
+    for mode in plan.modes:
+        mode_name = mode.value
+        if remaining <= 0:
+            failures.append(
+                ModeFailure(
+                    mode_name, "candidate budget exhausted", skipped=True, reason_code="RETRIEVAL_CANDIDATE_CAP"
+                )
+            )
+            continue
+        if mode_name in {"graph", "time"}:
+            required = "entity" if mode_name == "graph" else "time range"
+            failures.append(
+                ModeFailure(mode_name, f"{required} input is required", skipped=True, reason_code="INPUT_MISSING")
+            )
+            continue
+        if mode_name in {"semantic", "vector"} and not query.strip():
+            failures.append(
+                ModeFailure(mode_name, "query must be a non-empty string", "ValueError", reason_code="INPUT_MISSING")
+            )
+            continue
+        if mode_name == "vector" and not adapter.capabilities.get("vector_search", False):
+            truncation = Truncation(TruncationReason.VECTOR_UNAVAILABLE_FALLBACK, BudgetLayer.RETRIEVAL, 1)
+            truncations.append(truncation)
+            metrics.record_recall_truncation(truncation.reason_code, truncation.layer)
+            failures.append(
+                ModeFailure(
+                    mode_name,
+                    "vector search unavailable; fell back to fts",
+                    skipped=True,
+                    reason_code="VECTOR_UNAVAILABLE_FALLBACK",
+                )
+            )
+            mode_name = "fts"
+        try:
+            rows = _rows_for_mode(adapter, mode_name, query, remaining, filters, plan, failures)
+            if rows is None:
+                continue
+            for row in rows:
+                memory = row.to_dict() if hasattr(row, "to_dict") else dict(row)
+                if not isinstance(memory, dict) or memory.get("namespace") != plan.namespace:
+                    continue
+                candidates.append((mode_name, memory))
+                if len(candidates) >= candidate_cap:
+                    cap_hit = True
+                    break
+            remaining = candidate_cap - len(candidates)
+        except (KeyError, ValueError, TypeError, RuntimeError, AttributeError) as exc:
+            failures.append(
+                ModeFailure(
+                    mode_name,
+                    str(exc) or exc.__class__.__name__,
+                    exc.__class__.__name__,
+                    reason_code="RETRIEVAL_FAILED",
+                )
+            )
+    return candidates, cap_hit
+
+
+def _filter_sensitive_candidates(
+    candidates: List[Tuple[str, Dict[str, Any]]],
+    sensitivity_policy: str,
+    metrics: Any,
+    failures: List[ModeFailure],
+    truncations: List[Truncation],
+    metadata: Dict[str, Any],
+) -> List[Tuple[str, Dict[str, Any]]]:
+    """Drop candidates whose serialized payload trips the redaction engine."""
+    filtered: List[Tuple[str, Dict[str, Any]]] = []
+    for mode_name, memory in candidates:
+        try:
+            serialized = json.dumps(
+                {
+                    "content": memory.get("content"),
+                    "raw_text": memory.get("raw_text"),
+                    "metadata": memory.get("metadata", {}),
+                },
+                sort_keys=True,
+                default=str,
+            )
+            blocked, reason = should_redact(serialized)
+        except Exception as exc:  # NOTE intentional: fail closed on unreadable payloads; rationale above
+            blocked, reason = True, f"sensitivity check failed: {exc}"
+        if blocked:
+            if sensitivity_policy == "strict":
+                failures.append(
+                    ModeFailure(
+                        mode_name,
+                        reason or "sensitive candidate blocked",
+                        "SensitivityError",
+                        reason_code="SENSITIVITY_FILTERED",
+                    )
+                )
+            metadata["sensitivity_filtered"] = metadata.get("sensitivity_filtered", 0) + 1
+            truncation = Truncation(TruncationReason.SENSITIVITY_FILTERED, BudgetLayer.RETRIEVAL, 1)
+            truncations.append(truncation)
+            metrics.record_recall_truncation(truncation.reason_code, truncation.layer)
+            continue
+        filtered.append((mode_name, memory))
+    return filtered
+
+
+def _resolve_conflicts(
+    filtered: List[Tuple[str, Dict[str, Any]]],
+    conflict_policy: str,
+    metrics: Any,
+    truncations: List[Truncation],
+) -> Tuple[List[Tuple[str, Dict[str, Any]]], List[ConflictView]]:
+    """Group filtered candidates into conflict chains and apply the policy."""
+    grouped: Dict[str, List[Tuple[str, Dict[str, Any]]]] = {}
+    for mode_name, memory in filtered:
+        key = str(memory.get("version_chain_id") or _conflict_subject(memory))
+        grouped.setdefault(key, []).append((mode_name, memory))
+    conflicts: List[ConflictView] = []
+    conflicting_groups: set[str] = set()
+    for key, group in sorted(grouped.items()):
+        keys = {str(item[1].get("storage_key", "")) for item in group}
+        if len(keys) > 1:
+            conflicting_groups.add(key)
+            conflicts.append(ConflictView(key, tuple(sorted(keys)), tuple(item[1] for item in group)))
+
+    if conflicting_groups and conflict_policy == "hide":
+        filtered = [
+            (mode_name, memory)
+            for mode_name, memory in filtered
+            if str(memory.get("version_chain_id") or _conflict_subject(memory)) not in conflicting_groups
+        ]
+
+    if conflicting_groups and conflict_policy != "always":
+        truncation = Truncation(TruncationReason.CONFLICT_DEPRIORITIZED, BudgetLayer.RETRIEVAL, 1)
+        truncations.append(truncation)
+        metrics.record_recall_truncation(truncation.reason_code, truncation.layer)
+    return filtered, conflicts
+
+
+def _rank_and_dedupe(
+    filtered: List[Tuple[str, Dict[str, Any]]],
+    task_value: str,
+    conflict_policy: str,
+) -> List[Tuple[str, Dict[str, Any], Tuple[str, ...]]]:
+    """Dedupe candidates by storage key and rank protected entries first."""
+    by_key: Dict[str, Tuple[Dict[str, Any], List[str]]] = {}
+    for mode_name, memory in filtered:
+        key = str(memory.get("storage_key") or memory.get("id") or "")
+        if key in by_key:
+            by_key[key][1].append(mode_name)
+        else:
+            by_key[key] = (memory, [mode_name])
+    ranked = [(modes[0], memory, tuple(modes)) for memory, modes in by_key.values()]
+
+    def _priority(entry: Tuple[str, Dict[str, Any], Tuple[str, ...]]):
+        memory = entry[1]
+        memory_type = str(memory.get("type") or memory.get("memory_type") or "")
+        protected = (
+            memory_type in {"correction", "security", "strategy", "accepted_fact", "accepted_rule"}
+            or str(memory.get("status", "")).lower() == "accepted"
+        )
+        correction = task_value == "correction_resolution" and memory_type == "correction"
+        return (
+            0 if correction else 1 if protected else 2,
+            -_memory_score(memory),
+            str(memory.get("storage_key") or memory.get("id") or ""),
+        )
+
+    ranked.sort(key=_priority)
+    if conflict_policy == "show_top":
+        top_candidates = _top_conflict_candidates([(mode, memory) for mode, memory, _ in ranked])
+        ranked = [
+            (
+                mode,
+                memory,
+                tuple(by_key[str(memory.get("storage_key") or memory.get("id") or "")][1]),
+            )
+            for mode, memory in top_candidates
+        ]
+    return ranked
+
+
+def _expand_evidence(
+    adapter: StorageAdapter,
+    plan: RecallPlan,
+    ranked: List[Tuple[str, Dict[str, Any], Tuple[str, ...]]],
+    metrics: Any,
+    truncations: List[Truncation],
+) -> Tuple[List[RecallItem], int]:
+    """Attach evidence links to ranked items under the evidence budget."""
+    evidence_chars = 0
+    result_items: List[RecallItem] = []
+    for mode_name, memory, modes in ranked:
+        evidence: Tuple[Any, ...] = ()
+        if plan.include_evidence:
+            key = str(memory.get("storage_key") or memory.get("id") or "")
+            try:
+                links = adapter.list_evidence_links(
+                    plan.namespace,
+                    target_kind="memory",
+                    target_id=key,
+                    include_stale=False,
+                    limit=plan.budget.evidence.per_result_evidence,
+                )
+            except (AttributeError, KeyError, ValueError, TypeError, RuntimeError):
+                links = []
+            kept = []
+            for link in links or []:
+                encoded = json.dumps(link, sort_keys=True, default=str)
+                if evidence_chars + len(encoded) > plan.budget.evidence.evidence_chars_total:
+                    truncation = Truncation(TruncationReason.EVIDENCE_BUDGET_EXCEEDED, BudgetLayer.EVIDENCE, 1)
+                    truncations.append(truncation)
+                    metrics.record_recall_truncation(truncation.reason_code, truncation.layer)
+                    break
+                kept.append(link)
+                evidence_chars += len(encoded)
+            evidence = tuple(kept)
+        result_items.append(
+            RecallItem(
+                memory=memory,
+                source_mode=mode_name,
+                source_modes=modes,
+                score=_memory_score(memory),
+                evidence=evidence,
+            )
+        )
+    return result_items, evidence_chars
+
+
+def _enforce_output_limit(
+    result_items: List[RecallItem],
+    task_value: str,
+    output_limit: int,
+    metrics: Any,
+    truncations: List[Truncation],
+) -> Tuple[List[RecallItem], Optional[Degradation]]:
+    """Apply the hard output budget: drop ordinary items, shorten protected."""
+    protected_types = {"correction", "security", "strategy", "accepted_fact", "accepted_rule"}
+
+    def _protected(item: RecallItem) -> bool:
+        memory_type = str(item.memory.get("type") or item.memory.get("memory_type") or "")
+        return (
+            memory_type in protected_types
+            or str(item.memory.get("status", "")).lower() == "accepted"
+            or (task_value == "correction_resolution" and memory_type == "correction")
+        )
+
+    while result_items and _count_output_tokens(result_items) > output_limit:
+        droppable = [idx for idx, item in enumerate(result_items) if not _protected(item)]
+        if not droppable:
+            break
+        result_items.pop(droppable[-1])
+        truncation = Truncation(TruncationReason.OUTPUT_BUDGET_EXCEEDED, BudgetLayer.OUTPUT, 1)
+        truncations.append(truncation)
+        metrics.record_recall_truncation(truncation.reason_code, truncation.layer)
+
+    degraded: Optional[Degradation] = None
+    if _count_output_tokens(result_items) > output_limit:
+        degraded = Degradation(
+            TruncationReason.OUTPUT_BUDGET_EXCEEDED, "Protected recall output exceeded the hard token budget."
+        )
+
+        def _count_with(replacement: Dict[str, Any]) -> int:
+            probe = RecallItem(
+                memory=replacement,
+                source_mode=result_items[-1].source_mode,
+                source_modes=result_items[-1].source_modes,
+                score=result_items[-1].score,
+                evidence=result_items[-1].evidence,
+            )
+            return _count_output_tokens([*result_items[:-1], probe])
+
+        while result_items and _count_output_tokens(result_items) > output_limit:
+            item = result_items[-1]
+            memory = dict(item.memory)
+            content = str(memory.get("content") or memory.get("raw_text") or "")
+            # Deterministic binary search for the longest content prefix
+            # that fits the hard budget (mirrors token_budget._shorten_to_budget).
+            fitted = ""
+            low, high = 0, len(content)
+            while low <= high:
+                middle = (low + high) // 2
+                trial = dict(memory)
+                trial["content"] = content[:middle]
+                if _count_with(trial) <= output_limit:
+                    fitted = content[:middle]
+                    low = middle + 1
+                else:
+                    high = middle - 1
+            memory["content"] = fitted
+            stored_meta = memory.get("metadata")
+            if fitted and isinstance(stored_meta, dict) and stored_meta.get("original_message"):
+                sync_meta = dict(stored_meta)
+                sync_meta["original_message"] = fitted
+                memory["metadata"] = sync_meta
+            result_items[-1] = RecallItem(
+                memory=memory,
+                source_mode=item.source_mode,
+                source_modes=item.source_modes,
+                score=item.score,
+                evidence=item.evidence,
+            )
+            if not fitted:
+                # Even an empty body cannot fit: fixed serialization
+                # overhead alone exceeds the budget. Drop the item and let
+                # the Degradation record explain the protected-data loss.
+                result_items.pop()
+    return result_items, degraded
 
 
 class RecallMixin:
@@ -37,6 +452,11 @@ class RecallMixin:
         # From LifecycleMixin (property)
         @property
         def rule_engine(self) -> RuleEngine: ...
+
+    def build_recall_plan(self, **kwargs: Any) -> RecallPlan:
+        """Build a deterministic, validated plan without touching storage."""
+        kwargs.setdefault("namespace", self._namespace)
+        return build_recall_plan(**kwargs)
 
     def index_knowledge(self) -> Dict[str, Any]:
         """Index the configured knowledge base and return summary stats."""
@@ -121,6 +541,98 @@ class RecallMixin:
             "namespace": self._namespace,
             "priority": "rules > memory > knowledge",
         }
+
+    def recall_with_plan(self, plan: RecallPlan) -> RecallResult:
+        """Execute a validated recall plan without changing the legacy API."""
+        if not isinstance(plan, RecallPlan):
+            raise TypeError("plan must be a RecallPlan")
+        started = time.perf_counter()
+        result = _retry_on_busy(
+            lambda: self._execute_recall_plan(plan),
+            what="recall_with_plan",
+            reset=lambda: _reset_busy_connection(self._adapter),
+        )
+        get_metrics_collector().record_latency("recall", (time.perf_counter() - started) * 1000.0)
+        return result
+
+    def _execute_recall_plan(self, plan: RecallPlan) -> RecallResult:
+        if not self._adapter:
+            raise StorageNotConfiguredError()
+        if not plan.namespace or plan.namespace != self._namespace:
+            failure = ModeFailure("plan", "namespace is not authorized", skipped=True, reason_code="NAMESPACE_DENIED")
+            return RecallResult(
+                (),
+                plan.fingerprint,
+                plan.namespace,
+                plan.task.value,
+                tuple(m.value for m in plan.modes),
+                BudgetUsage(),
+                (failure,),
+                status="denied",
+            )
+
+        metrics = get_metrics_collector()
+        filters: Dict[str, Any] = {"include_superseded": plan.include_superseded}
+        candidate_cap = plan.budget.retrieval.max_candidates
+        query = plan.query or ""
+        failures: List[ModeFailure] = []
+        truncations: List[Truncation] = []
+
+        candidates, cap_hit = _retrieve_plan_candidates(
+            self._adapter, plan, query, filters, candidate_cap, metrics, failures, truncations
+        )
+        if cap_hit:
+            truncation = Truncation(TruncationReason.RETRIEVAL_CANDIDATE_CAP, BudgetLayer.RETRIEVAL, 1)
+            truncations.append(truncation)
+            metrics.record_recall_truncation(truncation.reason_code, truncation.layer)
+
+        metadata: Dict[str, Any] = {"candidate_cap": candidate_cap, "result_cap": plan.max_results}
+        filtered = _filter_sensitive_candidates(
+            candidates, plan.sensitivity_policy.value, metrics, failures, truncations, metadata
+        )
+        filtered, conflicts = _resolve_conflicts(filtered, plan.conflict_policy.value, metrics, truncations)
+        ranked = _rank_and_dedupe(filtered, plan.task.value, plan.conflict_policy.value)[: plan.max_results]
+        result_items, evidence_chars = _expand_evidence(self._adapter, plan, ranked, metrics, truncations)
+        result_items, degraded = _enforce_output_limit(
+            result_items, plan.task.value, plan.budget.output.max_tokens, metrics, truncations
+        )
+
+        output_usage = _count_output_tokens(result_items)
+        output_limit = plan.budget.output.max_tokens
+        metrics.set_recall_budget_utilization("retrieval", min(1.0, len(candidates) / max(1, candidate_cap)))
+        metrics.set_recall_budget_utilization(
+            "evidence", min(1.0, evidence_chars / max(1, plan.budget.evidence.evidence_chars_total))
+        )
+        metrics.set_recall_budget_utilization("reflection", 0.0)
+        metrics.set_recall_budget_utilization("output", min(1.0, output_usage / max(1, output_limit)))
+        status = "degraded" if degraded or truncations else "ok"
+        metadata.update({"evidence_chars": evidence_chars, "output_tokens": output_usage, "reflection_candidates": 0})
+        return RecallResult(
+            items=tuple(result_items),
+            plan_fingerprint=plan.fingerprint,
+            namespace=plan.namespace,
+            task=plan.task.value,
+            modes=tuple(mode.value for mode in plan.modes),
+            budget_usage=BudgetUsage(
+                len(candidates),
+                len(result_items),
+                candidate_cap,
+                plan.max_results,
+                evidence_chars,
+                0,
+                output_usage,
+                plan.budget.evidence.evidence_chars_total,
+                plan.budget.reflection.inline_max_candidates,
+                output_limit,
+            ),
+            mode_failures=tuple(failures),
+            conflicts=tuple(conflicts) if plan.conflict_policy.value == "always" else (),
+            metadata=metadata,
+            plan=ResultPlanSnapshot(plan.snapshot().to_dict()),
+            truncations=tuple(truncations),
+            degraded=degraded,
+            status=status,
+        )
 
     def recall_memories(
         self,

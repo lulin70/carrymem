@@ -17,8 +17,10 @@ import tempfile
 import pytest
 
 from carrymem import CarryMem
+from carrymem.monitoring import get_metrics_collector
 from carrymem.prompt_builder import PromptBuilder, _estimate_tokens
 from carrymem.scoring import RecallBudget
+from carrymem.token_budget import estimate_tokens
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -573,6 +575,43 @@ class TestBuildContext:
             cm.classify_and_remember(f"Memory number {i} about various topics", force_type="fact_declaration")
         result = pb.build_context(context="memory", max_memories=3, max_tokens=200)
         assert result["memory_count"] <= 10  # Should be constrained
+
+    def test_final_prompt_hard_gate_respects_small_budget(self, pb, cm):
+        """The final formatted prompt never exceeds the requested budget."""
+        for i in range(30):
+            cm.classify_and_remember(
+                f"Ordinary memory {i} contains detailed context about a repeated topic.",
+                force_type="fact_declaration",
+            )
+
+        result = pb.build_context(context="ordinary memory", max_memories=10, max_tokens=32)
+
+        assert estimate_tokens(result["system_prompt"]) <= 32
+        assert "truncations" in result
+        assert "degradation" in result
+        assert result["truncations"] or result["degradation"] is not None
+
+    def test_over_budget_drops_non_protected_blocks(self, pb, cm):
+        """Ordinary context is truncated before protected memory content."""
+        for i in range(20):
+            cm.classify_and_remember(
+                f"Ordinary context memory {i} contains enough detail to exceed the final budget.",
+                force_type="fact_declaration",
+            )
+
+        result = pb.build_context(context="ordinary context", max_memories=20, max_tokens=80)
+
+        assert any(not truncation.protected for truncation in result["truncations"])
+        assert estimate_tokens(result["system_prompt"]) <= 80
+
+    def test_budget_utilization_is_recorded_for_larger_budget(self, pb, cm):
+        """Metrics record actual output utilization rather than a fixed full budget."""
+        metrics = get_metrics_collector()
+        metrics.reset()
+        result = pb.build_context(context="nothing here", max_tokens=500)
+
+        assert result["budget_utilization"] < 1
+        assert metrics.get_snapshot()["recall_budget_utilization"]["output"] < 1
 
 
 # ===================================================================
