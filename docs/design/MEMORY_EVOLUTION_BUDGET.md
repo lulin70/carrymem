@@ -1,10 +1,14 @@
 # 分层预算契约（Recall / Reflection Budget）
 
-> **版本**：v1.0
-> **日期**：2026-09-28
+> **版本**：v1.1
+> **日期**：2026-10-06
 > **状态**：已批准（Gate 0，2026-09-28；D5 按本文四层结构与默认值执行）
 > **权威关系**：细化 [CARRYMEM_MEMORY_EVOLUTION_METHOD.md](CARRYMEM_MEMORY_EVOLUTION_METHOD.md) §7；预算结构、截断顺序与原因码以本文为准。
 > **实现边界**：Gate 0 批准前不修改 `build_context()`、`recall_engine.py` 或预算相关代码。
+>
+> **Phase 5 Slice 1（2026-10-05）**：已落地纯 `RecallPlan` 契约、四层预算数据结构、封闭任务模式、计划快照与 namespace/task fail-closed 校验；尚未接入在线 recall、token 硬闸或截断执行。
+>
+> **Phase 5 Slice 2（2026-10-06）**：已接入在线执行入口 `CarryMem.recall_with_plan(plan) -> RecallResult`（含 `AsyncCarryMem.recall_with_plan` 包装）、recall 路径 output token 硬闸、三态 conflict policy、敏感性过滤、vector→fts 回退、evidence 预算展开、截断/降级元数据与 low-cardinality metrics；真实 HTTP/MCP metrics E2E 通过。实现边界与遗留缺口见 §10。
 
 ---
 
@@ -209,3 +213,43 @@ carrymem_tokenizer_drift_ratio                        (gauge, 校准时更新)
 | D5 | 预算分层边界 | §2 四层结构 + §2.1 默认值 |
 | （关联） | 保护层清单 | §5.1 第 6-8 层，安全类永不自动截断 |
 | （关联） | build_context 现有默认 | `max_tokens=2000` 不变（Stable 兼容） |
+
+---
+
+## 10. Slice 2 实现状态（2026-10-06，诚实披露）
+
+### 10.1 已实现
+
+| 能力 | 位置 | 说明 |
+|---|---|---|
+| 在线执行入口 | `carrymem/core/_recall.py` `recall_with_plan` / `_execute_recall_plan` | plan 校验、namespace fail-closed、`_retry_on_busy` 包裹、recall 延迟采样 |
+| 兼容投影 | `RecallResult.to_legacy_list()` | `recall_memories()` 旧签名与返回结构未变 |
+| 异步包装 | `AsyncCarryMem.build_recall_plan / recall_with_plan` | plan 构建纯 CPU 不进 executor |
+| output 硬闸（recall 路径） | `_enforce_output_limit` | 先删非保护条目；保护内容超限时 `Degradation` + 确定性二分前缀截断（对齐 INV-TB1），`metadata["output_tokens"]` 始终 ≤ 预算 |
+| output 硬闸（prompt 路径） | `token_budget.enforce_output_budget`，`prompt_builder` 已接入 | `build_context()` 签名不变，metadata 返回 `truncations/degradation/budget_utilization` |
+| conflict policy | `_resolve_conflicts` | `hide`=整组剔除；`show_top`=每组保一条；`always`=返回 `ConflictView`；非 always 记 `CONFLICT_DEPRIORITIZED` |
+| 敏感性过滤 | `_filter_sensitive_candidates` | `filter`=剔除+截断记录；`strict`=额外 ModeFailure；序列化失败 fail-closed |
+| vector 回退 | `_rows_for_mode` | `vector_search=False` 时回退 fts 并记 `VECTOR_UNAVAILABLE_FALLBACK` |
+| evidence 预算 | `_expand_evidence` | per-result 条数 + 全局字符上限，超限记 `EVIDENCE_BUDGET_EXCEEDED` |
+| metrics | `monitoring.record_recall_truncation / set_recall_budget_utilization` | §8 四个序列中前两个已在线产生并通过 `/metrics` 暴露（真实 TCP E2E：`tests/integration/test_recall_metrics_http_e2e.py`） |
+
+### 10.2 与 §5.1 截断顺序的差异
+
+当前实现的保护分层为三档：correction（correction_resolution 任务下绝对保护）＞其他保护类型（security/strategy/accepted_fact/accepted_rule/accepted 状态）＞普通条目。§5.1 的 8 级顺序尚未逐级实现；普通档内部目前按"非保护优先删除、同级末位先删"，尚未引入"分数逆序/时间旧者先"的细粒度排序。补充实现时须以 §5.1 为准并回补测试。
+
+### 10.3 已知遗留缺口（不得宣称为已完成）
+
+1. `retrieval_timeout_ms` / `inline_timeout_ms` 尚未真正限制执行耗时，`RETRIEVAL_TIMEOUT` 原因码在线上无产生路径；
+2. reflection 预算尚未接入内联反思执行器，utilization 恒为 0（显式占位，非伪装数据）；
+3. graph/time 模式因 plan 缺少 `entity`/`time_range` 输入字段，当前显式返回 `INPUT_MISSING` skip，不做假执行；
+4. `SUPERSEDED_FILTERED` 截断码已定义，由 adapter 过滤 superseded 行为承担，但 executor 未单独计数；
+5. `TOKENIZER_DRIFT_WARNING` 未接线（校准属后续交付）；
+6. semantic 不可用时复用 `VECTOR_UNAVAILABLE_FALLBACK` 原因码，语义不完全准确，扩码需先更新 §5.2；
+7. candidate 预算按"命中次数"计量（多模式重复命中同一内存会重复计数），去重发生在预算之后；
+8. 单条 memory 的序列化固定开销约为 200 token（含 metadata/审计字段），`output.max_tokens` 低于该值时保护条目会被降级移除（`Degradation` 如实记录），调用方应避免设置过小的 output 预算。
+
+### 10.4 测试证据（2026-10-06）
+
+- 契约与执行测试：`tests/test_recall_plan.py` 23 项（确定性、fail-closed、budget cap、conflict 三态、敏感性 filter/strict、vector 回退去重、evidence 预算、correction 排序、保护内容降级、async parity）；
+- 真实用户 E2E：`tests/e2e/test_e2e_phase5_recall_budget.py` 4 项（全链路确定性、小预算保护 correction、fingerprint 敏感性、legacy prompt 共存）；
+- HTTP/MCP metrics E2E：`tests/integration/test_recall_metrics_http_e2e.py`（真实 TCP `/metrics` 断言 truncation 序列与 utilization gauge，真实 `/message` 工具调用共享 collector，`/healthz` 存活）。
