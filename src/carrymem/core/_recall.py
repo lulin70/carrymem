@@ -84,6 +84,28 @@ def _count_output_tokens(items: List[RecallItem]) -> int:
     return estimate_tokens(json.dumps([item.to_dict() for item in items], sort_keys=True, default=str))
 
 
+def _drop_tier(memory: Dict[str, Any]) -> int:
+    """Map a memory to its §5.1 drop order among non-protected entries.
+
+    0 = inferred/derived/graph candidates (dropped first), 1 = ordinary
+    fact/preference, 2 = observation (kept longest among droppable tiers).
+    """
+    raw_metadata = memory.get("metadata")
+    metadata = raw_metadata if isinstance(raw_metadata, dict) else {}
+    source = str(memory.get("source_layer") or metadata.get("source_layer") or "").lower()
+    if source in {"inference", "inferred", "derived", "aggregation", "graph", "co_occurrence"}:
+        return 0
+    if str(memory.get("type") or memory.get("memory_type") or "").lower() == "observation":
+        return 2
+    return 1
+
+
+def _drop_sort_key(item: RecallItem) -> Tuple[int, str, float]:
+    """Deterministic drop order: low trust tier first, then oldest, then lowest score."""
+    memory = item.memory
+    return (_drop_tier(memory), str(memory.get("created_at") or ""), -item.score)
+
+
 def _rows_for_mode(
     adapter: StorageAdapter,
     mode_name: str,
@@ -94,6 +116,18 @@ def _rows_for_mode(
     failures: List[ModeFailure],
 ) -> Optional[List[Any]]:
     """Fetch raw rows for one resolved mode, or None when the mode is skipped."""
+    if mode_name == "graph":
+        # Callers only reach here after the entity INPUT_MISSING gate passed.
+        result = adapter.recall_graph(
+            str(plan.entity or ""), plan.budget.retrieval.graph_max_hops, plan.namespace, remaining
+        )
+        return list((result or {}).get("memories") or [])
+    if mode_name == "time":
+        # Callers only reach here after the time_range INPUT_MISSING gate passed.
+        time_range = plan.time_range or ("", "")
+        start_dt = datetime.fromisoformat(time_range[0])
+        end_dt = datetime.fromisoformat(time_range[1])
+        return adapter.recall_by_time(start_dt, end_dt, dict(filters), remaining, [plan.namespace])
     if mode_name == "semantic":
         if not adapter.capabilities.get("semantic_recall", adapter.capabilities.get("vector_search", False)):
             failures.append(
@@ -133,8 +167,21 @@ def _retrieve_plan_candidates(
     candidates: List[Tuple[str, Dict[str, Any]]] = []
     remaining = candidate_cap
     cap_hit = False
+    timeout_ms = plan.budget.retrieval.retrieval_timeout_ms
+    loop_started = time.perf_counter()
     for mode in plan.modes:
         mode_name = mode.value
+        # Soft time budget: modes are checked before they start; a single
+        # in-flight SQLite query cannot be interrupted safely, so the budget
+        # gates which modes may still begin (documented in BUDGET §10.3).
+        if (time.perf_counter() - loop_started) * 1000.0 > timeout_ms:
+            failures.append(
+                ModeFailure(mode_name, "retrieval time budget exhausted", skipped=True, reason_code="RETRIEVAL_TIMEOUT")
+            )
+            truncation = Truncation(TruncationReason.RETRIEVAL_TIMEOUT, BudgetLayer.RETRIEVAL, 1)
+            truncations.append(truncation)
+            metrics.record_recall_truncation(truncation.reason_code, truncation.layer)
+            continue
         if remaining <= 0:
             failures.append(
                 ModeFailure(
@@ -142,10 +189,12 @@ def _retrieve_plan_candidates(
                 )
             )
             continue
-        if mode_name in {"graph", "time"}:
-            required = "entity" if mode_name == "graph" else "time range"
+        if mode_name == "graph" and not plan.entity:
+            failures.append(ModeFailure("graph", "entity input is required", skipped=True, reason_code="INPUT_MISSING"))
+            continue
+        if mode_name == "time" and not plan.time_range:
             failures.append(
-                ModeFailure(mode_name, f"{required} input is required", skipped=True, reason_code="INPUT_MISSING")
+                ModeFailure("time", "time range input is required", skipped=True, reason_code="INPUT_MISSING")
             )
             continue
         if mode_name in {"semantic", "vector"} and not query.strip():
@@ -379,7 +428,10 @@ def _enforce_output_limit(
         droppable = [idx for idx, item in enumerate(result_items) if not _protected(item)]
         if not droppable:
             break
-        result_items.pop(droppable[-1])
+        # §5.1 order: inferred first, ordinary next, observations last;
+        # ties break by oldest created_at, then lowest score.
+        droppable.sort(key=lambda idx: _drop_sort_key(result_items[idx]))
+        result_items.pop(droppable[0])
         truncation = Truncation(TruncationReason.OUTPUT_BUDGET_EXCEEDED, BudgetLayer.OUTPUT, 1)
         truncations.append(truncation)
         metrics.record_recall_truncation(truncation.reason_code, truncation.layer)

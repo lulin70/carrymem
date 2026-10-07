@@ -2,6 +2,7 @@
 
 import json
 from dataclasses import FrozenInstanceError
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -450,3 +451,141 @@ async def test_async_recall_with_plan_matches_sync_contract(tmp_path):
         assert result.to_legacy_list() == [item.memory for item in result.items]
     finally:
         await cm.close()
+
+
+def test_recall_plan_validates_entity_and_time_range_inputs():
+    with pytest.raises(ValueError, match="entity must be a non-empty string"):
+        RecallPlan(
+            query=None,
+            task=TaskMode.PROJECT_CONTEXT,
+            namespace="default",
+            modes=(RetrievalMode.GRAPH,),
+            entity="   ",
+        )
+
+    with pytest.raises(ValueError, match="ISO-8601"):
+        RecallPlan(
+            query=None,
+            task=TaskMode.TIMELINE_REVIEW,
+            namespace="default",
+            modes=(RetrievalMode.TIME,),
+            time_range=("not-a-date", "also-not-a-date"),
+        )
+
+    with pytest.raises(ValueError, match="start must not be after end"):
+        RecallPlan(
+            query=None,
+            task=TaskMode.TIMELINE_REVIEW,
+            namespace="default",
+            modes=(RetrievalMode.TIME,),
+            time_range=("2026-10-07T12:00:00+00:00", "2026-10-07T08:00:00+00:00"),
+        )
+
+    valid = RecallPlan(
+        query=None,
+        task=TaskMode.PROJECT_CONTEXT,
+        namespace="default",
+        modes=(RetrievalMode.GRAPH, RetrievalMode.TIME),
+        entity="  Python  ",
+        time_range=("2026-10-01T00:00:00+00:00", "2026-10-07T00:00:00+00:00"),
+    )
+    assert valid.entity == "Python"
+    assert valid.time_range == ("2026-10-01T00:00:00+00:00", "2026-10-07T00:00:00+00:00")
+    # The new inputs participate in the plan identity.
+    without_inputs = RecallPlan(
+        query=None,
+        task=TaskMode.PROJECT_CONTEXT,
+        namespace="default",
+        modes=(RetrievalMode.GRAPH, RetrievalMode.TIME),
+    )
+    assert valid.fingerprint != without_inputs.fingerprint
+
+
+def test_recall_with_plan_executes_time_mode(tmp_path):
+    cm = CarryMem(storage="sqlite", db_path=str(tmp_path / "recall.db"), auto_backup_interval=0)
+    try:
+        cm.declare("I started learning Rust this week", user_id="u")
+        now = datetime.now(timezone.utc)
+        plan = cm.build_recall_plan(
+            query=None,
+            task="timeline_review",
+            modes=[RetrievalMode.TIME],
+            time_range=((now - timedelta(hours=1)).isoformat(), (now + timedelta(hours=1)).isoformat()),
+        )
+        result = cm.recall_with_plan(plan)
+        time_failures = [f for f in result.mode_failures if f.mode == "time"]
+        assert not time_failures, f"time mode must execute with input, got {time_failures}"
+        assert result.items, "a memory stored seconds ago must fall inside the range"
+        assert any("Rust" in str(item.memory.get("content")) for item in result.items)
+    finally:
+        cm.close()
+
+
+def test_recall_with_plan_executes_graph_mode(tmp_path):
+    cm = CarryMem(storage="sqlite", db_path=str(tmp_path / "recall.db"), auto_backup_interval=0)
+    try:
+        stored = cm.declare("Our team uses Python and FastAPI for the backend", user_id="u")
+        memory_key = stored["storage_keys"][0]
+        assert cm._adapter.add_graph_relation("Python", "FastAPI", "works_with", memory_key) is True
+        plan = cm.build_recall_plan(
+            query=None,
+            task="project_context",
+            modes=[RetrievalMode.GRAPH],
+            entity="Python",
+        )
+        result = cm.recall_with_plan(plan)
+        graph_failures = [f for f in result.mode_failures if f.mode == "graph"]
+        assert not graph_failures, f"graph mode must execute with entity input, got {graph_failures}"
+        assert any(item.memory.get("storage_key") == memory_key for item in result.items)
+    finally:
+        cm.close()
+
+
+def test_recall_with_plan_reports_timeout_when_budget_exhausted(tmp_path):
+    cm = CarryMem(storage="sqlite", db_path=str(tmp_path / "recall.db"), auto_backup_interval=0)
+    try:
+        cm.declare("I prefer Python for data work", user_id="u")
+        plan = cm.build_recall_plan(
+            query="Python",
+            task="fact_lookup",
+            modes=[RetrievalMode.FTS, RetrievalMode.VECTOR],
+            budget=BudgetSpec(retrieval=RetrievalBudget(retrieval_timeout_ms=0)),
+        )
+        result = cm.recall_with_plan(plan)
+        # A zero budget admits no retrieval mode at all; every requested mode
+        # is skipped with RETRIEVAL_TIMEOUT and never silently executed.
+        assert {f.mode for f in result.mode_failures} == {"fts", "vector"}
+        assert all(f.reason_code == "RETRIEVAL_TIMEOUT" for f in result.mode_failures)
+        assert result.items == ()
+        assert any(t.reason_code is TruncationReason.RETRIEVAL_TIMEOUT for t in result.truncations)
+    finally:
+        cm.close()
+
+
+def test_output_truncation_drops_inferred_before_ordinary(tmp_path):
+    from carrymem.adapters.base import MemoryEntry
+
+    cm = CarryMem(storage="sqlite", db_path=str(tmp_path / "recall.db"), auto_backup_interval=0)
+    try:
+        cm._adapter.store_entry(
+            MemoryEntry(
+                type="fact_declaration", content="inferred guess about deployment tooling", source_layer="inference"
+            )
+        )
+        cm._adapter.store_entry(
+            MemoryEntry(type="fact_declaration", content="ordinary observed team fact about deployment tooling")
+        )
+        plan = cm.build_recall_plan(
+            query=None,
+            task="fact_lookup",
+            modes=[RetrievalMode.FTS],
+            max_results=5,
+            budget=BudgetSpec(output=OutputBudget(max_tokens=300)),
+        )
+        result = cm.recall_with_plan(plan)
+        kept_contents = [str(item.memory.get("content") or "") for item in result.items]
+        assert any("ordinary observed" in content for content in kept_contents), kept_contents
+        assert all("inferred guess" not in content for content in kept_contents), kept_contents
+        assert any(t.reason_code is TruncationReason.OUTPUT_BUDGET_EXCEEDED for t in result.truncations)
+    finally:
+        cm.close()

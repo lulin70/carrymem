@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
 from typing import Any, Optional, Sequence, Tuple
 
@@ -129,6 +130,8 @@ class RecallPlanSnapshot:
     include_superseded: bool
     conflict_policy: ConflictPolicy
     sensitivity_policy: SensitivityPolicy
+    entity: Optional[str]
+    time_range: Optional[Tuple[str, str]]
     fingerprint: str
 
     def to_dict(self) -> dict[str, Any]:
@@ -143,6 +146,8 @@ class RecallPlanSnapshot:
             "include_superseded": self.include_superseded,
             "conflict_policy": self.conflict_policy.value,
             "sensitivity_policy": self.sensitivity_policy.value,
+            "entity": self.entity,
+            "time_range": list(self.time_range) if self.time_range is not None else None,
             "fingerprint": self.fingerprint,
         }
 
@@ -161,6 +166,8 @@ class RecallPlan:
     include_superseded: bool = False
     conflict_policy: ConflictPolicy = ConflictPolicy.HIDE
     sensitivity_policy: SensitivityPolicy = SensitivityPolicy.FILTER
+    entity: Optional[str] = None
+    time_range: Optional[Tuple[str, str]] = None
 
     def __post_init__(self) -> None:
         if self.query is not None and not isinstance(self.query, str):
@@ -188,11 +195,22 @@ class RecallPlan:
         if task is TaskMode.CONFLICT_EXPLANATION and conflict_policy is not ConflictPolicy.ALWAYS:
             raise ValueError("conflict_explanation requires conflict_policy=always")
 
+        entity = self.entity
+        if entity is not None:
+            if not isinstance(entity, str) or not entity.strip():
+                raise ValueError("entity must be a non-empty string when provided")
+            entity = entity.strip()
+        time_range = self.time_range
+        if time_range is not None:
+            time_range = _validate_time_range(time_range)
+
         object.__setattr__(self, "namespace", namespace)
         object.__setattr__(self, "task", task)
         object.__setattr__(self, "modes", modes)
         object.__setattr__(self, "conflict_policy", conflict_policy)
         object.__setattr__(self, "sensitivity_policy", sensitivity_policy)
+        object.__setattr__(self, "entity", entity)
+        object.__setattr__(self, "time_range", time_range)
 
     @property
     def fingerprint(self) -> str:
@@ -208,6 +226,8 @@ class RecallPlan:
             "include_superseded": self.include_superseded,
             "conflict_policy": self.conflict_policy.value,
             "sensitivity_policy": self.sensitivity_policy.value,
+            "entity": self.entity,
+            "time_range": list(self.time_range) if self.time_range is not None else None,
         }
         encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()
@@ -225,8 +245,24 @@ class RecallPlan:
             include_superseded=self.include_superseded,
             conflict_policy=self.conflict_policy,
             sensitivity_policy=self.sensitivity_policy,
+            entity=self.entity,
+            time_range=self.time_range,
             fingerprint=self.fingerprint,
         )
+
+
+def _validate_time_range(value: Any) -> Tuple[str, str]:
+    """Validate an ISO-8601 (start, end) pair; JSON-safe by construction."""
+    if not isinstance(value, tuple) or len(value) != 2 or not all(isinstance(part, str) for part in value):
+        raise ValueError("time_range must be a (start_iso, end_iso) tuple of ISO-8601 timestamps")
+    try:
+        start_dt = datetime.fromisoformat(value[0])
+        end_dt = datetime.fromisoformat(value[1])
+    except (TypeError, ValueError) as exc:
+        raise ValueError("time_range must contain ISO-8601 timestamps") from exc
+    if start_dt > end_dt:
+        raise ValueError("time_range start must not be after end")
+    return (value[0], value[1])
 
 
 _TASK_MODES = {
@@ -283,6 +319,8 @@ def build_recall_plan(
     include_superseded: bool = False,
     conflict_policy: Optional[ConflictPolicy | str] = None,
     sensitivity_policy: SensitivityPolicy | str = SensitivityPolicy.FILTER,
+    entity: Optional[str] = None,
+    time_range: Optional[Tuple[str, str]] = None,
 ) -> RecallPlan:
     """Build a deterministic plan from request parameters.
 
@@ -319,6 +357,8 @@ def build_recall_plan(
         include_superseded=include_superseded,
         conflict_policy=resolved_conflict,
         sensitivity_policy=resolved_sensitivity,
+        entity=entity,
+        time_range=time_range,
     )
 
 
