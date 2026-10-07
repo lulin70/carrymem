@@ -9,6 +9,8 @@
 > **Phase 5 Slice 1（2026-10-05）**：已落地纯 `RecallPlan` 契约、四层预算数据结构、封闭任务模式、计划快照与 namespace/task fail-closed 校验；尚未接入在线 recall、token 硬闸或截断执行。
 >
 > **Phase 5 Slice 2（2026-10-06）**：已接入在线执行入口 `CarryMem.recall_with_plan(plan) -> RecallResult`（含 `AsyncCarryMem.recall_with_plan` 包装）、recall 路径 output token 硬闸、三态 conflict policy、敏感性过滤、vector→fts 回退、evidence 预算展开、截断/降级元数据与 low-cardinality metrics；真实 HTTP/MCP metrics E2E 通过。实现边界与遗留缺口见 §10。
+>
+> **Phase 5 Slice 3（2026-10-07）**：`RecallPlan` 新增 `entity` 与 `time_range`（ISO-8601 对）输入并纳入 fingerprint——graph/time 模式从显式 skip 变为真实执行（输入缺失仍 fail-closed 报 `INPUT_MISSING`）；`retrieval_timeout_ms` 以"mode 级软预算"接线（超时后不再启动新模式，记 `RETRIEVAL_TIMEOUT`，正在执行的同步 SQLite 查询不可中断）；output 截断顺序按信任层细化（推断/派生 → 普通旧者先 → observation），对齐 §5.1 普通档语义。遗留缺口清单更新见 §10.3。
 
 ---
 
@@ -74,8 +76,10 @@ RecallPlan(
     include_evidence: bool = False,       # 是否携带证据
     include_superseded: bool = False,     # 默认 False（INV-C2）
     conflict_policy: ConflictPolicy,      # hide / show_top / always
-    sensitivity_policy: SensitivityPolicy # 敏感过滤
-)
+    sensitivity_policy: SensitivityPolicy,# 敏感过滤
+    entity: Optional[str] = None,         # graph 模式起点实体（Slice 3）
+    time_range: Optional[Tuple[str, str]] # time 模式 ISO-8601 (start, end) 对
+)                                         # （Slice 3；均纳入 fingerprint）
 ```
 
 构造约束：
@@ -216,7 +220,7 @@ carrymem_tokenizer_drift_ratio                        (gauge, 校准时更新)
 
 ---
 
-## 10. Slice 2 实现状态（2026-10-06，诚实披露）
+## 10. 实现状态（诚实披露；Slice 3 更新于 2026-10-07）
 
 ### 10.1 已实现
 
@@ -225,7 +229,10 @@ carrymem_tokenizer_drift_ratio                        (gauge, 校准时更新)
 | 在线执行入口 | `carrymem/core/_recall.py` `recall_with_plan` / `_execute_recall_plan` | plan 校验、namespace fail-closed、`_retry_on_busy` 包裹、recall 延迟采样 |
 | 兼容投影 | `RecallResult.to_legacy_list()` | `recall_memories()` 旧签名与返回结构未变 |
 | 异步包装 | `AsyncCarryMem.build_recall_plan / recall_with_plan` | plan 构建纯 CPU 不进 executor |
+| graph/time 真实执行（Slice 3） | `_rows_for_mode` | plan 新增 `entity` / `time_range`（ISO-8601 对）输入并纳入 fingerprint；graph 走 `recall_graph`（受 `graph_max_hops` 预算约束），time 走 `recall_by_time`；输入缺失仍 fail-closed 报 `INPUT_MISSING` |
+| retrieval 软超时（Slice 3） | `_retrieve_plan_candidates` | `retrieval_timeout_ms` 为 mode 级软预算：超时后不再启动新模式并记 `RETRIEVAL_TIMEOUT`；正在执行的同步 SQLite 查询不可中断（预算语义=配额，非硬中断） |
 | output 硬闸（recall 路径） | `_enforce_output_limit` | 先删非保护条目；保护内容超限时 `Degradation` + 确定性二分前缀截断（对齐 INV-TB1），`metadata["output_tokens"]` 始终 ≤ 预算 |
+| 信任层截断顺序（Slice 3） | `_drop_tier` / `_drop_sort_key` | 普通档按 §5.1 语义：推断/派生/聚合先删 → 普通条目（旧者先）→ observation 最后；同级内旧者先、再低分先 |
 | output 硬闸（prompt 路径） | `token_budget.enforce_output_budget`，`prompt_builder` 已接入 | `build_context()` 签名不变，metadata 返回 `truncations/degradation/budget_utilization` |
 | conflict policy | `_resolve_conflicts` | `hide`=整组剔除；`show_top`=每组保一条；`always`=返回 `ConflictView`；非 always 记 `CONFLICT_DEPRIORITIZED` |
 | 敏感性过滤 | `_filter_sensitive_candidates` | `filter`=剔除+截断记录；`strict`=额外 ModeFailure；序列化失败 fail-closed |
@@ -235,21 +242,21 @@ carrymem_tokenizer_drift_ratio                        (gauge, 校准时更新)
 
 ### 10.2 与 §5.1 截断顺序的差异
 
-当前实现的保护分层为三档：correction（correction_resolution 任务下绝对保护）＞其他保护类型（security/strategy/accepted_fact/accepted_rule/accepted 状态）＞普通条目。§5.1 的 8 级顺序尚未逐级实现；普通档内部目前按"非保护优先删除、同级末位先删"，尚未引入"分数逆序/时间旧者先"的细粒度排序。补充实现时须以 §5.1 为准并回补测试。
+保护层（§5.1 第 6-8 层）为三档：correction（correction_resolution 任务下绝对保护）＞其他保护类型（security/strategy/accepted_fact/accepted_rule/accepted 状态）＞普通条目。普通档已按 Slice 3 落地"推断/派生 → 普通（旧者先）→ observation"三级顺序；§5.1 第 3 级"重复或语义高度相似条目"已由 storage_key 去重承担，"语义高度相似"的细粒度去重未实现。补充实现时须以 §5.1 为准并回补测试。
 
 ### 10.3 已知遗留缺口（不得宣称为已完成）
 
-1. `retrieval_timeout_ms` / `inline_timeout_ms` 尚未真正限制执行耗时，`RETRIEVAL_TIMEOUT` 原因码在线上无产生路径；
+1. `retrieval_timeout_ms` 为 mode 级软预算（超时后不再启动新模式），不能中断正在执行的同步 SQLite 查询；`inline_timeout_ms` 仍未接线（依赖内联反思执行器）；
 2. reflection 预算尚未接入内联反思执行器，utilization 恒为 0（显式占位，非伪装数据）；
-3. graph/time 模式因 plan 缺少 `entity`/`time_range` 输入字段，当前显式返回 `INPUT_MISSING` skip，不做假执行；
-4. `SUPERSEDED_FILTERED` 截断码已定义，由 adapter 过滤 superseded 行为承担，但 executor 未单独计数；
-5. `TOKENIZER_DRIFT_WARNING` 未接线（校准属后续交付）；
-6. semantic 不可用时复用 `VECTOR_UNAVAILABLE_FALLBACK` 原因码，语义不完全准确，扩码需先更新 §5.2；
-7. candidate 预算按"命中次数"计量（多模式重复命中同一内存会重复计数），去重发生在预算之后；
-8. 单条 memory 的序列化固定开销约为 200 token（含 metadata/审计字段），`output.max_tokens` 低于该值时保护条目会被降级移除（`Degradation` 如实记录），调用方应避免设置过小的 output 预算。
+3. `SUPERSEDED_FILTERED` 截断码已定义，由 adapter 过滤 superseded 行为承担，但 executor 未单独计数；
+4. `TOKENIZER_DRIFT_WARNING` 未接线（校准属后续交付）；
+5. semantic 不可用时复用 `VECTOR_UNAVAILABLE_FALLBACK` 原因码，语义不完全准确，扩码需先更新 §5.2；
+6. candidate 预算按"命中次数"计量（多模式重复命中同一内存会重复计数），去重发生在预算之后；
+7. 单条 memory 的序列化固定开销约为 200 token（含 metadata/审计字段），`output.max_tokens` 低于该值时保护条目会被降级移除（`Degradation` 如实记录），调用方应避免设置过小的 output 预算；
+8. 默认 `retrieval_timeout_ms=200` 下，vector/semantic 模式的首次调用若包含 embedding 模型加载（秒级）会被软超时推迟——调用方应调大该层预算或预热模型，这不是缺陷而是预算语义。
 
-### 10.4 测试证据（2026-10-06）
+### 10.4 测试证据（2026-10-07）
 
-- 契约与执行测试：`tests/test_recall_plan.py` 23 项（确定性、fail-closed、budget cap、conflict 三态、敏感性 filter/strict、vector 回退去重、evidence 预算、correction 排序、保护内容降级、async parity）；
+- 契约与执行测试：`tests/test_recall_plan.py` 28 项（确定性、fail-closed、budget cap、conflict 三态、敏感性 filter/strict、vector 回退去重、evidence 预算、correction 排序、保护内容降级、async parity、entity/time_range 校验与 graph/time 真实执行、软超时、信任层截断顺序）；
 - 真实用户 E2E：`tests/e2e/test_e2e_phase5_recall_budget.py` 4 项（全链路确定性、小预算保护 correction、fingerprint 敏感性、legacy prompt 共存）；
 - HTTP/MCP metrics E2E：`tests/integration/test_recall_metrics_http_e2e.py`（真实 TCP `/metrics` 断言 truncation 序列与 utilization gauge，真实 `/message` 工具调用共享 collector，`/healthz` 存活）。

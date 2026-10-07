@@ -46,34 +46,36 @@ The v0.11.x line carries the breaking `native_async` removal, the `cryptography>
 > Only `0.11.2`, `0.11.1`, `0.9.3rc1`, `0.8.0` and `0.5.0`–`0.5.2` are on PyPI;
 > everything between them exists as source and CHANGELOG entries only.
 
-### Current Test & Quality Metrics (working tree, 2026-10-06)
+### Current Test & Quality Metrics (working tree, 2026-10-07)
 
-Measured on the current working tree (memory evolution Phase 5 Slice 2);
+Measured on the current working tree (memory evolution Phase 5 Slice 3);
 these numbers describe the tree, not the v0.11.2 tag.
 
 - **Memory evolution status**: Phase 1 (Provenance), Phase 2
   (Observation/ConflictRecord), and Phase 4 (Reflection Proposal) are complete;
   Phase 4 passed the exclusive full gate on 2026-10-04 — see
   [PHASE4_REFLECTION_PROPOSAL_READINESS.md](design/PHASE4_REFLECTION_PROPOSAL_READINESS.md)
-  §7. Phase 5 Slice 2 is implemented (2026-10-06): the immutable `RecallPlan`
-  contract, closed task modes, and four-layer budgets are joined by the online
-  executor `CarryMem.recall_with_plan(plan) -> RecallResult` (plus async
-  parity), the recall-path output token hard gate with deterministic protected
-  content shortening, three-state conflict policy, sensitivity filtering,
-  vector→fts fallback, evidence budget expansion, truncation/degradation
-  metadata, and low-cardinality truncation/budget metrics verified over real
-  HTTP. Known deferred edges (retrieval/reflection timeouts, graph/time plan
-  inputs, tokenizer-drift wiring) are disclosed in
-  [MEMORY_EVOLUTION_BUDGET.md](design/MEMORY_EVOLUTION_BUDGET.md) §10.
-- **Phase 5 focused evidence (2026-10-06)**: 23 contract tests
+  §7. Phase 5 Slice 3 is implemented (2026-10-07): on top of the Slice 2
+  online executor (`CarryMem.recall_with_plan` -> `RecallResult`, async
+  parity, output token hard gate with deterministic protected-content
+  shortening, three-state conflict policy, sensitivity filtering,
+  vector→fts fallback, evidence budgets, truncation/degradation metadata,
+  and low-cardinality metrics verified over real HTTP), Slice 3 adds the
+  `entity` / `time_range` plan inputs (graph/time modes now execute for
+  real), the mode-level `retrieval_timeout_ms` soft budget
+  (`RETRIEVAL_TIMEOUT`), and the trust-tier truncation order
+  (inferred → ordinary oldest-first → observation). Known deferred edges are
+  disclosed in [MEMORY_EVOLUTION_BUDGET.md](design/MEMORY_EVOLUTION_BUDGET.md)
+  §10.3.
+- **Phase 5 focused evidence (2026-10-07)**: 28 contract tests
   (`tests/test_recall_plan.py`), 4 real-user E2E tests
   (`tests/e2e/test_e2e_phase5_recall_budget.py`), 1 real-HTTP metrics E2E
-  (`tests/integration/test_recall_metrics_http_e2e.py`) — 28 passed.
-- **Tests (Phase 5 exclusive full gate, 2026-10-06)**:
-  `5078 passed, 10 skipped, 77 deselected, 143 warnings`, total coverage
-  `83.15%` — all eight blocking local gates green via
-  `scripts/ci_local_check.py` on the Phase 5 Slice 2 tree.
-- **Coverage**: 83.15% (`fail_under = 80`)
+  (`tests/integration/test_recall_metrics_http_e2e.py`).
+- **Tests (Phase 5 exclusive full gate, 2026-10-07)**:
+  `5083 passed, 10 skipped, 77 deselected, 143 warnings`, total coverage
+  `83.16%` — all eight blocking local gates green via
+  `scripts/ci_local_check.py` on the Phase 5 Slice 3 tree.
+- **Coverage**: 83.16% (`fail_under = 80`)
 - **Lint**: flake8 clean, black clean, isort clean, mypy `Success: no issues found in 163 source files`
 - **Complexity**: `radon: no functions with complexity >= 21`
 - **Version consistency**: all five machine-readable sources report `0.11.2`
