@@ -48,7 +48,7 @@ The v0.11.x line carries the breaking `native_async` removal, the `cryptography>
 
 ### Current Test & Quality Metrics (working tree, 2026-10-07)
 
-Measured on the current working tree (memory evolution Phase 5 Slice 3);
+Measured on the current working tree (memory evolution Phase 5 Slice 4);
 these numbers describe the tree, not the v0.11.2 tag.
 
 - **Memory evolution status**: Phase 1 (Provenance), Phase 2
@@ -64,18 +64,21 @@ these numbers describe the tree, not the v0.11.2 tag.
   `entity` / `time_range` plan inputs (graph/time modes now execute for
   real), the mode-level `retrieval_timeout_ms` soft budget
   (`RETRIEVAL_TIMEOUT`), and the trust-tier truncation order
-  (inferred → ordinary oldest-first → observation). Known deferred edges are
+  (inferred → ordinary oldest-first → observation), and Slice 4 moves the
+  superseded filter into the plan executor so `SUPERSEDED_FILTERED` carries
+  an exact online count (`metadata["superseded_filtered"]` + metrics) while
+  legacy recall keeps adapter-side filtering. Known deferred edges are
   disclosed in [MEMORY_EVOLUTION_BUDGET.md](design/MEMORY_EVOLUTION_BUDGET.md)
   §10.3.
-- **Phase 5 focused evidence (2026-10-07)**: 28 contract tests
+- **Phase 5 focused evidence (2026-10-07)**: 29 contract tests
   (`tests/test_recall_plan.py`), 4 real-user E2E tests
   (`tests/e2e/test_e2e_phase5_recall_budget.py`), 1 real-HTTP metrics E2E
   (`tests/integration/test_recall_metrics_http_e2e.py`).
 - **Tests (Phase 5 exclusive full gate, 2026-10-07)**:
-  `5083 passed, 10 skipped, 77 deselected, 143 warnings`, total coverage
-  `83.16%` — all eight blocking local gates green via
-  `scripts/ci_local_check.py` on the Phase 5 Slice 3 tree.
-- **Coverage**: 83.16% (`fail_under = 80`)
+  `5084 passed, 10 skipped, 77 deselected, 143 warnings`, total coverage
+  `83.18%` — all eight blocking local gates green via
+  `scripts/ci_local_check.py` on the Phase 5 Slice 4 tree.
+- **Coverage**: 83.18% (`fail_under = 80`)
 - **Lint**: flake8 clean, black clean, isort clean, mypy `Success: no issues found in 163 source files`
 - **Complexity**: `radon: no functions with complexity >= 21`
 - **Version consistency**: all five machine-readable sources report `0.11.2`
