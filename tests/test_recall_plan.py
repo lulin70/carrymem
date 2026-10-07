@@ -562,6 +562,41 @@ def test_recall_with_plan_reports_timeout_when_budget_exhausted(tmp_path):
         cm.close()
 
 
+def test_recall_with_plan_counts_superseded_filtering(tmp_path):
+    cm = CarryMem(storage="sqlite", db_path=str(tmp_path / "recall.db"), auto_backup_interval=0)
+    try:
+        _version_chain_fixture(cm)
+        plan = cm.build_recall_plan(
+            query=None,
+            task="fact_lookup",
+            modes=[RetrievalMode.FTS],
+        )
+        result = cm.recall_with_plan(plan)
+        # The superseded original must be hidden with an exact, observable
+        # count (INV-C2), not silently filtered inside the adapter.
+        assert result.metadata.get("superseded_filtered") == 1
+        assert any(truncation.reason_code is TruncationReason.SUPERSEDED_FILTERED for truncation in result.truncations)
+        assert all(not item.memory.get("superseded_at") for item in result.items)
+
+        # timeline_review with include_superseded=True still sees the full
+        # chain: no hidden rows, no SUPERSEDED_FILTERED truncation.
+        timeline = cm.build_recall_plan(
+            query=None,
+            task="timeline_review",
+            modes=[RetrievalMode.FTS],
+            include_superseded=True,
+            conflict_policy="always",
+        )
+        timeline_result = cm.recall_with_plan(timeline)
+        assert timeline_result.metadata.get("superseded_filtered") == 0
+        assert not any(
+            truncation.reason_code is TruncationReason.SUPERSEDED_FILTERED for truncation in timeline_result.truncations
+        )
+        assert len(timeline_result.items) == 2
+    finally:
+        cm.close()
+
+
 def test_output_truncation_drops_inferred_before_ordinary(tmp_path):
     from carrymem.adapters.base import MemoryEntry
 

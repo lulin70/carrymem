@@ -153,6 +153,35 @@ def _rows_for_mode(
     return None
 
 
+def _collect_mode_rows(
+    rows: List[Any],
+    mode_name: str,
+    plan: RecallPlan,
+    candidate_cap: int,
+    candidates: List[Tuple[str, Dict[str, Any]]],
+) -> Tuple[int, bool]:
+    """Append namespace-valid candidates from one mode's rows.
+
+    Applies the plan's INV-C2 superseded filter with an exact hidden count.
+    Returns (superseded_hidden, cap_hit).
+    """
+    superseded_count = 0
+    for row in rows:
+        memory = row.to_dict() if hasattr(row, "to_dict") else dict(row)
+        if not isinstance(memory, dict) or memory.get("namespace") != plan.namespace:
+            continue
+        # INV-C2: the plan path fetches full rows and applies the superseded
+        # filter here, so the hidden count is observable (legacy recall keeps
+        # adapter-side filtering unchanged).
+        if not plan.include_superseded and str(memory.get("superseded_at") or ""):
+            superseded_count += 1
+            continue
+        candidates.append((mode_name, memory))
+        if len(candidates) >= candidate_cap:
+            return superseded_count, True
+    return superseded_count, False
+
+
 def _retrieve_plan_candidates(
     adapter: StorageAdapter,
     plan: RecallPlan,
@@ -162,11 +191,12 @@ def _retrieve_plan_candidates(
     metrics: Any,
     failures: List[ModeFailure],
     truncations: List[Truncation],
-) -> Tuple[List[Tuple[str, Dict[str, Any]]], bool]:
+) -> Tuple[List[Tuple[str, Dict[str, Any]]], bool, int]:
     """Collect candidates from each plan mode under the retrieval budget."""
     candidates: List[Tuple[str, Dict[str, Any]]] = []
     remaining = candidate_cap
     cap_hit = False
+    superseded_count = 0
     timeout_ms = plan.budget.retrieval.retrieval_timeout_ms
     loop_started = time.perf_counter()
     for mode in plan.modes:
@@ -219,14 +249,10 @@ def _retrieve_plan_candidates(
             rows = _rows_for_mode(adapter, mode_name, query, remaining, filters, plan, failures)
             if rows is None:
                 continue
-            for row in rows:
-                memory = row.to_dict() if hasattr(row, "to_dict") else dict(row)
-                if not isinstance(memory, dict) or memory.get("namespace") != plan.namespace:
-                    continue
-                candidates.append((mode_name, memory))
-                if len(candidates) >= candidate_cap:
-                    cap_hit = True
-                    break
+            hidden, hit = _collect_mode_rows(rows, mode_name, plan, candidate_cap, candidates)
+            superseded_count += hidden
+            if hit:
+                cap_hit = True
             remaining = candidate_cap - len(candidates)
         except (KeyError, ValueError, TypeError, RuntimeError, AttributeError) as exc:
             failures.append(
@@ -237,7 +263,7 @@ def _retrieve_plan_candidates(
                     reason_code="RETRIEVAL_FAILED",
                 )
             )
-    return candidates, cap_hit
+    return candidates, cap_hit, superseded_count
 
 
 def _filter_sensitive_candidates(
@@ -624,21 +650,32 @@ class RecallMixin:
             )
 
         metrics = get_metrics_collector()
-        filters: Dict[str, Any] = {"include_superseded": plan.include_superseded}
+        # Plan path fetches full rows (including superseded) and applies the
+        # plan's INV-C2 filter in the executor with an exact count; legacy
+        # recall keeps adapter-side filtering unchanged.
+        filters: Dict[str, Any] = {"include_superseded": True}
         candidate_cap = plan.budget.retrieval.max_candidates
         query = plan.query or ""
         failures: List[ModeFailure] = []
         truncations: List[Truncation] = []
 
-        candidates, cap_hit = _retrieve_plan_candidates(
+        candidates, cap_hit, superseded_count = _retrieve_plan_candidates(
             self._adapter, plan, query, filters, candidate_cap, metrics, failures, truncations
         )
         if cap_hit:
             truncation = Truncation(TruncationReason.RETRIEVAL_CANDIDATE_CAP, BudgetLayer.RETRIEVAL, 1)
             truncations.append(truncation)
             metrics.record_recall_truncation(truncation.reason_code, truncation.layer)
+        if superseded_count:
+            truncation = Truncation(TruncationReason.SUPERSEDED_FILTERED, BudgetLayer.RETRIEVAL, superseded_count)
+            truncations.append(truncation)
+            metrics.record_recall_truncation(truncation.reason_code, truncation.layer, superseded_count)
 
-        metadata: Dict[str, Any] = {"candidate_cap": candidate_cap, "result_cap": plan.max_results}
+        metadata: Dict[str, Any] = {
+            "candidate_cap": candidate_cap,
+            "result_cap": plan.max_results,
+            "superseded_filtered": superseded_count,
+        }
         filtered = _filter_sensitive_candidates(
             candidates, plan.sensitivity_policy.value, metrics, failures, truncations, metadata
         )
