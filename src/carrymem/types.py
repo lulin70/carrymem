@@ -217,11 +217,15 @@ class BudgetUsage:
     max_candidates: int = 0
     max_results: int = 0
     evidence: int = 0
-    reflection: int = 0
+    reflection: int = 0  # legacy field: number of reflection candidates observed
     output: int = 0
     max_evidence: int = 0
     max_reflection: int = 0
     max_output: int = 0
+    # v1.2 inline-reflection Slice 5 (Phase 5): how many ranked candidates
+    # the inline inspector actually inspected, and how many hints surfaced.
+    reflection_inspected: int = 0
+    hints_count: int = 0
 
     def to_dict(self) -> Dict[str, int]:
         return {
@@ -235,6 +239,8 @@ class BudgetUsage:
             "max_evidence": self.max_evidence,
             "max_reflection": self.max_reflection,
             "max_output": self.max_output,
+            "reflection_inspected": self.reflection_inspected,
+            "hints_count": self.hints_count,
         }
 
 
@@ -302,6 +308,10 @@ class RecallResult:
     truncations: Tuple[Any, ...] = ()
     degraded: Optional[Any] = None
     status: str = "ok"
+    # v1.2 inline-reflection Slice 5 (Phase 5): structured re-rank hints
+    # surfaced alongside the recalled items. Beta form — callers decide how
+    # to render. See docs/design/MEMORY_EVOLUTION_BUDGET_v1.2.md §5.1 §11.
+    hints: Tuple[Any, ...] = ()
 
     def to_legacy_list(self) -> List[Dict[str, Any]]:
         return [dict(item.memory) for item in self.items]
@@ -321,6 +331,7 @@ class RecallResult:
             "truncations": [_json_safe(item) for item in self.truncations],
             "degraded": _json_safe(self.degraded) if self.degraded is not None else None,
             "status": self.status,
+            "hints": [_json_safe(item) for item in self.hints],
         }
 
 

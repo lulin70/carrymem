@@ -237,7 +237,7 @@ class LifecycleMixin:
         if self._adapter is not None and hasattr(self._adapter, "db_path"):
             try:
                 _ = self.rule_engine
-            except Exception as e:
+            except Exception as e:  # NOTE: intentional — FTS vtable init failure must be logged, not raised
                 logger.warning(
                     "Rule engine lazy init failed (FTS vtable may be invalid): %s",
                     e,

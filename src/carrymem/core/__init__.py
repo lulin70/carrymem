@@ -125,7 +125,7 @@ class CarryMem(
                 stats = self._adapter.get_stats() if hasattr(self._adapter, "get_stats") else {}
                 components["storage"] = {"status": "ready", "stats": stats}
                 components["adapter"] = {"status": "ready", "type": type(self._adapter).__name__}
-            except Exception as exc:  # pragma: no cover
+            except Exception as exc:  # pragma: no cover - NOTE: intentional — healthcheck must report rather than crash
                 components["storage"] = {"status": "error", "error": str(exc)}
                 components["adapter"] = {"status": "error", "error": str(exc)}
                 issues.append(f"Storage adapter error: {exc}")
@@ -137,7 +137,7 @@ class CarryMem(
         try:
             _ = self._engine
             components["engine"] = {"status": "ready", "type": type(self._engine).__name__}
-        except Exception as exc:  # pragma: no cover
+        except Exception as exc:  # pragma: no cover - NOTE: intentional — healthcheck must report rather than crash
             components["engine"] = {"status": "error", "error": str(exc)}
             issues.append(f"Engine error: {exc}")
 
@@ -154,7 +154,7 @@ class CarryMem(
         try:
             _ = self.rule_engine
             components["rule_engine"] = {"status": "ready"}
-        except Exception as exc:  # pragma: no cover
+        except Exception as exc:  # pragma: no cover - NOTE: intentional — healthcheck must report rather than crash
             components["rule_engine"] = {"status": "error", "error": str(exc)}
             issues.append(f"Rule engine error: {exc}")
 
@@ -236,7 +236,7 @@ class CarryMem(
         if self._rule_engine is not None:
             try:
                 _ = self.rule_engine  # noqa: F841 – force attribute access
-            except Exception as exc:
+            except Exception as exc:  # NOTE: intentional — wraps any rule_engine bootstrap failure as CarryMemError
                 raise CarryMemError(
                     code="CM-004",
                     message=f"Rule engine is in error state: {exc}",

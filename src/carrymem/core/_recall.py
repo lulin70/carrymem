@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import sqlite3
 import time
 from datetime import datetime, timezone
 from typing import (
@@ -20,6 +21,7 @@ from carrymem.adapters.obsidian_adapter import ObsidianAdapter
 from carrymem.constants import DEFAULT_RECALL_LIMIT, RULE_MATCH_LIMIT_CAP
 from carrymem.core._lifecycle import KnowledgeNotConfiguredError, StorageNotConfiguredError
 from carrymem.core._memory_crud import _reset_busy_connection, _retry_on_busy
+from carrymem.inline_reflection import InlineReflectionHint, inspect_candidates_for_hints
 from carrymem.monitoring import get_metrics_collector
 from carrymem.recall_plan import RecallPlan, build_recall_plan
 from carrymem.security.redaction import should_redact
@@ -516,6 +518,115 @@ def _enforce_output_limit(
     return result_items, degraded
 
 
+def _run_inline_reflection(
+    adapter: Any,
+    plan: RecallPlan,
+    ranked: Any,
+    metrics: Any,
+) -> Tuple[List[Truncation], List[InlineReflectionHint], Any]:
+    """Run inline reflection inspection over the ranked candidates.
+
+    Returns a triple ``(truncations, hints, report)``:
+
+    * ``truncations`` — list of ``Truncation`` events to append (currently
+      only ``RETRIEVAL_TIMEOUT`` when the soft timeout fires).
+    * ``hints`` — the structured re-rank hints (capped by
+      ``MAX_HINTS_PER_RESPONSE``). Pure data; call sites decide how to
+      surface them to the user (BetaCarryMem exposes them as the
+      ``hints`` field of ``RecallResult``).
+    * ``report`` — the raw ``InlineReflectionReport`` (for metadata + utilization).
+
+    The function never touches the items list. It also never calls
+    ``ReflectionManager`` (per v1.2 §10.5 defect #3) and never opens a
+    transaction — the inline path is read-only and side-effect-free except
+    for metrics emission.
+
+    ``stale_keys`` is pre-computed via the adapter's decay gate
+    (``find_decay_candidates``) when available; if the adapter does not
+    support it (e.g. non-SQLite backends), inspect runs without stale hints.
+    """
+    budget = plan.budget.reflection
+    stale_keys = _collect_stale_keys(adapter, plan.namespace, budget.inline_max_candidates)
+
+    report = inspect_candidates_for_hints(
+        ranked,
+        inline_max_candidates=budget.inline_max_candidates,
+        inline_timeout_ms=budget.inline_timeout_ms,
+        stale_keys=stale_keys,
+    )
+
+    truncations: List[Truncation] = []
+    if report.timeout_hit:
+        truncation = Truncation(TruncationReason.RETRIEVAL_TIMEOUT, BudgetLayer.REFLECTION, 1)
+        truncations.append(truncation)
+        metrics.record_recall_truncation(truncation.reason_code, truncation.layer)
+    if report.capped_count > 0:
+        truncation = Truncation(
+            TruncationReason.OUTPUT_BUDGET_EXCEEDED,
+            BudgetLayer.REFLECTION,
+            report.capped_count,
+        )
+        truncations.append(truncation)
+        metrics.record_recall_truncation(truncation.reason_code, truncation.layer, report.capped_count)
+
+    for hint in report.hints:
+        metrics.increment(f"carrymem_recall_reflection_hints_total.{hint.hint_type.value}")
+
+    return truncations, list(report.hints), report
+
+
+def _collect_stale_keys(
+    adapter: Any,
+    namespace: str,
+    budget_inline_max_candidates: int,
+) -> set:
+    """Best-effort: ask the adapter for storage keys matching the decay gate.
+
+    Returns an empty set when the adapter does not expose a connection or
+    when ``find_decay_candidates`` is unavailable. Inline reflection still
+    runs (conflict hints only) — only the ``stale`` hint type is suppressed.
+
+    This helper performs narrow duck-typed probes — each ``except`` covers a
+    specific failure mode (missing attribute, missing function, DB error)
+    rather than a bare ``except [BASE_EXCEPTION]``, to keep the broad-exception
+    gate honest.
+    """
+    if not adapter:
+        return set()
+    conn = None
+    provider = getattr(adapter, "_conn_mgr", None) or getattr(adapter, "connection_provider", None)
+    if provider is not None and hasattr(provider, "get_connection"):
+        try:
+            conn = provider.get_connection()
+        except (AttributeError, TypeError, OSError) as exc:
+            logger.debug("stale_keys: provider access failed: %s", exc)
+            conn = None
+    if conn is None and hasattr(adapter, "conn"):
+        try:
+            conn = adapter.conn
+        except (AttributeError, TypeError, OSError) as exc:
+            logger.debug("stale_keys: conn attr access failed: %s", exc)
+            conn = None
+    if conn is None:
+        return set()
+    try:
+        from carrymem.layers.memify import find_decay_candidates
+    except ImportError:
+        return set()
+    try:
+        keys = find_decay_candidates(
+            conn,
+            namespace,
+            stale_days=90,
+            min_importance=0.3,
+            batch_size=max(50, budget_inline_max_candidates * 4),
+        )
+    except (AttributeError, TypeError, ValueError, OSError, sqlite3.DatabaseError) as exc:
+        logger.debug("stale_keys: find_decay_candidates failed: %s", exc)
+        return set()
+    return set(keys)
+
+
 class RecallMixin:
     """Recall / search operations across memories, knowledge base, and rules."""
 
@@ -686,16 +797,44 @@ class RecallMixin:
             result_items, plan.task.value, plan.budget.output.max_tokens, metrics, truncations
         )
 
+        # v1.2 §11 inline reflection — read-only over `ranked` (post-dedupe,
+        # pre-evidence), emit metrics/truncations, never touches items.
+        # ``_run_inline_reflection`` is the only place that consumes
+        # ``ReflectionBudget`` so the wired-up path is observable.
+        ref_truncations, inline_hints, inline_report = _run_inline_reflection(
+            self._adapter,
+            plan,
+            ranked,
+            metrics,
+        )
+        truncations.extend(ref_truncations)
+        inspected_count = inline_report.inspected_count
+
         output_usage = _count_output_tokens(result_items)
         output_limit = plan.budget.output.max_tokens
         metrics.set_recall_budget_utilization("retrieval", min(1.0, len(candidates) / max(1, candidate_cap)))
         metrics.set_recall_budget_utilization(
             "evidence", min(1.0, evidence_chars / max(1, plan.budget.evidence.evidence_chars_total))
         )
-        metrics.set_recall_budget_utilization("reflection", 0.0)
+        metrics.set_recall_budget_utilization(
+            "reflection",
+            min(1.0, inspected_count / max(1, plan.budget.reflection.inline_max_candidates)),
+        )
         metrics.set_recall_budget_utilization("output", min(1.0, output_usage / max(1, output_limit)))
         status = "degraded" if degraded or truncations else "ok"
-        metadata.update({"evidence_chars": evidence_chars, "output_tokens": output_usage, "reflection_candidates": 0})
+        metadata.update(
+            {
+                "evidence_chars": evidence_chars,
+                "output_tokens": output_usage,
+                "reflection_candidates": inline_report.inspected_count,
+                "hints_count": len(inline_hints),
+                # Deterministic metadata for E2E equality (wall-clock goes
+                # only into budget_usage / metrics — see inline_reflection.
+                # InlineReflectionReport.elapsed_ms).
+                "reflection_timeout_hit": inline_report.timeout_hit,
+                "reflection_hints_capped": inline_report.capped_count,
+            }
+        )
         return RecallResult(
             items=tuple(result_items),
             plan_fingerprint=plan.fingerprint,
@@ -708,11 +847,13 @@ class RecallMixin:
                 candidate_cap,
                 plan.max_results,
                 evidence_chars,
-                0,
+                inline_report.inspected_count,
                 output_usage,
                 plan.budget.evidence.evidence_chars_total,
                 plan.budget.reflection.inline_max_candidates,
                 output_limit,
+                inline_report.inspected_count,
+                len(inline_hints),
             ),
             mode_failures=tuple(failures),
             conflicts=tuple(conflicts) if plan.conflict_policy.value == "always" else (),
@@ -721,6 +862,7 @@ class RecallMixin:
             truncations=tuple(truncations),
             degraded=degraded,
             status=status,
+            hints=tuple(inline_hints),
         )
 
     def recall_memories(
@@ -752,7 +894,7 @@ class RecallMixin:
                 what="recall_memories",
                 reset=lambda: _reset_busy_connection(self._adapter),
             )
-        except Exception:
+        except Exception:  # NOTE: intentional — top-level fail-closed wrapper, re-raised after metric
             metrics.increment("recall_errors")
             raise
         finally:

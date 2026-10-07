@@ -212,7 +212,7 @@ class MemoryCRUDMixin:
                 what="classify_and_remember",
                 reset=lambda: _reset_busy_connection(self._adapter),
             )
-        except Exception:
+        except Exception:  # NOTE: intentional — top-level fail-closed wrapper, re-raised after metric
             metrics.increment("classify_and_remember_errors")
             raise
         finally:
@@ -303,7 +303,7 @@ class MemoryCRUDMixin:
                     details={"message_preview": message[:100]},
                 )
             return result
-        except Exception as exc:
+        except Exception as exc:  # NOTE: intentional — audit must log *any* persistence failure
             if self._adapter:
                 self._adapter.log_audit(
                     "remember",

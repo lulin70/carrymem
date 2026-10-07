@@ -91,7 +91,7 @@ class SemanticClassifier:
             result = json.loads(content)
 
             return result
-        except Exception as e:
+        except Exception as e:  # NOTE: intentional — classifier must fall back to rule-based path on LLM errors
             logger.error("Semantic classification failed: %s", e)
             return None
 
