@@ -222,7 +222,7 @@ carrymem_tokenizer_drift_ratio                        (gauge, 校准时更新)
 
 ---
 
-## 10. 实现状态（诚实披露；Slice 4 更新于 2026-10-07）
+## 10. 实现状态（诚实披露；Slice 5 更新于 2026-10-07）
 
 ### 10.1 已实现
 
@@ -242,6 +242,7 @@ carrymem_tokenizer_drift_ratio                        (gauge, 校准时更新)
 | evidence 预算 | `_expand_evidence` | per-result 条数 + 全局字符上限，超限记 `EVIDENCE_BUDGET_EXCEEDED` |
 | metrics | `monitoring.record_recall_truncation / set_recall_budget_utilization` | §8 四个序列中前两个已在线产生并通过 `/metrics` 暴露（真实 TCP E2E：`tests/integration/test_recall_metrics_http_e2e.py`） |
 | superseded 精确计数（Slice 4） | `_retrieve_plan_candidates` | plan 路径取回全量行后由 executor 按 INV-C2 裁剪并计数：`metadata["superseded_filtered"]`、`SUPERSEDED_FILTERED` 截断（含 dropped_count）与 metrics 计数；legacy `recall_memories` 保持 adapter 层过滤不变 |
+| 内联反思接线（Slice 5，v1.2 §11） | `carrymem/inline_reflection.py` + `_run_inline_reflection` | 纯函数 `inspect_candidates_for_hints` 在 ranked 候选上产出结构化 `InlineReflectionHint`（stale/flag_conflict，DLP 过滤 `reasoning_short`，`MAX_HINTS_PER_RESPONSE=20` 封顶）；executor 在 output 硬闸后调用，`ReflectionBudget.inline_max_candidates` / `inline_timeout_ms` 首次真实消费：utilization gauge 按实际 inspected/max 计算（取代硬编码 0.0），metadata 新增 `hints_count/reflection_timeout_hit/reflection_hints_capped`（wall-clock 只进 report，不进 metadata，保证两次同 plan 执行 to_dict 相等），`RecallResult.hints` 以 β 形态暴露；超时复用 `RETRIEVAL_TIMEOUT` 原因码并标 `BudgetLayer.REFLECTION`；不新增封闭枚举、不触碰 `ReflectionManager` 与事务表（INV-IR1） |
 
 ### 10.2 与 §5.1 截断顺序的差异
 
@@ -249,16 +250,20 @@ carrymem_tokenizer_drift_ratio                        (gauge, 校准时更新)
 
 ### 10.3 已知遗留缺口（不得宣称为已完成）
 
-1. `retrieval_timeout_ms` 为 mode 级软预算（超时后不再启动新模式），不能中断正在执行的同步 SQLite 查询；`inline_timeout_ms` 仍未接线（依赖内联反思执行器）；
-2. reflection 预算尚未接入内联反思执行器，utilization 恒为 0（显式占位，非伪装数据）；
+1. `retrieval_timeout_ms` 为 mode 级软预算（超时后不再启动新模式），不能中断正在执行的同步 SQLite 查询；
+2. ~~reflection 预算尚未接入内联反思执行器~~ **已在 Slice 5 修复（2026-10-07，v1.2 §11）**：`inline_max_candidates` / `inline_timeout_ms` 已被 `inspect_candidates_for_hints` 真实消费，utilization 按实际值计算。剩余子项：hint 类型目前仅 stale/flag_conflict 两类，boost/downrank 枚举值已定义但无产生规则；`carrymem_recall_reflection_hints_total{hint_type}` 计数器经 metrics.increment 产生，Prometheus exporter 映射与 `/metrics` E2E 断言待补；
 3. `TOKENIZER_DRIFT_WARNING` 未接线（校准属后续交付）；
 4. semantic 不可用时复用 `VECTOR_UNAVAILABLE_FALLBACK` 原因码，语义不完全准确，扩码需先更新 §5.2；
 5. candidate 预算按"命中次数"计量（多模式重复命中同一内存会重复计数），去重发生在预算之后；
 6. 单条 memory 的序列化固定开销约为 200 token（含 metadata/审计字段），`output.max_tokens` 低于该值时保护条目会被降级移除（`Degradation` 如实记录），调用方应避免设置过小的 output 预算；
-7. 默认 `retrieval_timeout_ms=200` 下，vector/semantic 模式的首次调用若包含 embedding 模型加载（秒级）会被软超时推迟——调用方应调大该层预算或预热模型，这不是缺陷而是预算语义。
+7. 默认 `retrieval_timeout_ms=200` 下，vector/semantic 模式的首次调用若包含 embedding 模型加载（秒级）会被软超时推迟——调用方应调大该层预算或预热模型，这不是缺陷而是预算语义；
+8. stale hint 的候选集来自 `_collect_stale_keys` 的 best-effort 衰减门扫描（SQLite 直连、窄异常收窄），adapter 不暴露连接时仅产 conflict hint——降级路径有意为之，但未单独计量。
 
 ### 10.4 测试证据（2026-10-07）
 
-- 契约与执行测试：`tests/test_recall_plan.py` 29 项（确定性、fail-closed、budget cap、conflict 三态、敏感性 filter/strict、vector 回退去重、evidence 预算、correction 排序、保护内容降级、async parity、entity/time_range 校验与 graph/time 真实执行、软超时、信任层截断顺序、superseded 精确计数）；
+- 契约与执行测试：`tests/test_recall_plan.py` 31 项（Slice 5 新增：内联反思 metadata/utilization/hints 契约、`inline_timeout_ms=0` 触发 REFLECTION 层截断）；
+- 内联反思前置测试：`tests/test_inline_reflection.py` 11 项（纯函数不变量——不耦合 `ReflectionManager`、不产 metrics；确定性；零预算短路；`MAX_HINTS_PER_RESPONSE` 封顶；DLP 不泄漏 + 越界/空 key/超长 reasoning fail-closed；stale/conflict 产生规则；无 storage_key 候选忽略）；
 - 真实用户 E2E：`tests/e2e/test_e2e_phase5_recall_budget.py` 4 项（全链路确定性、小预算保护 correction、fingerprint 敏感性、legacy prompt 共存）；
-- HTTP/MCP metrics E2E：`tests/integration/test_recall_metrics_http_e2e.py`（真实 TCP `/metrics` 断言 truncation 序列与 utilization gauge，真实 `/message` 工具调用共享 collector，`/healthz` 存活）。
+- HTTP/MCP metrics E2E：`tests/integration/test_recall_metrics_http_e2e.py`（真实 TCP `/metrics` 断言 truncation 序列与 utilization gauge，真实 `/message` 工具调用共享 collector，`/healthz` 存活）；
+- 全量门禁：pytest 5180 passed / 4 skipped（`--no-cov`，2026-10-07 Slice 5 收尾）；覆盖率未随本切片重测（Slice 4 测量值 83.18% 仍为最近一次全量口径）；
+- 宽异常门禁：`tests/test_exception_narrowing.py` 全量治理通过（本切片将 9 处历史未注释宽异常补 `NOTE: intentional` 及理由，`_collect_stale_keys` 新增捕获全部使用窄异常）。

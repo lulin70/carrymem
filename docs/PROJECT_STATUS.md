@@ -48,7 +48,7 @@ The v0.11.x line carries the breaking `native_async` removal, the `cryptography>
 
 ### Current Test & Quality Metrics (working tree, 2026-10-07)
 
-Measured on the current working tree (memory evolution Phase 5 Slice 4);
+Measured on the current working tree (memory evolution Phase 5 Slice 5);
 these numbers describe the tree, not the v0.11.2 tag.
 
 - **Memory evolution status**: Phase 1 (Provenance), Phase 2
@@ -67,18 +67,32 @@ these numbers describe the tree, not the v0.11.2 tag.
   (inferred → ordinary oldest-first → observation), and Slice 4 moves the
   superseded filter into the plan executor so `SUPERSEDED_FILTERED` carries
   an exact online count (`metadata["superseded_filtered"]` + metrics) while
-  legacy recall keeps adapter-side filtering. Known deferred edges are
-  disclosed in [MEMORY_EVOLUTION_BUDGET.md](design/MEMORY_EVOLUTION_BUDGET.md)
-  §10.3.
-- **Phase 5 focused evidence (2026-10-07)**: 29 contract tests
-  (`tests/test_recall_plan.py`), 4 real-user E2E tests
+  legacy recall keeps adapter-side filtering. Slice 5 (2026-10-07, budget
+  contract v1.2) wires the previously orphaned reflection budget into the
+  plan executor: `carrymem/inline_reflection.py` provides a pure
+  `inspect_candidates_for_hints` (structured stale/flag_conflict hints,
+  DLP-checked reasoning, 20-hint cap, soft `inline_timeout_ms`), the executor
+  consumes `ReflectionBudget` for real (utilization gauge is now measured,
+  not hard-coded 0.0), `RecallResult.hints` exposes hints in beta form, and
+  timeout reuses `RETRIEVAL_TIMEOUT` tagged `BudgetLayer.REFLECTION`. The
+  slice also cleared the broad-exception gate debt (9 historical unjustified
+  `except Exception` lines annotated with `NOTE: intentional` + rationale).
+  Known deferred edges are disclosed in
+  [MEMORY_EVOLUTION_BUDGET.md](design/MEMORY_EVOLUTION_BUDGET.md) §10.3
+  (design rationale in
+  [MEMORY_EVOLUTION_BUDGET_v1.2.md](design/MEMORY_EVOLUTION_BUDGET_v1.2.md)
+  §10.5/§11).
+- **Phase 5 focused evidence (2026-10-07)**: 31 contract tests
+  (`tests/test_recall_plan.py`), 11 inline-reflection tests
+  (`tests/test_inline_reflection.py`), 4 real-user E2E tests
   (`tests/e2e/test_e2e_phase5_recall_budget.py`), 1 real-HTTP metrics E2E
-  (`tests/integration/test_recall_metrics_http_e2e.py`).
-- **Tests (Phase 5 exclusive full gate, 2026-10-07)**:
-  `5084 passed, 10 skipped, 77 deselected, 143 warnings`, total coverage
-  `83.18%` — all eight blocking local gates green via
-  `scripts/ci_local_check.py` on the Phase 5 Slice 4 tree.
-- **Coverage**: 83.18% (`fail_under = 80`)
+  (`tests/integration/test_recall_metrics_http_e2e.py`) — 42 focused Phase 5
+  tests total.
+- **Tests (Phase 5 Slice 5 full run, 2026-10-07)**:
+  `5180 passed, 4 skipped` (`pytest --no-cov`) — no coverage re-measurement
+  this slice; black/isort/flake8/mypy/radon re-run green on all touched
+  files.
+- **Coverage**: 83.18% as last measured at Slice 4 (`fail_under = 80`)
 - **Lint**: flake8 clean, black clean, isort clean, mypy `Success: no issues found in 163 source files`
 - **Complexity**: `radon: no functions with complexity >= 21`
 - **Version consistency**: all five machine-readable sources report `0.11.2`
