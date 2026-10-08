@@ -33,8 +33,8 @@
 | P3 低优先级 | 10 项 | ~4h | 日常维护渐进 |
 
 > **复核说明（2026-10-03 更新）**：上表为 v2 创建时的统计。经逐项复核，§2~§5 中所有 TD 条目
-> （含后续新增的 TD-055~TD-067）均为 ✅ 已完成（TD-067 于 2026-10-03 修复）；遗留一项为 **TD-068**
-> （状态 ⬜ 无法推进——上游 zhipuai 把传递依赖 pyjwt 钉在 2.8.0，无本地修复路径，证据见该条）。
+> （含后续新增的 TD-055~TD-067）均为 ✅ 已完成（TD-067 于 2026-10-03 修复）；遗留三项为 **TD-068/069/070**
+> （2026-10-08 新增，均为依赖链安全告警的处置项：TD-068 上游约束已豁免留痕，TD-069/070 待推进）。
 
 ### 用户价值映射 (PM 建议)
 
@@ -929,7 +929,37 @@
 | **负责角色** | DevOps / Security |
 | **验证标准** | `grep -n '^pyjwt==' requirements.txt requirements-dev.txt` 的取值与 `pip index versions zhipuai` 最新版声明的 pyjwt 上限一致；上游放宽后重跑 `pip-compile --upgrade-package pyjwt` 应产生非零 pin 变化 |
 | **依赖** | 上游 zhipuai 发版 |
-| **状态** | ⬜ 无法推进（上游约束，证据已留痕） |
+| **状态** | ⬜ 无法推进（上游约束，证据已留痕）。**2026-10-08 重评估**：告警数量升至 13 条 pyjwt（2 critical + 4 high + 4 medium，修复版本 2.14.0/2.15.0）。新增暴露面分析：zhipuai 对 pyjwt 的唯一调用是 `zhipuai/core/_jwt_token.py:26` 的 `jwt.encode(payload, secret, algorithm="HS256")`（本地签名，无 decode/JWKS fetch），而本轮全部 CVE 均位于验证/拉取路径——**脆弱代码在本项目运行路径上不可达**。复核 `pip index versions zhipuai` 确认最新版仍是 `2.1.5.20250825`，上游上限未放宽。处置：维持 (a) 接受风险，告警以 `tolerable_risk` 豁免并留痕；上游放宽后重编译即自动跟进 |
+| **生命周期** | P6 安全审查 |
+
+### TD-069: virtualenv dev 链停在 21.7.6，低于 Dependabot 要求的 21.7.13 ⚠️ 新增 (2026-10-08)
+
+| 字段 | 值 |
+|------|-----|
+| **优先级** | P3 |
+| **位置** | `requirements-dev.txt:327`（`virtualenv==21.7.6`，传递依赖，经 pre-commit 引入） |
+| **问题描述** | Dependabot 报 3 条 virtualenv high 告警（配置注入/seed wheel 完整性/activation 脚本命令注入，修复版本 21.7.11~21.7.13）。`pip-compile --upgrade-package virtualenv` 重编译后解析器只选到 `21.7.6`，而清华镜像与官方源均已存在 `21.7.16`；pre-commit 4.6.0 声明的是 `virtualenv>=20.10.0`（无上限）。压低版本的约束源尚未定位（2026-10-08 排查被中断，待续）。virtualenv 仅用于 dev 工具链（pre-commit hooks），不进运行时镜像 |
+| **复现** | `pip-compile --index-url https://pypi.tuna.tsinghua.edu.cn/simple --upgrade-package virtualenv requirements-dev.in -o requirements-dev.txt` → `virtualenv==21.7.6`；`curl -s https://pypi.tuna.tsinghua.edu.cn/simple/virtualenv/ \| grep -c virtualenv-21.7.1` → ≥4（镜像有新版） |
+| **修复方案** | (a) 定位约束源：`pip install --dry-run --index-url https://pypi.tuna.tsinghua.edu.cn/simple "pre-commit==4.6.0" "virtualenv==21.7.13"` 观察解析冲突（只读验证）；(b) 若无真实约束，在 `requirements-dev.in` 显式加 `virtualenv>=21.7.13` 后重编译；(c) 若解析器行为异常，改用 `--no-binary`/直接手改 pin 并跑全量 dev 安装验证 |
+| **负责角色** | DevOps |
+| **验证标准** | `grep -n 'virtualenv==' requirements-dev.txt` → `virtualenv==21.7.13` 或更高；`.venv/bin/pip check` 无冲突；`pre-commit run --all-files` 正常 |
+| **依赖** | 无 |
+| **状态** | ⬜ 待开始（用户决策：记入技术债，先继续推进） |
+| **生命周期** | P6 安全审查 |
+
+### TD-070: VSCode 插件 dev 链 chokidar/mocha 高危告警需破坏性升级 ⚠️ 新增 (2026-10-08)
+
+| 字段 | 值 |
+|------|-----|
+| **优先级** | P3 |
+| **位置** | `extensions/vscode-carrymem/package-lock.json`（`mocha==10.8.2` → `chokidar==3.6.0` → `braces` 漏洞链；`@vscode/test-cli==0.0.10`） |
+| **问题描述** | 官方 registry `npm audit` 报 5 条 high：braces/chokidar/mocha 链。同 lock 的 brace-expansion（2 条 medium）已于 2026-10-08 经 `npm update brace-expansion` 升至 `1.1.21`/`2.1.7`（恰为补丁版）修复。剩余链无非破坏修复路径：修复版本要求 `@vscode/test-cli@0.0.15`（官方 audit 明示 breaking change）+ mocha 11.x。该链仅用于插件开发测试（`npm test`），不进插件产物 |
+| **复现** | `cd extensions/vscode-carrymem && npm audit --registry=https://registry.npmjs.org` → 5 high（升级 brace-expansion 后应剩 chokidar/mocha 链相关） |
+| **修复方案** | 升级 `@vscode/test-cli` 至 0.0.15+ 与 `@types/mocha`/`mocha@^11`，跑 VSCode Tier 2 UI E2E（TD-034/61 的 17 用例）验证行为不变后提交 |
+| **负责角色** | DevOps + Tester |
+| **验证标准** | `npm audit --registry=https://registry.npmjs.org` → 0 high；`npm test`（VSCode E2E）17/17 passing |
+| **依赖** | 无 |
+| **状态** | ⬜ 待开始 |
 | **生命周期** | P6 安全审查 |
 
 ---
@@ -1081,6 +1111,7 @@ TD-035 (AccessPolicy 集成) — 安全债，独立推进
 | 2026-07-27 | v12: TD-059 后续决策 2 推进 (DevSquad 7 角色共识 + 用户决策"只升级 Patch 版本")。`.github/dependabot.yml` 3 个 ecosystem (pip/github-actions/docker) 全部添加 `ignore: version-update:semver-major + semver-minor` 规则；dev-dependencies group `update-types` 从 `minor+patch` 收紧为 `patch` only；github-actions group 添加 `update-types: patch`。理由: minor/major 升级引入 breaking changes (ruff/mypy 版本漂移致 4 次 CI 全红历史教训)。Security 共识: runtime deps 安全修复仍通过 dependabot daily security advisory 独立通道流入，不受 ignore 影响。验证: YAML 语法 OK (python yaml.safe_load), 3 ecosystems ignore 规则全部就位。project_memory.md 硬约束同步: "allow patch/minor" → "only allow patch" | DevSquad 7 角色共识 |
 | 2026-07-27 | v13: TD-066 (new) knowledge graph 删除完整性修复 (DevSquad 7 角色共识, v0.9.8)。Oracle Agent Memory 报告 (arXiv:2607.13157) 启发：`forget()` 之前仅删除 `memories` + `memory_vectors`，遗留 `memory_entities` 孤儿实体 + `memory_relations` 残留关系。根因: FK `ON DELETE SET NULL` 在 DELETE FROM memories 时把 `memory_key` 设为 NULL，但 entity 记录本身残留。修复: `forget()` 新增 `_collect_entity_ids()` 在 DELETE 前预捕获 entity_ids (绕过 FK 副作用)，`_cleanup_graph_data()` 用预捕获的 entity_ids 级联删除 relations + entities + source_memory_key relations。4 个新测试: entities 清理 / relations 清理 / 共享实体保留 / 不存在 key 不报错。验证: 4651 passed, 14 skipped (pre-existing), 0 failed。**P0-2 superseded 过滤已全面覆盖确认** (SQL 层 5 处 + Python 层 4 处 `superseded_at IS NULL`)。**P1-4 CMB 基准评估取消**: CarryMem 已有 PrefEval (94.0%) + LongMemEval + LaMP + LoCoMo + MSC 5 个学术基准，无需新建 | DevSquad 7 角色共识 |
 | 2026-09-21 | v14: v0.11.2 事实复核 (对照 PROJECT_STATUS.md + CHANGELOG.md)。头部测试数（旧快照值已过时）更正为 `4891 passed, 10 skipped, 77 deselected` (4978 collected) + e2e 265 passed；§1 增加"全部 TD 项已完成"复核说明；新增 **TD-067**（`types.py:350-356` 的 `ScheduleConsolidationResult` 声明字段 `scheduled/interval_hours/dry_run/message` 与 `core/_maintenance.py:254-260` 实际返回的 `scheduled/interval_hours/dry_run/run_p1/run_p2` 漂移，状态 ⬜ 待开始）。本次复核同时核对：`plugins/` 目录与 `SummaryLayer` 类已于 v0.11.0 删除、`AsyncCarryMem(native_async=True)` 模式已删除、`AsyncSQLiteAdapter` 对 `encryption_key` fail-closed——本文档原无与这些事实冲突的表述 | DevSquad |
+| 2026-10-08 | v15: Dependabot 23 条告警处置。**已修复**：urllib3 2.7.0→2.8.0（requirements-dev.txt 重编译，消 2 high）；VSCode 插件 brace-expansion 1.1.16→1.1.21 / 2.1.2→2.1.7（`npm update brace-expansion`，消 2 medium）。**豁免留痕**：13 条 pyjwt 告警（2 critical）——暴露面分析证实脆弱代码不可达（zhipuai 仅 jwt.encode 本地签名，见 TD-068 重评估），以 tolerable_risk 豁免。**登记新债**：TD-069（virtualenv 解析器停在 21.7.6，约束源待查）、TD-070（VSCode chokidar/mocha 链需破坏性升级 @vscode/test-cli 0.0.15）。本地 CI 八项门禁全绿（pytest 5103 passed / 覆盖率 83.17%） | DevSquad |
 
 ---
 
