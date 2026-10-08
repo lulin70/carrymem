@@ -5,7 +5,18 @@ when running the full suite locally with --timeout=120. CI excludes slow tests
 via `-m "not slow"`, so this hook has no CI impact.
 """
 
+import os
+import tempfile
+from pathlib import Path
+
 import pytest
+
+# The file handler in utils/logger.py binds its log path when the first
+# CarryMem module is imported, which happens during test collection —
+# before any fixture runs. Set the log dir here so that binding lands in a
+# temp directory instead of the user's real ~/.carrymem/logs.
+# setdefault: an explicitly exported CARRYMEM_LOG_DIR still wins.
+os.environ.setdefault("CARRYMEM_LOG_DIR", str(Path(tempfile.gettempdir()) / "carrymem-test-logs"))
 
 
 @pytest.fixture(autouse=True)
