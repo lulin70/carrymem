@@ -4,8 +4,6 @@
 #
 #    pip-compile --index-url=https://pypi.tuna.tsinghua.edu.cn/simple --output-file=requirements-dev.txt requirements-dev.in
 #
---index-url https://pypi.tuna.tsinghua.edu.cn/simple
-
 aiosqlite==0.22.1
     # via -r requirements.in
 annotated-doc==0.0.4
@@ -48,7 +46,15 @@ coverage[toml]==7.15.2
     #   -r requirements-dev.in
     #   pytest-cov
 cryptography==50.0.1
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   secretstorage
+cuda-bindings==13.4.3
+    # via torch
+cuda-pathfinder==1.8.3
+    # via cuda-bindings
+cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3.0
+    # via torch
 distlib==0.4.3
     # via virtualenv
 distro==1.9.0
@@ -106,6 +112,10 @@ jaraco-context==6.1.2
     # via keyring
 jaraco-functools==4.6.0
     # via keyring
+jeepney==0.9.0
+    # via
+    #   keyring
+    #   secretstorage
 jinja2==3.1.6
     # via torch
 jiter==0.16.0
@@ -161,6 +171,47 @@ numpy==2.5.1
     #   scipy
     #   sentence-transformers
     #   transformers
+nvidia-cublas==13.1.1.3
+    # via
+    #   cuda-toolkit
+    #   nvidia-cudnn-cu13
+    #   nvidia-cusolver
+nvidia-cuda-cupti==13.0.85
+    # via cuda-toolkit
+nvidia-cuda-nvrtc==13.0.88
+    # via
+    #   cuda-toolkit
+    #   nvidia-cublas
+nvidia-cuda-runtime==13.0.96
+    # via cuda-toolkit
+nvidia-cudnn-cu13==9.20.0.48
+    # via torch
+nvidia-cufft==12.0.0.61
+    # via cuda-toolkit
+nvidia-cufile==1.15.1.6
+    # via cuda-toolkit
+nvidia-curand==10.4.0.35
+    # via cuda-toolkit
+nvidia-cusolver==12.0.4.66
+    # via cuda-toolkit
+nvidia-cusparse==12.6.3.3
+    # via
+    #   cuda-toolkit
+    #   nvidia-cusolver
+nvidia-cusparselt-cu13==0.8.1
+    # via torch
+nvidia-nccl-cu13==2.29.7
+    # via torch
+nvidia-nvjitlink==13.4.92
+    # via
+    #   cuda-toolkit
+    #   nvidia-cufft
+    #   nvidia-cusolver
+    #   nvidia-cusparse
+nvidia-nvshmem-cu13==3.4.5
+    # via torch
+nvidia-nvtx==13.0.85
+    # via cuda-toolkit
 openai==2.46.0
     # via -r requirements.in
 packaging==26.2
@@ -178,7 +229,6 @@ pathspec==1.1.1
 platformdirs==4.10.1
     # via
     #   black
-    #   python-discovery
     #   textual
     #   virtualenv
 pluggy==1.6.0
@@ -230,7 +280,7 @@ pytest-mock==3.15.1
     # via -r requirements-dev.in
 pytest-timeout==2.4.0
     # via -r requirements-dev.in
-python-discovery==1.4.4
+python-discovery==1.6.1
     # via virtualenv
 pytokens==0.4.1
     # via black
@@ -268,6 +318,8 @@ scipy==1.18.0
     # via
     #   scikit-learn
     #   sentence-transformers
+secretstorage==3.5.0
+    # via keyring
 sentence-transformers==5.6.0
     # via -r requirements.in
 shellingham==1.5.4
@@ -298,6 +350,8 @@ tqdm==4.69.0
     #   transformers
 transformers==5.14.1
     # via sentence-transformers
+triton==3.7.1
+    # via torch
 twine==6.2.0
     # via -r requirements-dev.in
 typer==0.27.0
@@ -324,7 +378,7 @@ urllib3==2.8.0
     #   id
     #   requests
     #   twine
-virtualenv==21.7.6
+virtualenv==21.7.13
     # via pre-commit
 zhipuai==2.1.5.20250825
     # via -r requirements.in
