@@ -104,7 +104,7 @@ ZH_CN_MESSAGES: dict[str, str] = {
     # ── CLI 错误消息 (cli.error.*) ───────────────────────────
     "cli.error.not_found": "记忆未找到: {key}",
     "cli.error.no_memories": "未找到任何记忆",
-    "cli.error.no_matching": "未找到匹配的记忆: {query}",
+    "cli.error.no_matching": "未找到匹配的记忆:",
     "cli.error.store_failed": "存储记忆失败",
     "cli.error.update_failed": "更新失败: {key}",
     "cli.error.forget_failed": "删除失败: {key}",

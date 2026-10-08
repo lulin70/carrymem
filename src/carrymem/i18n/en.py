@@ -104,7 +104,7 @@ EN_MESSAGES: dict[str, str] = {
     # ── CLI error messages (cli.error.*) ──────────────────────
     "cli.error.not_found": "Memory not found: {key}",
     "cli.error.no_memories": "No memories found",
-    "cli.error.no_matching": "No memories matching {query}",
+    "cli.error.no_matching": "No memories matching:",
     "cli.error.store_failed": "Failed to store memory",
     "cli.error.update_failed": "Failed to update: {key}",
     "cli.error.forget_failed": "Failed to forget: {key}",

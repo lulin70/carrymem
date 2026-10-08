@@ -76,6 +76,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **CLI `search` empty-result message duplicated the query** (found by the
+  2026-10-08 pre-release real-user CLI journey): the `cli.error.no_matching`
+  i18n template already contained `{query}` and `cli/_memory.py` appended the
+  bold query again, printing e.g. "No memories matching coding coding".
+  The template no longer embeds the query; the bold query is printed once
+  after the dimmed message (en + zh_CN updated, closure of the
+  V0.11.0_PROJECT_REVIEW §8 #17 leftover).
+- Tests no longer write the user's real `~/.carrymem/logs` during pytest
+  runs: the logger binds its file handler at first import (collection time),
+  before the autouse `isolate_default_runtime` fixture runs, so
+  `CARRYMEM_LOG_DIR` arrived too late. `tests/conftest.py` now sets a
+  `setdefault` before any src import (closes V0.11.0_PROJECT_REVIEW §8 #19;
+  config/db/backup/cache were already covered by commit 7504324).
 - The current `max_tokens=2000` behavior is documented as a compatibility
   candidate-selection budget, not as a customer-validated final prompt hard
   limit. Final output gating, real tokenizer calibration, and the 16K budget

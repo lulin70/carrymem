@@ -185,7 +185,7 @@ def cmd_search(args):
     memories = cm.recall_memories(query=parsed.query, filters=filters, limit=parsed.limit)
 
     if not memories:
-        print(f"  {_dim(_t('cli.error.no_matching', query=parsed.query))} {_bold(parsed.query)}")
+        print(f"  {_dim(_t('cli.error.no_matching'))} {_bold(parsed.query)}")
         cm.close()
         return 0
 
