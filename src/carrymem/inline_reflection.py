@@ -169,32 +169,42 @@ def _safe_hint(
     )
 
 
-def _candidate_storage_key(ranked_item: Any) -> str:
-    """Extract the storage_key from a ranked item (object/dict)."""
+def _candidate_memory(ranked_item: Any) -> Optional[Mapping[str, Any]]:
+    """Project a ranked entry into its memory mapping.
+
+    Supported shapes (first match wins):
+
+    * the plan executor's ranked tuples ``(mode_name, memory, modes)``;
+    * ``RecallItem``-like objects exposing a ``memory`` attribute;
+    * plain memory mappings.
+    """
+    if isinstance(ranked_item, tuple) and len(ranked_item) >= 2 and isinstance(ranked_item[1], Mapping):
+        return ranked_item[1]
     if hasattr(ranked_item, "memory"):
         memory = ranked_item.memory
         if isinstance(memory, Mapping):
-            value = memory.get("storage_key")
-            if isinstance(value, str):
-                return value
-        return ""
+            return memory
+        return None
     if isinstance(ranked_item, Mapping):
-        value = ranked_item.get("storage_key")
-        return value if isinstance(value, str) else ""
-    return ""
+        return ranked_item
+    return None
+
+
+def _candidate_storage_key(ranked_item: Any) -> str:
+    """Extract the storage_key from a ranked entry (any supported shape)."""
+    memory = _candidate_memory(ranked_item)
+    if memory is None:
+        return ""
+    value = memory.get("storage_key")
+    return value if isinstance(value, str) else ""
 
 
 def _candidate_dict(ranked_item: Any) -> Dict[str, Any]:
-    """Project a ranked item (RecallItem or dict) into the dict shape
-    ``consolidation.find_duplicates`` / ``find_superseded_pairs`` accept.
+    """Project a ranked entry into the dict shape ``consolidation``
+    helpers accept (empty dict when no memory mapping is available).
     """
-    if isinstance(ranked_item, Mapping):
-        return dict(ranked_item)
-    if hasattr(ranked_item, "memory"):
-        memory = ranked_item.memory
-        if isinstance(memory, Mapping):
-            return dict(memory)
-    return {}
+    memory = _candidate_memory(ranked_item)
+    return dict(memory) if memory is not None else {}
 
 
 def inspect_candidates_for_hints(

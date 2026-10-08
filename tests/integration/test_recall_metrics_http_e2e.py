@@ -154,3 +154,54 @@ class TestRecallBudgetMetricsOverHTTP:
                 await server_task
             except asyncio.CancelledError:
                 pass
+
+    @pytest.mark.asyncio
+    async def test_reflection_hint_metrics_reach_http_export(self, tmp_path, monkeypatch):
+        """Slice 5b: hint counters must surface as the dedicated low-cardinality
+        series over real TCP — ``carrymem_recall_reflection_hints_total{hint_type=...}``
+        (v1.2 §8), never as a generic dotted-name counter line.
+        """
+        monkeypatch.setenv("CARRYMEM_DATA_PATH", str(tmp_path))
+        monkeypatch.setenv("CARRYMEM_BACKUP_DIR", str(tmp_path / "backups"))
+
+        port = 18771
+        server = MCPHTTPServer(host="127.0.0.1", port=port)
+        server_task = asyncio.create_task(server.start())
+        await _wait_for_server("127.0.0.1", port)
+
+        try:
+            # Clean baseline: the hint series must not pre-exist.
+            get_metrics_collector().reset()
+            before = await _http_get("127.0.0.1", port, "/metrics")
+            assert "carrymem_recall_reflection_hints_total" not in before
+
+            # Two *similar but distinct* memories inside the ranked window
+            # force a flag_conflict hint (identical content would be
+            # idempotently merged by declare). Word-set Jaccard: 6/7 >= 0.85.
+            cm = CarryMem(db_path=str(tmp_path / "hints.db"), auto_backup_interval=0)
+            try:
+                cm.declare("our backup window is sunday evening utc", user_id="u")
+                cm.declare("our backup window is sunday evening", user_id="u")
+                plan = cm.build_recall_plan(query="backup window sunday evening", task="fact_lookup")
+                result = cm.recall_with_plan(plan)
+                assert result.metadata["hints_count"] >= 1, "duplicate pair must surface a hint"
+            finally:
+                cm.close()
+
+            metrics_body = _body_of(await _http_get("127.0.0.1", port, "/metrics"))
+            assert "# TYPE carrymem_recall_reflection_hints_total counter" in metrics_body
+            assert (
+                'carrymem_recall_reflection_hints_total{hint_type="flag_conflict"}' in metrics_body
+            ), f"hint counter missing from /metrics:\n{metrics_body}"
+            assert 'carrymem_recall_budget_utilization_ratio{layer="reflection"}' in metrics_body
+            assert 'carrymem_latency_ms{operation="recall_reflection_inspect"' in metrics_body
+            # The dotted-name ghost must never reappear.
+            assert "reflection_hints_total." not in metrics_body
+            assert "None" not in metrics_body, "exposition must stay parseable"
+        finally:
+            await server.stop()
+            server_task.cancel()
+            try:
+                await server_task
+            except asyncio.CancelledError:
+                pass

@@ -351,3 +351,80 @@ def test_capped_count_is_zero_under_limit():
     )
     assert report.capped_count == 0
     assert len(report.hints) == 3
+
+
+# ---------------------------------------------------------------------------
+# 11. Hint counters: dedicated low-cardinality registry + Prometheus export
+#     (v1.2 §8 — Slice 5b closes the dotted-name ghost: the series must be
+#     carrymem_recall_reflection_hints_total{hint_type=...}, not a generic
+#     carrymem_total{operation=...} line.)
+# ---------------------------------------------------------------------------
+
+
+def test_hint_counter_records_and_exports_prometheus_series():
+    from carrymem.monitoring import get_metrics_collector
+
+    collector = get_metrics_collector()
+    collector.reset()
+    collector.record_recall_reflection_hint("stale")
+    collector.record_recall_reflection_hint("stale")
+    collector.record_recall_reflection_hint("flag_conflict", count=3)
+
+    snapshot = collector.get_snapshot()
+    assert snapshot["recall_reflection_hints"] == {"stale": 2, "flag_conflict": 3}
+
+    body = collector.to_prometheus()
+    assert "# TYPE carrymem_recall_reflection_hints_total counter" in body
+    assert 'carrymem_recall_reflection_hints_total{hint_type="stale"} 2' in body
+    assert 'carrymem_recall_reflection_hints_total{hint_type="flag_conflict"} 3' in body
+    # The dotted-name ghost must never reappear in the generic counters.
+    assert not any("reflection_hints" in op for op in snapshot["counters"])
+
+
+def test_hint_counter_fails_closed_on_unknown_type_or_bad_count():
+    from carrymem.monitoring import get_metrics_collector
+
+    collector = get_metrics_collector()
+    with pytest.raises(ValueError):
+        collector.record_recall_reflection_hint("nonexistent_type")
+    with pytest.raises(ValueError):
+        collector.record_recall_reflection_hint("stale", count=0)
+    with pytest.raises(ValueError):
+        collector.record_recall_reflection_hint("stale", count=-1)
+
+
+# ---------------------------------------------------------------------------
+# 12. Executor-shaped ranked entries (Slice 5b regression guard)
+#     The plan executor passes ``(mode_name, memory, modes)`` tuples — the
+#     inspector must project them, not silently skip them (the original
+#     wiring produced zero hints end-to-end because only object/dict shapes
+#     were recognized).
+# ---------------------------------------------------------------------------
+
+
+def test_executor_tuple_shape_candidates_produce_hints():
+    older = {
+        "storage_key": "tuple_older",
+        "content": "the staging db password rotates monthly",
+        "type": "personal_fact",
+        "confidence": 0.9,
+        "created_at": "2026-01-01T00:00:00+00:00",
+        "superseded_at": None,
+        "access_count": 5,
+    }
+    newer = {
+        "storage_key": "tuple_newer",
+        "content": "the staging db password rotates monthly",
+        "type": "personal_fact",
+        "confidence": 0.9,
+        "created_at": "2026-06-01T00:00:00+00:00",
+        "superseded_at": None,
+        "access_count": 0,
+    }
+    # Real executor shape: (mode_name, memory, modes_tuple).
+    ranked = [("fts", older, ("fts",)), ("fts", newer, ("fts",))]
+    report = inspect_candidates_for_hints(ranked, inline_max_candidates=2, inline_timeout_ms=10_000)
+    assert report.inspected_count == 2
+    flag_hints = [h for h in report.hints if h.hint_type is HintType.FLAG_CONFLICT]
+    assert len(flag_hints) == 1
+    assert flag_hints[0].storage_key == "tuple_newer"

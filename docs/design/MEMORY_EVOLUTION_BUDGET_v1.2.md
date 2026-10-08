@@ -1,8 +1,8 @@
 # 分层预算契约（Recall / Reflection Budget）
 
-> **版本**：v1.2（草稿，待 Gate 0 重决策）
+> **版本**：v1.2（已批准，Gate 0 于 2026-10-07 通过）
 > **日期**：2026-10-07
-> **状态**：v1.2 DRAFT —— §10.5 hindsight 复盘未批准前不修改代码
+> **状态**：v1.2 APPROVED —— §10.5 hindsight 三缺陷已按修复路径落地（Slice 5/5b 完成，见 §10.1.1/§10.1.2）
 > **权威关系**：细化 [CARRYMEM_MEMORY_EVOLUTION_METHOD.md](CARRYMEM_MEMORY_EVOLUTION_METHOD.md) §7；预算结构、截断顺序与原因码以本文为准。
 > **v1.1 → v1.2 主要变更**：
 > 1. **§5.1 新增第 5.5 档 reflection_hints**（re-rank 提示保护层缺位的修复）；
@@ -10,7 +10,7 @@
 > 3. **§11 新增 InlineReflectionHint 数据契约**（取代原"未定义的内联反思执行器"占位）；
 > 4. **§10.3 第 2 项更新**："reflection 预算尚未接入内联反思执行器" 升级为"v1.2 实施中"。
 >
-> **Phase 5 Slice 1/2/3/4 已落地**：RecallPlan 契约、四层预算结构、在线执行入口 `recall_with_plan`、graph/time 模式真实执行、`retrieval_timeout_ms` 软超时、output 截断按信任层细化、superseded 精确计数（§10.1）。
+> **Phase 5 Slice 1/2/3/4/5/5b 已落地**：RecallPlan 契约、四层预算结构、在线执行入口 `recall_with_plan`、graph/time 模式真实执行、`retrieval_timeout_ms` 软超时、output 截断按信任层细化、superseded 精确计数（§10.1）、内联反思接线与 hints 计数/Latency 真实 exposition（§10.1.1/§10.1.2）。
 
 ---
 
@@ -57,7 +57,10 @@
 8. 安全类事实与策略性记忆（安全保护层，永不自动截断）
 ```
 
-**第 5.5 档语义约束**：
+**第 5.5 档语义约束（Slice 5b 诚实口径，2026-10-07）**：
+
+> **当前实现状态**：hints 以 `RecallResult.hints` **独立字段（β 形态）**返回，**不进入 §5.1 items 截断路径**——第 5.5 档是**预留档**，仅在 hints 未来进 items 时生效（届时须先升版本节并回补守门测试 `test_output_truncation_never_touches_hints`）。守门测试已断言：items 截断（含保护层降级）不得增删改 hints。
+
 - `drop_priority=50`（高于普通 fact 40，低于 observation 60），普通档裁剪时按 drop_priority 排序，先于 fact 删、后于 observation 删；
 - **非保护**：`protected=False`，截断到保护层前允许丢弃；
 - **数量硬上限**：`max_hints_per_response=20`（防御性，避免 LLM 调用方被 hint 淹没，**与 §5.1 INV-TB3 确定性兼容**——同一 plan + 同一 ranked → 同 hints 顺序）；
@@ -94,16 +97,16 @@
 
 ## 8. 可观测性挂钩
 
-**v1.2 新增 series**：
+**v1.2 新增 series（Slice 5b 已接线并经真实 TCP E2E 断言）**：
 
 | Series | 类型 | 标签 | 产生者（v1.2 接线） | 触发条件 |
 |---|---|---|---|---|
-| `carrymem_recall_reflection_hints_total` | counter | hint_type | `_run_inline_reflection` 出口 | 每个 hint 产出 +1（受 `max_hints_per_response` 截断后） |
-| `carrymem_recall_reflection_inspect_duration_ms` | summary | 无 | `_run_inline_reflection` 入口 | 每次 inspect 总耗时（含超时退出场景） |
+| `carrymem_recall_reflection_hints_total` | counter | hint_type | `_run_inline_reflection` 出口（`record_recall_reflection_hint`，专用低基数注册表） | 每个 hint 产出 +1（受 `max_hints_per_response` 截断后） |
+| `carrymem_latency_ms{operation="recall_reflection_inspect",quantile=...}` | summary | operation | `_run_inline_reflection` 出口（`record_latency`） | 每次 inspect 总耗时（含超时退出场景）；**实现说明**：原案独立命名 `carrymem_recall_reflection_inspect_duration_ms` 改为复用既有 latency summary 族，避免为单一 operation 新增平行 summary 机制——文档按实际 exposition 形态记录 |
 
 **既有 series 扩展**：`carrymem_recall_budget_utilization_ratio{layer="reflection"}` 由硬编码 0.0 改为真实 utilization = `inspected / max(1, inline_max_candidates)`。
 
-标签均为低基数枚举（hint_type ∈ {downrank, boost, flag_conflict, stale} ≤ 4 值）。
+标签均为低基数枚举（hint_type ∈ {downrank, boost, flag_conflict, stale} ≤ 4 值，注册表 fail-closed 校验，未知 hint_type 拒绝记录）。**反幽灵守门**：hints 计数禁止回退到通用 `carrymem_total{operation=...}` 点号拼接形态——`test_recall_with_plan_exports_hint_counters_to_collector` 与 HTTP E2E 均断言通用 counters 中不含 `reflection_hints`。
 
 ---
 
@@ -134,6 +137,16 @@
 - **附带技术债治理**：本切片触发 `tests/test_exception_narrowing.py` 宽异常门禁（41 处历史未注释 > 上限 40），经用户确认全量治理——9 处历史宽异常补 `NOTE: intentional` 及业务理由，Slice 5 新增捕获全部使用窄异常，门禁恢复绿色。
 - **全量门禁**：pytest 5180 passed / 4 skipped（`--no-cov`）；black/isort/flake8/mypy/radon 聚焦复跑全绿；覆盖率未随本切片重测。
 
+### 10.1.2 Slice 5b 收尾（2026-10-07，hindsight 复盘驱动的反幽灵治理）
+
+复盘发现并修复三个"已宣称但未闭环"的半成品：
+
+1. **§5.1 第 5.5 档 ghost**：hints 实际不进 items 截断路径，5.5 档为死条款 → 文档口径改为"预留档"（§5.1），并新增守门测试 `test_output_truncation_never_touches_hints`（items 截断不得触碰 hints；未来进 items 须先升版）；
+2. **hints 计数器 exposition 名实不符**：原用 `metrics.increment("..._total.<type>")` 点号拼接落进通用 counters，实际导出为 `carrymem_total{operation=...}` 而非文档承诺的 `carrymem_recall_reflection_hints_total{hint_type=...}` → 新增 collector 专用低基数注册表 `record_recall_reflection_hint`（fail-closed 校验 4 值枚举），接线点替换，真实 TCP E2E（端口 18771）断言专用序列；
+3. **inspect 耗时 summary 未接线**：§8 承诺的 duration 序列缺失 → 接 `record_latency("recall_reflection_inspect")`，文档改为按实际 exposition 形态记录。
+
+**附带发现并修复的真 bug**：executor 传入 `ranked` 是 `(mode_name, memory, modes)` 元组，原 inspector 只认对象/Mapping 形态导致**端到端 hints 恒为 0**（此前集成测试断言 `>= 0` 为空洞断言，未抓住）——修复投影逻辑并新增元组形态回归测试 `test_executor_tuple_shape_candidates_produce_hints`。**教训**：空洞断言（`>= 0`）是 ghost 的温床，所有接线测试必须断言非零产出路径。
+
 ### 10.2 与 §5.1 截断顺序的差异
 
 （与 v1.1 §10.2 一致）
@@ -143,7 +156,7 @@
 | # | 项 | 状态 |
 |---|---|---|
 | 1 | `retrieval_timeout_ms` 软预算（mode 级，不可中断同步查询） | 文档（与 v1.1 一致） |
-| 2 | **reflection 预算未接入**——v1.1 披露为"接入完成"，但产品语义未定义 + 保护层无 hint 档 + 复用接口错误假设 | **已修复（Slice 5，2026-10-07）**。剩余子项：boost/downrank 枚举已定义无产生规则；hints 计数器的 Prometheus exporter 映射与 `/metrics` E2E 断言待补 |
+| 2 | **reflection 预算未接入**——v1.1 披露为"接入完成"，但产品语义未定义 + 保护层无 hint 档 + 复用接口错误假设 | **已修复（Slice 5 + 5b，2026-10-07）**。剩余子项：boost/downrank 枚举已定义无产生规则（YAGNI，待真实需求）；stale hint 降级路径未单独计量（§10.3 #8） |
 | 3 | `TOKENIZER_DRIFT_WARNING` 未接线 | 仍延期（需真实 tokenizer 基准集） |
 | 4 | semantic 不可用时复用 `VECTOR_UNAVAILABLE_FALLBACK` 原因码 | 仍延期（扩码需先升版） |
 | 5 | candidate 预算按"命中次数"计量，多模式重复命中同一内存重复计数 | 仍延期（去重维属设计决策） |
@@ -261,4 +274,4 @@ v1.1 Gate 0 的失误在于**"预算结构"与"产品语义"被分离决策**—
 | 版本 | 日期 | 主要决策 | 状态 |
 |---|---|---|---|
 | v1.1 | 2026-10-06 | D5 四层预算 + 截断顺序 + 原因码 | 已批准（Gate 0） |
-| v1.2 | 2026-10-07 | D7 §5.1 第 5.5 档 + §11 数据契约；D8 告警延后 | 草稿（待 Gate 0 重决策） |
+| v1.2 | 2026-10-07 | D7 §5.1 第 5.5 档 + §11 数据契约；D8 告警延后 | 已批准（Gate 0，2026-10-07；§10.5 三缺陷经 Slice 5/5b 修复闭环） |

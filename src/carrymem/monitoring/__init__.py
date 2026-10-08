@@ -19,6 +19,10 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 _LATENCY_MAX_SAMPLES = 10_000
 _RECALL_BUDGET_LAYERS = ("retrieval", "evidence", "reflection", "output")
+# Closed set of inline reflection hint types (v1.2 §11 HintType) — mirrors
+# HintType in carrymem.inline_reflection without importing it (monitoring
+# must stay dependency-free).
+_RECALL_HINT_TYPES = ("stale", "flag_conflict", "boost", "downrank")
 _RECALL_TRUNCATION_REASONS = (
     "OUTPUT_BUDGET_EXCEEDED",
     "EVIDENCE_BUDGET_EXCEEDED",
@@ -82,6 +86,7 @@ class MetricsCollector:
         self._gauges: Dict[str, float] = {}
         self._recall_truncations: Dict[Tuple[str, str], int] = {}
         self._recall_budget_utilization: Dict[str, float] = {}
+        self._recall_reflection_hints: Dict[str, int] = {}
         self._start_time: float = time.time()
 
     def increment(self, operation: str, value: int = 1) -> None:
@@ -118,6 +123,18 @@ class MetricsCollector:
         with self._lock:
             key = (reason, layer_value)
             self._recall_truncations[key] = self._recall_truncations.get(key, 0) + count
+
+    def record_recall_reflection_hint(self, hint_type: str, count: int = 1) -> None:
+        """Record low-cardinality inline reflection hint counters (v1.2 §8).
+
+        Exported as ``carrymem_recall_reflection_hints_total{hint_type=...}``.
+        """
+        if hint_type not in _RECALL_HINT_TYPES:
+            raise ValueError(f"unknown recall reflection hint_type: {hint_type}")
+        if not isinstance(count, int) or isinstance(count, bool) or count <= 0:
+            raise ValueError("count must be a positive integer")
+        with self._lock:
+            self._recall_reflection_hints[hint_type] = self._recall_reflection_hints.get(hint_type, 0) + count
 
     def set_recall_budget_utilization(self, layer: str, ratio: float) -> None:
         """Set final utilization for one of the four fixed recall budget layers."""
@@ -169,6 +186,7 @@ class MetricsCollector:
                     f"{reason_code}|{layer}": count for (reason_code, layer), count in self._recall_truncations.items()
                 },
                 "recall_budget_utilization": dict(self._recall_budget_utilization),
+                "recall_reflection_hints": dict(self._recall_reflection_hints),
                 "uptime_seconds": round(time.time() - self._start_time, 2),
             }
 
@@ -212,6 +230,11 @@ class MetricsCollector:
             for layer, ratio in snapshot["recall_budget_utilization"].items():
                 lines.append(f'carrymem_recall_budget_utilization_ratio{{layer="{layer}"}} {ratio}')
 
+        if snapshot["recall_reflection_hints"]:
+            lines.append("\n# TYPE carrymem_recall_reflection_hints_total counter")
+            for hint_type, count in snapshot["recall_reflection_hints"].items():
+                lines.append(f'carrymem_recall_reflection_hints_total{{hint_type="{hint_type}"}} {count}')
+
         # Gauges — one TYPE line per family. Emitting a single
         # "# TYPE carrymem_gauge" header while publishing differently-named
         # series does not declare those series, so each gauge declares itself.
@@ -233,6 +256,7 @@ class MetricsCollector:
             self._gauges.clear()
             self._recall_truncations.clear()
             self._recall_budget_utilization.clear()
+            self._recall_reflection_hints.clear()
 
 
 # ── Health Checker ────────────────────────────────────────────────────────

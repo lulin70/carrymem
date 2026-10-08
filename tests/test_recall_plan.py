@@ -691,6 +691,76 @@ def test_recall_with_plan_timeout_records_reflection_layer_truncation(tmp_path):
         cm.close()
 
 
+def test_output_truncation_never_touches_hints(tmp_path):
+    """v1.2 §5.1 第 5.5 档口径守门（Slice 5b）。
+
+    第 5.5 档当前**不被** §5.1 items 截断顺序消费：hints 以独立字段
+    （β 形态）返回，items 截断（含保护层降级）不得增删改 hints；
+    hints 仅受 MAX_HINTS_PER_RESPONSE=20 独立封顶。若未来 hints 进
+    items 截断路径，必须先升版 v1.2 §5.1 并回补本测试。
+    """
+    from carrymem.inline_reflection import MAX_HINTS_PER_RESPONSE, HintType
+    from carrymem.recall_plan import BudgetSpec, OutputBudget
+
+    cm = CarryMem(storage="sqlite", db_path=str(tmp_path / "hint_guard.db"), auto_backup_interval=0)
+    try:
+        # Two *similar but distinct* memories force a flag_conflict hint
+        # (identical content would be idempotently merged by declare).
+        # Word-set Jaccard: 6/7 = 0.857 >= 0.85 duplicate threshold.
+        cm.declare("our deploy window is friday night utc", user_id="u")
+        cm.declare("our deploy window is friday night", user_id="u")
+
+        plan = cm.build_recall_plan(
+            query="deploy window friday night",
+            task="fact_lookup",
+            budget=BudgetSpec(output=OutputBudget(max_tokens=250)),
+        )
+        result = cm.recall_with_plan(plan)
+
+        # items were cut by the hard output gate...
+        item_truncations = [t for t in result.truncations if t.reason_code is TruncationReason.OUTPUT_BUDGET_EXCEEDED]
+        assert item_truncations, "tiny output budget must truncate items"
+
+        # ...but hints survive untouched: hints come from pre-truncation
+        # ranked and are capped only by MAX_HINTS_PER_RESPONSE.
+        assert len(result.hints) >= 1
+        assert len(result.hints) <= MAX_HINTS_PER_RESPONSE
+        assert result.metadata["hints_count"] == len(result.hints)
+        conflict_hints = [h for h in result.hints if h.hint_type is HintType.FLAG_CONFLICT]
+        assert conflict_hints, "duplicate pair must surface a flag_conflict hint"
+    finally:
+        cm.close()
+
+
+def test_recall_with_plan_exports_hint_counters_to_collector(tmp_path):
+    """Slice 5b anti-ghost guard: hints must land in the dedicated
+    low-cardinality registry (exported as
+    ``carrymem_recall_reflection_hints_total{hint_type=...}``), never in the
+    generic dotted-name counters.
+    """
+    from carrymem.monitoring import get_metrics_collector
+
+    cm = CarryMem(storage="sqlite", db_path=str(tmp_path / "hint_counters.db"), auto_backup_interval=0)
+    try:
+        # Similar-but-distinct pair (identical content is merged by declare).
+        cm.declare("our rollout window is thursday morning utc", user_id="u")
+        cm.declare("our rollout window is thursday morning", user_id="u")
+
+        get_metrics_collector().reset()
+        plan = cm.build_recall_plan(query="rollout window thursday morning", task="fact_lookup")
+        result = cm.recall_with_plan(plan)
+        assert result.metadata["hints_count"] >= 1
+
+        snapshot = get_metrics_collector().get_snapshot()
+        assert snapshot["recall_reflection_hints"].get("flag_conflict", 0) >= 1
+        # Inspect duration must feed the latency summary (v1.2 §8).
+        assert snapshot["latency"].get("recall_reflection_inspect", {}).get("count", 0) >= 1
+        # The dotted-name ghost must never reappear.
+        assert not any("reflection_hints" in op for op in snapshot["counters"])
+    finally:
+        cm.close()
+
+
 def test_output_truncation_drops_inferred_before_ordinary(tmp_path):
     from carrymem.adapters.base import MemoryEntry
 

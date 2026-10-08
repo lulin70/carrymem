@@ -570,7 +570,8 @@ def _run_inline_reflection(
         metrics.record_recall_truncation(truncation.reason_code, truncation.layer, report.capped_count)
 
     for hint in report.hints:
-        metrics.increment(f"carrymem_recall_reflection_hints_total.{hint.hint_type.value}")
+        metrics.record_recall_reflection_hint(hint.hint_type.value)
+    metrics.record_latency("recall_reflection_inspect", report.elapsed_ms)
 
     return truncations, list(report.hints), report
 

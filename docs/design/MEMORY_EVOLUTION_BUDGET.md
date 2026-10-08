@@ -251,7 +251,7 @@ carrymem_tokenizer_drift_ratio                        (gauge, 校准时更新)
 ### 10.3 已知遗留缺口（不得宣称为已完成）
 
 1. `retrieval_timeout_ms` 为 mode 级软预算（超时后不再启动新模式），不能中断正在执行的同步 SQLite 查询；
-2. ~~reflection 预算尚未接入内联反思执行器~~ **已在 Slice 5 修复（2026-10-07，v1.2 §11）**：`inline_max_candidates` / `inline_timeout_ms` 已被 `inspect_candidates_for_hints` 真实消费，utilization 按实际值计算。剩余子项：hint 类型目前仅 stale/flag_conflict 两类，boost/downrank 枚举值已定义但无产生规则；`carrymem_recall_reflection_hints_total{hint_type}` 计数器经 metrics.increment 产生，Prometheus exporter 映射与 `/metrics` E2E 断言待补；
+2. ~~reflection 预算尚未接入内联反思执行器~~ **已在 Slice 5 修复（2026-10-07，v1.2 §11；Slice 5b 完成反幽灵治理）**：`inline_max_candidates` / `inline_timeout_ms` 已被 `inspect_candidates_for_hints` 真实消费，utilization 按实际值计算；hints 计数器走专用低基数注册表并经真实 TCP E2E 断言。剩余子项：hint 类型目前仅 stale/flag_conflict 两类，boost/downrank 枚举值已定义但无产生规则（YAGNI，待真实需求）；
 3. `TOKENIZER_DRIFT_WARNING` 未接线（校准属后续交付）；
 4. semantic 不可用时复用 `VECTOR_UNAVAILABLE_FALLBACK` 原因码，语义不完全准确，扩码需先更新 §5.2；
 5. candidate 预算按"命中次数"计量（多模式重复命中同一内存会重复计数），去重发生在预算之后；
