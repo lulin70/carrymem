@@ -3,7 +3,7 @@
 This module provides LLM client abstraction for CarryMem's AI-powered features
 (session summarization, semantic aggregation, etc.).
 
-Currently supports OpenAI and ZhipuAI backends. Future enhancements (v0.5.1+)
+Currently supports OpenAI and Z.AI backends. Future enhancements (v0.5.1+)
 may include:
 - Additional LLM provider support (Anthropic, Google, etc.)
 - Streaming response support
@@ -28,7 +28,7 @@ DEFAULT_LLM_MAX_TOKENS = 500
 DEFAULT_LLM_TIMEOUT_SECONDS = 30
 
 _OPENAI_CLIENT = None
-_ZHIPUAI_CLIENT = None
+_ZAI_CLIENT = None
 _BACKEND = None
 
 try:
@@ -41,10 +41,10 @@ except ImportError:
 
 if _BACKEND is None:
     try:
-        from zhipuai import ZhipuAI as _ZhipuAI
+        from zai import ZhipuAiClient as _ZhipuAiClient
 
-        _ZHIPUAI_CLIENT = _ZhipuAI
-        _BACKEND = "zhipuai"
+        _ZAI_CLIENT = _ZhipuAiClient
+        _BACKEND = "zai"
     except ImportError:
         pass
 
@@ -64,7 +64,7 @@ def _str_to_bool(val: Union[str, bool]) -> bool:
 
 
 class LLMClient:
-    """LLM client wrapper supporting OpenAI and ZhipuAI backends."""
+    """LLM client wrapper supporting OpenAI and Z.AI backends."""
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         self._enabled = self._resolve_enabled(config)
@@ -135,13 +135,13 @@ class LLMClient:
             except (ImportError, ValueError, OSError) as e:
                 logger.error("Failed to initialize OpenAI client: %s", e)
                 return None
-        if _BACKEND == "zhipuai" and _ZHIPUAI_CLIENT is not None:
+        if _BACKEND == "zai" and _ZAI_CLIENT is not None:
             try:
-                return _ZHIPUAI_CLIENT(api_key=self._api_key)
-            except (ImportError, ValueError) as e:
-                logger.error("Failed to initialize ZhipuAI client: %s", e)
+                return _ZAI_CLIENT(api_key=self._api_key, timeout=self._timeout)
+            except (ImportError, ValueError, OSError) as e:
+                logger.error("Failed to initialize Z.AI client: %s", e)
                 return None
-        logger.warning("No LLM backend available (openai/zhipuai not installed)")
+        logger.warning("No LLM backend available (openai/zai not installed)")
         return None
 
     def is_available(self) -> bool:
@@ -174,7 +174,7 @@ class LLMClient:
                     logger.warning("LLM returned empty choices")
                     return None
                 return response.choices[0].message.content  # type: ignore[no-any-return]
-            if _BACKEND == "zhipuai":
+            if _BACKEND == "zai":
                 response = self._client.chat.completions.create(
                     model=self._model,
                     messages=messages,

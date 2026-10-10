@@ -127,7 +127,7 @@ setup(
         ],
         "llm": [
             "openai>=1.0",
-            "zhipuai>=2.0",
+            "zai-sdk>=0.2.3",
         ],
         "tui": [
             "textual>=8.2.8",
@@ -140,7 +140,7 @@ setup(
             "pysqlite3>=0.6.0",
             "sentence-transformers>=5.6.0",
             "openai>=1.0",
-            "zhipuai>=2.0",
+            "zai-sdk>=0.2.3",
             "aiosqlite>=0.19",
         ],
     },

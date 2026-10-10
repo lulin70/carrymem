@@ -348,7 +348,7 @@ jobs:
   # ═══════════════════════════════════════
   # ADVISORY: Optional Deps Test (non-blocking)
   #   Detects import errors in optional-dependency code paths
-  #   (textual TUI, cryptography, openai/zhipuai LLM, pycld2/langdetect).
+  #   (textual TUI, cryptography, openai/zai-sdk LLM, pycld2/langdetect).
   #   Excludes semantic extras (sentence-transformers is heavy).
   # ═══════════════════════════════════════
   optional-deps:

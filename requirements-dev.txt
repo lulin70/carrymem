@@ -25,7 +25,7 @@ black==26.5.1
 build==1.5.0
     # via -r requirements-dev.in
 cachetools==7.1.4
-    # via zhipuai
+    # via zai-sdk
 certifi==2026.6.17
     # via
     #   httpcore
@@ -81,7 +81,7 @@ httpx==0.28.1
     # via
     #   huggingface-hub
     #   openai
-    #   zhipuai
+    #   zai-sdk
 huggingface-hub==1.24.0
     # via
     #   sentence-transformers
@@ -196,11 +196,11 @@ pycparser==3.0
 pydantic==2.13.4
     # via
     #   openai
-    #   zhipuai
+    #   zai-sdk
 pydantic-core==2.46.4
     # via
     #   pydantic
-    #   zhipuai
+    #   zai-sdk
 pyflakes==3.4.0
     # via flake8
 pygments==2.20.0
@@ -209,8 +209,8 @@ pygments==2.20.0
     #   readme-renderer
     #   rich
     #   textual
-pyjwt==2.8.0
-    # via zhipuai
+pyjwt==2.15.1
+    # via zai-sdk
 pyproject-hooks==1.2.0
     # via build
 pysqlite3==0.6.0
@@ -277,7 +277,9 @@ six==1.17.0
     #   langdetect
     #   mando
 sniffio==1.3.1
-    # via openai
+    # via
+    #   openai
+    #   zai-sdk
 sqlite-vec==0.1.9
     # via -r requirements.in
 sympy==1.14.0
@@ -328,7 +330,7 @@ virtualenv==21.14.6
     # via
     #   -r requirements-dev.in
     #   pre-commit
-zhipuai==2.1.5.20250825
+zai-sdk==0.2.3
     # via -r requirements.in
 
 # The following packages are considered to be unsafe in a requirements file:

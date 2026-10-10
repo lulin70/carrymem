@@ -32,7 +32,7 @@
 | P2 中优先级 | 13 项 | ~18h | 方案+共识后推进 |
 | P3 低优先级 | 10 项 | ~4h | 日常维护渐进 |
 
-> **复核说明（2026-10-10 更新）**：上表为 v2 创建时的统计。历史已完成项与遗留项按各条目状态为准。TD-068/069/070 为此前记录的依赖链安全告警处置项；本轮新增 **TD-071~TD-077**，均为 working tree 评估发现的未闭环项，状态均为 `⬜ 待开始`。
+> **复核说明（2026-10-10 更新）**：上表为 v2 创建时的统计。历史已完成项与遗留项按各条目状态为准。TD-068 和 TD-069 已完成；TD-070~TD-077 仍按各条目状态跟踪。
 
 ### 用户价值映射 (PM 建议)
 
@@ -915,34 +915,34 @@
 | **状态** | ✅ 已完成 (2026-10-03 采用方案 a：TypedDict 字段改为 `run_p1`/`run_p2` 并删除零消费的 `message`；`schedule_consolidation` 返回类型收窄为 `ScheduleConsolidationResult`（mypy 实测并抓出并修复了 status 字面量被联合推断为 `dict[str, float]` 的隐性问题，需显式标注）；回归断言 `set(result.keys()) == {...}` 锁定键集合防再漂移。验证：`pytest tests/test_consolidation_schedule.py tests/test_carrymem_full.py tests/core/test_maintenance.py` 97 passed；mypy 两文件 `Success: no issues found`；black/isort/flake8 通过) |
 | **生命周期** | P8 实现 |
 
-### TD-068: PyJWT 被上游 zhipuai 钉在 2.8.0，Dependabot 告警无本地修复路径 ⚠️ 新增 (2026-09-21)
+### TD-068: PyJWT 被旧版 zhipuai 钉在 2.8.0，已迁移到 zai-sdk ✅ 完成 (2026-10-10)
 
 | 字段 | 值 |
 |------|-----|
 | **优先级** | P3 |
-| **位置** | `requirements.in` (`zhipuai>=2.0`) → `requirements.txt:118` / `requirements-dev.txt:212` (`pyjwt==2.8.0`) |
-| **问题描述** | Dependabot 报告 5 条 pyjwt 告警（2 high / 2 medium / 1 low，修复版本 2.13.0）。**根因是上游约束，不是本项目缺陷**：`pyjwt` 是 `zhipuai` 的传递依赖，`zhipuai` 声明 `pyjwt<2.9.0,>=2.8.0`，而镜像上 `zhipuai` 的最新版恰为当前钉住的 `2.1.5.20250825`——不存在放宽该上限的新版本。`pyjwt` 不被 `src/` 直接引用（无 `import jwt`），仅在用户显式配置 zhipuai 后端时经 `src/carrymem/llm/__init__.py:44` 间接加载。**注意**：这 5 条告警在 2026-09-22 曾显示为 `fixed`（依赖图不再看见该包），改名恢复可见后**重新打开**，最终以 `tolerable_risk` 理由关闭并在告警上留痕——**是 dismissed，不是 fixed**，pin 本身未动，本条依然成立。 |
-| **复现** | `pip-compile --upgrade-package pyjwt --output-file=requirements.txt requirements.in` → 两个编译产物的 pin **零变化**（唯一 diff 是头部命令行）；`pip index versions zhipuai` → `2.1.5.20250825`（= 当前钉住版本）；`pip index versions pyjwt` → 最新 `2.14.0` 可用但被上游上限拒绝 |
-| **修复方案** | 无本地修复路径。可选：(a) 接受风险并保留证据（**当前选择**）；(b) 上游 zhipuai 放宽上限后，`pip-compile --upgrade-package pyjwt` 自动跟进；(c) 移除 zhipuai 后端（会失去一个可用的 LLM provider，不建议）。**禁止**强行 pin `pyjwt>=2.9.0`——那会产出违反上游声明元数据的 lock，属假修复 |
-| **负责角色** | DevOps / Security |
-| **验证标准** | `grep -n '^pyjwt==' requirements.txt requirements-dev.txt` 的取值与 `pip index versions zhipuai` 最新版声明的 pyjwt 上限一致；上游放宽后重跑 `pip-compile --upgrade-package pyjwt` 应产生非零 pin 变化 |
-| **依赖** | 上游 zhipuai 发版 |
-| **状态** | ⬜ 无法推进（上游约束，证据已留痕）。**2026-10-08 重评估**：告警数量升至 13 条 pyjwt（2 critical + 4 high + 4 medium，修复版本 2.14.0/2.15.0）。新增暴露面分析：zhipuai 对 pyjwt 的唯一调用是 `zhipuai/core/_jwt_token.py:26` 的 `jwt.encode(payload, secret, algorithm="HS256")`（本地签名，无 decode/JWKS fetch），而本轮全部 CVE 均位于验证/拉取路径——**脆弱代码在本项目运行路径上不可达**。复核 `pip index versions zhipuai` 确认最新版仍是 `2.1.5.20250825`，上游上限未放宽。处置：维持 (a) 接受风险，告警以 `tolerable_risk` 豁免并留痕；上游放宽后重编译即自动跟进 |
+| **位置** | `requirements.in` / `requirements.txt` / `requirements-dev.txt`；LLM 入口位于 `src/carrymem/llm/__init__.py` 和 `src/carrymem/layers/semantic_classifier.py` |
+| **问题描述** | 旧版 `zhipuai==2.1.5.20250825` 声明 `pyjwt<2.9.0`，阻塞 Dependabot 建议的 PyJWT 安全版本。官方 `zai-sdk==0.2.3` 已提供兼容的 `ZhipuAiClient`，并声明 `pyjwt>=2.9.0,<3.0.0`。 |
+| **复现** | 旧依赖解析：`zhipuai==2.1.5.20250825` 与 `PyJWT==2.15.1` 产生 `ResolutionImpossible`；新依赖解析到 `zai-sdk==0.2.3` 与 `PyJWT==2.15.1`。 |
+| **修复方案** | 用官方 `zai-sdk` 替换旧 `zhipuai`，保持 `chat.completions.create` 调用契约，重新生成两个锁文件。 |
+| **负责角色** | DevOps / Security / Coder |
+| **验证标准** | `pip check` 通过；锁文件包含 `zai-sdk==0.2.3`、`pyjwt==2.15.1` 且不包含 `zhipuai`；Z.AI client 初始化和 LLM 回归测试通过。 |
+| **依赖** | 无 |
+| **状态** | ✅ 已完成（2026-10-10）。Dependabot 重新扫描后应关闭 PyJWT 两条告警。 |
 | **生命周期** | P6 安全审查 |
 
-### TD-069: virtualenv dev 链停在 21.7.6，低于 Dependabot 要求的 21.7.13 ⚠️ 新增 (2026-10-08)
+### TD-069: virtualenv dev 链停在 21.7.6，低于 Dependabot 要求的 21.7.13 ✅ 完成 (2026-10-10)
 
 | 字段 | 值 |
 |------|-----|
 | **优先级** | P3 |
-| **位置** | `requirements-dev.txt:327`（`virtualenv==21.7.6`，传递依赖，经 pre-commit 引入） |
-| **问题描述** | Dependabot 报 3 条 virtualenv high 告警（配置注入/seed wheel 完整性/activation 脚本命令注入，修复版本 21.7.11~21.7.13）。`pip-compile --upgrade-package virtualenv` 重编译后解析器只选到 `21.7.6`，而清华镜像与官方源均已存在 `21.7.16`；pre-commit 4.6.0 声明的是 `virtualenv>=20.10.0`（无上限）。压低版本的约束源尚未定位（2026-10-08 排查被中断，待续）。virtualenv 仅用于 dev 工具链（pre-commit hooks），不进运行时镜像 |
-| **复现** | `pip-compile --index-url https://pypi.tuna.tsinghua.edu.cn/simple --upgrade-package virtualenv requirements-dev.in -o requirements-dev.txt` → `virtualenv==21.7.6`；`curl -s https://pypi.tuna.tsinghua.edu.cn/simple/virtualenv/ \| grep -c virtualenv-21.7.1` → ≥4（镜像有新版） |
-| **修复方案** | (a) 定位约束源：`pip install --dry-run --index-url https://pypi.tuna.tsinghua.edu.cn/simple "pre-commit==4.6.0" "virtualenv==21.7.13"` 观察解析冲突（只读验证）；(b) 若无真实约束，在 `requirements-dev.in` 显式加 `virtualenv>=21.7.13` 后重编译；(c) 若解析器行为异常，改用 `--no-binary`/直接手改 pin 并跑全量 dev 安装验证 |
+| **位置** | `requirements-dev.in` / `requirements-dev.txt`（显式安全下限和锁定版本） |
+| **问题描述** | Dependabot 报告 virtualenv 的配置注入、seed wheel 完整性和 activation 脚本命令注入告警。该依赖只用于 dev 工具链，不进入运行时镜像。 |
+| **复现** | 旧锁文件为 `virtualenv==21.7.6`；升级后锁文件为 `virtualenv==21.14.6`。 |
+| **修复方案** | 在 `requirements-dev.in` 显式增加 `virtualenv>=21.7.13`，重新生成锁文件并升级到 `virtualenv==21.14.6`。 |
 | **负责角色** | DevOps |
-| **验证标准** | `grep -n 'virtualenv==' requirements-dev.txt` → `virtualenv==21.7.13` 或更高；`.venv/bin/pip check` 无冲突；`pre-commit run --all-files` 正常 |
+| **验证标准** | `grep -n 'virtualenv==' requirements-dev.txt` → `virtualenv==21.14.6`；`.venv/bin/pip check` 无冲突；依赖解析通过。 |
 | **依赖** | 无 |
-| **状态** | ⬜ 待开始（用户决策：记入技术债，先继续推进） |
+| **状态** | ✅ 已完成（2026-10-10）。 |
 | **生命周期** | P6 安全审查 |
 
 ### TD-070: VSCode 插件 dev 链 chokidar/mocha 高危告警需破坏性升级 ⚠️ 新增 (2026-10-08)

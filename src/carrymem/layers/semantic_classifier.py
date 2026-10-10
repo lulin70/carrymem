@@ -53,12 +53,12 @@ class SemanticClassifier:
             return None
 
         # Attempt to initialize LLM client from available providers
-        # Supports ZhipuAI (GLM) as primary LLM backend
+        # Supports Z.AI (GLM) as primary LLM backend
         try:
-            from zhipuai import ZhipuAI
+            from zai import ZhipuAiClient
 
             if self.llm_api_key:
-                return ZhipuAI(api_key=self.llm_api_key)
+                return ZhipuAiClient(api_key=self.llm_api_key, timeout=self.llm_timeout)
         except ImportError:
             pass
 

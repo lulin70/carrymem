@@ -98,9 +98,9 @@ these numbers describe the tree, not the v0.11.2 tag.
 - **Version consistency**: all five machine-readable sources report `0.11.2`
 - **Gates**: eight blocking local gates (flake8, black, isort, mypy, pytest, radon,
   version-consistency, swallowed-assert) via `python3 scripts/ci_local_check.py`
-- **Tech debt**: TD-001~TD-067 complete (TD-067 fixed 2026-10-03);
-  TD-068 blocked upstream (zhipuai pins pyjwt<2.9.0, dismissed with evidence) —
-  see [TECH_DEBT_PLAN.md](TECH_DEBT_PLAN.md).
+- **Tech debt**: TD-001~TD-069 complete (TD-068 fixed by migrating from zhipuai to zai-sdk;
+  TD-069 fixed by upgrading virtualenv to 21.14.6); see
+  [TECH_DEBT_PLAN.md](TECH_DEBT_PLAN.md).
 
 ### Test & Quality Metrics (v0.9.8, historical)
 
