@@ -1,12 +1,19 @@
 """Connection management for SQLiteAdapter."""
 
+import importlib
 import logging
 import os
 import sqlite3
 import threading
 import time
 from contextlib import contextmanager
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
+
+_fcntl_module: Any = None
+try:
+    _fcntl_module = importlib.import_module("fcntl")
+except ImportError:  # pragma: no cover - Windows uses SQLite busy handling
+    pass
 
 from ...exceptions import DBConnectionError
 from .constants import (
@@ -18,8 +25,9 @@ from .constants import (
 
 logger = logging.getLogger(__name__)
 
-# Global write locks per database file
-_db_write_locks: Dict[str, threading.RLock] = {}
+# Global write locks per database file. The complete lock object is shared so
+# auxiliary SQLite writers can join the same process and cross-process lock.
+_db_write_locks: Dict[str, "_DatabaseWriteLock"] = {}
 _db_write_locks_guard = threading.Lock()
 
 # Slow query threshold (ms), 0 = disabled. Configurable via CARRYMEM_SLOW_QUERY_MS env var
@@ -47,6 +55,61 @@ except ImportError:
     SQLITE_VEC_AVAILABLE = False
 
 
+class _DatabaseWriteLock:
+    """Serialize writes within a process and, when available, across processes."""
+
+    def __init__(self, db_path: Optional[str], thread_lock: threading.RLock):
+        self._thread_lock = thread_lock
+        self._lock_path = f"{db_path}.write.lock" if db_path else None
+        self._state = threading.local()
+
+    def __enter__(self):
+        self._thread_lock.acquire()
+        depth = getattr(self._state, "depth", 0)
+        if depth == 0 and _fcntl_module is not None and self._lock_path is not None:
+            lock_path = self._lock_path
+            os.makedirs(os.path.dirname(lock_path) or ".", exist_ok=True)
+            lock_file = open(lock_path, "a+")
+            try:
+                _fcntl_module.flock(lock_file.fileno(), _fcntl_module.LOCK_EX)
+            except Exception:
+                lock_file.close()
+                self._thread_lock.release()
+                raise
+            self._state.lock_file = lock_file
+        self._state.depth = depth + 1
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        depth = getattr(self._state, "depth", 1) - 1
+        self._state.depth = depth
+        try:
+            if depth == 0 and _fcntl_module is not None:
+                lock_file = getattr(self._state, "lock_file", None)
+                if lock_file is not None:
+                    _fcntl_module.flock(lock_file.fileno(), _fcntl_module.LOCK_UN)
+                    lock_file.close()
+                    del self._state.lock_file
+        finally:
+            self._thread_lock.release()
+        return False
+
+
+def get_database_write_lock(db_path: str) -> _DatabaseWriteLock:
+    """Return the shared write lock for one database path."""
+    resolved = str(os.path.realpath(db_path))
+    with _db_write_locks_guard:
+        lock = _db_write_locks.get(resolved)
+        if lock is None:
+            thread_lock = threading.RLock()
+            lock = _DatabaseWriteLock(
+                None if db_path == ":memory:" else resolved,
+                thread_lock,
+            )
+            _db_write_locks[resolved] = lock
+        return lock
+
+
 class ConnectionManager:
     """Manages SQLite connections with thread-local storage and write locking.
 
@@ -62,11 +125,7 @@ class ConnectionManager:
         self._db_path = db_path
         self._lock = threading.Lock()
 
-        resolved = str(os.path.realpath(self._db_path))
-        with _db_write_locks_guard:
-            if resolved not in _db_write_locks:
-                _db_write_locks[resolved] = threading.RLock()
-            self._file_lock = _db_write_locks[resolved]
+        self._file_lock = get_database_write_lock(self._db_path)
 
         self._local = threading.local()
         self._closed = False
@@ -92,7 +151,7 @@ class ConnectionManager:
         return self._lock
 
     @property
-    def file_lock(self):
+    def file_lock(self) -> _DatabaseWriteLock:
         """Cross-process file lock guarding the database file."""
         return self._file_lock
 

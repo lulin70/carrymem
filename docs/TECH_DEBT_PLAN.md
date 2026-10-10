@@ -2,12 +2,12 @@
 
 > **文档性质**: 活文档 (Living Document) — 每完成一项立即更新状态
 > **创建时间**: 2026-07-17
-> **最后更新**: 2026-10-03 (TD-067 修复：`ScheduleConsolidationResult` 契约与实现对齐 + mypy 返回类型收窄 + 键集合回归断言，详见该条状态；全量门禁最新事实见 `docs/design/PHASE2_OBSERVATION_CONFLICT_READINESS.md` §6.1：`5070 passed, 4 skipped`、coverage 83.96%。历史批次记录见 §9 更新日志)
+> **最后更新**: 2026-10-10 (本轮关闭 CLI 规则 JSON 协议、真实 CLI/SQLite CRUD/reload 验收和 `autoMatch` 幽灵配置；`defaultScope` 已接入编辑器生产路径；发布门禁已移除阻塞 CI 的 `--no-deps` 降级并统一使用 `npm ci`，release 增加显式多进程并发回归；保留真实 VSCode UI、clean checkout/release 模拟、完整 slow 门禁、health schema、timer 生命周期和 HTTP 超时副作用契约债务。已发布 `0.11.2` 的事实与当前 working tree 证据严格区分。TD-067 修复与历史批次记录见 §9 更新日志)
 > **基于**: 7 维度项目整理评估 (2026-07-17, B+ 77/100) + DevSquad 7 角色并行审核
 > **配套文档**: [ROADMAP_P0_P3.md](ROADMAP_P0_P3.md) — 执行路线图 (Wave 推进表 + 7-Role 投票矩阵 + 11 阶段生命周期映射)
 >
 > **文档分工**:
-> - 本文档 (TECH_DEBT_PLAN.md) = 技术债**目录** (TD-001~TD-068 明细 + 验证标准 + 风险矩阵)
+> - 本文档 (TECH_DEBT_PLAN.md) = 技术债**目录** (TD-001~TD-077 明细 + 验证标准 + 风险矩阵)
 > - ROADMAP_P0_P3.md = 技术债**执行路线** (Wave 推进表 + 共识投票矩阵 + 活文档同步清单)
 
 ---
@@ -32,9 +32,7 @@
 | P2 中优先级 | 13 项 | ~18h | 方案+共识后推进 |
 | P3 低优先级 | 10 项 | ~4h | 日常维护渐进 |
 
-> **复核说明（2026-10-03 更新）**：上表为 v2 创建时的统计。经逐项复核，§2~§5 中所有 TD 条目
-> （含后续新增的 TD-055~TD-067）均为 ✅ 已完成（TD-067 于 2026-10-03 修复）；遗留三项为 **TD-068/069/070**
-> （2026-10-08 新增，均为依赖链安全告警的处置项：TD-068 上游约束已豁免留痕，TD-069/070 待推进）。
+> **复核说明（2026-10-10 更新）**：上表为 v2 创建时的统计。历史已完成项与遗留项按各条目状态为准。TD-068/069/070 为此前记录的依赖链安全告警处置项；本轮新增 **TD-071~TD-077**，均为 working tree 评估发现的未闭环项，状态均为 `⬜ 待开始`。
 
 ### 用户价值映射 (PM 建议)
 
@@ -962,6 +960,97 @@
 | **状态** | ⬜ 待开始 |
 | **生命周期** | P6 安全审查 |
 
+### TD-071: VSCode rules-effectiveness 调用没有对应 CLI 命令
+
+| 字段 | 值 |
+|------|-----|
+| **优先级** | P1 |
+| **位置** | `extensions/vscode-carrymem/` rules-effectiveness client 调用处；`src/carrymem/cli/` 命令注册与分发处 |
+| **问题描述** | VSCode client 发起 rules-effectiveness 调用，但 CLI 没有对应命令。客户端调用与生产入口未形成闭环，真实用户无法从 CLI 完成该能力。 |
+| **修复方案** | 明确命令名称、参数和输出契约；补 CLI 实现或移除无效 client 调用；补真实 CLI 端到端用例。 |
+| **负责角色** | UI + Coder + Tester |
+| **验证标准** | 在隔离 HOME 下，从 VSCode client 使用的同一命令入口执行 rules-effectiveness；命令存在并返回稳定结果；测试覆盖成功、无规则和错误路径，且不使用 mock 替代 CLI 进程。 |
+| **状态** | ✅ 已完成（新增 `rules effectiveness --json`，保留旧 flat 命令兼容；真实临时 SQLite CRUD/reload 旅程通过） |
+| **生命周期** | P5 交互设计 → P8 实现 → P9 测试执行 |
+
+### TD-072: `autoMatch` / `defaultScope` 幽灵配置已清理
+
+| 字段 | 值 |
+|------|-----|
+| **优先级** | P1 |
+| **位置** | VSCode manifest 配置、对应测试读取处，以及 rules 配置/匹配生产路径 |
+| **问题描述** | `autoMatch` 没有自动匹配生产消费者；`defaultScope` 已有生产消费者，但原配置未反映真实状态。 |
+| **修复方案** | 删除未实现的 `autoMatch` 配置和测试；保留 `defaultScope`，由规则编辑器将其用于新规则默认作用域，并在保存后刷新树。 |
+| **负责角色** | Architect + UI + Coder |
+| **验证标准** | manifest 不再声明 `autoMatch`；`defaultScope` 由编辑器生产路径读取；真实 CLI/SQLite 旅程验证作用域持久化。 |
+| **状态** | ✅ 已完成（删除 `autoMatch` 幽灵配置；`defaultScope` 已接入 `RuleEditorPanel`；真实作用域持久化验证通过） |
+| **生命周期** | P2 架构设计 → P5 交互设计 → P9 测试执行 |
+
+### TD-073: VSCode E2E 尚未证明真实 VSCode UI→CLI→SQLite
+
+| 字段 | 值 |
+|------|-----|
+| **优先级** | P1 |
+| **位置** | `extensions/vscode-carrymem/test/` E2E runner、VSCode client 调用层、CLI/SQLite 持久化路径 |
+| **问题描述** | 当前 Tier 2 E2E 仍主要覆盖 VSCode 壳层或静态契约。真实 CLI→SQLite CRUD 与 reload 已由独立真实进程验收，但真实 VSCode UI 到 CLI 的联动仍受本机缺少 Node/npm 和依赖环境限制。 |
+| **修复方案** | 在具备 Node/npm 的 CI 或发布环境执行真实 VSCode E2E；通过扩展实际调用 CLI，完成 CRUD、reload、错误显示和清理。 |
+| **负责角色** | UI + Tester + DevOps |
+| **验证标准** | 本轮已完成真实 `carrymem` 进程临时 SQLite CRUD/reload；剩余门禁是 CI/发布环境的真实 VSCode UI E2E，结果必须包含 0 个 mock CLI 调用。 |
+| **状态** | 🟡 部分完成（真实 CLI/SQLite 已通过；真实 VSCode UI 仍开放） |
+| **生命周期** | P5 交互设计 → P7 测试规划 → P9 测试执行 → P10 部署发布 |
+
+### TD-074: release/CI 门禁可信度仍有缺口
+
+| 字段 | 值 |
+|------|-----|
+| **优先级** | P1 |
+| **位置** | `.github/workflows/ci.yml`、`.github/workflows/release.yml`、`.github/workflows/nightly.yml`、VSCode 扩展安装步骤 |
+| **问题描述** | release/CI 主测试仍排除 slow 集合；benchmark/nightly 仍保留非阻塞或降级安装路径；完整 clean checkout 发布模拟尚未执行。 |
+| **修复方案** | release pre-test 已加入显式的多进程 SQLite 并发阻塞回归；CI 主测试安装失败现在直接失败，不再使用 `--no-deps` fallback；CI/release/nightly 的 VSCode 依赖安装改为 `npm ci`。后续仍需决定是否把完整 slow 集合纳入发布门禁，并在 clean checkout 验证 optional job 策略。 |
+| **负责角色** | DevOps + Tester |
+| **验证标准** | release workflow 包含阻塞并发回归；CI 主安装失败时非零退出；VSCode 安装使用 lockfile；clean checkout 和目标 commit 的完整 release 模拟通过；slow 测试策略和 optional job 失败语义有明确负向验证。 |
+| **状态** | 🟡 部分完成（关键误报路径已修；完整 clean checkout/release 模拟和完整 slow 门禁仍开放） |
+| **生命周期** | P7 测试规划 → P9 测试执行 → P10 部署发布 |
+
+### TD-076: HTTP 工具超时后的后台线程继续执行 ⚠️ 新增 (2026-10-10)
+
+| 字段 | 值 |
+|------|-----|
+| **优先级** | P1 |
+| **位置** | `src/carrymem/integration/layer2_mcp/server.py:234-252`，HTTP `/message` 工具调用路径 |
+| **问题描述** | `asyncio.wait_for()` 超时只取消 executor future，不会停止已运行的同步线程。同步 worker 可能在客户端收到 timeout 后继续完成业务写入。 |
+| **修复方案** | 按方案 A 固化契约：超时只结束客户端等待，不承诺取消业务操作；JSON-RPC 错误通过 `error.data.execution=background_may_continue` 和 `error.data.side_effects=possible` 明确告知客户端；`stop()` 等待已启动 worker 完成后再释放资源。方案 B（绝对无副作用）另作为未来架构债务。 |
+| **负责角色** | Architect + Coder + Security + Tester |
+| **验证标准** | 工具超时后，客户端响应、持久化状态和审计记录符合同一契约；重复请求不产生未声明副作用；真实 TCP 测试覆盖慢工具、超时、取消和 cleanup。 |
+| **状态** | ✅ 资源生命周期已修复；保留“同步工具超时后可能继续产生副作用”的产品契约债务。真实 TCP 已验证单响应、无 stdout 协议污染、stop 等待 worker；若需要强制无副作用，仍需原生 async、幂等键或进程隔离。 |
+| **生命周期** | P2 架构设计 → P8 实现 → P9 测试执行 |
+
+### TD-077: 高负载 HTTP/MCP SLO 不稳定 ⚠️ 新增 (2026-10-10)
+
+| 字段 | 值 |
+|------|-----|
+| **优先级** | P1 |
+| **位置** | `tests/integration/test_monitoring_endpoints.py` SLO 测试；HTTP/MCP 工具调用、SQLite/实体图谱和指标路径 |
+| **问题描述** | 真实 TCP 测量在当前工作树出现中位数 p99 `416.093 ms`，超过 `200 ms` 阈值；另一个批次出现 `19019.455 ms` 的异常轮次。该结果不能证明稳定的发布级延迟。测试同时暴露高负载写入与 KnowledgeGraph/SQLite 锁竞争。 |
+| **修复方案** | 先拆分冷启动、实体图谱写入、主记忆写入、审计和指标的延迟预算；修复锁竞争后重新测量。不得只提高阈值或删除异常轮次。保留真实 TCP、多轮、真实 SQLite 测试。 |
+| **负责角色** | Architect + Coder + Tester + DevOps |
+| **验证标准** | 干净环境中真实 TCP 测试多轮通过；p99 预算有明确分层；锁竞争、超时和异常轮次均有解释；测试不通过时发布阻塞。 |
+| **状态** | ✅ 当前 working tree 已关闭本轮 SLO 红灯：真实 TCP、多轮、真实 SQLite 测试 1 passed；3 轮中位数 p99 ≤ 200ms，未提高阈值。仍需在干净 checkout、目标 commit 和完整发布负载中复验，因此发布门禁债务 TD-074 仍然开放。 |
+| **生命周期** | P2 架构设计 → P8 实现 → P9 测试执行 → P10 部署发布 |
+
+### TD-075: health schema 双轨与 consolidation timer close 生命周期风险 ⚠️ 新增 (2026-10-10)
+
+| 字段 | 值 |
+|------|-----|
+| **优先级** | P2 |
+| **位置** | MCP health handler、HTTP `/healthz` schema、consolidation timer 创建/关闭路径 |
+| **问题描述** | MCP 与 HTTP 的 health schema 仍是两套契约，消费者无法依赖统一字段和语义；consolidation timer 的 close 生命周期仍有风险，可能出现 close 后回调、重复 close 或资源未释放。两项均未在本轮闭环。 |
+| **修复方案** | 定义共享 health schema 或明确版本化转换层；为 consolidation timer 定义 owner、close 幂等性、回调取消和进程退出行为，并补状态转换测试。 |
+| **负责角色** | Architect + Coder + Tester |
+| **验证标准** | MCP 与 HTTP health 响应的字段、状态语义和错误映射有同一份契约测试；timer 在 start/close/重复 close/close 后回调/异常退出场景下均可验证资源释放且无未处理回调。 |
+| **状态** | ⬜ 待开始 |
+| **生命周期** | P2 架构设计 → P8 实现 → P9 测试执行 |
+
 ---
 
 ## 6. 生命周期阶段映射
@@ -1112,6 +1201,7 @@ TD-035 (AccessPolicy 集成) — 安全债，独立推进
 | 2026-07-27 | v13: TD-066 (new) knowledge graph 删除完整性修复 (DevSquad 7 角色共识, v0.9.8)。Oracle Agent Memory 报告 (arXiv:2607.13157) 启发：`forget()` 之前仅删除 `memories` + `memory_vectors`，遗留 `memory_entities` 孤儿实体 + `memory_relations` 残留关系。根因: FK `ON DELETE SET NULL` 在 DELETE FROM memories 时把 `memory_key` 设为 NULL，但 entity 记录本身残留。修复: `forget()` 新增 `_collect_entity_ids()` 在 DELETE 前预捕获 entity_ids (绕过 FK 副作用)，`_cleanup_graph_data()` 用预捕获的 entity_ids 级联删除 relations + entities + source_memory_key relations。4 个新测试: entities 清理 / relations 清理 / 共享实体保留 / 不存在 key 不报错。验证: 4651 passed, 14 skipped (pre-existing), 0 failed。**P0-2 superseded 过滤已全面覆盖确认** (SQL 层 5 处 + Python 层 4 处 `superseded_at IS NULL`)。**P1-4 CMB 基准评估取消**: CarryMem 已有 PrefEval (94.0%) + LongMemEval + LaMP + LoCoMo + MSC 5 个学术基准，无需新建 | DevSquad 7 角色共识 |
 | 2026-09-21 | v14: v0.11.2 事实复核 (对照 PROJECT_STATUS.md + CHANGELOG.md)。头部测试数（旧快照值已过时）更正为 `4891 passed, 10 skipped, 77 deselected` (4978 collected) + e2e 265 passed；§1 增加"全部 TD 项已完成"复核说明；新增 **TD-067**（`types.py:350-356` 的 `ScheduleConsolidationResult` 声明字段 `scheduled/interval_hours/dry_run/message` 与 `core/_maintenance.py:254-260` 实际返回的 `scheduled/interval_hours/dry_run/run_p1/run_p2` 漂移，状态 ⬜ 待开始）。本次复核同时核对：`plugins/` 目录与 `SummaryLayer` 类已于 v0.11.0 删除、`AsyncCarryMem(native_async=True)` 模式已删除、`AsyncSQLiteAdapter` 对 `encryption_key` fail-closed——本文档原无与这些事实冲突的表述 | DevSquad |
 | 2026-10-08 | v15: Dependabot 23 条告警处置。**已修复**：urllib3 2.7.0→2.8.0（requirements-dev.txt 重编译，消 2 high）；VSCode 插件 brace-expansion 1.1.16→1.1.21 / 2.1.2→2.1.7（`npm update brace-expansion`，消 2 medium）。**豁免留痕**：13 条 pyjwt 告警（2 critical）——暴露面分析证实脆弱代码不可达（zhipuai 仅 jwt.encode 本地签名，见 TD-068 重评估），以 tolerable_risk 豁免。**登记新债**：TD-069（virtualenv 解析器停在 21.7.6，约束源待查）、TD-070（VSCode chokidar/mocha 链需破坏性升级 @vscode/test-cli 0.0.15）。本地 CI 八项门禁全绿（pytest 5103 passed / 覆盖率 83.17%） | DevSquad |
+| 2026-10-10 | v16: 继续评估当前 working tree。记录 HTTP→MCP 配置映射、HTTP cleanup/SSE 唤醒、RRF per-call 竞态修复；独立并发变异测试连续 5 次通过，但完整非 slow 门禁为 `5106 passed, 1 failed, 10 skipped, 77 deselected`，slow 多进程测试耗时 `453.3s` 超过门槛，HTTP/MCP 批次 `84 passed, 2 failed`（工具超时后后台线程继续写入；SLO 中位数 p99 `416.093ms` 超过 `200ms`）。新增 TD-071~TD-077，明确 VSCode CLI/配置消费者、真实 CRUD/reload E2E、release/CI 门禁可信度、health schema 双轨、consolidation timer close 生命周期、HTTP 超时副作用与高负载 SLO 仍未闭环。当前有 7 个未提交文件；不得将本轮结果作为已发布 0.11.2 证据，完整发布门禁需在干净 checkout/目标 commit 上重跑 | DevSquad |
 
 ---
 

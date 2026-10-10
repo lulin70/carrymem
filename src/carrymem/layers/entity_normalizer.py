@@ -33,6 +33,15 @@ from typing import Any, Dict, List, Optional, cast
 
 from carrymem.utils.logger import logger
 
+
+class _NullLock:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return False
+
+
 # Env switch (default enabled per spec §4.1.4)
 _ENTITY_NORMALIZATION_ENV = "CARRYMEM_ENTITY_NORMALIZATION"
 
@@ -319,38 +328,39 @@ class EntityNormalizer:
         conn = self._conn_mgr.get_connection()
         repointed = 0
         try:
-            # Repoint all aliases currently pointing to source -> target.
-            # INSERT OR IGNORE preserves UNIQUE(canonical, alias, namespace)
-            # in case the alias already exists under target.
-            existing = conn.execute(
-                "SELECT alias_form, entity_type, similarity_score FROM entity_aliases "
-                "WHERE canonical_form = ? AND namespace = ?",
-                (source, safe_ns),
-            ).fetchall()
-            for row in existing:
-                try:
-                    conn.execute(
-                        "INSERT OR IGNORE INTO entity_aliases "
-                        "(canonical_form, alias_form, entity_type, namespace, similarity_score, created_at) "
-                        "VALUES (?, ?, ?, ?, ?, ?)",
-                        (
-                            target,
-                            row["alias_form"],
-                            row["entity_type"],
-                            safe_ns,
-                            row["similarity_score"],
-                            datetime.now(timezone.utc).isoformat(),
-                        ),
-                    )
-                    repointed += 1
-                except _SQLITE_ERRORS as e:
-                    logger.debug("merge_entities insert skipped: %s", e)
-            # Remove old source aliases
-            conn.execute(
-                "DELETE FROM entity_aliases WHERE canonical_form = ? AND namespace = ?",
-                (source, safe_ns),
-            )
-            conn.commit()
+            lock = getattr(self._conn_mgr, "file_lock", _NullLock())
+            with lock:
+                # Repoint all aliases currently pointing to source -> target.
+                # INSERT OR IGNORE preserves UNIQUE(canonical, alias, namespace)
+                # in case the alias already exists under target.
+                existing = conn.execute(
+                    "SELECT alias_form, entity_type, similarity_score FROM entity_aliases "
+                    "WHERE canonical_form = ? AND namespace = ?",
+                    (source, safe_ns),
+                ).fetchall()
+                for row in existing:
+                    try:
+                        conn.execute(
+                            "INSERT OR IGNORE INTO entity_aliases "
+                            "(canonical_form, alias_form, entity_type, namespace, similarity_score, created_at) "
+                            "VALUES (?, ?, ?, ?, ?, ?)",
+                            (
+                                target,
+                                row["alias_form"],
+                                row["entity_type"],
+                                safe_ns,
+                                row["similarity_score"],
+                                datetime.now(timezone.utc).isoformat(),
+                            ),
+                        )
+                        repointed += 1
+                    except _SQLITE_ERRORS as e:
+                        logger.debug("merge_entities insert skipped: %s", e)
+                conn.execute(
+                    "DELETE FROM entity_aliases WHERE canonical_form = ? AND namespace = ?",
+                    (source, safe_ns),
+                )
+                conn.commit()
         except _SQLITE_ERRORS as e:
             logger.warning("merge_entities failed: %s", e)
             return 0
@@ -508,20 +518,22 @@ class EntityNormalizer:
         """Persist an alias mapping (idempotent via UNIQUE constraint)."""
         conn = self._conn_mgr.get_connection()
         try:
-            conn.execute(
-                "INSERT OR IGNORE INTO entity_aliases "
-                "(canonical_form, alias_form, entity_type, namespace, similarity_score, created_at) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                (
-                    canonical_form,
-                    alias_form,
-                    entity_type,
-                    namespace,
-                    float(similarity_score),
-                    datetime.now(timezone.utc).isoformat(),
-                ),
-            )
-            conn.commit()
+            lock = getattr(self._conn_mgr, "file_lock", _NullLock())
+            with lock:
+                conn.execute(
+                    "INSERT OR IGNORE INTO entity_aliases "
+                    "(canonical_form, alias_form, entity_type, namespace, similarity_score, created_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    (
+                        canonical_form,
+                        alias_form,
+                        entity_type,
+                        namespace,
+                        float(similarity_score),
+                        datetime.now(timezone.utc).isoformat(),
+                    ),
+                )
+                conn.commit()
         except _SQLITE_ERRORS as e:
             # Handle errors from both supported SQLite drivers.
             logger.debug("persist_alias skipped: %s", e)

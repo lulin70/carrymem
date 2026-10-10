@@ -13,7 +13,10 @@ Uses real SQLiteAdapter (in-memory) per user testing philosophy.
 
 from __future__ import annotations
 
+import sqlite3
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -376,6 +379,72 @@ class TestConfiguration:
             time_range=(start, end),
         )
         assert result["mode_count"] >= 2
+
+    def test_recall_hybrid_concurrent_overrides_do_not_leak(self):
+        """Verify: concurrent hybrid calls keep their RRF parameters local."""
+        from carrymem.adapters.sqlite.recall_engine import RecallEngine
+
+        conn = sqlite3.connect(":memory:")
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT 1 AS id, 'fact_declaration' AS type UNION ALL SELECT 2, 'fact_declaration'"
+        ).fetchall()
+
+        class _Adapter:
+            enable_vector = True
+            namespace = "default"
+
+        class _Lock:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+        class _ConnManager:
+            lock = _Lock()
+
+        class _Serializer:
+            @staticmethod
+            def row_to_stored(row):
+                return row["id"]
+
+        engine = RecallEngine(
+            adapter=_Adapter(),
+            conn_mgr=_ConnManager(),
+            serializer=_Serializer(),
+            cache=None,
+            expander=None,
+            merger=None,
+            embedding_model=None,
+            embedding_dim=0,
+            rrf_k=60,
+            rrf_fts_weight=0.6,
+            rrf_vec_weight=0.4,
+            rrf_type_boosts={},
+        )
+        fts_rows = rows
+        vec_rows = list(reversed(rows))
+        engine._fts_search = lambda *args: fts_rows
+        engine._vector_search = lambda *args: vec_rows
+        original_fuse = engine._rrf_fuse
+        serial_a = original_fuse(fts_rows, vec_rows, 2, rrf_k=1, fts_weight=1.0, vec_weight=0.0)
+        serial_b = original_fuse(fts_rows, vec_rows, 2, rrf_k=100, fts_weight=0.0, vec_weight=1.0)
+        barrier = threading.Barrier(2)
+
+        def fused_with_barrier(*args, **kwargs):
+            barrier.wait()
+            return original_fuse(*args, **kwargs)
+
+        engine._rrf_fuse = fused_with_barrier
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            future_a = pool.submit(engine.hybrid_search, "query", 1.0, 0.0, 1, limit=2)
+            future_b = pool.submit(engine.hybrid_search, "query", 0.0, 1.0, 100, limit=2)
+            result_a = future_a.result()
+            result_b = future_b.result()
+
+        assert result_a == [row["id"] for row in serial_a]
+        assert result_b == [row["id"] for row in serial_b]
 
 
 # ── Integration (6 tests) ─────────────────────────────────────────────────

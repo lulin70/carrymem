@@ -16,6 +16,7 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+from .adapters.sqlite.connection import get_database_write_lock
 from .utils.logger import logger
 
 
@@ -32,6 +33,7 @@ class BackupManager:
     ):
         self._db_path = db_path
         self._max_backups = max_backups
+        self._write_lock = get_database_write_lock(db_path)
 
         if backup_dir:
             self._backup_dir = backup_dir
@@ -64,17 +66,19 @@ class BackupManager:
         if not os.path.exists(self._db_path):
             raise FileNotFoundError(f"Database not found: {self._db_path}")
 
-        try:
-            conn = sqlite3.connect(self._db_path)
+        with self._write_lock:
             try:
-                conn.execute("VACUUM INTO ?", (backup_path,))
+                conn = sqlite3.connect(self._db_path, timeout=30.0)
+                try:
+                    conn.execute("PRAGMA busy_timeout=30000")
+                    conn.execute("VACUUM INTO ?", (backup_path,))
+                except sqlite3.OperationalError:
+                    conn.close()
+                    shutil.copy2(self._db_path, backup_path)
+                else:
+                    conn.close()
             except sqlite3.OperationalError:
-                conn.close()
                 shutil.copy2(self._db_path, backup_path)
-            else:
-                conn.close()
-        except sqlite3.OperationalError:
-            shutil.copy2(self._db_path, backup_path)
 
         try:
             os.chmod(backup_path, 0o600)

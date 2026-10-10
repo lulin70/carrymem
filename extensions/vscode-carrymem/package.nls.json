@@ -14,6 +14,5 @@
   "command.skillInstall.title": "CarryMem: Install Skill",
   "configuration.title": "CarryMem",
   "configuration.dbPath.description": "Path to CarryMem database (empty = default ~/.carrymem/carrymem.db)",
-  "configuration.autoMatch.description": "Automatically match rules when opening files",
   "configuration.defaultScope.description": "Default scope for new rules"
 }

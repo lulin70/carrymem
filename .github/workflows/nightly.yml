@@ -89,7 +89,7 @@ jobs:
 
       - name: Install extension dependencies
         working-directory: extensions/vscode-carrymem
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Compile TypeScript
         working-directory: extensions/vscode-carrymem

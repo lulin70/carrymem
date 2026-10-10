@@ -597,12 +597,24 @@ class RecallEngine:
             logger.warning("Vector search failed: %s", e)
             return []
 
-    def _rrf_fuse(self, fts_rows: list, vec_rows: list, limit: int) -> list:
+    def _rrf_fuse(
+        self,
+        fts_rows: list,
+        vec_rows: list,
+        limit: int,
+        rrf_k: Optional[int] = None,
+        fts_weight: Optional[float] = None,
+        vec_weight: Optional[float] = None,
+        type_boosts: Optional[Dict[str, float]] = None,
+    ) -> list:
         """Reciprocal Rank Fusion of FTS5 and vector search results.
 
         RRF formula: score(d) = w_fts * 1/(k + rank_fts) + w_vec * 1/(k + rank_vec)
         Where k, weights, and type boosts are configurable via rrf_config or env vars.
         """
+        rrf_k = self._rrf_k if rrf_k is None else rrf_k
+        fts_weight = self._rrf_fts_weight if fts_weight is None else fts_weight
+        vec_weight = self._rrf_vec_weight if vec_weight is None else vec_weight
         rrf_scores: Dict[str, float] = {}
         row_data: Dict[str, Any] = {}
 
@@ -610,8 +622,8 @@ class RecallEngine:
             rid = row["id"] if row and "id" in row.keys() else None
             if not rid:
                 continue
-            base_score = self._rrf_fts_weight / (self._rrf_k + rank)
-            type_boost = self._type_boost(row)
+            base_score = fts_weight / (rrf_k + rank)
+            type_boost = self._type_boost(row, type_boosts)
             rrf_scores[rid] = rrf_scores.get(rid, 0.0) + base_score * type_boost
             row_data[rid] = row
 
@@ -619,8 +631,8 @@ class RecallEngine:
             rid = row["id"] if row and "id" in row.keys() else None
             if not rid:
                 continue
-            base_score = self._rrf_vec_weight / (self._rrf_k + rank)
-            type_boost = self._type_boost(row)
+            base_score = vec_weight / (rrf_k + rank)
+            type_boost = self._type_boost(row, type_boosts)
             rrf_scores[rid] = rrf_scores.get(rid, 0.0) + base_score * type_boost
             if rid not in row_data:
                 row_data[rid] = row
@@ -628,14 +640,15 @@ class RecallEngine:
         sorted_ids = sorted(rrf_scores.keys(), key=lambda x: rrf_scores[x], reverse=True)
         return [row_data[rid] for rid in sorted_ids[:limit]]
 
-    def _type_boost(self, row) -> float:
+    def _type_boost(self, row, type_boosts: Optional[Dict[str, float]] = None) -> float:
         """Apply type-based score boost/penalty.
 
         Configurable via rrf_config.type_boosts or CARRYMEM_RRF_TYPE_BOOSTS env var.
         Default: fact/decision +20%, sentiment -50%.
         """
         mtype = row["type"] if row and "type" in row.keys() else ""
-        return self._rrf_type_boosts.get(mtype, 1.0)
+        boosts = self._rrf_type_boosts if type_boosts is None else type_boosts
+        return boosts.get(mtype, 1.0)
 
     def _fts_search(self, query, where_clause, params, limit):
         from .query_builder import QueryBuilder
@@ -775,33 +788,17 @@ class RecallEngine:
         limit: int = 20,
         namespaces: Optional[List[str]] = None,
     ) -> List[StoredMemory]:
-        """Hybrid FTS+Vector search with per-call RRF weight override (v0.7.1).
-
-        Temporarily overrides adapter RRF config for this call, then restores.
-        """
+        """Hybrid FTS+Vector search with per-call RRF weight override (v0.7.1)."""
         where_clause, params = self._build_hybrid_where_clause(filters, namespaces)
-
-        # Save original RRF config (engine-local, not adapter state)
-        orig_fts_w = self._rrf_fts_weight
-        orig_vec_w = self._rrf_vec_weight
-        orig_k = self._rrf_k
-
-        # Apply per-call overrides
-        if fts_weight is not None:
-            self._rrf_fts_weight = fts_weight
-        if vec_weight is not None:
-            self._rrf_vec_weight = vec_weight
-        if rrf_k is not None:
-            self._rrf_k = rrf_k
-
-        try:
-            results = self._run_hybrid_search(query, where_clause, params, limit)
-        finally:
-            # Restore original RRF config
-            self._rrf_fts_weight = orig_fts_w
-            self._rrf_vec_weight = orig_vec_w
-            self._rrf_k = orig_k
-
+        results = self._run_hybrid_search(
+            query,
+            where_clause,
+            params,
+            limit,
+            rrf_k=rrf_k,
+            fts_weight=fts_weight,
+            vec_weight=vec_weight,
+        )
         return [r for r in results if r]
 
     def _build_hybrid_where_clause(
@@ -844,7 +841,16 @@ class RecallEngine:
 
         return "WHERE " + " AND ".join(conditions), params
 
-    def _run_hybrid_search(self, query: str, where_clause: str, params: List, limit: int) -> list:
+    def _run_hybrid_search(
+        self,
+        query: str,
+        where_clause: str,
+        params: List,
+        limit: int,
+        rrf_k: Optional[int] = None,
+        fts_weight: Optional[float] = None,
+        vec_weight: Optional[float] = None,
+    ) -> list:
         """Execute FTS+vector search under conn lock and fuse results via RRF."""
         with self._conn_mgr.lock:
             fts_rows = self._fts_search(query, where_clause, params, limit)
@@ -853,7 +859,15 @@ class RecallEngine:
             else:
                 vec_rows = []
             if fts_rows and vec_rows:
-                fused = self._rrf_fuse(fts_rows, vec_rows, limit)
+                fused = self._rrf_fuse(
+                    fts_rows,
+                    vec_rows,
+                    limit,
+                    rrf_k=rrf_k,
+                    fts_weight=fts_weight,
+                    vec_weight=vec_weight,
+                    type_boosts=self._rrf_type_boosts,
+                )
             elif fts_rows:
                 fused = fts_rows
             elif vec_rows:

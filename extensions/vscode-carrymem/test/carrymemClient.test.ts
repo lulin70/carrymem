@@ -128,9 +128,9 @@ describe('CarryMemClient — CLI bridge integration', () => {
             assert.strictEqual(rule.id, 'rule-001');
             assert.strictEqual(calls.length, 1);
             assert.strictEqual(calls[0].cmd, 'carrymem');
-            assert.strictEqual(calls[0].args[0], 'add-rule');
-            assert.strictEqual(calls[0].args[1], 'database');
-            assert.strictEqual(calls[0].args[2], 'Use SSL');
+            assert.deepStrictEqual(calls[0].args.slice(0, 3), ['rules', 'add', 'Use SSL']);
+            assert(calls[0].args.includes('--trigger'));
+            assert(calls[0].args.includes('database'));
             assert(calls[0].args.includes('--type'));
             assert(calls[0].args.includes('always'));
             assert(calls[0].args.includes('--scope'));
@@ -143,23 +143,24 @@ describe('CarryMemClient — CLI bridge integration', () => {
             const rules = await client.listRules();
             assert.strictEqual(rules.length, 1);
             assert.strictEqual(rules[0].trigger, 'database');
-            assert(calls[0].args.includes('list-rules'));
+            assert.deepStrictEqual(calls[0].args.slice(0, 2), ['rules', 'list']);
             assert(calls[0].args.includes('--limit'));
             assert(calls[0].args.includes('200'));
             assert(calls[0].args.includes('--json'));
         });
 
-        it('listRules: returns empty array on CLI error (graceful degradation)', async () => {
+        it('listRules: propagates CLI errors', async () => {
             const { client } = createMockClient('', new Error('carrymem not found'));
-            const rules = await client.listRules();
-            assert.deepStrictEqual(rules, []);
+            await assert.rejects(
+                client.listRules(),
+                /carrymem not found/,
+            );
         });
 
         it('editRule: passes update fields as CLI flags', async () => {
             const { client, calls } = createMockClient(JSON.stringify(SAMPLE_RULE));
             await client.editRule('rule-001', { trigger: 'db', action: 'Use TLS' });
-            assert.strictEqual(calls[0].args[0], 'edit-rule');
-            assert.strictEqual(calls[0].args[1], 'rule-001');
+            assert.deepStrictEqual(calls[0].args.slice(0, 3), ['rules', 'edit', 'rule-001']);
             assert(calls[0].args.includes('--trigger'));
             assert(calls[0].args.includes('db'));
             assert(calls[0].args.includes('--action'));
@@ -169,8 +170,7 @@ describe('CarryMemClient — CLI bridge integration', () => {
         it('deleteRule: calls delete-rule command', async () => {
             const { client, calls } = createMockClient('');
             await client.deleteRule('rule-001');
-            assert.strictEqual(calls[0].args[0], 'delete-rule');
-            assert.strictEqual(calls[0].args[1], 'rule-001');
+            assert.deepStrictEqual(calls[0].args.slice(0, 3), ['rules', 'delete', 'rule-001']);
         });
     });
 
@@ -181,7 +181,7 @@ describe('CarryMemClient — CLI bridge integration', () => {
             const { client, calls } = createMockClient(JSON.stringify(pausedRule));
             const result = await client.pauseRule('rule-001');
             assert.strictEqual(result.status, 'paused');
-            assert.strictEqual(calls[0].args[0], 'pause-rule');
+            assert.deepStrictEqual(calls[0].args.slice(0, 3), ['rules', 'pause', 'rule-001']);
             assert(calls[0].args.includes('--json'));
         });
 
@@ -189,7 +189,7 @@ describe('CarryMemClient — CLI bridge integration', () => {
             const { client, calls } = createMockClient(JSON.stringify(SAMPLE_RULE));
             const result = await client.resumeRule('rule-001');
             assert.strictEqual(result.status, 'active');
-            assert.strictEqual(calls[0].args[0], 'resume-rule');
+            assert.deepStrictEqual(calls[0].args.slice(0, 3), ['rules', 'resume', 'rule-001']);
         });
     });
 
@@ -200,8 +200,7 @@ describe('CarryMemClient — CLI bridge integration', () => {
             const matches = await client.matchRules('security review');
             assert.strictEqual(matches.length, 1);
             assert.strictEqual(matches[0].score, 0.85);
-            assert.strictEqual(calls[0].args[0], 'match-rules');
-            assert.strictEqual(calls[0].args[1], 'security review');
+            assert.deepStrictEqual(calls[0].args.slice(0, 3), ['rules', 'match', 'security review']);
             assert(calls[0].args.includes('--json'));
         });
     });
@@ -215,7 +214,7 @@ describe('CarryMemClient — CLI bridge integration', () => {
             assert.strictEqual(report.active, 8);
             assert.strictEqual(report.trigger_rate, 0.5);
             assert.strictEqual(Object.keys(report.type_breakdown).length, 4);
-            assert.strictEqual(calls[0].args[0], 'rules-effectiveness');
+            assert.deepStrictEqual(calls[0].args.slice(0, 2), ['rules', 'effectiveness']);
         });
     });
 

@@ -112,10 +112,6 @@ describe('VSCode Extension — UI E2E User Journeys', () => {
             const config = vscode.workspace.getConfiguration('carrymem');
             assert.ok(config, 'Should have carrymem configuration');
 
-            // Verify default values from package.json
-            const autoMatch = config.get<boolean>('autoMatch');
-            assert.strictEqual(autoMatch, true, 'autoMatch should default to true');
-
             const defaultScope = config.get<string>('defaultScope');
             assert.strictEqual(defaultScope, 'personal', 'defaultScope should default to personal');
         });

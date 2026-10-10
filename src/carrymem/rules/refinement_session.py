@@ -104,9 +104,10 @@ class RefinementSessionManager:
 
     def _ensure_sessions_table(self):
         conn = self.storage._get_connection()
-        try:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS refinement_sessions (
+        with self.storage.write_lock:
+            try:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS refinement_sessions (
                     id TEXT PRIMARY KEY,
                     source_rule_id TEXT,
                     source_memory_id TEXT,
@@ -127,13 +128,13 @@ class RefinementSessionManager:
                     resulting_rule_id TEXT
                 )
             """)
-            conn.execute("""
-                CREATE INDEX IF NOT EXISTS idx_refinement_status
-                ON refinement_sessions(status)
-            """)
-            conn.commit()
-        finally:
-            pass
+                conn.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_refinement_status
+                    ON refinement_sessions(status)
+                """)
+                conn.commit()
+            finally:
+                pass
 
     def start_session(
         self,
@@ -164,33 +165,34 @@ class RefinementSessionManager:
 
         conn = self.storage._get_connection()
         try:
-            conn.execute(
-                """
+            with self.storage.write_lock:
+                conn.execute(
+                    """
                 INSERT INTO refinement_sessions
                     (id, source_rule_id, source_memory_id, original_trigger, original_action,
                      current_trigger, current_action, rule_type, phase, round_number,
                      status, scope_notes, conversation, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (
-                    session_id,
-                    source_rule_id,
-                    source_memory_id,
-                    trigger,
-                    action,
-                    trigger,
-                    action,
-                    rule_type,
-                    RefinementPhase.SCOPE.value,
-                    0,
-                    SESSION_STATUS_ACTIVE,
-                    "",
-                    json.dumps([]),
-                    now,
-                    now,
-                ),
-            )
-            conn.commit()
+                    (
+                        session_id,
+                        source_rule_id,
+                        source_memory_id,
+                        trigger,
+                        action,
+                        trigger,
+                        action,
+                        rule_type,
+                        RefinementPhase.SCOPE.value,
+                        0,
+                        SESSION_STATUS_ACTIVE,
+                        "",
+                        json.dumps([]),
+                        now,
+                        now,
+                    ),
+                )
+                conn.commit()
         except (sqlite3.IntegrityError, sqlite3.OperationalError, ValueError):
             conn.rollback()
             return {"error": "Failed to create session"}

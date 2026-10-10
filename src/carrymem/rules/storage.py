@@ -16,6 +16,7 @@ import threading
 from pathlib import Path
 from typing import Any, List, Optional
 
+from carrymem.adapters.sqlite.connection import get_database_write_lock
 from carrymem.adapters.sqlite.constants import SQLITE_BUSY_TIMEOUT_MS, SQLITE_DB_TIMEOUT_SECONDS
 from carrymem.utils.language import has_cjk
 
@@ -51,22 +52,13 @@ class RuleStorage:
         else:
             self.db_path = str(Path(db_path).expanduser().resolve())
         self._local = threading.local()
-        self._ensure_schema()
+        self._write_lock = get_database_write_lock(self.db_path)
+        with self._write_lock:
+            self._ensure_schema()
 
     def _get_connection(self) -> sqlite3.Connection:
         if not hasattr(self._local, "conn") or self._local.conn is None:
-            conn = sqlite3.connect(self.db_path, timeout=SQLITE_DB_TIMEOUT_SECONDS)
-            conn.row_factory = sqlite3.Row
-            # Set busy_timeout FIRST so subsequent PRAGMAs respect it
-            conn.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")
-            conn.execute("PRAGMA journal_mode=WAL")
-            conn.execute("PRAGMA foreign_keys=ON")
-            self._local.conn = conn
-        else:
-            try:
-                self._local.conn.execute("SELECT 1")
-            except (sqlite3.OperationalError, sqlite3.ProgrammingError) as e:
-                _logger.debug("[RuleStorage] Connection health check failed, reconnecting: %s", e)
+            with self._write_lock:
                 conn = sqlite3.connect(self.db_path, timeout=SQLITE_DB_TIMEOUT_SECONDS)
                 conn.row_factory = sqlite3.Row
                 # Set busy_timeout FIRST so subsequent PRAGMAs respect it
@@ -74,7 +66,37 @@ class RuleStorage:
                 conn.execute("PRAGMA journal_mode=WAL")
                 conn.execute("PRAGMA foreign_keys=ON")
                 self._local.conn = conn
+        else:
+            try:
+                self._local.conn.execute("SELECT 1")
+            except (sqlite3.OperationalError, sqlite3.ProgrammingError) as e:
+                _logger.debug("[RuleStorage] Connection health check failed, reconnecting: %s", e)
+                with self._write_lock:
+                    conn = sqlite3.connect(self.db_path, timeout=SQLITE_DB_TIMEOUT_SECONDS)
+                    conn.row_factory = sqlite3.Row
+                    # Set busy_timeout FIRST so subsequent PRAGMAs respect it
+                    conn.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")
+                    conn.execute("PRAGMA journal_mode=WAL")
+                    conn.execute("PRAGMA foreign_keys=ON")
+                    self._local.conn = conn
         return self._local.conn  # type: ignore[no-any-return]
+
+    @property
+    def write_lock(self):
+        """Shared lock for auxiliary rule tables using this database."""
+        return self._write_lock
+
+    def _execute_write(self, sql: str, params=()):
+        """Execute one rule-storage write under the database lock."""
+        conn = self._get_connection()
+        with self._write_lock:
+            try:
+                cursor = conn.execute(sql, params)
+                conn.commit()
+                return cursor
+            except sqlite3.Error:
+                conn.rollback()
+                raise
 
     def close(self):
         """Close the thread-local SQLite connection if open."""
@@ -221,36 +243,37 @@ class RuleStorage:
 
         conn = self._get_connection()
         try:
-            conn.execute(
-                """
-                INSERT INTO rules (
-                    id, trigger, action, rule_type,
-                    source_memories, derived_from,
-                    status, override, confidence, trigger_count, confirmed_by_user, scope,
-                    created_at, updated_at, expires_at, condition, metadata
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    rule.id,
-                    rule.trigger,
-                    rule.action,
-                    rule.rule_type,
-                    json.dumps(rule.source_memories),
-                    rule.derived_from,
-                    rule.status,
-                    1 if rule.override else 0,
-                    rule.confidence,
-                    rule.trigger_count,
-                    1 if rule.confirmed_by_user else 0,
-                    rule.scope,
-                    rule.created_at,
-                    rule.updated_at,
-                    rule.expires_at,
-                    rule.condition,
-                    json.dumps(rule.metadata),
-                ),
-            )
-            conn.commit()
+            with self._write_lock:
+                conn.execute(
+                    """
+                    INSERT INTO rules (
+                        id, trigger, action, rule_type,
+                        source_memories, derived_from,
+                        status, override, confidence, trigger_count, confirmed_by_user, scope,
+                        created_at, updated_at, expires_at, condition, metadata
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        rule.id,
+                        rule.trigger,
+                        rule.action,
+                        rule.rule_type,
+                        json.dumps(rule.source_memories),
+                        rule.derived_from,
+                        rule.status,
+                        1 if rule.override else 0,
+                        rule.confidence,
+                        rule.trigger_count,
+                        1 if rule.confirmed_by_user else 0,
+                        rule.scope,
+                        rule.created_at,
+                        rule.updated_at,
+                        rule.expires_at,
+                        rule.condition,
+                        json.dumps(rule.metadata),
+                    ),
+                )
+                conn.commit()
         except sqlite3.Error as e:
             _logger.debug("[RuleStorage] _create_validated insert failed: %s", e)
 
@@ -303,36 +326,37 @@ class RuleStorage:
         # Insert into database
         conn = self._get_connection()
         try:
-            conn.execute(
-                """
-                INSERT INTO rules (
-                    id, trigger, action, rule_type,
-                    source_memories, derived_from,
-                    status, override, confidence, trigger_count, confirmed_by_user, scope,
-                    created_at, updated_at, expires_at, condition, metadata
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    rule.id,
-                    rule.trigger,
-                    rule.action,
-                    rule.rule_type,
-                    json.dumps(rule.source_memories),
-                    rule.derived_from,
-                    rule.status,
-                    1 if rule.override else 0,
-                    rule.confidence,
-                    rule.trigger_count,
-                    1 if rule.confirmed_by_user else 0,
-                    rule.scope,
-                    rule.created_at,
-                    rule.updated_at,
-                    rule.expires_at,
-                    rule.condition,
-                    json.dumps(rule.metadata),
-                ),
-            )
-            conn.commit()
+            with self._write_lock:
+                conn.execute(
+                    """
+                    INSERT INTO rules (
+                        id, trigger, action, rule_type,
+                        source_memories, derived_from,
+                        status, override, confidence, trigger_count, confirmed_by_user, scope,
+                        created_at, updated_at, expires_at, condition, metadata
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        rule.id,
+                        rule.trigger,
+                        rule.action,
+                        rule.rule_type,
+                        json.dumps(rule.source_memories),
+                        rule.derived_from,
+                        rule.status,
+                        1 if rule.override else 0,
+                        rule.confidence,
+                        rule.trigger_count,
+                        1 if rule.confirmed_by_user else 0,
+                        rule.scope,
+                        rule.created_at,
+                        rule.updated_at,
+                        rule.expires_at,
+                        rule.condition,
+                        json.dumps(rule.metadata),
+                    ),
+                )
+                conn.commit()
         except (sqlite3.IntegrityError, sqlite3.OperationalError) as e:
             _logger.debug("[RuleStorage] create insert failed: %s", e)
 
@@ -599,8 +623,9 @@ class RuleStorage:
 
         conn = self._get_connection()
         try:
-            conn.execute(f"UPDATE rules SET {', '.join(set_clauses)} WHERE id = ?", params)
-            conn.commit()
+            with self._write_lock:
+                conn.execute(f"UPDATE rules SET {', '.join(set_clauses)} WHERE id = ?", params)
+                conn.commit()
         except (sqlite3.IntegrityError, sqlite3.OperationalError) as e:
             _logger.debug("[RuleStorage] update failed: %s", e)
 
@@ -618,9 +643,10 @@ class RuleStorage:
         """
         conn = self._get_connection()
         try:
-            cursor = conn.execute("DELETE FROM rules WHERE id = ?", (rule_id,))
-            conn.commit()
-            return cursor.rowcount > 0
+            with self._write_lock:
+                cursor = conn.execute("DELETE FROM rules WHERE id = ?", (rule_id,))
+                conn.commit()
+                return cursor.rowcount > 0
         except sqlite3.Error as e:
             _logger.debug("[RuleStorage] delete failed: %s", e)
             return False
@@ -672,17 +698,18 @@ class RuleStorage:
 
         conn = self._get_connection()
         try:
-            cursor = conn.execute(
-                """
-                UPDATE rules
-                SET trigger_count = trigger_count + 1,
-                    updated_at = ?
-                WHERE id = ?
-                """,
-                (datetime.now(timezone.utc).isoformat(), rule_id),
-            )
-            conn.commit()
-            return cursor.rowcount > 0
+            with self._write_lock:
+                cursor = conn.execute(
+                    """
+                    UPDATE rules
+                    SET trigger_count = trigger_count + 1,
+                        updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (datetime.now(timezone.utc).isoformat(), rule_id),
+                )
+                conn.commit()
+                return cursor.rowcount > 0
         except sqlite3.Error as e:
             _logger.debug("[RuleStorage] increment_trigger_count failed: %s", e)
             return False
@@ -707,18 +734,19 @@ class RuleStorage:
 
         conn = self._get_connection()
         try:
-            for rule_id in rule_ids:
-                cursor = conn.execute(
-                    """
-                    UPDATE rules
-                    SET trigger_count = trigger_count + 1,
-                        updated_at = ?
-                    WHERE id = ?
-                    """,
-                    (now, rule_id),
-                )
-                updated += cursor.rowcount
-            conn.commit()
+            with self._write_lock:
+                for rule_id in rule_ids:
+                    cursor = conn.execute(
+                        """
+                        UPDATE rules
+                        SET trigger_count = trigger_count + 1,
+                            updated_at = ?
+                        WHERE id = ?
+                        """,
+                        (now, rule_id),
+                    )
+                    updated += cursor.rowcount
+                conn.commit()
         except sqlite3.Error as e:
             _logger.debug("[RuleStorage] batch_increment_trigger_counts failed: %s", e)
 

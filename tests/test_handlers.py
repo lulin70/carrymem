@@ -6,6 +6,7 @@ _clamp, _format_memory_entry, _build_summary.
 """
 
 import asyncio
+import time
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
@@ -460,6 +461,31 @@ class TestHandlersClass:
             assert handlers._rule_engine is handlers._carrymem.rule_engine
         finally:
             handlers.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_handle_tool_timeout_keeps_worker_until_released(self, temp_db):
+        handlers = Handlers(storage="sqlite", data_path=temp_db)
+        started = asyncio.Event()
+        release = asyncio.Event()
+
+        def slow_handler(_target, _arguments):
+            started.set()
+            while not release.is_set():
+                time.sleep(0.001)
+            return "done"
+
+        handlers._inflight.clear()
+        with patch.dict(handler_map, {"slow_test": (slow_handler, "carrymem")}):
+            task = asyncio.create_task(handlers.handle_tool("slow_test", {}))
+            await started.wait()
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+            assert handlers._inflight
+            release.set()
+            await handlers.wait_idle()
+            assert not handlers._inflight
+        handlers.cleanup()
 
     @pytest.mark.asyncio
     async def test_handle_tool_classify(self, temp_db):

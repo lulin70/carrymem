@@ -166,3 +166,6 @@ PrefEval_official/
 LaMP_data/
 MSC_official_data/
 MSC_official/
+
+# MOKA AI credentials (local only, never commit)
+moka_ai.json

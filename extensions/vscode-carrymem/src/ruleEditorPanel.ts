@@ -12,6 +12,8 @@ export class RuleEditorPanel {
     private constructor(
         panel: vscode.WebviewPanel,
         private client: CarryMemClient,
+        private defaultScope: string,
+        private onSaved: () => void,
         private rule?: Rule,
     ) {
         this._panel = panel;
@@ -22,7 +24,12 @@ export class RuleEditorPanel {
         this._panel.onDidDispose(() => this.dispose());
     }
 
-    public static createOrShow(client: CarryMemClient, rule?: Rule) {
+    public static createOrShow(
+        client: CarryMemClient,
+        defaultScope: string,
+        onSaved: () => void,
+        rule?: Rule,
+    ) {
         const column = vscode.window.activeTextEditor
             ? vscode.window.activeTextEditor.viewColumn
             : undefined;
@@ -43,7 +50,7 @@ export class RuleEditorPanel {
             { enableScripts: true },
         );
 
-        RuleEditorPanel.currentPanel = new RuleEditorPanel(panel, client, rule);
+        RuleEditorPanel.currentPanel = new RuleEditorPanel(panel, client, defaultScope, onSaved, rule);
     }
 
     private async _handleMessage(msg: any) {
@@ -69,6 +76,7 @@ export class RuleEditorPanel {
                         );
                         vscode.window.showInformationMessage(`Rule added: ${msg.trigger}`);
                     }
+                    this.onSaved();
                     this._panel.dispose();
                 } catch (e: any) {
                     vscode.window.showErrorMessage(`Failed to save rule: ${e.message}`);
@@ -87,7 +95,7 @@ export class RuleEditorPanel {
         const trigger = r ? this._escapeHtml(r.trigger) : '';
         const action = r ? this._escapeHtml(r.action) : '';
         const ruleType = r ? r.rule_type : 'avoid';
-        const scope = r ? r.scope : 'personal';
+        const scope = r ? r.scope : this.defaultScope;
         const override = r ? r.override : true;
 
         const typeOptions = RULE_TYPES.map(t =>

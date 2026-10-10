@@ -23,6 +23,8 @@ from io import StringIO
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from carrymem.adapters.sqlite.connection import get_database_write_lock
+
 _audit_logger = logging.getLogger(__name__)
 
 
@@ -125,6 +127,7 @@ class AuditLogger:
         self._persist_path = persist_path
         self._db_conn: Optional[sqlite3.Connection] = None
         self._db_lock = threading.Lock()
+        self._write_lock = get_database_write_lock(persist_path) if persist_path else None
 
         if persist_path is not None:
             self._init_db(persist_path)
@@ -135,7 +138,22 @@ class AuditLogger:
         if db_dir != Path(".") and not db_dir.exists():
             db_dir.mkdir(parents=True, exist_ok=True)
 
-        self._db_conn = sqlite3.connect(persist_path, check_same_thread=False)
+        self._db_conn = sqlite3.connect(
+            persist_path,
+            timeout=30.0,
+            check_same_thread=False,
+        )
+        write_lock = self._write_lock
+        if write_lock is None:
+            self._initialize_db_schema()
+            return
+        with write_lock:
+            self._initialize_db_schema()
+
+    def _initialize_db_schema(self) -> None:
+        """Create the persistent audit schema under the sidecar lock."""
+        assert self._db_conn is not None
+        self._db_conn.execute("PRAGMA busy_timeout=30000")
         self._db_conn.execute("PRAGMA journal_mode=WAL")
         cursor = self._db_conn.cursor()
         cursor.execute("""
@@ -189,20 +207,12 @@ class AuditLogger:
                 # outer check and lock acquisition — executing against a
                 # closed connection is use-after-free (segfault).
                 if self._db_conn is not None:
-                    self._db_conn.execute(
-                        "INSERT INTO audit_log (timestamp, action, resource, user_id, result, details, ip_address) "
-                        "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                        (
-                            event.timestamp.isoformat(),
-                            event.action,
-                            event.resource,
-                            event.user_id,
-                            event.result,
-                            json.dumps(event.details, ensure_ascii=False),
-                            event.ip_address,
-                        ),
-                    )
-                    self._db_conn.commit()
+                    lock = self._write_lock
+                    if lock is None:
+                        self._write_audit_event(event)
+                    else:
+                        with lock:
+                            self._write_audit_event(event)
 
         _audit_logger.debug(
             "Audit log: %s %s %s -> %s [%s]",
@@ -212,6 +222,24 @@ class AuditLogger:
             event.result,
             event.timestamp.isoformat(),
         )
+
+    def _write_audit_event(self, event: AuditEvent) -> None:
+        """Persist one event while the per-logger lock is held."""
+        assert self._db_conn is not None
+        self._db_conn.execute(
+            "INSERT INTO audit_log (timestamp, action, resource, user_id, result, details, ip_address) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                event.timestamp.isoformat(),
+                event.action,
+                event.resource,
+                event.user_id,
+                event.result,
+                json.dumps(event.details, ensure_ascii=False),
+                event.ip_address,
+            ),
+        )
+        self._db_conn.commit()
 
     def log_operation(
         self,

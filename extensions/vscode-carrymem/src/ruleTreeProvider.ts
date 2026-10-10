@@ -54,7 +54,7 @@ export class RuleTreeProvider implements vscode.TreeDataProvider<RuleTreeItem> {
     private _onDidChangeTreeData = new vscode.EventEmitter<RuleTreeItem | undefined | null>();
     readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-    constructor(private client: CarryMemClient) {}
+    constructor(private readonly client: CarryMemClient) {}
 
     refresh(): void {
         this._onDidChangeTreeData.fire(undefined);
@@ -65,11 +65,7 @@ export class RuleTreeProvider implements vscode.TreeDataProvider<RuleTreeItem> {
     }
 
     async getChildren(): Promise<RuleTreeItem[]> {
-        try {
-            const rules = await this.client.listRules();
-            return rules.map(r => new RuleTreeItem(r));
-        } catch {
-            return [];
-        }
+        const rules = await this.client.listRules();
+        return rules.map(r => new RuleTreeItem(r));
     }
 }

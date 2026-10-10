@@ -66,11 +66,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade "pip>=26.1.2"
-          pip install -e ".[dev]" || {
-            echo "WARNING: Full dev install failed for benchmark"
-            pip install -e ".[dev]" --no-deps 2>/dev/null || true
-            pip install pytest pytest-cov pytest-mock
-          }
+          # Benchmark setup failures must remain visible. The benchmark job
+          # itself is advisory because its thresholds are runner-sensitive.
+          pip install -e ".[dev]"
 
       - name: Run performance benchmarks
         id: benchmark

@@ -7,7 +7,9 @@ import { Rule } from './carrymemClient';
 export function activate(context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration('carrymem');
     const client = new CarryMemClient(config);
+    const defaultScope = config.get<string>('defaultScope', 'personal');
     const treeProvider = new RuleTreeProvider(client);
+    const openEditor = (rule?: Rule) => RuleEditorPanel.createOrShow(client, defaultScope, () => treeProvider.refresh(), rule);
 
     const treeView = vscode.window.createTreeView('carrymem-rules', {
         treeDataProvider: treeProvider,
@@ -25,13 +27,13 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     register('carrymem.addRule', async () => {
-        RuleEditorPanel.createOrShow(client);
+        openEditor();
     });
 
     register('carrymem.editRule', async (item?: RuleTreeItem | Rule) => {
         const rule = item instanceof RuleTreeItem ? item.rule : item as Rule | undefined;
         if (rule) {
-            RuleEditorPanel.createOrShow(client, rule);
+            openEditor(rule);
         }
     });
 
@@ -103,7 +105,7 @@ export function activate(context: vscode.ExtensionContext) {
             });
 
             if (selected) {
-                RuleEditorPanel.createOrShow(client, selected.rule);
+                openEditor(selected.rule);
             }
         } catch (e: any) {
             vscode.window.showErrorMessage(`Match failed: ${e.message}`);

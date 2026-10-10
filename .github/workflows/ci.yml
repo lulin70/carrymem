@@ -87,15 +87,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade "pip>=26.1.2"
-          # Install with error handling for optional deps that may need system libs
-          # [async] extra (aiosqlite) is required for test_async_sqlite.py — do not drop on fallback
-          # [tui] extra (textual) is required for test_tui.py — TD-011: install in main test job
-          pip install -e ".[dev,async,tui]" || {
-            echo "WARNING: Full dev install failed, retrying without language extras"
-            pip install -e ".[dev,async,tui]" --no-deps 2>/dev/null || true
-            pip install pytest pytest-cov pytest-mock pytest-timeout pytest-asyncio coverage[toml] build twine black isort flake8 mypy aiosqlite textual
-            pip install pycld2 langdetect 2>/dev/null || echo "NOTE: pycld2/langdetect skipped (need libicu-dev)"
-          }
+          # Keep the blocking gate reproducible: a failed editable install must
+          # fail the job instead of falling back to --no-deps or partial tools.
+          pip install -e ".[dev,async,tui]"
 
       - name: Run Phase 1 provenance blocking tests
         run: |
@@ -405,7 +399,7 @@ jobs:
 
       - name: Install extension dependencies
         working-directory: extensions/vscode-carrymem
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Compile TypeScript
         working-directory: extensions/vscode-carrymem

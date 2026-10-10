@@ -3,6 +3,8 @@
 import asyncio
 import contextlib
 import json
+import threading
+import time
 
 import coverage
 import pytest
@@ -61,11 +63,12 @@ async def _read_all(reader) -> str:
     return b"".join(chunks).decode()
 
 
-async def _http_get(host: str, port: int, path: str) -> str:
+async def _http_get(host: str, port: int, path: str, headers: dict | None = None) -> str:
     """Send a GET request and return the response string."""
     reader, writer = await asyncio.open_connection(host, port)
     try:
-        request = f"GET {path} HTTP/1.1\r\nHost: localhost\r\n\r\n".encode()
+        extra_headers = "".join(f"{key}: {value}\r\n" for key, value in (headers or {}).items())
+        request = f"GET {path} HTTP/1.1\r\nHost: localhost\r\n{extra_headers}\r\n".encode()
         writer.write(request)
         await writer.drain()
         return await _read_all(reader)
@@ -74,17 +77,24 @@ async def _http_get(host: str, port: int, path: str) -> str:
         await writer.wait_closed()
 
 
-async def _http_post(host: str, port: int, path: str, payload: dict) -> str:
+async def _http_post(
+    host: str,
+    port: int,
+    path: str,
+    payload: dict,
+    headers: dict | None = None,
+) -> str:
     """Send a JSON POST request and return the response string."""
     reader, writer = await asyncio.open_connection(host, port)
     try:
         body = json.dumps(payload).encode()
+        extra_headers = "".join(f"{key}: {value}\r\n" for key, value in (headers or {}).items())
         request = (
             f"POST {path} HTTP/1.1\r\n"
             "Host: localhost\r\n"
             "Content-Type: application/json\r\n"
             f"Content-Length: {len(body)}\r\n"
-            "\r\n"
+            f"{extra_headers}\r\n"
         ).encode() + body
         writer.write(request)
         await writer.drain()
@@ -97,6 +107,44 @@ async def _http_post(host: str, port: int, path: str, payload: dict) -> str:
 def _body_of(response: str) -> str:
     """Return everything after the HTTP header block."""
     return response[response.find("\r\n\r\n") + 4 :]
+
+
+async def _start_on_ephemeral_port(server: MCPHTTPServer):
+    """Start a real listener and return its task and kernel-selected port."""
+    server_task = asyncio.create_task(server.start())
+    deadline = asyncio.get_event_loop().time() + 5
+    while server._server is None:
+        if asyncio.get_event_loop().time() >= deadline:
+            raise RuntimeError("HTTP server did not expose its listener")
+        await asyncio.sleep(0.01)
+    port = server._server.sockets[0].getsockname()[1]
+    await _wait_for_server(server._host, port)
+    return server_task, port
+
+
+async def _open_sse(host: str, port: int, origin: str = "", token: str | None = None):
+    """Open SSE over TCP and return the stream plus its initial endpoint event."""
+    reader, writer = await asyncio.open_connection(host, port)
+    request = f"GET /sse HTTP/1.1\r\nHost: localhost\r\n"
+    if origin:
+        request += f"Origin: {origin}\r\n"
+    if token:
+        request += f"Authorization: Bearer {token}\r\n"
+    writer.write((request + "\r\n").encode())
+    await writer.drain()
+    response_headers = (await reader.readuntil(b"\r\n\r\n")).decode()
+    endpoint_event = (await reader.readuntil(b"\n\n")).decode()
+    return reader, writer, response_headers, endpoint_event
+
+
+async def _stop_server(server: MCPHTTPServer, server_task: asyncio.Task) -> None:
+    """Stop the listener and finish its serve task."""
+    await server.stop()
+    server_task.cancel()
+    try:
+        await server_task
+    except asyncio.CancelledError:
+        pass
 
 
 class TestMonitoringEndpoints:
@@ -192,6 +240,237 @@ class TestMonitoringEndpoints:
                 await server_task
             except asyncio.CancelledError:
                 pass
+
+
+class TestMCPHTTPServerRealE2E:
+    """Exercise the public MCP transport through real TCP connections."""
+
+    @pytest.mark.asyncio
+    async def test_real_sse_message_tools_and_cleanup(self, tmp_path):
+        config_path = tmp_path / "carrymem.json"
+        config_path.write_text('{"classification": {"confidence_threshold": 0.1}}', encoding="utf-8")
+        data_path = tmp_path / "data"
+        data_path.mkdir()
+        server = MCPHTTPServer(
+            host="127.0.0.1",
+            port=0,
+            carrymem_config={
+                "config_path": str(config_path),
+                "data_path": str(data_path),
+                "namespace": "http_e2e",
+                "request_timeout": 7,
+            },
+            allowed_origins=["http://localhost:*"],
+        )
+        server_task, port = await _start_on_ephemeral_port(server)
+        sse_writer = None
+
+        try:
+            sse_reader, sse_writer, sse_headers, endpoint_event = await _open_sse(
+                "127.0.0.1", port, origin="http://localhost:34567"
+            )
+            assert "200 OK" in sse_headers
+            assert "Content-Type: text/event-stream" in sse_headers
+            assert "Access-Control-Allow-Origin: http://localhost:34567" in sse_headers
+            assert endpoint_event.startswith("event: endpoint\n")
+            endpoint_data = json.loads(endpoint_event.split("data: ", 1)[1].strip())
+            assert endpoint_data["endpoint"] == "/message"
+            client_id = endpoint_data["client_id"]
+            assert client_id in server._clients
+
+            initialize = await _http_post(
+                "127.0.0.1",
+                port,
+                "/message",
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2024-11-05",
+                        "clientInfo": {"name": "http-e2e", "version": "1"},
+                    },
+                },
+                headers={"Origin": "http://localhost:34567"},
+            )
+            assert "200 OK" in initialize
+            assert json.loads(_body_of(initialize))["result"]["serverInfo"]["name"] == "carrymem-mcp"
+
+            write_response = await _http_post(
+                "127.0.0.1",
+                port,
+                "/message",
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "classify_and_remember",
+                        "arguments": {"message": "HTTP SSE E2E remembers this namespace fact"},
+                    },
+                },
+                headers={"Origin": "http://evil.example"},
+            )
+            assert "200 OK" in write_response
+            assert "Access-Control-Allow-Origin: \r\n" in write_response
+            write_payload = json.loads(_body_of(write_response))
+            assert write_payload["result"]["content"]
+
+            notification = await asyncio.wait_for(sse_reader.readuntil(b"\n\n"), timeout=5)
+            assert b"notifications/message" in notification
+
+            recall_response = await _http_post(
+                "127.0.0.1",
+                port,
+                "/message",
+                {
+                    "jsonrpc": "2.0",
+                    "id": 3,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "recall_memories",
+                        "arguments": {"query": "namespace fact", "limit": 10},
+                    },
+                },
+            )
+            recall_payload = json.loads(_body_of(recall_response))
+            recall_text = recall_payload["result"]["content"][0]["text"]
+            recall_data = json.loads(recall_text)
+            assert recall_data["success"] is True
+            assert any("namespace fact" in item.get("content", "") for item in recall_data["data"]["memories"])
+
+            mcp_server = server._mcq_server
+            assert mcp_server is not None
+            assert mcp_server.config_path == str(config_path)
+            assert mcp_server.data_path == str(data_path)
+            assert mcp_server.namespace == "http_e2e"
+            assert mcp_server.request_timeout == 7
+            assert mcp_server.handlers._engine.config.config_path == str(config_path)
+            assert (data_path / "carrymem.db").exists()
+        finally:
+            if sse_writer is not None:
+                sse_writer.close()
+                await sse_writer.wait_closed()
+            mcp_server = server._mcq_server
+            await _stop_server(server, server_task)
+            assert server._server is None
+            assert server._clients == {}
+            assert server._mcq_server is None
+            if mcp_server is not None:
+                assert mcp_server.handlers._carrymem._adapter._conn_mgr._closed is True
+
+    @pytest.mark.asyncio
+    async def test_real_tcp_timeout_returns_once_and_drains_worker(self, tmp_path, monkeypatch, capsys):
+        server = MCPHTTPServer(
+            host="127.0.0.1",
+            port=0,
+            carrymem_config={
+                "data_path": str(tmp_path),
+                "request_timeout": 0.01,
+            },
+        )
+        server_task, port = await _start_on_ephemeral_port(server)
+        started = threading.Event()
+        release = threading.Event()
+        completed = threading.Event()
+
+        def slow_tool(_target, _arguments):
+            started.set()
+            while not release.is_set():
+                time.sleep(0.001)
+            completed.set()
+            return "finished"
+
+        import carrymem.integration.layer2_mcp.handlers as handlers_module
+
+        monkeypatch.setitem(handlers_module.handler_map, "slow_http_test", (slow_tool, "carrymem"))
+        try:
+            response_task = asyncio.create_task(
+                _http_post(
+                    "127.0.0.1",
+                    port,
+                    "/message",
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 91,
+                        "method": "tools/call",
+                        "params": {"name": "slow_http_test", "arguments": {}},
+                    },
+                )
+            )
+            await asyncio.to_thread(started.wait, 5)
+            response = await response_task
+            assert response.count("HTTP/1.1") == 1
+            payload = json.loads(_body_of(response))
+            assert payload == {
+                "jsonrpc": "2.0",
+                "id": 91,
+                "error": {
+                    "code": -32603,
+                    "message": "Request timeout",
+                    "data": {
+                        "execution": "background_may_continue",
+                        "side_effects": "possible",
+                    },
+                },
+            }
+            assert not completed.is_set()
+            assert capsys.readouterr().out == ""
+
+            stop_task = asyncio.create_task(server.stop())
+            await asyncio.sleep(0)
+            assert not stop_task.done()
+            release.set()
+            await asyncio.wait_for(stop_task, timeout=5)
+            assert completed.is_set()
+            assert server._mcq_server is None
+        finally:
+            release.set()
+            if not server._stopping:
+                await server.stop()
+            server_task.cancel()
+            try:
+                await server_task
+            except asyncio.CancelledError:
+                pass
+
+    @pytest.mark.asyncio
+    async def test_real_auth_and_cors_paths(self):
+        server = MCPHTTPServer(host="127.0.0.1", port=0, api_key="http-secret")
+        server_task, port = await _start_on_ephemeral_port(server)
+        try:
+            unauthorized_sse = await _http_get("127.0.0.1", port, "/sse")
+            assert "401 Unauthorized" in unauthorized_sse
+
+            unauthorized_message = await _http_post(
+                "127.0.0.1", port, "/message", {"jsonrpc": "2.0", "id": 1, "method": "initialize"}
+            )
+            assert "401 Unauthorized" in unauthorized_message
+
+            allowed = await _http_post(
+                "127.0.0.1",
+                port,
+                "/message",
+                {"jsonrpc": "2.0", "id": 2, "method": "initialize"},
+                headers={"Authorization": "Bearer http-secret", "Origin": "http://localhost:45678"},
+            )
+            assert "200 OK" in allowed
+            assert "Access-Control-Allow-Origin: http://localhost:45678" in allowed
+
+            denied = await _http_post(
+                "127.0.0.1",
+                port,
+                "/message",
+                {"jsonrpc": "2.0", "id": 3, "method": "initialize"},
+                headers={"Authorization": "Bearer http-secret", "Origin": "http://evil.example"},
+            )
+            assert "200 OK" in denied
+            assert "Access-Control-Allow-Origin: \r\n" in denied
+        finally:
+            await _stop_server(server, server_task)
+            assert server._server is None
+            assert server._clients == {}
+            assert server._mcq_server is None
 
 
 class TestInstrumentedMetricsEndToEnd:

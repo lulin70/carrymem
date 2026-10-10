@@ -125,11 +125,6 @@
           "default": "",
           "description": "%configuration.dbPath.description%"
         },
-        "carrymem.autoMatch": {
-          "type": "boolean",
-          "default": true,
-          "description": "%configuration.autoMatch.description%"
-        },
         "carrymem.defaultScope": {
           "type": "string",
           "default": "personal",

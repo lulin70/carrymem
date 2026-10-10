@@ -768,8 +768,9 @@ carrymem unpack team-identity.carry
 - **Result**: Coverage 22% → 80%+ (encryption 79%, redaction 90%, input_validator 82%, audit 88%)
 
 #### P2-C: MCP Server Timeout
-- **Status**: ✅ Done
-- **What**: 3-layer timeout (stdin 300s / request 30s / tool call 30s)
+- **Status**: ✅ Done (方案 A)
+- **What**: stdin idle timeout 300s; one request timeout owner; HTTP/stdio share the same MCP timeout.
+- **Contract**: timeout ends client waiting, but a started synchronous worker may continue and produce side effects. The JSON-RPC timeout error exposes `error.data.execution=background_may_continue` and `error.data.side_effects=possible`. Shutdown drains started workers before closing CarryMem/SQLite.
 - **Config**: CARRYMEM_REQUEST_TIMEOUT env var, default 30s
 
 ---

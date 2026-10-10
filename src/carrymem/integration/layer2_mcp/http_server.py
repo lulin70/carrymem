@@ -50,15 +50,21 @@ class SSEClient:
         self.client_id = client_id
         self.queue: asyncio.Queue = asyncio.Queue()
         self.closed = False
+        self._closed_event = asyncio.Event()
 
     async def send(self, data: str):
         """Enqueue data for the client unless it has been closed."""
         if not self.closed:
             await self.queue.put(data)
 
+    async def wait_closed(self):
+        await self._closed_event.wait()
+
     def close(self):
-        """Mark the client as closed so sends become no-ops."""
-        self.closed = True
+        """Mark the client as closed so sends become no-ops and wake waiters."""
+        if not self.closed:
+            self.closed = True
+            self._closed_event.set()
 
 
 class MCPHTTPServer:
@@ -79,6 +85,8 @@ class MCPHTTPServer:
         self._carrymem_config = carrymem_config
         self._allowed_origins = allowed_origins or ["http://localhost:*", "http://127.0.0.1:*"]
         self._clients: Dict[str, SSEClient] = {}
+        self._request_tasks: set[asyncio.Task] = set()
+        self._stopping = False
         self._server: Optional[asyncio.AbstractServer] = None
         self._mcq_server: Optional[MCPServer] = None
         # Monitoring components — the process-wide collector, so /metrics and
@@ -139,7 +147,12 @@ class MCPHTTPServer:
         return ""
 
     async def _handle_request(self, reader, writer):
+        task = asyncio.current_task()
+        if task is not None:
+            self._request_tasks.add(task)
         try:
+            if self._stopping:
+                return
             request_line = await reader.readline()
             if not request_line:
                 writer.close()
@@ -174,6 +187,8 @@ class MCPHTTPServer:
         except Exception as e:
             await self._handle_request_exception(writer, e)
         finally:
+            if task is not None:
+                self._request_tasks.discard(task)
             try:
                 writer.close()
             except OSError as e:
@@ -297,14 +312,29 @@ class MCPHTTPServer:
         await writer.drain()
 
         try:
-            while not client.closed:
-                try:
-                    data = await asyncio.wait_for(client.queue.get(), timeout=_SSE_KEEPALIVE_TIMEOUT_SECONDS)
-                    writer.write(f"data: {data}\n\n".encode())
-                    await writer.drain()
-                except asyncio.TimeoutError:
+            while True:
+                queue_task = asyncio.create_task(client.queue.get())
+                close_task = asyncio.create_task(client.wait_closed())
+                done, pending = await asyncio.wait(
+                    (queue_task, close_task),
+                    timeout=_SSE_KEEPALIVE_TIMEOUT_SECONDS,
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+                for task in pending:
+                    task.cancel()
+                if pending:
+                    await asyncio.gather(*pending, return_exceptions=True)
+
+                if client.closed:
+                    return
+                if not done:
                     writer.write(": keepalive\n\n".encode())
                     await writer.drain()
+                    continue
+
+                data = queue_task.result()
+                writer.write(f"data: {data}\n\n".encode())
+                await writer.drain()
         except (ConnectionError, asyncio.CancelledError):
             pass
         finally:
@@ -320,9 +350,15 @@ class MCPHTTPServer:
             return
 
         if not self._mcq_server:
-            self._mcq_server = MCPServer(self._carrymem_config)  # type: ignore[arg-type]
+            config = self._carrymem_config or {}
+            self._mcq_server = MCPServer(
+                config_path=config.get("config_path"),
+                data_path=config.get("data_path"),
+                namespace=config.get("namespace"),
+                request_timeout=config.get("request_timeout"),
+            )
 
-        response = await self._mcq_server.handle_request(request)
+        response = await self._mcq_server.execute_request(request)
 
         await self._send_response(writer, 200, response, request_origin)  # type: ignore[arg-type]
 
@@ -398,13 +434,46 @@ class MCPHTTPServer:
             await self._server.serve_forever()
 
     async def stop(self):
-        """Close the server and disconnect all SSE clients."""
-        if self._server:
-            self._server.close()
-            await self._server.wait_closed()
-        for client in self._clients.values():
-            client.close()
+        """Stop accepting requests, drain active tools, then cleanup resources."""
+        self._stopping = True
+        http_server = self._server
+        self._server = None
+        if http_server:
+            try:
+                http_server.close()
+            except Exception as exc:
+                logger.warning("Failed to close HTTP server: %s", exc)
+            try:
+                await http_server.wait_closed()
+            except Exception as exc:
+                logger.warning("Failed to wait for HTTP server close: %s", exc)
+
+        clients = list(self._clients.values())
         self._clients.clear()
+        for client in clients:
+            try:
+                client.close()
+            except Exception as exc:
+                logger.warning("Failed to close SSE client: %s", exc)
+        try:
+            self._metrics.set_gauge("carrymem_sse_clients", 0)
+        except Exception as exc:
+            logger.warning("Failed to update SSE client metric: %s", exc)
+
+        request_tasks = tuple(task for task in self._request_tasks if task is not asyncio.current_task())
+        for task in request_tasks:
+            task.cancel()
+        if request_tasks:
+            await asyncio.gather(*request_tasks, return_exceptions=True)
+
+        mcp_server = self._mcq_server
+        self._mcq_server = None
+        if mcp_server:
+            try:
+                await mcp_server.cleanup()
+            except Exception as exc:
+                logger.warning("Failed to clean up MCP server: %s", exc)
+
         logger.info("CarryMem MCP HTTP Server stopped")
 
 

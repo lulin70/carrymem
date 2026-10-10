@@ -1,5 +1,8 @@
 """CarryMem CLI - Rules engine commands (~26 functions)."""
 
+import json
+import sys
+
 from carrymem.cli._base import (
     _DEFAULT_DB,
     _add_common_args,
@@ -20,7 +23,11 @@ def _deprecated_wrapper(old_cmd, new_sub, handler):
 
     def wrapper(args):
         """Print a deprecation notice and delegate to the wrapped handler."""
-        print(f"  {_yellow(f'[DEPRECATED]')} {_dim(f'Use `carrymem rules {new_sub}` instead of `carrymem {old_cmd}`')}")
+        print(
+            f"  {_yellow(f'[DEPRECATED]')} "
+            f"{_dim(f'Use `carrymem rules {new_sub}` instead of `carrymem {old_cmd}`')}",
+            file=sys.stderr,
+        )
         return handler(args)
 
     return wrapper
@@ -53,6 +60,7 @@ def cmd_rules_hub(args):
         "lesson-log": cmd_lesson_log,
         "refine": cmd_refine_rule,
         "refinement-sessions": cmd_refinement_sessions,
+        "effectiveness": cmd_rules_effectiveness,
     }
 
     sub = args[0]
@@ -98,10 +106,16 @@ cmd_refinement_sessions_deprecated = _deprecated_wrapper(
 )
 
 
+def _rule_payload(rule):
+    """Serialize a rule for machine-readable CLI consumers."""
+    return rule.to_dict()
+
+
 def cmd_add_rule(args):
     """Add a new rule, optionally from a template or interactively."""
     parser = _make_parser("add-rule")
     parser.add_argument("action", nargs="?", help=_t("cli.arg.rules.action"))
+    parser.add_argument("trigger_pos", nargs="?", help="Trigger text for legacy clients")
     parser.add_argument("--trigger", "-t", help=_t("cli.arg.rules.trigger"))
     parser.add_argument(
         "--type",
@@ -110,6 +124,9 @@ def cmd_add_rule(args):
         help=_t("cli.arg.rules.type"),
     )
     parser.add_argument("--soft", action="store_true", help=_t("cli.arg.rules.soft"))
+    parser.add_argument("--override", choices=["true", "false"], help="Override flag for CLI clients")
+    parser.add_argument("--scope", choices=["personal", "company", "negotiated"], default="personal")
+    parser.add_argument("--json", action="store_true", help=_t("cli.arg.rules.json"))
     parser.add_argument("--template", help=_t("cli.arg.rules.template"))
     parser.add_argument("--interactive", "-i", action="store_true", help=_t("cli.arg.rules.interactive"))
     _add_common_args(parser)
@@ -171,6 +188,10 @@ def cmd_add_rule(args):
 
     # Normal mode
     else:
+        if not parsed.trigger and parsed.trigger_pos:
+            parsed.trigger = parsed.trigger_pos
+        if parsed.override is not None:
+            parsed.soft = parsed.override == "false"
         if not parsed.action or not parsed.trigger:
             _usage_hint = _red("Missing required arguments. Use:")
             print(f"\n  {_usage_hint} carrymem rules add <action> --trigger <scene>")
@@ -190,7 +211,11 @@ def cmd_add_rule(args):
             action=action,
             rule_type=rule_type,
             override=override,
+            scope=parsed.scope,
         )
+        if parsed.json:
+            print(json.dumps(_rule_payload(rule), ensure_ascii=False, default=str))
+            return 0
         marker = _red("HARD") if rule.override else _yellow("SOFT")
         print(f"\n  {_green('Rule created:')} {rule.id}")
         print(f"    Trigger: {rule.trigger}")
@@ -219,6 +244,8 @@ def cmd_list_rules(args):
         help=_t("cli.arg.rules.filter_type"),
     )
     parser.add_argument("--limit", type=int, default=20, help=_t("cli.arg.rules.limit_20"))
+    parser.add_argument("--scope", choices=["personal", "company", "negotiated"])
+    parser.add_argument("--json", action="store_true", help=_t("cli.arg.rules.json"))
     parser.add_argument(
         "--format",
         choices=["detail", "table", "compact"],
@@ -229,7 +256,11 @@ def cmd_list_rules(args):
     parsed = parser.parse_args(args)
 
     engine = _get_rule_engine(parsed.db)
-    rules = engine.list_rules(status=parsed.status, rule_type=parsed.type, limit=parsed.limit)
+    rules = engine.list_rules(status=parsed.status, rule_type=parsed.type, scope=parsed.scope, limit=parsed.limit)
+
+    if parsed.json:
+        print(json.dumps([_rule_payload(rule) for rule in rules], ensure_ascii=False, default=str))
+        return 0
 
     if not rules:
         print(f"\n  {_dim('No rules found.')}")
@@ -306,6 +337,7 @@ def cmd_match_rules(args):
         default=None,
         help=_t("cli.arg.rules.context_budget"),
     )
+    parser.add_argument("--json", action="store_true", help=_t("cli.arg.rules.json"))
     _add_common_args(parser)
     parsed = parser.parse_args(args)
 
@@ -314,6 +346,18 @@ def cmd_match_rules(args):
     if parsed.format == "json":
         result = engine.inject(parsed.scene, format="json", max_rules=parsed.limit)
         print(result)
+        return 0
+    if parsed.json:
+        matches = engine.match(parsed.scene, limit=parsed.limit)
+        result = [
+            {
+                "rule": _rule_payload(match.rule),
+                "score": match.score,
+                "match_type": match.match_type,
+            }
+            for match in matches
+        ]
+        print(json.dumps(result, ensure_ascii=False, default=str))
         return 0
     elif parsed.format == "compact":
         result = engine.inject(parsed.scene, format="compact", max_rules=parsed.limit)
@@ -362,6 +406,7 @@ def cmd_delete_rule(args):
     """Delete a rule by its ID after confirmation."""
     parser = _make_parser("delete-rule")
     parser.add_argument("rule_id", help=_t("cli.arg.rules.rule_id_delete"))
+    parser.add_argument("--json", action="store_true", help=_t("cli.arg.rules.json"))
     _add_common_args(parser)
     parsed = parser.parse_args(args)
 
@@ -370,6 +415,11 @@ def cmd_delete_rule(args):
     if not rule:
         print(f"\n  {_red(f'Rule not found:')} {parsed.rule_id}")
         return 1
+
+    if parsed.json:
+        deleted = engine.delete_rule(parsed.rule_id)
+        print(json.dumps({"deleted": deleted, "id": parsed.rule_id}, ensure_ascii=False))
+        return 0 if deleted else 1
 
     print(f"\n  Deleting rule: {rule.id}")
     print(f"    Trigger: {rule.trigger}")
@@ -388,11 +438,15 @@ def cmd_pause_rule(args):
     """Pause a rule by setting its status to 'paused'."""
     parser = _make_parser("pause-rule")
     parser.add_argument("rule_id", help=_t("cli.arg.rules.rule_id_pause"))
+    parser.add_argument("--json", action="store_true", help=_t("cli.arg.rules.json"))
     _add_common_args(parser)
     parsed = parser.parse_args(args)
 
     engine = _get_rule_engine(parsed.db)
     updated = engine.update_rule(parsed.rule_id, status="paused")
+    if updated and parsed.json:
+        print(json.dumps(_rule_payload(updated), ensure_ascii=False, default=str))
+        return 0
     if updated:
         print(f"\n  {_green('Rule paused:')} {updated.id}")
         print(f"    Trigger: {updated.trigger}")
@@ -406,16 +460,39 @@ def cmd_resume_rule(args):
     """Resume a paused rule by setting its status back to 'active'."""
     parser = _make_parser("resume-rule")
     parser.add_argument("rule_id", help=_t("cli.arg.rules.rule_id_resume"))
+    parser.add_argument("--json", action="store_true", help=_t("cli.arg.rules.json"))
     _add_common_args(parser)
     parsed = parser.parse_args(args)
 
     engine = _get_rule_engine(parsed.db)
     updated = engine.update_rule(parsed.rule_id, status="active")
+    if updated and parsed.json:
+        print(json.dumps(_rule_payload(updated), ensure_ascii=False, default=str))
+        return 0
     if updated:
         print(f"\n  {_green('Rule resumed:')} {updated.id}")
         print(f"    Trigger: {updated.trigger}")
     else:
         print(f"\n  {_red('Rule not found:')} {parsed.rule_id}")
+    print()
+    return 0
+
+
+def cmd_rules_effectiveness(args):
+    """Print rule effectiveness metrics for CLI and VSCode clients."""
+    parser = _make_parser("rules-effectiveness")
+    parser.add_argument("--json", action="store_true", help=_t("cli.arg.rules.json"))
+    _add_common_args(parser)
+    parsed = parser.parse_args(args)
+    report = _get_rule_engine(parsed.db).get_effectiveness_report()
+    if parsed.json:
+        print(json.dumps(report, ensure_ascii=False, default=str))
+        return 0
+    print(f"\n  {_bold('Rules Effectiveness')}")
+    print(f"  Total: {report['total_rules']}")
+    print(f"  Active: {report['active']}")
+    print(f"  Triggered: {report['triggered']}")
+    print(f"  Trigger rate: {report['trigger_rate']:.1%}")
     print()
     return 0
 
@@ -736,6 +813,13 @@ def cmd_edit_rule(args):
     )
     parser.add_argument("--soft", action="store_true", help=_t("cli.arg.rules.change_soft"))
     parser.add_argument("--hard", action="store_true", help=_t("cli.arg.rules.change_hard"))
+    parser.add_argument(
+        "--override",
+        choices=["true", "false"],
+        help="Override flag for CLI clients (mutually exclusive with --soft/--hard)",
+    )
+    parser.add_argument("--scope", choices=["personal", "company", "negotiated"], help="Rule scope")
+    parser.add_argument("--json", action="store_true", help=_t("cli.arg.rules.json"))
     _add_common_args(parser)
     parsed = parser.parse_args(args)
 
@@ -756,6 +840,10 @@ def cmd_edit_rule(args):
         updates["override"] = False
     if parsed.hard:
         updates["override"] = True
+    if parsed.override is not None:
+        updates["override"] = parsed.override == "true"
+    if parsed.scope:
+        updates["scope"] = parsed.scope
 
     if not updates:
         _no_changes = _yellow("No changes specified. Use --trigger, --action, --type, --soft, or --hard")
@@ -763,6 +851,9 @@ def cmd_edit_rule(args):
         return 1
 
     updated = engine.update_rule(parsed.rule_id, **updates)
+    if updated and parsed.json:
+        print(json.dumps(_rule_payload(updated), ensure_ascii=False, default=str))
+        return 0
     if updated:
         print(f"\n  {_green('Rule updated:')} {updated.id}")
         print(f"    Trigger: {updated.trigger}")

@@ -98,8 +98,6 @@ class KnowledgeGraph:
         stored = 0
         attempted = 0
         now = datetime.now(timezone.utc).isoformat()
-        # file_lock invariant: raw-connection writers must serialize with the
-        # CRUD/recall write paths (flaky SQLITE_BUSY under concurrent classify).
         with self._conn_mgr.file_lock:
             for entity in result.entities:
                 canonical = self._sanitize(entity.get("canonical", ""))
@@ -806,24 +804,31 @@ class KnowledgeGraph:
         conn = self._conn_mgr.get_connection()
         now = datetime.now(timezone.utc).isoformat()
 
-        try:
-            src_id = self._find_or_create_entity(safe_src, safe_ns, conn, now)
-            dst_id = self._find_or_create_entity(safe_dst, safe_ns, conn, now)
-            if src_id is None or dst_id is None:
-                return False
+        with self._conn_mgr.file_lock:
+            try:
+                conn.execute("BEGIN IMMEDIATE")
+                src_id = self._find_or_create_entity(safe_src, safe_ns, conn, now)
+                dst_id = self._find_or_create_entity(safe_dst, safe_ns, conn, now)
+                if src_id is None or dst_id is None:
+                    conn.rollback()
+                    return False
 
-            conn.execute(
-                "INSERT OR IGNORE INTO memory_relations "
-                "(src_entity_id, dst_entity_id, relation_type, source_memory_key, "
-                "weight, namespace, created_at, confidence) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (src_id, dst_id, relation_type, source_memory_key, weight, safe_ns, now, confidence),
-            )
-            conn.commit()
-            return True
-        except sqlite3.Error as e:
-            logger.warning("add_relation failed: %s", e)
-            return False
+                conn.execute(
+                    "INSERT OR IGNORE INTO memory_relations "
+                    "(src_entity_id, dst_entity_id, relation_type, source_memory_key, "
+                    "weight, namespace, created_at, confidence) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    (src_id, dst_id, relation_type, source_memory_key, weight, safe_ns, now, confidence),
+                )
+                conn.commit()
+                return True
+            except sqlite3.Error as e:
+                try:
+                    conn.rollback()
+                except sqlite3.Error:
+                    pass
+                logger.warning("add_relation failed: %s", e)
+                return False
 
     def _find_or_create_entity(
         self,

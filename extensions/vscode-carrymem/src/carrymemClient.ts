@@ -69,23 +69,19 @@ export class CarryMemClient {
     }
 
     async listRules(scope?: string, status?: string): Promise<Rule[]> {
-        const args = ['list-rules', '--limit', '200', '--json', ...this.getDbArg()];
+        const args = ['rules', 'list', '--limit', '200', '--json', ...this.getDbArg()];
         if (scope) {
             args.push('--scope', scope);
         }
         if (status) {
             args.push('--status', status);
         }
-        try {
-            return await this.execJson<Rule[]>(args);
-        } catch {
-            return [];
-        }
+        return this.execJson<Rule[]>(args);
     }
 
     async addRule(trigger: string, action: string, ruleType: string, scope: string, override: boolean): Promise<Rule> {
         const args = [
-            'add-rule', trigger, action,
+            'rules', 'add', action, '--trigger', trigger,
             '--type', ruleType,
             '--scope', scope,
             '--override', override ? 'true' : 'false',
@@ -96,7 +92,7 @@ export class CarryMemClient {
     }
 
     async editRule(ruleId: string, updates: Partial<Pick<Rule, 'trigger' | 'action' | 'rule_type' | 'scope' | 'override'>>): Promise<Rule> {
-        const args = ['edit-rule', ruleId, '--json', ...this.getDbArg()];
+        const args = ['rules', 'edit', ruleId, '--json', ...this.getDbArg()];
         if (updates.trigger) { args.push('--trigger', updates.trigger); }
         if (updates.action) { args.push('--action', updates.action); }
         if (updates.rule_type) { args.push('--type', updates.rule_type); }
@@ -106,24 +102,24 @@ export class CarryMemClient {
     }
 
     async deleteRule(ruleId: string): Promise<void> {
-        await this.exec(['delete-rule', ruleId, ...this.getDbArg()]);
+        await this.exec(['rules', 'delete', ruleId, '--json', ...this.getDbArg()]);
     }
 
     async pauseRule(ruleId: string): Promise<Rule> {
-        return this.execJson<Rule>(['pause-rule', ruleId, '--json', ...this.getDbArg()]);
+        return this.execJson<Rule>(['rules', 'pause', ruleId, '--json', ...this.getDbArg()]);
     }
 
     async resumeRule(ruleId: string): Promise<Rule> {
-        return this.execJson<Rule>(['resume-rule', ruleId, '--json', ...this.getDbArg()]);
+        return this.execJson<Rule>(['rules', 'resume', ruleId, '--json', ...this.getDbArg()]);
     }
 
     async matchRules(scene: string): Promise<MatchResult[]> {
-        const args = ['match-rules', scene, '--json', ...this.getDbArg()];
+        const args = ['rules', 'match', scene, '--json', ...this.getDbArg()];
         return this.execJson<MatchResult[]>(args);
     }
 
     async getEffectivenessReport(): Promise<EffectivenessReport> {
-        const args = ['rules-effectiveness', '--json', ...this.getDbArg()];
+        const args = ['rules', 'effectiveness', '--json', ...this.getDbArg()];
         return this.execJson<EffectivenessReport>(args);
     }
 

@@ -107,9 +107,10 @@ class ExperienceRuleBridge:
     def _ensure_audit_table(self):
         """Create experience_audit table if not exists."""
         conn = self.storage._get_connection()
-        try:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS experience_audit (
+        with self.storage.write_lock:
+            try:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS experience_audit (
                     id TEXT PRIMARY KEY,
                     source_memory_id TEXT NOT NULL,
                     source_content TEXT NOT NULL,
@@ -127,17 +128,17 @@ class ExperienceRuleBridge:
                     resulting_rule_id TEXT
                 )
             """)
-            conn.execute("""
-                CREATE INDEX IF NOT EXISTS idx_experience_status
-                ON experience_audit(status)
-            """)
-            conn.execute("""
-                CREATE INDEX IF NOT EXISTS idx_experience_source
-                ON experience_audit(source_memory_id)
-            """)
-            conn.commit()
-        finally:
-            pass
+                conn.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_experience_status
+                    ON experience_audit(status)
+                """)
+                conn.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_experience_source
+                    ON experience_audit(source_memory_id)
+                """)
+                conn.commit()
+            finally:
+                pass
 
     def extract_lessons(
         self,
@@ -216,30 +217,31 @@ class ExperienceRuleBridge:
 
         conn = self.storage._get_connection()
         try:
-            conn.execute(
-                """
+            with self.storage.write_lock:
+                conn.execute(
+                    """
                 INSERT INTO experience_audit
                     (id, source_memory_id, source_content, failure_signal,
                      lesson, trigger_hint, action_hint, confidence,
                      status, domain, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (
-                    audit_id,
-                    lesson.source_memory_id,
-                    lesson.source_content[:500],
-                    lesson.failure_signal.value,
-                    lesson.lesson[:500],
-                    sanitized_trigger,
-                    sanitized_action,
-                    confidence_score,
-                    EXPERIENCE_STATUS_PENDING,
-                    lesson.domain,
-                    now,
-                ),
-            )
-            conn.commit()
-            return audit_id
+                    (
+                        audit_id,
+                        lesson.source_memory_id,
+                        lesson.source_content[:500],
+                        lesson.failure_signal.value,
+                        lesson.lesson[:500],
+                        sanitized_trigger,
+                        sanitized_action,
+                        confidence_score,
+                        EXPERIENCE_STATUS_PENDING,
+                        lesson.domain,
+                        now,
+                    ),
+                )
+                conn.commit()
+                return audit_id
         except (sqlite3.IntegrityError, sqlite3.OperationalError):
             conn.rollback()
             return None

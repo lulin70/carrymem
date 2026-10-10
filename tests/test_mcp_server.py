@@ -112,20 +112,75 @@ class TestMCPHTTPServer:
         assert writer.drain.called
 
     @pytest.mark.asyncio
-    async def test_stop(self):
-        server = MCPHTTPServer()
-        server._server = None
-        await server.stop()
+    async def test_handle_message_maps_config_to_mcp_server(self):
+        config = {
+            "config_path": "/tmp/config.yaml",
+            "data_path": "/tmp/data",
+            "namespace": "test",
+            "request_timeout": 17,
+        }
+        server = MCPHTTPServer(carrymem_config=config)
+        writer = MagicMock()
+        writer.write = MagicMock()
+        writer.drain = AsyncMock()
+        mock_mcp_server = MagicMock()
+        mock_mcp_server.execute_request = AsyncMock(return_value={"jsonrpc": "2.0", "id": 1, "result": None})
+
+        with patch("carrymem.integration.layer2_mcp.http_server.MCPServer", return_value=mock_mcp_server) as mcp_class:
+            await server._handle_message(writer, b'{"jsonrpc":"2.0","id":1,"method":"initialize"}')
+
+        mcp_class.assert_called_once_with(
+            config_path="/tmp/config.yaml",
+            data_path="/tmp/data",
+            namespace="test",
+            request_timeout=17,
+        )
 
     @pytest.mark.asyncio
-    async def test_stop_with_server(self):
+    async def test_stop_cleans_up_all_resources(self):
         server = MCPHTTPServer()
-        mock_server = MagicMock()
-        mock_server.close = MagicMock()
-        mock_server.wait_closed = AsyncMock()
-        server._server = mock_server
+        mock_http_server = MagicMock()
+        mock_http_server.wait_closed = AsyncMock()
+        mock_mcp_server = MagicMock()
+        mock_mcp_server.cleanup = AsyncMock()
+        client = MagicMock()
+        server._server = mock_http_server
+        server._mcq_server = mock_mcp_server
+        server._clients["client"] = client
+
         await server.stop()
-        assert mock_server.close.called
+
+        mock_http_server.close.assert_called_once_with()
+        mock_http_server.wait_closed.assert_awaited_once_with()
+        client.close.assert_called_once_with()
+        mock_mcp_server.cleanup.assert_awaited_once_with()
+        assert server._server is None
+        assert server._mcq_server is None
+        assert server._clients == {}
+
+        await server.stop()
+        mock_mcp_server.cleanup.assert_awaited_once_with()
+
+    @pytest.mark.asyncio
+    async def test_stop_continues_cleanup_after_errors(self):
+        server = MCPHTTPServer()
+        mock_http_server = MagicMock()
+        mock_http_server.close.side_effect = RuntimeError("close failed")
+        mock_http_server.wait_closed = AsyncMock(side_effect=RuntimeError("wait failed"))
+        mock_mcp_server = MagicMock()
+        mock_mcp_server.cleanup = AsyncMock(side_effect=RuntimeError("cleanup failed"))
+        failing_client = MagicMock()
+        failing_client.close.side_effect = RuntimeError("client failed")
+        healthy_client = MagicMock()
+        server._server = mock_http_server
+        server._mcq_server = mock_mcp_server
+        server._clients.update({"bad": failing_client, "good": healthy_client})
+
+        await server.stop()
+
+        healthy_client.close.assert_called_once_with()
+        mock_mcp_server.cleanup.assert_awaited_once_with()
+        assert server._clients == {}
 
 
 class TestMCPServer:
@@ -133,6 +188,37 @@ class TestMCPServer:
     async def test_init(self, tmp_path):
         server = MCPServer(data_path=str(tmp_path))
         assert server.handlers is not None
+        await server.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_execute_request_timeout_returns_one_error(self, tmp_path):
+        server = MCPServer(data_path=str(tmp_path), request_timeout=0.01)
+        started = asyncio.Event()
+        release = asyncio.Event()
+
+        async def slow_request(_request):
+            started.set()
+            await release.wait()
+            return {"jsonrpc": "2.0", "id": 1, "result": None}
+
+        server.handle_request = slow_request
+        task = asyncio.create_task(server.execute_request({"jsonrpc": "2.0", "id": 1, "method": "slow"}))
+        await started.wait()
+        response = await task
+
+        assert response == {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "error": {
+                "code": -32603,
+                "message": "Request timeout",
+                "data": {
+                    "execution": "background_may_continue",
+                    "side_effects": "possible",
+                },
+            },
+        }
+        release.set()
         await server.cleanup()
 
     @pytest.mark.asyncio

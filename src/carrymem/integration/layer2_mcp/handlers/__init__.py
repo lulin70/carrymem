@@ -188,6 +188,8 @@ class Handlers:
         self._rule_engine = self._carrymem.rule_engine
 
         self._default_user_id = default_user_id
+        self._inflight: set[asyncio.Future] = set()
+        self._closing = False
 
         # TD-035: AccessPolicy integration into the MCP tool invocation chain.
         # ────────────────────────────────────────────────────────────────────
@@ -333,6 +335,9 @@ class Handlers:
 
     async def handle_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
         """Dispatch an MCP tool call to its handler, running it in an executor."""
+        if self._closing:
+            return {"success": False, "error": "server_shutting_down"}
+
         entry = handler_map.get(tool_name)
         if not entry:
             return {
@@ -356,17 +361,34 @@ class Handlers:
         if tool_name in self._CARRYMEM_INJECTION_TOOLS:
             injected_args = {**injected_args, "_carrymem": self._carrymem}
 
+        loop = asyncio.get_running_loop()
+        future = loop.run_in_executor(None, lambda: handler_func(target, injected_args))
+        self._inflight.add(future)
+        future.add_done_callback(self._inflight.discard)
+
         try:
-            loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(None, lambda: handler_func(target, injected_args))
+            result = await asyncio.shield(future)
             return {"success": True, "data": result}
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             # NOTE: Broad exception in async MCP handler wrapper is intentional to catch
-            # all errors and return standardized error responses to MCP clients.
+            # all errors and return standardized error responses.
             return {"success": False, "error": _safe_error(e)}
 
+    def start_shutdown(self):
+        """Reject new tools while already-started tools drain."""
+        self._closing = True
+
+    async def wait_idle(self):
+        """Wait for synchronous tool calls that already started in worker threads."""
+        while self._inflight:
+            pending = tuple(self._inflight)
+            await asyncio.gather(*(asyncio.shield(future) for future in pending), return_exceptions=True)
+
     def cleanup(self):
-        """Cleanup resources (synchronous — safe to call from sync or async code)."""
+        """Close resources after callers have waited for active tools."""
+        self._closing = True
         if self._carrymem:
             self._carrymem.close()
 

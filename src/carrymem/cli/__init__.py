@@ -167,6 +167,7 @@ def main():
         "pause-rule": cmd_pause_rule_deprecated,
         "resume-rule": cmd_resume_rule_deprecated,
         "rules-stats": cmd_rules_stats_deprecated,
+        "rules-effectiveness": cmd_rules_effectiveness,
         "check-rules": cmd_check_rules_deprecated,
         "export-rules": cmd_export_rules_deprecated,
         "import-rules": cmd_import_rules_deprecated,

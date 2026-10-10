@@ -92,9 +92,10 @@ class PromotionPipeline:
     def _ensure_audit_table(self):
         """Create promotion_audit table if not exists."""
         conn = self.storage._get_connection()
-        try:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS promotion_audit (
+        with self.storage.write_lock:
+            try:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS promotion_audit (
                     id TEXT PRIMARY KEY,
                     candidate_trigger TEXT NOT NULL,
                     candidate_action TEXT NOT NULL,
@@ -110,17 +111,17 @@ class PromotionPipeline:
                     resulting_rule_id TEXT
                 )
             """)
-            conn.execute("""
-                CREATE INDEX IF NOT EXISTS idx_promotion_status
-                ON promotion_audit(status)
-            """)
-            conn.execute("""
-                CREATE INDEX IF NOT EXISTS idx_promotion_created
-                ON promotion_audit(created_at)
-            """)
-            conn.commit()
-        finally:
-            pass
+                conn.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_promotion_status
+                    ON promotion_audit(status)
+                """)
+                conn.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_promotion_created
+                    ON promotion_audit(created_at)
+                """)
+                conn.commit()
+            finally:
+                pass
 
     def run_pipeline(
         self,

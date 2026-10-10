@@ -105,23 +105,17 @@ class MCPServer:
 
                 try:
                     request = json.loads(line)
-                    response = await asyncio.wait_for(
-                        self.handle_request(request),
-                        timeout=self.request_timeout,
-                    )
+                    response = await self.execute_request(request)
                     if response:
                         await self.send_response(response)
-                except asyncio.TimeoutError:
-                    logger.error("Request timed out after %ds", self.request_timeout)
-                    await self.send_error(None, -32603, "Request timeout")
                 except json.JSONDecodeError as e:
                     logger.error("Invalid JSON: %s", e)
-                    await self.send_error(None, -32700, "Parse error")
+                    await self.send_response(self.make_error_response(None, -32700, "Parse error"))
                 # NOTE: Broad exception in MCP server request handler is intentional to catch
                 # all errors and return standardized JSON-RPC error responses.
                 except Exception as e:
                     logger.error("Error handling request: %s", e)
-                    await self.send_error(None, -32603, "Internal error")
+                    await self.send_response(self.make_error_response(None, -32603, "Internal error"))
 
         except KeyboardInterrupt:
             logger.info("Received interrupt, shutting down...")
@@ -131,6 +125,35 @@ class MCPServer:
             logger.error("Server error: %s", e)
         finally:
             await self.cleanup()
+
+    @staticmethod
+    def make_error_response(
+        request_id: Union[str, int, None], code: int, message: str, data: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Build an error response without writing to a transport."""
+        error: Dict[str, Any] = {"code": code, "message": message}
+        if data:
+            error["data"] = data
+        return {"jsonrpc": "2.0", "id": request_id, "error": error}
+
+    async def execute_request(self, request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Execute one request with the single transport-independent timeout."""
+        try:
+            return await asyncio.wait_for(self.handle_request(request), timeout=self.request_timeout)
+        except asyncio.TimeoutError:
+            logger.error("Request timed out after %ds", self.request_timeout)
+            request_id = request.get("id")
+            if request_id is None:
+                return None
+            return self.make_error_response(
+                request_id,
+                -32603,
+                "Request timeout",
+                data={
+                    "execution": "background_may_continue",
+                    "side_effects": "possible",
+                },
+            )
 
     async def handle_request(self, request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
@@ -165,7 +188,7 @@ class MCPServer:
             logger.warning("Unknown method: %s", method)
             if request_id is None:
                 return None
-            return await self.send_error(request_id, -32601, "Method not found")
+            return self.make_error_response(request_id, -32601, "Method not found")
 
     SUPPORTED_PROTOCOL_VERSIONS = {"2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"}
 
@@ -232,24 +255,17 @@ class MCPServer:
         logger.debug("Arguments: %s", arguments)
 
         try:
-            result = await asyncio.wait_for(
-                self.handlers.handle_tool(tool_name, arguments),  # type: ignore[arg-type]
-                timeout=self.request_timeout,
-            )
-
+            result = await self.handlers.handle_tool(tool_name, arguments)  # type: ignore[arg-type]
             return {
                 "jsonrpc": "2.0",
                 "id": request_id,
                 "result": {"content": [{"type": "text", "text": json.dumps(result, indent=2, ensure_ascii=False)}]},
             }
-        except asyncio.TimeoutError:
-            logger.error("Tool '%s' timed out after %ds", tool_name, self.request_timeout)
-            return await self.send_error(request_id, -32603, f"Tool '{tool_name}' timeout")
         # NOTE: Broad exception in tool execution is intentional to catch all handler errors
         # and return standardized error responses to MCP clients.
         except Exception as e:
             logger.error("Error calling tool %s: %s", tool_name, e)
-            return await self.send_error(request_id, -32603, f"Tool error: {str(e)}")
+            return self.make_error_response(request_id, -32603, f"Tool error: {str(e)}")
 
     async def handle_shutdown(self, request_id: Union[str, int, None]) -> Dict[str, Any]:
         """
@@ -292,21 +308,15 @@ class MCPServer:
         Returns:
             Error response dictionary
         """
-        error_response = {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "error": {"code": code, "message": message},
-        }
-
-        if data:
-            error_response["error"]["data"] = data  # type: ignore[index]
-
+        error_response = self.make_error_response(request_id, code, message, data)
         await self.send_response(error_response)
         return error_response
 
     async def cleanup(self):
-        """Cleanup resources."""
+        """Drain active tools, then cleanup resources."""
         logger.info("Cleaning up resources...")
+        self.handlers.start_shutdown()
+        await self.handlers.wait_idle()
         self.handlers.cleanup()
 
 
