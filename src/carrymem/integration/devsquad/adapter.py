@@ -1,5 +1,6 @@
 import sqlite3
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from carrymem.rules import RuleEngine
@@ -47,6 +48,10 @@ class DevSquadAdapter:
             if injected_engine is not None:
                 self._rule_engine = injected_engine
             else:
+                if self._db_path != ":memory:":
+                    db_parent = Path(self._db_path).expanduser().parent
+                    if not db_parent.is_dir():
+                        raise FileNotFoundError(f"Database parent directory does not exist: {db_parent}")
                 self._rule_engine = RuleEngine(self._db_path)
             self._audit = AuditLogger(
                 persist_path=self._db_path,

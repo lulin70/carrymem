@@ -17,6 +17,7 @@ import tempfile
 import pytest
 
 from carrymem import CarryMem
+from carrymem.errors import CarryMemError
 from carrymem.exceptions import DBConnectionError, ValidationError
 
 
@@ -232,7 +233,7 @@ class TestE2EPermissionScenarios:
                 cm.close()
             else:
                 # Non-root: opening a db in a read-only directory must fail.
-                with pytest.raises((PermissionError, OSError, DBConnectionError)):
+                with pytest.raises((CarryMemError, PermissionError, OSError, DBConnectionError)):
                     cm = CarryMem(db_path=db_path)
                     cm.close()
         finally:

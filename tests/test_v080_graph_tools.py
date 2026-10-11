@@ -14,6 +14,7 @@ Test dimensions per DevSquad Iron Rules:
 from __future__ import annotations
 
 import sqlite3
+import threading
 
 import pytest
 
@@ -29,6 +30,7 @@ class FakeConnMgr:
         self._conn.execute("PRAGMA journal_mode=WAL")
         self.db_path = db_path
         self.namespace = "default"
+        self.file_lock = threading.RLock()
 
     def get_connection(self) -> sqlite3.Connection:
         return self._conn
