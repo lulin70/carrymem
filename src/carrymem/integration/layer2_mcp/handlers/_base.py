@@ -66,7 +66,7 @@ class OperationLevel(str, Enum):
 
 
 # TD-044: Operation level for every MCP tool registered in ``handler_map``.
-# Covers all 31 public tools in ``TOOLS`` (see tools.py) plus the internal
+# Covers every public tool in ``TOOLS`` (see tools.py) plus the internal
 # ``mce_status`` diagnostic. The invariant "every handler_map entry has a
 # level" is enforced by ``tests/test_mcp_operation_levels_td044.py``.
 _TOOL_OPERATION_LEVELS: Dict[str, OperationLevel] = {
@@ -78,6 +78,8 @@ _TOOL_OPERATION_LEVELS: Dict[str, OperationLevel] = {
     "classify_and_remember": OperationLevel.WRITE,
     "recall_memories": OperationLevel.READ,
     "forget_memory": OperationLevel.DELETE,
+    "update_memory": OperationLevel.WRITE,
+    "get_memory_history": OperationLevel.READ,
     # ── Knowledge (index builds/refreshes; recall is READ) ──
     "index_knowledge": OperationLevel.WRITE,
     "recall_from_knowledge": OperationLevel.READ,

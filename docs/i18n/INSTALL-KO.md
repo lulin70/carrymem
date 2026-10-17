@@ -51,7 +51,7 @@ carrymem version
 
 **대안 (어디서든 동작)**:
 ```bash
-python3 -m carrymem.cli version
+python3 -m carrymem version
 ```
 
 > ⚠️ **패키지명 vs 임포트명**: `pip install carrymem`로 설치하고, `from carrymem import CarryMem` 또는 `from carrymem import CarryMem`로 임포트합니다.

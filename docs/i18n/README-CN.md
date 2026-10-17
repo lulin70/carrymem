@@ -2,7 +2,7 @@
 
 **别再一遍遍教 AI 你是谁了。**
 
-> 你的随身 AI 记忆 — 偏好、决策和纠正，跨模型、跨工具、跨设备随身携带。
+> 你的随身 AI 记忆 — 偏好、决策和纠正，由支持 MCP 的本地客户端共享。
 
 [English](../../README.md) | **中文** | [日本語](README-JP.md) | [한국어](README-KO.md) | [繁體中文](README-ZH-TW.md)
 
@@ -10,7 +10,7 @@
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI 版本"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-4907%20passed%2C%2010%20skipped-brightgreen" alt="测试">
+  <img src="https://img.shields.io/badge/tests-CI%20门禁-brightgreen" alt="测试">
   <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="覆盖率">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval 学术基准"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
@@ -49,7 +49,7 @@
 周五：切换到 TRAE — 同样的偏好，零重复
 ```
 
-**方法**：`carrymem setup-mcp --all --global` — 一条命令，所有工具共享一份记忆。
+**方法**：`carrymem setup-mcp --all --global` 配置 CLI 已支持的客户端。Workbuddy 使用下方的手动 MCP 配置。所有已配置的客户端可以共享同一个本地记忆数据库。
 
 ### 场景2：U盘携带——新机器，同一身份
 
@@ -118,27 +118,67 @@ cd carrymem && pip install -e ".[dev]"
 
 > **核心功能零 LLM 依赖** — 分类使用内置规则引擎，无需调用任何大模型。
 
-### 用 Cursor / Claude Code / TRAE？
+### 使用 Cursor / Claude Code / TRAE？
 
 ```bash
-pip install carrymem && carrymem setup-mcp --all --global
+pip install carrymem
+carrymem init
+carrymem setup-mcp --all --global
+carrymem doctor
 ```
 
-重启 AI 工具。搞定。
+`--all` 只配置 CLI 已支持的客户端。配置后重启客户端。
+
+### 使用 Workbuddy
+
+Workbuddy 支持相同的本地 stdio MCP 服务，但 CarryMem 当前不会自动修改 Workbuddy 的配置。请把下面的配置加入 Workbuddy 的 MCP 配置文件（通常是 `~/.workbuddy/mcp.json`），并保留已有服务：
+
+```json
+{
+  "mcpServers": {
+    "carrymem": {
+      "command": "carrymem",
+      "args": ["mcp"],
+      "env": {
+        "CARRYMEM_DATA_PATH": "/Users/你的用户名/.carrymem/memories.db"
+      }
+    }
+  }
+}
+```
+
+如果 `carrymem` 不在 PATH 中，请使用包含 CarryMem 的 Python 绝对路径：
+
+```json
+{
+  "command": "/你的 Python 绝对路径",
+  "args": ["-m", "carrymem.integration.layer2_mcp"]
+}
+```
+
+保存配置后重启 Workbuddy。
 
 ### 验证效果（30 秒）
 
-告诉你的 AI：
-```
-记住，我偏好 PostgreSQL
+在任一客户端中输入：
+
+```text
+请调用 CarryMem 的 health_check，检查服务是否正常。
 ```
 
-开一个新对话，问：
-```
-我用什么数据库？
+然后输入：
+
+```text
+请记住：我偏好使用 PostgreSQL。
 ```
 
-AI 回答 "PostgreSQL" — 成功了！
+开启新对话后输入：
+
+```text
+我偏好使用什么数据库？请查询 CarryMem。
+```
+
+验证跨客户端同步：在一个客户端写入偏好，再在另一个客户端查询相同偏好。
 
 ### 需要迁移记忆？
 
@@ -178,7 +218,7 @@ carrymem backup --restore <path> # 从备份恢复
 ### 3. 轻量可携带 — 仅 SQLite
 - 核心功能零外部依赖
 - 单个 .db 文件 — 身份随身携带
-- 支持 Cursor、Claude Code、ChatGPT、任何 MCP 客户端
+- 支持能够运行本地 stdio MCP 服务的 MCP 客户端
 
 ---
 
@@ -232,7 +272,7 @@ export PATH="$HOME/Library/Python/3.12/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"
 
 # 或直接使用 Python 模块
-python3 -m carrymem.cli version
+python3 -m carrymem version
 ```
 
 然后运行 `carrymem doctor` 检查配置。
@@ -260,8 +300,8 @@ carrymem add "我偏好深色模式"            # 存储记忆
 carrymem add "测试笔记" --force         # 强制存储（跳过分类）
 carrymem list                           # 列出记忆
 carrymem search "主题"                  # 搜索记忆
-carrymem show <key>                     # 查看记忆详情
-carrymem edit <key> "新内容"            # 编辑记忆
+carrymem show <key>                     # 查看详情、来源和版本
+carrymem edit <key> "新内容"            # 编辑记忆并创建新版本
 carrymem forget <key>                   # 删除记忆
 carrymem whoami                         # AI 认为你是谁
 carrymem profile export --output identity.json   # 导出 AI 身份
@@ -407,16 +447,17 @@ carrymem setup-mcp --tool claude-code
 carrymem setup-mcp --tool all
 ```
 
-31 个 MCP 工具：Core (3) · Storage (3) · Knowledge (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11) · Graph (3) · Health (1)
+33 个 MCP 工具，包含记忆修改和版本历史。可通过 `tools/list` 或 `carrymem doctor` 验证当前服务。
 
 **客户端兼容性：**
 
-| 状态 | 客户端 | 配置方式 |
+| 证据 | 客户端 | 配置方式 |
 |------|--------|---------|
-| ✅ 直接支持 | Cursor、Claude Code、TRAE、Windsurf、Cline | `setup-mcp --global` |
-| ✅ 自动检测 | OpenClaw、Kimi Code CLI、CodeX | `setup-mcp --global`（自动回退到 Claude Code 格式） |
-| 📋 应用商店 | WorkBuddy、CodeBuddy | 需提交至 MCP Marketplace（待完成） |
-| ❌ 不支持 | Kimi 桌面版、DeepSeek 桌面版、通义千问、豆包、天工、智谱清言 | 封闭平台，无 MCP 接口 |
+| ✅ 本机真实同步 | TRAE、Workbuddy | TRAE：`setup-mcp --global`；Workbuddy：手动加入 stdio 配置 |
+| 🟡 仅协议级可行性 | 其他支持本地 stdio MCP 的客户端 | 手动配置标准 `carrymem mcp` 服务 |
+| ❌ 无 MCP 接口 | 不支持 MCP 的封闭客户端 | 无法通过标准 MCP 路径接入 CarryMem |
+
+本轮按计划跳过第三客户端真实 UI 验收。协议级可行性不等同于客户端 UI 验收。
 
 > **🔒 你的记忆只存在你自己的机器上。** CarryMem 所有数据本地存储在 `~/.carrymem/`（SQLite）。每个用户拥有独立的数据库——就像 Git，大家用同一个工具，但各自的仓库完全独立。无云端同步、无共享状态、无跨用户冲突。
 

@@ -1,4 +1,4 @@
-"""MCP Tool handlers for CarryMem — compatibility entry point (TD-039).
+"""MCP Tool handlers for CarryMem — backward-compatible entry point (TD-039).
 
 This package was split from the original monolithic ``handlers.py`` into
 domain-specific sub-modules:
@@ -60,6 +60,7 @@ from .read import (
     handle_batch_classify,
     handle_classify_message,
     handle_get_classification_schema,
+    handle_get_memory_history,
     handle_get_memory_profile,
     handle_get_system_prompt,
     handle_mce_status,
@@ -89,6 +90,7 @@ from .write import (
     handle_declare_preference,
     handle_forget_memory,
     handle_index_knowledge,
+    handle_update_memory,
     handle_schedule_consolidation,
     handle_stop_consolidation,
     handle_summarize_and_store,
@@ -107,6 +109,8 @@ handler_map = {
     "classify_and_remember": (handle_classify_and_remember, "carrymem"),
     "recall_memories": (handle_recall_memories, "carrymem"),
     "forget_memory": (handle_forget_memory, "carrymem"),
+    "update_memory": (handle_update_memory, "carrymem"),
+    "get_memory_history": (handle_get_memory_history, "carrymem"),
     "index_knowledge": (handle_index_knowledge, "carrymem"),
     "recall_from_knowledge": (handle_recall_from_knowledge, "carrymem"),
     "recall_all": (handle_recall_all, "carrymem"),
@@ -234,6 +238,7 @@ class Handlers:
         {
             "classify_and_remember",
             "forget_memory",
+            "update_memory",
             "declare_preference",
         }
     )
@@ -297,8 +302,8 @@ class Handlers:
         """
         normalized = cls._normalize_level(level)
         result: List[Dict[str, Any]] = []
-        # TOOL_NAMES is the canonical set of 31 public tools (excludes
-        # the internal mce_status diagnostic).
+        # TOOL_NAMES is the canonical public tool set (excludes the
+        # internal mce_status diagnostic).
         for name in sorted(TOOL_NAMES):
             op_level = _TOOL_OPERATION_LEVELS.get(name)
             if op_level is None:

@@ -1,9 +1,9 @@
 """
 MCP Tools definitions for CarryMem.
 
-3+3+3+2+1 Optional Mode:
+Public MCP tools are grouped by domain:
   Core (always available): classify_message, get_classification_schema, batch_classify
-  Storage Optional (requires storage adapter): classify_and_remember, recall_memories, forget_memory
+  Storage Optional (requires storage adapter): classify_and_remember, recall_memories, forget_memory, update_memory, get_memory_history
   Knowledge Optional (requires knowledge adapter): index_knowledge, recall_from_knowledge, recall_all
   Profile Optional (requires storage adapter): declare_preference, get_memory_profile
   Prompt Optional (requires storage adapter): get_system_prompt
@@ -165,6 +165,33 @@ OPTIONAL_TOOLS: List[Dict[str, Any]] = [
             "type": "object",
             "properties": {"memory_id": {"type": "string", "description": "Memory ID (storage_key) to delete"}},
             "required": ["memory_id"],
+        },
+    },
+    {
+        "name": "update_memory",
+        "description": (
+            "Update a stored memory and create a new version. Use recall_memories "
+            "first to find the storage_key. Requires storage adapter."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "storage_key": {"type": "string", "description": "Memory storage_key to update"},
+                "new_content": {"type": "string", "description": "Replacement memory content"},
+                "reason": {"type": "string", "description": "Optional reason for the update"},
+            },
+            "required": ["storage_key", "new_content"],
+        },
+    },
+    {
+        "name": "get_memory_history",
+        "description": "Show the version history of one stored memory.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "storage_key": {"type": "string", "description": "Memory storage_key"},
+            },
+            "required": ["storage_key"],
         },
     },
 ]

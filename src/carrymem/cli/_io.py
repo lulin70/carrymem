@@ -25,6 +25,8 @@ from carrymem.cli._base import (
     _validate_cli_path,
 )
 from carrymem.cli._format import formatter
+from carrymem.constants import get_config_file
+from carrymem.utils.config import ConfigManager
 
 
 def cmd_consolidate(args):
@@ -254,10 +256,9 @@ def _collect_rules_for_pack(db_path: str):
 def _collect_config_for_pack():
     """Collect config for packing. Returns config dict or None."""
     try:
-        config_file = _DEFAULT_CONFIG_DIR / "config.json"
+        config_file = get_config_file()
         if config_file.exists():
-            with open(config_file, "r", encoding="utf-8") as f:
-                config_data = json.load(f)
+            config_data = ConfigManager(config_path=str(config_file)).config
             formatter.success("Config (namespace, consolidation settings)")
             return config_data
         formatter.info("No config file found")
@@ -567,20 +568,29 @@ def _restore_config_from_pack(config_data, merge_mode: bool) -> None:
         return
 
     try:
-        config_file = _DEFAULT_CONFIG_DIR / "config.json"
-        _DEFAULT_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        config_file = get_config_file()
+        config_file.parent.mkdir(parents=True, exist_ok=True)
         if config_file.exists() and merge_mode:
-            with open(config_file, "r", encoding="utf-8") as f:
-                existing_config = json.load(f)
+            existing_config = ConfigManager(config_path=str(config_file)).config
             # Deep merge: new values don't overwrite existing
             for key, value in config_data.items():
                 if key not in existing_config:
                     existing_config[key] = value
             with open(config_file, "w", encoding="utf-8") as f:
-                json.dump(existing_config, f, indent=2, ensure_ascii=False)
+                if str(config_file).endswith((".yaml", ".yml")):
+                    import yaml
+
+                    yaml.safe_dump(existing_config, f, allow_unicode=True, sort_keys=False)
+                else:
+                    json.dump(existing_config, f, indent=2, ensure_ascii=False)
         else:
             with open(config_file, "w", encoding="utf-8") as f:
-                json.dump(config_data, f, indent=2, ensure_ascii=False)
+                if str(config_file).endswith((".yaml", ".yml")):
+                    import yaml
+
+                    yaml.safe_dump(config_data, f, allow_unicode=True, sort_keys=False)
+                else:
+                    json.dump(config_data, f, indent=2, ensure_ascii=False)
         formatter.success("Config restored")
     except (OSError, json.JSONDecodeError, ValueError) as e:
         formatter.warning(f"Config restore skipped: {e}")

@@ -94,6 +94,34 @@ class TestMCPToolsE2E(unittest.TestCase):
         self.assertIn("memories", data)
         self.assertIsInstance(data["memories"], list)
 
+    def test_update_memory_tool(self):
+        """Verify: update_memory creates a new version through MCP."""
+        store_result = self.loop.run_until_complete(
+            _call_tool(self.server, "declare_preference", {"message": "I prefer PostgreSQL"})
+        )
+        self.assertIs(store_result.get("success"), True)
+        storage_key = store_result.get("data", {}).get("storage_keys", [])[0]
+
+        update_result = self.loop.run_until_complete(
+            _call_tool(
+                self.server,
+                "update_memory",
+                {
+                    "storage_key": storage_key,
+                    "new_content": "I prefer SQLite for local development",
+                    "reason": "Local development constraint",
+                },
+            )
+        )
+        self.assertIs(update_result.get("success"), True, f"Update failed: {update_result}")
+        self.assertIs(update_result.get("data", {}).get("updated"), True)
+
+        history_result = self.loop.run_until_complete(
+            _call_tool(self.server, "get_memory_history", {"storage_key": storage_key})
+        )
+        self.assertIs(history_result.get("success"), True, f"History failed: {history_result}")
+        self.assertGreaterEqual(len(history_result.get("data", {}).get("history", [])), 2)
+
     def test_forget_memory_tool(self):
         """Verify: forget_memory tool removes a memory."""
         # Store a memory first

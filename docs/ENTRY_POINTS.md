@@ -265,6 +265,8 @@ carrymem stats           # 查看统计
 | `classify_and_remember` | Storage | carrymem | ✅ |
 | `recall_memories` | Storage | carrymem | ✅ |
 | `forget_memory` | Storage | carrymem | ✅ |
+| `update_memory` | Storage | carrymem | ✅ |
+| `get_memory_history` | Storage | carrymem | ✅ |
 | `index_knowledge` | Knowledge | carrymem | ✅ |
 | `recall_from_knowledge` | Knowledge | carrymem | ✅ |
 | `recall_all` | Knowledge | carrymem | ✅ |
@@ -291,7 +293,7 @@ carrymem stats           # 查看统计
 | `onboard` | Guide | carrymem | ✅ |
 | `health_check` | Health | carrymem | ✅ |
 
-**总计**: 31 个 MCP 工具
+**总计**: 33 个 MCP 工具（包含 `update_memory` 和 `get_memory_history`）
 
 ## 附录 B: CLI 命令别名表
 

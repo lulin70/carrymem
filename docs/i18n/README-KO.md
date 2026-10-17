@@ -232,7 +232,7 @@ export PATH="$HOME/Library/Python/3.12/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"
 
 # 또는 Python 모듈 직접 사용
-python3 -m carrymem.cli version
+python3 -m carrymem version
 ```
 
 그 후 `carrymem doctor`로 설정을 확인하세요.

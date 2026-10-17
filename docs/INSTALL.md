@@ -85,7 +85,8 @@ Then in VS Code: Extensions → "Install from VSIX" or press F5 to run in debug 
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CARRYMEM_DB_PATH` | `~/.carrymem/memories.db` | Database file path |
+| `CARRYMEM_DB_PATH` | `~/.carrymem/memories.db` | Database file path used by the CLI and Python API |
+| `CARRYMEM_DATA_PATH` | Not set | Database file path passed to the MCP server; set this to the same file when configuring MCP manually |
 | `CARRYMEM_ENCRYPTION_KEY` | None | Fernet encryption key |
 
 ### VS Code Settings
@@ -93,10 +94,78 @@ Then in VS Code: Extensions → "Install from VSIX" or press F5 to run in debug 
 ```json
 {
   "carrymem.dbPath": "~/.carrymem/memories.db",
-  "carrymem.autoMatch": false,
   "carrymem.defaultScope": "personal"
 }
 ```
+
+## MCP client setup
+
+CarryMem uses MCP. Skill installation is not required. After configuring MCP, use the client chat for normal work.
+
+### Clients configured by the setup command
+
+```bash
+carrymem init
+carrymem setup-mcp --all --global
+carrymem doctor
+```
+
+`--all` configures the clients supported by the setup command. Restart the client after configuration.
+
+### Workbuddy manual configuration
+
+CarryMem does not edit Workbuddy configuration automatically. Add the following server to Workbuddy's MCP configuration, usually `~/.workbuddy/mcp.json`, and preserve existing servers:
+
+```json
+{
+  "mcpServers": {
+    "carrymem": {
+      "command": "carrymem",
+      "args": ["mcp"],
+      "env": {
+        "CARRYMEM_DATA_PATH": "/Users/your-name/.carrymem/memories.db"
+      }
+    }
+  }
+}
+```
+
+If `carrymem` is not on PATH, use the absolute Python executable that contains CarryMem:
+
+```json
+{
+  "command": "/path/to/python",
+  "args": ["-m", "carrymem.integration.layer2_mcp"]
+}
+```
+
+Restart Workbuddy after saving the file. In the client chat, verify the connection:
+
+```text
+Please call CarryMem's health_check and report whether the service is healthy.
+```
+
+Then store a preference, start a new conversation, and query it:
+
+```text
+Remember: I prefer PostgreSQL.
+What database do I prefer? Please query CarryMem.
+```
+
+To keep a memory under user control, ask the client to query it first, then use its `storage_key`:
+
+```text
+Please query CarryMem and show the storage_key, source, scope, and version for the PostgreSQL preference.
+Please call update_memory with that storage_key and replace the preference with: I prefer SQLite for local development.
+Please call get_memory_history with that storage_key.
+Please call forget_memory with that storage_key, then query it again to verify it is gone.
+```
+
+CarryMem currently supports memory update, version history, delete, and export/import. It does not currently expose a unified memory-level pause operation; do not confuse rule pause with memory pause.
+
+### Optional vector model
+
+CarryMem may try to download an optional vector model for semantic search. If the download fails because the machine is offline or the model service is unavailable, CarryMem continues to work with rule-based classification and SQLite FTS5 search. This warning does not block installation, MCP, memory write, recall, update, history, delete, backup, or restore. Network access is only required when you want to download or use the optional vector model.
 
 ## Verification
 

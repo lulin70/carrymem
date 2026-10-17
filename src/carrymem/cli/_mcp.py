@@ -66,7 +66,7 @@ def _build_mcp_server_config(db_path=None):
     if db_path:
         env["CARRYMEM_DATA_PATH"] = db_path
     else:
-        env["CARRYMEM_DATA_PATH"] = "$HOME/.carrymem/memories.db"
+        env["CARRYMEM_DATA_PATH"] = str(_DEFAULT_DB)
     return {
         "command": cmd_info["command"],
         "args": cmd_info["args"],

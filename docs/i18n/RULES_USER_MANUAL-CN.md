@@ -634,7 +634,7 @@ carrymem setup-mcp --tool cursor
 
 ### Rules in System Prompts
 
-When you use CarryMem with any AI tool, rules are **automatically injected** into the system prompt:
+当支持 MCP 的客户端使用 CarryMem 时，规则可以通过已配置的 MCP 工作流注入客户端上下文：
 
 **Before (Memory Only):**
 ```

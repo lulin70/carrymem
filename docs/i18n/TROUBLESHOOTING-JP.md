@@ -113,7 +113,7 @@
 
 **クイック修正**（どこでも動作）:
 ```bash
-python3 -m carrymem.cli version
+python3 -m carrymem version
 ```
 
 **標準修正**:

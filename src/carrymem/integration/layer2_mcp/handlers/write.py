@@ -50,6 +50,26 @@ def handle_forget_memory(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @mcp_tool_handler
+def handle_update_memory(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Update a memory and create a new version."""
+    storage_key = arguments.get("storage_key", "")
+    new_content = arguments.get("new_content", "")
+    reason = arguments.get("reason")
+    user_id = arguments.get("user_id")
+
+    if not storage_key:
+        return {"error": "Missing required field: storage_key"}
+    if not new_content or not new_content.strip():
+        return {"error": "Missing required field: new_content"}
+
+    storage_key = _validate_input(storage_key, "storage_key")
+    new_content = _validate_input(new_content, "new_content")
+    if reason:
+        reason = _validate_input(reason, "reason")
+    return carrymem.update_memory(storage_key, new_content, reason, user_id=user_id)
+
+
+@mcp_tool_handler
 def handle_index_knowledge(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
     """Build the knowledge index and return indexing stats."""
     result = carrymem.index_knowledge()

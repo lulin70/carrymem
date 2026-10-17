@@ -51,7 +51,7 @@ carrymem version
 
 **通用替代方案**：
 ```bash
-python3 -m carrymem.cli version
+python3 -m carrymem version
 ```
 
 > ⚠️ **套件名稱與匯入名稱**：安裝時使用 `pip install carrymem`，匯入時使用 `from carrymem import CarryMem` 或 `from carrymem import CarryMem`。

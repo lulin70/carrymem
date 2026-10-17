@@ -8,12 +8,12 @@
 
 CarryMem 让 AI 记住你，而不是反过来。
 
-**一句话**：跨模型、跨工具、跨设备的 AI 记忆层。
+**一句话**：通过 MCP 兼容客户端共享的本地 AI 记忆层。
 
 **核心价值**：
 - 🧠 AI 自动记住你的偏好、纠正和决策
 - 🔄 记忆可移植 — 切换工具不丢数据
-- ⚡ 60%+ 零成本分类 — 不浪费 Token
+- ⚡ 基于规则的本地分类 — 不依赖 LLM Token
 
 ---
 
@@ -42,18 +42,33 @@ carrymem init
 - 配置文件：`~/.carrymem/config.yaml`
 - 数据库：`~/.carrymem/memories.db`
 
-### 2. 存储第一条记忆（1 分钟）
+### 2. 连接客户端（1 分钟）
 
-```python
-from carrymem import CarryMem
+CarryMem 通过 MCP 使用，不需要安装为 Skill。配置 MCP，重启客户端，然后在对话框中使用自然语言。
 
-with CarryMem() as cm:
-    cm.classify_and_remember("我偏好深色模式")
-    cm.classify_and_remember("我用 PostgreSQL 做数据库")
-    cm.classify_and_remember("我在东京的一家创业公司工作")
+```bash
+carrymem setup-mcp --all --global
+carrymem doctor
+```
+
+命令只配置内置支持的客户端。Workbuddy 请参考 [INSTALL-CN.md](INSTALL-CN.md#workbuddy-手动配置) 手动添加 stdio MCP 配置。
+
+在客户端对话框中验证：
+
+```text
+请调用 CarryMem 的 health_check，检查服务是否正常。
+请记住：我偏好使用 PostgreSQL。
 ```
 
 ### 3. 查看记忆（30 秒）
+
+开启新对话并输入：
+
+```text
+请查询 CarryMem，告诉我偏好使用什么数据库。
+```
+
+本地 CLI 也可以查看：
 
 ```bash
 carrymem list
@@ -72,6 +87,10 @@ with CarryMem() as cm:
 ```bash
 carrymem stats
 ```
+
+### 离线环境和可选向量搜索
+
+如果无法下载可选向量模型，CarryMem 可能显示警告。这不会阻止核心流程。基于规则的分类和 SQLite FTS5 搜索仍然可用，包括 MCP 连接、记忆写入、新对话召回、修改、历史、删除、备份和恢复。以后连接网络后，再下载可选向量模型即可。
 
 ---
 

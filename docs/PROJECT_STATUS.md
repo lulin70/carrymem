@@ -1,8 +1,12 @@
 # CarryMem — Project Status
 
 **Version**: v0.11.2
-**Last Updated**: 2026-10-05
+**Last Updated**: 2026-10-16
 **Maintainer**: CarryMem Team
+
+**Product rollout plan**: [PRODUCT_ROLLOUT_PLAN.md](PRODUCT_ROLLOUT_PLAN.md)
+
+**Current product milestone**: 阶段三“记忆可信和可控”、阶段五文档首轮重做和阶段六首轮隔离 CLI/MCP 模拟验收已完成；外部用户测试执行表已准备，真实外部用户尚未招募；TRAE ↔ Workbuddy 本机同步已验证，第三客户端真实验收按用户决定跳过，其他客户端仅保留 MCP 协议级可行性结论。
 
 ---
 
@@ -45,6 +49,16 @@ The v0.11.x line carries the breaking `native_async` removal, the `cryptography>
 > Publication status is tracked per version in [Version History](#version-history).
 > Only `0.11.2`, `0.11.1`, `0.9.3rc1`, `0.8.0` and `0.5.0`–`0.5.2` are on PyPI;
 > everything between them exists as source and CHANGELOG entries only.
+
+### Current Product-Control Evidence (working tree, 2026-10-16)
+
+- **MCP memory control**: `update_memory` and `get_memory_history` are discoverable through real stdio `initialize` / `tools/list`; the public MCP tool set contains 33 tools.
+- **Focused regression**: MCP workflow, MCP tool contract, operation-level and handler tests — 178 passed.
+- **Memory lifecycle E2E**: CRUD, version history, preference replacement, export/import and full lifecycle — 67 passed.
+- **Real client evidence**: TRAE ↔ Workbuddy shared local SQLite synchronization verified. No third-client UI acceptance is claimed; other MCP clients are covered only by protocol-level feasibility.
+- **Simulated user acceptance**: isolated CLI journey passed — `init` leaves zero user memories, three memories can be added, one memory reaches version 2 after edit, backup is created, and deletion removes the PostgreSQL result from search. CLI, MCP workflow and MCP tool regression tests passed 175 tests; a real MCP stdio subprocess also passed initialize, tools/list, health_check, write, update, history, recall and delete.
+- **Documentation readiness**: English/Chinese installation and quick-start documents were audited against the CLI and MCP paths. In an isolated HOME, version, init, doctor, add, list, pack, unpack and restored search passed; 269 installation, CLI, MCP server and MCP E2E tests passed. The fallback command and pack/unpack config-file path were corrected. Documentation now states clearly that optional vector-model download failure does not block installation, MCP, memory write, recall, update, history, delete, backup, restore, rule-based classification or SQLite FTS5 search.
+- **Known limitation**: memory-level pause/resume has no unified API. Rule-level pause must not be presented as memory-level pause. Tracked as TD-078 in [TECH_DEBT_PLAN.md](TECH_DEBT_PLAN.md).
 
 ### Current Test & Quality Metrics (working tree, 2026-10-07)
 
@@ -119,7 +133,7 @@ these numbers describe the tree, not the v0.11.2 tag.
 | Dimension | Score | Status |
 |-----------|-------|--------|
 | Architecture | B+ | PromptDelegateMixin MRO corrected, doctor Python 3.12 aligned |
-| Modularity | A- | ✅ All 31 MCP tools have handlers (ghost features found later are recorded in [V0.11.0_PROJECT_REVIEW.md](design/V0.11.0_PROJECT_REVIEW.md) §4) |
+| Modularity | A- | ✅ All 33 MCP tools have handlers; `update_memory` and `get_memory_history` are covered by MCP E2E tests (historical ghost findings are recorded in [V0.11.0_PROJECT_REVIEW.md](design/V0.11.0_PROJECT_REVIEW.md) §4) |
 | Security | B+ | MCP XSS strict_mode enabled, SecurityError propagation fixed |
 | Performance | B | Smoke tests added to CI (4 tests, not marked slow) |
 | Maintainability | B+ | Documentation consistency verified across 15 files |

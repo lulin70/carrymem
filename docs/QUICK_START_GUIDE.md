@@ -8,12 +8,12 @@
 
 CarryMem lets AI remember you, not the other way around.
 
-**One sentence**: Your AI memory layer that works across models, tools, and devices.
+**One sentence**: A local AI memory layer shared through MCP-compatible clients.
 
 **Core Value**:
 - 🧠 AI automatically remembers your preferences, corrections, decisions
 - 🔄 Memories are portable - switch tools without losing data
-- ⚡ Rule-based first classification; the historical 88% snapshot has no versioned dataset artifact and is not a release gate
+- ⚡ Rule-based local classification; historical benchmark snapshots are not release gates
 
 ---
 
@@ -44,11 +44,14 @@ This creates:
 
 ### 2. Connect Your AI Tools (1 minute)
 
+CarryMem uses MCP. You do not need to install CarryMem as a Skill. Configure MCP, restart the client, then use the client chat with natural language.
+
 ```bash
-carrymem setup-mcp --global
+carrymem setup-mcp --all --global
+carrymem doctor
 ```
 
-This configures CarryMem for all installed AI tools:
+This configures CarryMem for clients supported by the setup command:
 - **Cursor**: `~/.cursor/mcp.json`
 - **Claude Code**: `~/.claude.json`
 - **TRAE**: `~/.trae/mcp.json`
@@ -56,24 +59,44 @@ This configures CarryMem for all installed AI tools:
 - **Cline**: `~/.cline/mcp.json`
 - **OpenClaw / Kimi Code CLI / CodeX**: Auto-detected
 
+Workbuddy is not configured by this command. Add the manual stdio configuration from [INSTALL.md](INSTALL.md#workbuddy-manual-configuration), then restart Workbuddy.
+
 For a specific tool: `carrymem setup-mcp --tool cursor --global`
 
 **Restart your AI tool to activate CarryMem.**
 
+Verify the connection in the client chat:
+
+```text
+Please call CarryMem's health_check and report whether the service is healthy.
+```
+
 ### 3. Store Your First Memory (1 minute)
+
+For normal MCP use, write the memory in the client chat:
+
+```text
+Remember: I use PostgreSQL for databases.
+```
+
+The Python API is also available for scripts:
 
 ```python
 from carrymem import CarryMem
 
-# Create instance
 with CarryMem() as cm:
-    # Classify and store preferences
-    cm.classify_and_remember("I prefer dark mode")
     cm.classify_and_remember("I use PostgreSQL for databases")
-    cm.classify_and_remember("I work at a startup in Tokyo")
 ```
 
 ### 4. View Memories (30 seconds)
+
+Start a new client conversation and ask:
+
+```text
+Please query CarryMem and tell me which database preference you remember.
+```
+
+For local CLI inspection:
 
 ```bash
 carrymem list
@@ -92,6 +115,10 @@ with CarryMem() as cm:
 ```bash
 carrymem stats
 ```
+
+### Offline and optional vector search
+
+CarryMem may show a warning when it cannot download the optional vector model. This does not block the core workflow. Rule-based classification and SQLite FTS5 search remain available, including MCP connection, memory write, new-conversation recall, update, history, delete, backup, and restore. Connect to the network later if you want to download the optional vector model.
 
 ---
 

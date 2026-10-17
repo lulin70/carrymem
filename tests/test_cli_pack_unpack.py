@@ -92,6 +92,22 @@ class TestBasicPackUnpack:
         assert found
 
 
+class TestConfigPathRoundtrip:
+    def test_pack_uses_config_file_environment_path(self, temp_db, tmp_path, monkeypatch, capsys):
+        config_file = tmp_path / "config" / "config.yaml"
+        config_file.parent.mkdir()
+        config_file.write_text("namespace: pilot\n", encoding="utf-8")
+        monkeypatch.setenv("CARRYMEM_CONFIG_FILE", str(config_file))
+
+        cm = _store_unique_memories(temp_db, 1)
+        cm.close()
+        carry_path = str(tmp_path / "config_path.carry")
+
+        assert cmd_pack(["--output", carry_path, "--db", temp_db]) == 0
+        captured = capsys.readouterr()
+        assert "Config (namespace, consolidation settings)" in captured.out
+
+
 class TestChecksumVerification:
     """SHA-256 checksum verification for .carry files."""
 

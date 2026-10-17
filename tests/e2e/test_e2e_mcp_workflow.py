@@ -94,6 +94,36 @@ class TestE2EMCPWorkflow:
         assert result.get("success") is True
         assert len(str(result)) > 50, "Profile should contain meaningful summary"
 
+    def test_update_and_history_workflow(self, mcp_server):
+        """recall → update → history → recall uses the MCP production path."""
+        store_result = _call(
+            mcp_server,
+            "declare_preference",
+            message="I prefer PostgreSQL for application databases",
+        )
+        assert store_result.get("success") is True
+        storage_key = store_result.get("data", {}).get("storage_keys", [])[0]
+
+        update_result = _call(
+            mcp_server,
+            "update_memory",
+            storage_key=storage_key,
+            new_content="I prefer SQLite for local application databases",
+            reason="Local development changed",
+        )
+        assert update_result.get("success") is True
+        assert update_result.get("data", {}).get("updated") is True
+
+        history_result = _call(mcp_server, "get_memory_history", storage_key=storage_key)
+        assert history_result.get("success") is True
+        history = history_result.get("data", {}).get("history", [])
+        assert len(history) >= 2
+
+        recall_result = _call(mcp_server, "recall_memories", query="local application databases")
+        assert recall_result.get("success") is True
+        assert "SQLite" in str(recall_result)
+        assert "PostgreSQL" not in str(recall_result)
+
     def test_forget_workflow(self, mcp_server):
         """classify_and_remember → recall → forget → recall empty workflow."""
         store_result = _call(mcp_server, "classify_and_remember", message="Temporary note for deletion test")

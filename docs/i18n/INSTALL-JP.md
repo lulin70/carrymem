@@ -79,7 +79,7 @@ carrymem init
 ```
 
 作成されるもの：
-- `~/.carrymem/config.json` — 設定ファイル
+- `~/.carrymem/config.yaml` — 設定ファイル
 - `~/.carrymem/memories.db` — SQLiteデータベース
 
 ### ヘルスチェック
@@ -118,7 +118,7 @@ source ~/.bashrc
 
 **Windows (ネイティブ)**:
 ```powershell
-python -m carrymem.cli version
+python -m carrymem version
 ```
 
 ### PATH確認

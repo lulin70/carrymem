@@ -72,7 +72,7 @@ setup(
     name="carrymem",
     version=get_version(),
     description=(
-        "Your portable AI memory layer. Classify, store, and recall what matters " "across models, tools, and devices."
+        "Portable AI memory for MCP-compatible local clients. Classify, store, and recall what matters."
     ),
     long_description=get_long_description(),
     long_description_content_type="text/markdown",

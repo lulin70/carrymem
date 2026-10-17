@@ -6,8 +6,6 @@ import sqlite3
 import sys
 
 from carrymem.cli._base import (
-    _DEFAULT_CONFIG_DIR,
-    _DEFAULT_DB,
     CarryMem,
     __version__,
     _add_common_args,
@@ -21,6 +19,7 @@ from carrymem.cli._base import (
     _t,
     _yellow,
 )
+from carrymem.constants import get_config_dir, get_config_file, get_db_path
 
 
 def cmd_backup(args):
@@ -120,18 +119,20 @@ def cmd_init(args):
     _add_common_args(parser)
 
     parsed = parser.parse_args(args)
-    db_path = parsed.db or str(_DEFAULT_DB)
+    db_path = parsed.db or str(get_db_path())
+    config_dir = get_config_dir()
 
     print(f"\n  {_bold('Initializing CarryMem...')}\n")
 
-    if not _DEFAULT_CONFIG_DIR.exists():
-        _DEFAULT_CONFIG_DIR.mkdir(parents=True)
-        print(f"  {_green('[OK]')} Created config directory: {_DEFAULT_CONFIG_DIR}")
+    if not config_dir.exists():
+        config_dir.mkdir(parents=True)
+        print(f"  {_green('[OK]')} Created config directory: {config_dir}")
     else:
-        print(f"  {_green('[OK]')} Config directory exists: {_DEFAULT_CONFIG_DIR}")
+        print(f"  {_green('[OK]')} Config directory exists: {config_dir}")
 
-    config_file = _DEFAULT_CONFIG_DIR / "config.json"
+    config_file = get_config_file()
     if not config_file.exists():
+        config_file.parent.mkdir(parents=True, exist_ok=True)
         config = {
             "version": __version__,
             "db_path": db_path,
@@ -145,9 +146,8 @@ def cmd_init(args):
 
     try:
         cm = CarryMem(db_path=db_path)
-        cm.declare("CarryMem initialized successfully!")
-        print(f"  {_green('[OK]')} Database initialized: {db_path}")
         cm.close()
+        print(f"  {_green('[OK]')} Database initialized: {db_path}")
     except (sqlite3.OperationalError, OSError, ValueError) as e:
         print(f"  {_red('[FAIL]')} Database init error: {e}")
         return 1
@@ -167,7 +167,7 @@ def cmd_version(args):
     """Print CarryMem version and runtime environment info."""
     print(f"\n  {_bold(f'CarryMem v{__version__}')}")
     print(f"  Python: {sys.version.split()[0]}")
-    print(f"  Config: {_DEFAULT_CONFIG_DIR}")
-    print(f"  Database: {_DEFAULT_DB}")
+    print(f"  Config: {get_config_dir()}")
+    print(f"  Database: {get_db_path()}")
     print()
     return 0

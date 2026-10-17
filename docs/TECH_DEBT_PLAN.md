@@ -2,9 +2,9 @@
 
 > **文档性质**: 活文档 (Living Document) — 每完成一项立即更新状态
 > **创建时间**: 2026-07-17
-> **最后更新**: 2026-10-10 (本轮关闭 CLI 规则 JSON 协议、真实 CLI/SQLite CRUD/reload 验收和 `autoMatch` 幽灵配置；`defaultScope` 已接入编辑器生产路径；发布门禁已移除阻塞 CI 的 `--no-deps` 降级并统一使用 `npm ci`，release 增加显式多进程并发回归；保留真实 VSCode UI、clean checkout/release 模拟、完整 slow 门禁、health schema、timer 生命周期和 HTTP 超时副作用契约债务。已发布 `0.11.2` 的事实与当前 working tree 证据严格区分。TD-067 修复与历史批次记录见 §9 更新日志)
+> **最后更新**: 2026-10-16 (本轮完成阶段三记忆控制闭环记录：MCP 修改、版本历史、删除和导出恢复已有生产路径与 E2E 证据；记录记忆级暂停尚无统一 API；第三客户端真实验收按用户决定跳过。保留真实 VSCode UI、clean checkout/release 模拟、完整 slow 门禁、health schema、timer 生命周期和 HTTP 超时副作用契约债务。已发布 `0.11.2` 的事实与当前 working tree 证据严格区分。TD-067 修复与历史批次记录见 §9 更新日志)
 > **基于**: 7 维度项目整理评估 (2026-07-17, B+ 77/100) + DevSquad 7 角色并行审核
-> **配套文档**: [ROADMAP_P0_P3.md](ROADMAP_P0_P3.md) — 执行路线图 (Wave 推进表 + 7-Role 投票矩阵 + 11 阶段生命周期映射)
+> **配套文档**: [ROADMAP_P0_P3.md](ROADMAP_P0_P3.md) — 执行路线图 (Wave 推进表 + 7-Role 投票矩阵 + 11 阶段生命周期映射)；[PRODUCT_ROLLOUT_PLAN.md](PRODUCT_ROLLOUT_PLAN.md) — 面向用户价值、首次成功、兼容性和推广的产品推进方案
 >
 > **文档分工**:
 > - 本文档 (TECH_DEBT_PLAN.md) = 技术债**目录** (TD-001~TD-077 明细 + 验证标准 + 风险矩阵)
@@ -1051,6 +1051,19 @@
 | **状态** | ⬜ 待开始 |
 | **生命周期** | P2 架构设计 → P8 实现 → P9 测试执行 |
 
+### TD-078: 记忆级暂停能力缺失 ⚠️ 新增 (2026-10-16)
+
+| 字段 | 值 |
+|------|-----|
+| **优先级** | P1 |
+| **位置** | CarryMem 记忆 CRUD、MCP read/write handlers、CLI memory commands |
+| **问题描述** | 当前支持查看、来源/作用域/版本、修改、版本历史、删除和导出恢复，但没有统一的记忆级暂停状态与暂停/恢复 API。规则级暂停不能替代记忆级暂停；如果宣传“可暂停记忆”，用户无法通过统一入口控制单条记忆何时生效。 |
+| **修复方案** | 先定义暂停语义：暂停是否影响召回、自动注入、规则匹配、更新和导出；再设计持久化状态、MCP/CLI/API 入口、权限审计、恢复操作和 E2E 验收。完成前不得把记忆级暂停列为已支持能力。 |
+| **负责角色** | Product Manager + Architect + Security + Coder + Tester |
+| **验证标准** | 设计完成后，提供真实 MCP/CLI/API 的暂停与恢复路径；暂停记忆不出现在受影响的用户召回路径中，恢复后可召回；审计记录和状态可观察；覆盖写入、跨客户端召回、暂停、恢复、删除和导出恢复 E2E。 |
+| **状态** | ⬜ 待开始 |
+| **生命周期** | P1 需求分析 → P2 架构设计 → P5 交互设计 → P8 实现 → P9 测试执行 |
+
 ---
 
 ## 6. 生命周期阶段映射
@@ -1202,6 +1215,7 @@ TD-035 (AccessPolicy 集成) — 安全债，独立推进
 | 2026-09-21 | v14: v0.11.2 事实复核 (对照 PROJECT_STATUS.md + CHANGELOG.md)。头部测试数（旧快照值已过时）更正为 `4891 passed, 10 skipped, 77 deselected` (4978 collected) + e2e 265 passed；§1 增加"全部 TD 项已完成"复核说明；新增 **TD-067**（`types.py:350-356` 的 `ScheduleConsolidationResult` 声明字段 `scheduled/interval_hours/dry_run/message` 与 `core/_maintenance.py:254-260` 实际返回的 `scheduled/interval_hours/dry_run/run_p1/run_p2` 漂移，状态 ⬜ 待开始）。本次复核同时核对：`plugins/` 目录与 `SummaryLayer` 类已于 v0.11.0 删除、`AsyncCarryMem(native_async=True)` 模式已删除、`AsyncSQLiteAdapter` 对 `encryption_key` fail-closed——本文档原无与这些事实冲突的表述 | DevSquad |
 | 2026-10-08 | v15: Dependabot 23 条告警处置。**已修复**：urllib3 2.7.0→2.8.0（requirements-dev.txt 重编译，消 2 high）；VSCode 插件 brace-expansion 1.1.16→1.1.21 / 2.1.2→2.1.7（`npm update brace-expansion`，消 2 medium）。**豁免留痕**：13 条 pyjwt 告警（2 critical）——暴露面分析证实脆弱代码不可达（zhipuai 仅 jwt.encode 本地签名，见 TD-068 重评估），以 tolerable_risk 豁免。**登记新债**：TD-069（virtualenv 解析器停在 21.7.6，约束源待查）、TD-070（VSCode chokidar/mocha 链需破坏性升级 @vscode/test-cli 0.0.15）。本地 CI 八项门禁全绿（pytest 5103 passed / 覆盖率 83.17%） | DevSquad |
 | 2026-10-10 | v16: 继续评估当前 working tree。记录 HTTP→MCP 配置映射、HTTP cleanup/SSE 唤醒、RRF per-call 竞态修复；独立并发变异测试连续 5 次通过，但完整非 slow 门禁为 `5106 passed, 1 failed, 10 skipped, 77 deselected`，slow 多进程测试耗时 `453.3s` 超过门槛，HTTP/MCP 批次 `84 passed, 2 failed`（工具超时后后台线程继续写入；SLO 中位数 p99 `416.093ms` 超过 `200ms`）。新增 TD-071~TD-077，明确 VSCode CLI/配置消费者、真实 CRUD/reload E2E、release/CI 门禁可信度、health schema 双轨、consolidation timer close 生命周期、HTTP 超时副作用与高负载 SLO 仍未闭环。当前有 7 个未提交文件；不得将本轮结果作为已发布 0.11.2 证据，完整发布门禁需在干净 checkout/目标 commit 上重跑 | DevSquad |
+| 2026-10-16 | v17: 阶段三记忆可信和可控完成当前可交付闭环记录。MCP `update_memory`、`get_memory_history`、删除、导出恢复均有生产路径与 E2E 证据；MCP stdio 工具发现验证通过（33 个工具）。TRAE ↔ Workbuddy 已完成本机真实同步。第三客户端真实验收按用户决定跳过，仅保留 MCP 协议级可行性结论。新增 TD-078：记忆级暂停尚无统一 API，继续禁止宣传为已支持能力 | DevSquad |
 
 ---
 

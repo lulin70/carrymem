@@ -619,7 +619,7 @@ cm.close()
 
 ### Integrating with MCP Tools
 
-If using Cursor / Claude Code / Trae / Windsurf / Cline with MCP:
+If using an MCP-compatible local client such as Cursor, Claude Code, Trae, Windsurf, or Cline:
 
 ```bash
 # Setup MCP (one-time)
@@ -634,7 +634,7 @@ carrymem setup-mcp --tool cursor
 
 ### Rules in System Prompts
 
-When you use CarryMem with any AI tool, rules are **automatically injected** into the system prompt:
+When an MCP-compatible client uses CarryMem, rules can be injected into the client context through the configured MCP workflow:
 
 **Before (Memory Only):**
 ```

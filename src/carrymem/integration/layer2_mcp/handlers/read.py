@@ -168,6 +168,16 @@ def handle_recall_memories(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any
 
 
 @mcp_tool_handler
+def handle_get_memory_history(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Return version history for one memory."""
+    storage_key = arguments.get("storage_key", "")
+    if not storage_key:
+        return {"error": "Missing required field: storage_key"}
+    storage_key = _validate_input(storage_key, "storage_key")
+    return {"storage_key": storage_key, "history": carrymem.get_memory_history(storage_key)}
+
+
+@mcp_tool_handler
 def handle_recall_from_knowledge(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
     """Recall knowledge notes matching a query."""
     query = arguments.get("query", "")

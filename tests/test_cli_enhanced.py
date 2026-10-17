@@ -381,6 +381,28 @@ class TestCmdInit:
         captured = capsys.readouterr()
         assert "ready" in captured.out.lower()
 
+    def test_init_does_not_create_user_memory(self, tmp_path, capsys):
+        db = str(tmp_path / "empty_after_init.db")
+        result = cmd_init(["--db", db])
+        assert result == 0
+        capsys.readouterr()
+
+        cm = CarryMem(db_path=db)
+        assert cm.recall_memories(query="", limit=100) == []
+        cm.close()
+
+    def test_init_uses_config_file_environment_path(self, tmp_path, monkeypatch, capsys):
+        db = str(tmp_path / "init_test.db")
+        config_file = tmp_path / "nested" / "config.yaml"
+        monkeypatch.setenv("CARRYMEM_CONFIG_FILE", str(config_file))
+
+        result = cmd_init(["--db", db])
+
+        assert result == 0
+        capsys.readouterr()
+        assert config_file.exists()
+        assert not (tmp_path / "config.json").exists()
+
 
 class TestCmdVersion:
     def test_version(self, capsys):
@@ -440,7 +462,7 @@ class TestBuildMcpServerConfig:
             config = _build_mcp_server_config()
             assert config["command"] == "carrymem"
             assert config["args"] == ["mcp"]
-            assert config["env"]["CARRYMEM_DATA_PATH"] == "$HOME/.carrymem/memories.db"
+            assert config["env"]["CARRYMEM_DATA_PATH"].endswith(".carrymem/memories.db")
 
     def test_custom_db_path(self):
         with patch("shutil.which", return_value="/usr/local/bin/carrymem"):

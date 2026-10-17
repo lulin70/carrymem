@@ -2,8 +2,7 @@
 
 Verifies that every MCP tool registered in ``handler_map`` has an
 ``OperationLevel`` annotation, and that ``Handlers.list_tools(level)``
-filters correctly. The 31 public tools (``TOOL_NAMES``) are the primary
-scope; the internal ``mce_status`` diagnostic is also covered.
+filters correctly. The public tools (``TOOL_NAMES``) are the primary scope; the internal ``mce_status`` diagnostic is also covered.
 """
 
 import pytest
@@ -20,14 +19,11 @@ from carrymem.integration.layer2_mcp.tools import TOOL_NAMES, TOOLS
 
 
 class TestAllToolsHaveLevel:
-    """TD-044 acceptance: all 31 public MCP tools carry an OperationLevel."""
+    """TD-044 acceptance: every public MCP tool carries an OperationLevel."""
 
-    def test_public_tool_count_is_31(self):
-        """Lock the public surface at 31 tools (the task's stated scope)."""
-        assert len(TOOL_NAMES) == 31, (
-            f"Expected 31 public tools, got {len(TOOL_NAMES)}. "
-            "If you added a tool, update _TOOL_OPERATION_LEVELS and this test."
-        )
+    def test_public_tool_count_matches_tool_definitions(self):
+        """The operation-level contract follows the public tool definitions."""
+        assert len(TOOL_NAMES) == len(TOOLS)
 
     def test_every_public_tool_has_level(self):
         """Every name in TOOL_NAMES must appear in _TOOL_OPERATION_LEVELS."""
@@ -68,6 +64,7 @@ class TestOperationLevelBreakdown:
         "recall_memories",
         "recall_from_knowledge",
         "recall_all",
+        "get_memory_history",
         "get_memory_profile",
         "get_system_prompt",
         "list_rules",
@@ -89,6 +86,7 @@ class TestOperationLevelBreakdown:
         "declare_preference",
         "summarize_and_store",
         "consolidate_memories",
+        "update_memory",
         "promote_rules",
         "update_rule",
         "add_rule",
@@ -137,9 +135,9 @@ class TestOperationLevelBreakdown:
         assert actual == self.EXPECTED_ADMIN_TOOLS
 
     def test_level_counts_match_total(self):
-        """READ + WRITE + DELETE + ADMIN counts must equal 31 public tools."""
+        """READ + WRITE + DELETE + ADMIN counts must equal public tools."""
         counts = Handlers.count_tools_by_level()
-        assert sum(counts.values()) == 31, counts
+        assert sum(counts.values()) == len(TOOL_NAMES), counts
         # Spot-check expected counts
         assert counts["read"] == len(self.EXPECTED_READ_TOOLS)
         assert counts["write"] == len(self.EXPECTED_WRITE_TOOLS)
@@ -171,9 +169,9 @@ class TestOperationLevelBreakdown:
 class TestListTools:
     """Verify Handlers.list_tools(level) filtering and output shape."""
 
-    def test_list_all_tools_returns_31(self):
+    def test_list_all_tools_matches_public_tools(self):
         all_tools = Handlers.list_tools()
-        assert len(all_tools) == 31
+        assert len(all_tools) == len(TOOL_NAMES)
         # Each entry has the expected shape
         for entry in all_tools:
             assert set(entry.keys()) == {"name", "level", "target"}

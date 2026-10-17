@@ -2,7 +2,7 @@
   "$schema": "https://glama.ai/mcp/schemas/server.json",
   "name": "carrymem",
   "display_name": "CarryMem",
-  "description": "Your portable AI memory layer — preferences, decisions, and corrections that follow you across models, tools, and devices. Classify, store, and recall what matters using zero-LLM rule-based classification (88% coverage), SQLite with FTS5 full-text search, and cross-client MCP integration for Cursor, Claude Code, TRAE, Windsurf, Cline, and more.",
+  "description": "Portable AI memory for MCP-compatible local clients. Store, recall, update, version, and delete preferences and decisions with SQLite and FTS5. TRAE and Workbuddy local synchronization has been verified; other clients are protocol-level compatibility only.",
   "url": "https://github.com/lulin70/carrymem",
   "type": "mcp-server",
   "category": "memory",

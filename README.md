@@ -2,13 +2,13 @@
 
 **Stop teaching AI who you are every single conversation.**
 
-> Your portable AI memory — preferences, decisions, and corrections that follow you across models, tools, and devices.
+> Your portable AI memory — preferences, decisions, and corrections shared by MCP-compatible local clients.
 
 Every time you open a new chat, you introduce yourself again. Your preferences, your decisions, your corrections — all forgotten. Switch from Cursor to Claude Code, from GPT to Claude, start from scratch every time.
 
 You're not using AI. You're training it. Over and over.
 
-CarryMem fixes this. It's a lightweight, zero-dependency memory system that stores **who you are** and makes that identity available to any AI tool. Your AI remembers your preferences, your past decisions, and the corrections you've made — so you can focus on building, not repeating yourself.
+CarryMem fixes this. It's a lightweight, zero-dependency memory system that stores **who you are** and makes that identity available to MCP-compatible local clients. Your AI remembers your preferences, your past decisions, and the corrections you've made — so you can focus on building, not repeating yourself.
 
 **English** | [中文](docs/i18n/README-CN.md) | [日本語](docs/i18n/README-JP.md) | [한국어](docs/i18n/README-KO.md) | [繁體中文](docs/i18n/README-ZH-TW.md)
 
@@ -52,7 +52,7 @@ CarryMem fixes this. It's a lightweight, zero-dependency memory system that stor
 
 > **你每天见客户、开会、聊天，AI 问你一句你答一句，下次对话它又忘了你是谁。**
 >
-> CarryMem 让 AI **自动记住你的偏好和决策**——不用每次重复说。装一次，所有 AI 工具通用。
+> CarryMem 让 AI **自动记住你的偏好和决策**——不用每次重复说。配置一次，支持本地 stdio MCP 的客户端可以共享同一份记忆。
 
 *Technical users: see [PrefEval benchmarks](https://arxiv.org/abs/2410.01373) (83.0% ICLR 2025 Oral) and [architecture docs](#-architecture) below.*
 
@@ -63,7 +63,7 @@ CarryMem fixes this. It's a lightweight, zero-dependency memory system that stor
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI version"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-4907%20passed%2C%2010%20skipped-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-CI%20gated-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="Coverage">
   <img src="https://img.shields.io/badge/mypy-0%20errors-brightgreen" alt="mypy">
   <img src="https://img.shields.io/badge/security-bandit%2Bpip--audit-blue" alt="Security">
@@ -107,7 +107,7 @@ Tuesday: Open Claude Code — it already knows your stack
 Friday:  Switch to TRAE — same preferences, zero repetition
 ```
 
-**How**: `carrymem setup-mcp --all --global` — one command, all tools share one memory.
+**How**: `carrymem setup-mcp --all --global` configures the supported clients. Workbuddy uses the manual MCP configuration shown below. All configured clients can share one local memory database.
 
 ### Scenario 2: The USB Carry — New Machine, Same Identity
 
@@ -148,24 +148,64 @@ Month 6: carrymem whoami → shows "I prefer light mode" (dark mode archived)
 ### Using Cursor / Claude Code / TRAE?
 
 ```bash
-pip install carrymem && carrymem setup-mcp --all --global
+pip install carrymem
+carrymem init
+carrymem setup-mcp --all --global
+carrymem doctor
 ```
 
-Restart your AI tool. Done.
+`--all` configures the clients supported by the setup CLI. Restart the client after configuration.
+
+### Using Workbuddy
+
+Workbuddy supports the same local stdio MCP server, but CarryMem does not edit its configuration automatically. Add this entry to Workbuddy's MCP configuration file, usually `~/.workbuddy/mcp.json`, and preserve any existing servers:
+
+```json
+{
+  "mcpServers": {
+    "carrymem": {
+      "command": "carrymem",
+      "args": ["mcp"],
+      "env": {
+        "CARRYMEM_DATA_PATH": "/Users/your-name/.carrymem/memories.db"
+      }
+    }
+  }
+}
+```
+
+If `carrymem` is not on PATH, use the absolute Python executable that contains CarryMem:
+
+```json
+{
+  "command": "/path/to/python",
+  "args": ["-m", "carrymem.integration.layer2_mcp"]
+}
+```
+
+Restart Workbuddy after saving the configuration.
 
 ### Verify it works (30 seconds)
 
-Tell your AI:
+In either client, ask:
+
+```text
+Please call CarryMem's health_check and report whether the service is healthy.
 ```
-Remember, I prefer PostgreSQL
+
+Then ask:
+
+```text
+Remember: I prefer PostgreSQL.
 ```
 
 Start a new conversation and ask:
-```
-What database do I prefer?
+
+```text
+What database do I prefer? Please query CarryMem.
 ```
 
-AI answers "PostgreSQL" — it works!
+To verify cross-client synchronization, store the preference in one client and query it in the other.
 
 ### Need to move your memory?
 
@@ -209,7 +249,7 @@ These are what make CarryMem different from every other memory solution:
 ### 3. Lightweight & Portable — SQLite Only
 - Zero external dependencies for core functionality
 - Single .db file — carry your identity anywhere
-- Works with Cursor, Claude Code, ChatGPT, any MCP client
+- Works with MCP clients that support local stdio MCP servers
 
 ### 4. Industrial-Grade Engineering — 4907 Tests / mypy 0 / flake8 0
 - **4907 tests passed, 10 skipped** in the current full regression (optional vector/semantic dependencies account for the skips); E2E and TUI suites are included in the repository test run.
@@ -313,9 +353,9 @@ carrymem add "I prefer dark mode"       # Store a memory
 carrymem add "test note" --force        # Force store (bypass classification)
 carrymem list                           # List memories
 carrymem search "theme"                 # Search memories
-carrymem show <key>                     # View memory details
-carrymem edit <key> "new content"       # Edit a memory
-carrymem forget <key>                   # Delete a memory
+carrymem show <key>                     # View memory details, source, and version
+carrymem edit <key> "new content"        # Edit a memory and create a version
+carrymem forget <key>                    # Delete a memory
 carrymem whoami                         # Who your AI thinks you are
 carrymem profile export --output identity.json   # Export your AI identity
 carrymem stats                          # Memory statistics
@@ -674,16 +714,17 @@ carrymem setup-mcp --tool claude-code
 carrymem setup-mcp --tool all
 ```
 
-31 MCP tools available: Core (3) · Storage (3) · Knowledge (3) · Graph (3) · Profile (2) · Prompt (2) · Consolidation (3) · Rules (11) · Health (1)
+33 MCP tools available, including memory update and version history. Use `tools/list` or `carrymem doctor` to verify the installed server.
 
 **Client Compatibility:**
 
-| Status | Clients | Setup |
-|--------|---------|-------|
-| ✅ Direct | Cursor, Claude Code, TRAE, Windsurf, Cline | `setup-mcp --global` |
-| ✅ Auto-detect | OpenClaw, Kimi Code CLI, CodeX | `setup-mcp --global` (falls back to Claude Code format) |
-| 📋 Marketplace | WorkBuddy, CodeBuddy | Submit to MCP Marketplace (pending) |
-| ❌ Not supported | Kimi Desktop, DeepSeek Desktop, Qianwen, Doubao, TiGong, ChatGLM | Closed platforms, no MCP interface |
+| Evidence | Clients | Setup |
+|----------|---------|-------|
+| ✅ Real local sync | TRAE, Workbuddy | TRAE: `setup-mcp --global`; Workbuddy: add the stdio entry manually |
+| 🟡 Protocol-level only | Other clients with local stdio MCP support | Configure the standard `carrymem mcp` server manually |
+| ❌ No MCP interface | Closed clients without MCP support | CarryMem cannot be connected through the standard MCP path |
+
+The third-client real UI acceptance is intentionally skipped in the current local rollout. Do not treat protocol-level compatibility as client UI acceptance.
 
 > **🔒 Your memories stay on your machine.** CarryMem stores all data locally in `~/.carrymem/` (SQLite). Each user gets an independent database — just like Git, everyone uses the same tool but keeps their own repos. No cloud sync, no shared state, no cross-user conflicts.
 

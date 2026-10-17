@@ -113,7 +113,7 @@
 
 **快速修复**（通用）:
 ```bash
-python3 -m carrymem.cli version
+python3 -m carrymem version
 ```
 
 **标准修复**:
