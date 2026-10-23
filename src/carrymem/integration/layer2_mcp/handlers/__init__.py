@@ -90,10 +90,10 @@ from .write import (
     handle_declare_preference,
     handle_forget_memory,
     handle_index_knowledge,
-    handle_update_memory,
     handle_schedule_consolidation,
     handle_stop_consolidation,
     handle_summarize_and_store,
+    handle_update_memory,
 )
 
 # ── Handler registry ───────────────────────────────────────────────

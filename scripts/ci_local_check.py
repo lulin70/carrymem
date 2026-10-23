@@ -177,7 +177,9 @@ def main() -> int:
                 "HOME": str(runtime_dirs["home"]),
                 "CARRYMEM_CONFIG_DIR": str(runtime_dirs["config"]),
                 "CARRYMEM_CONFIG_FILE": str(runtime_dirs["config"] / "config.yaml"),
-                "CARRYMEM_DB_PATH": str(runtime_dirs["data"] / "memories.db"),
+                # Keep the isolated default database under HOME/.carrymem so
+                # default-path CLI contracts remain representative of a real install.
+                "CARRYMEM_DB_PATH": str(runtime_dirs["home"] / ".carrymem" / "memories.db"),
                 "CARRYMEM_DATA_PATH": str(runtime_dirs["data"]),
                 "CARRYMEM_CACHE_DIR": str(runtime_dirs["cache"]),
                 "CARRYMEM_LOG_DIR": str(runtime_dirs["logs"]),

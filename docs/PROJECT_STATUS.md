@@ -1,12 +1,12 @@
 # CarryMem — Project Status
 
 **Version**: v0.11.2
-**Last Updated**: 2026-10-16
+**Last Updated**: 2026-10-23
 **Maintainer**: CarryMem Team
 
 **Product rollout plan**: [PRODUCT_ROLLOUT_PLAN.md](PRODUCT_ROLLOUT_PLAN.md)
 
-**Current product milestone**: 阶段三“记忆可信和可控”、阶段五文档首轮重做和阶段六首轮隔离 CLI/MCP 模拟验收已完成；外部用户测试执行表已准备，真实外部用户尚未招募；TRAE ↔ Workbuddy 本机同步已验证，第三客户端真实验收按用户决定跳过，其他客户端仅保留 MCP 协议级可行性结论。
+**Current product milestone**: 阶段三“记忆可信和可控”、阶段五文档首轮重做和阶段六首轮隔离 CLI/MCP 模拟验收已完成；外部用户试点执行表、最小测试指引和反馈模板已准备，当前进入招募待开始阶段；TRAE ↔ Workbuddy 本机同步已验证，第三客户端真实验收按用户决定跳过，其他客户端仅保留 MCP 协议级可行性结论。
 
 ---
 
@@ -18,7 +18,7 @@ The v0.11.x line carries the breaking `native_async` removal, the `cryptography>
 
 ### Release Evidence
 
-- **Regression (CI semantics)**: `python3 scripts/ci_local_check.py` → `collected 4986 items / 77 deselected / 4909 selected`, **`4899 passed, 10 skipped, 77 deselected, 143 warnings in 946.04s (0:15:46)`**, `Total coverage: 83.20%` (`fail_under = 80`), `radon: no functions with complexity >= 21`, `All six blocking local CI gates passed (flake8, black, isort, mypy, pytest, radon).`
+- **Regression (CI semantics)**: Python 3.12 isolated local release-style gate passed on 2026-10-23 after fixing the runtime path contract: `5124 passed, 10 skipped, 77 deselected`, `Total coverage: 83.19%` (`fail_under = 80`), `radon: no functions with complexity >= 21`; all eight blocking gates passed (flake8, black, isort, mypy, pytest, radon, version-consistency, swallowed-assert).
 - **Release workflow**: run `35572211377` (`Release v0.11.2`) — all four jobs `success`: Pre-Release Tests / E2E Tests (User Journey Gate) / VSCode Tier 2 UI E2E / Build & Publish.
 - **PyPI**: `carrymem-0.11.2-py3-none-any.whl` (537,877 B) and `carrymem-0.11.2.tar.gz` (1,645,442 B) uploaded `2026-09-21T07:36Z`; `info.version == 0.11.2`.
 - **Fresh-install smoke** (venv + `pip install carrymem==0.11.2` from PyPI): `installed: 0.11.2`, `pip check` → `No broken requirements found.` Four storing message shapes — including two that contain pronouns and one correction — each report `counters={'classify_and_remember': 1}` with **no `recall` key**, and one explicit `recall_memories` reports `{'recall': 1}`. `LEAKING BRANCHES: none`.
@@ -112,9 +112,8 @@ these numbers describe the tree, not the v0.11.2 tag.
 - **Version consistency**: all five machine-readable sources report `0.11.2`
 - **Gates**: eight blocking local gates (flake8, black, isort, mypy, pytest, radon,
   version-consistency, swallowed-assert) via `python3 scripts/ci_local_check.py`
-- **Tech debt**: TD-001~TD-069 complete (TD-068 fixed by migrating from zhipuai to zai-sdk;
-  TD-069 fixed by upgrading virtualenv to 21.14.6); see
-  [TECH_DEBT_PLAN.md](TECH_DEBT_PLAN.md).
+- **Tech debt**: 当前目录包含 TD-001~TD-078 共 78 条明细；TD-070、TD-073、TD-074、TD-075、TD-076 的产品契约部分、TD-077 和 TD-078 仍未完全闭环。GitHub Issue #56/#57 已调查并关闭，后续 nightly runs `39736182269` 和 `39913021565` 全部通过；详见
+  [TECH_DEBT_PLAN.md](TECH_DEBT_PLAN.md)。
 
 ### Test & Quality Metrics (v0.9.8, historical)
 

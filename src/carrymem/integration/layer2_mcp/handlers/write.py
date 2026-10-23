@@ -66,7 +66,7 @@ def handle_update_memory(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
     new_content = _validate_input(new_content, "new_content")
     if reason:
         reason = _validate_input(reason, "reason")
-    return carrymem.update_memory(storage_key, new_content, reason, user_id=user_id)
+    return carrymem.update_memory(storage_key, new_content, reason, user_id=user_id)  # type: ignore[no-any-return]
 
 
 @mcp_tool_handler

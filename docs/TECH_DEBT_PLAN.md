@@ -2,12 +2,12 @@
 
 > **文档性质**: 活文档 (Living Document) — 每完成一项立即更新状态
 > **创建时间**: 2026-07-17
-> **最后更新**: 2026-10-16 (本轮完成阶段三记忆控制闭环记录：MCP 修改、版本历史、删除和导出恢复已有生产路径与 E2E 证据；记录记忆级暂停尚无统一 API；第三客户端真实验收按用户决定跳过。保留真实 VSCode UI、clean checkout/release 模拟、完整 slow 门禁、health schema、timer 生命周期和 HTTP 超时副作用契约债务。已发布 `0.11.2` 的事实与当前 working tree 证据严格区分。TD-067 修复与历史批次记录见 §9 更新日志)
+> **最后更新**: 2026-10-23 (已调查并关闭 GitHub Issue #56/#57；后续 nightly runs `39736182269` 和 `39913021565` 全部通过。当前目录包含 TD-001~TD-078 共 78 条明细；未闭环项为 TD-070、TD-073、TD-074、TD-075、TD-076 的产品契约部分、TD-077 和 TD-078。保留真实 VSCode UI→CLI→SQLite、clean checkout/release 模拟、完整 slow 门禁、health schema、timer 生命周期、HTTP 超时副作用契约和记忆级暂停债务。已发布 `0.11.2` 的事实与当前 working tree 证据严格区分。TD-067 修复与历史批次记录见 §9 更新日志)
 > **基于**: 7 维度项目整理评估 (2026-07-17, B+ 77/100) + DevSquad 7 角色并行审核
 > **配套文档**: [ROADMAP_P0_P3.md](ROADMAP_P0_P3.md) — 执行路线图 (Wave 推进表 + 7-Role 投票矩阵 + 11 阶段生命周期映射)；[PRODUCT_ROLLOUT_PLAN.md](PRODUCT_ROLLOUT_PLAN.md) — 面向用户价值、首次成功、兼容性和推广的产品推进方案
 >
 > **文档分工**:
-> - 本文档 (TECH_DEBT_PLAN.md) = 技术债**目录** (TD-001~TD-077 明细 + 验证标准 + 风险矩阵)
+> - 本文档 (TECH_DEBT_PLAN.md) = 技术债**目录** (TD-001~TD-078 共 78 条明细 + 验证标准 + 风险矩阵)
 > - ROADMAP_P0_P3.md = 技术债**执行路线** (Wave 推进表 + 共识投票矩阵 + 活文档同步清单)
 
 ---
@@ -28,11 +28,11 @@
 | 优先级 | 数量 | 预估时间 | 执行方式 |
 |--------|------|----------|----------|
 | P0 立即修复 | 5 项 | 60min | 立即执行 |
-| P1 高优先级 | 22 项 | ~28h | 测试先行 → 架构重构 → DevOps+代码 |
-| P2 中优先级 | 13 项 | ~18h | 方案+共识后推进 |
-| P3 低优先级 | 10 项 | ~4h | 日常维护渐进 |
+| P1 高优先级 | 33 项 | ~28h | 测试先行 → 架构重构 → DevOps+代码 |
+| P2 中优先级 | 25 项 | ~18h | 方案+共识后推进 |
+| P3 低优先级 | 15 项 | ~4h | 日常维护渐进 |
 
-> **复核说明（2026-10-10 更新）**：上表为 v2 创建时的统计。历史已完成项与遗留项按各条目状态为准。TD-068 和 TD-069 已完成；TD-070~TD-077 仍按各条目状态跟踪。
+> **复核说明（2026-10-23 更新）**：上表统计当前目录中的 78 条技术债明细，按条目优先级计数，不表示开放项数量。当前未完全闭环项为 TD-070、TD-073、TD-074、TD-075、TD-076 的产品契约部分、TD-077 和 TD-078；其他条目以各自状态为准。GitHub Issue #56/#57 已调查并关闭，后续 nightly runs `39736182269` 和 `39913021565` 全部通过。
 
 ### 用户价值映射 (PM 建议)
 
@@ -952,12 +952,12 @@
 | **优先级** | P3 |
 | **位置** | `extensions/vscode-carrymem/package-lock.json`（`mocha==10.8.2` → `chokidar==3.6.0` → `braces` 漏洞链；`@vscode/test-cli==0.0.10`） |
 | **问题描述** | 官方 registry `npm audit` 报 5 条 high：braces/chokidar/mocha 链。同 lock 的 brace-expansion（2 条 medium）已于 2026-10-08 经 `npm update brace-expansion` 升至 `1.1.21`/`2.1.7`（恰为补丁版）修复。剩余链无非破坏修复路径：修复版本要求 `@vscode/test-cli@0.0.15`（官方 audit 明示 breaking change）+ mocha 11.x。该链仅用于插件开发测试（`npm test`），不进插件产物 |
-| **复现** | `cd extensions/vscode-carrymem && npm audit --registry=https://registry.npmjs.org` → 5 high（升级 brace-expansion 后应剩 chokidar/mocha 链相关） |
-| **修复方案** | 升级 `@vscode/test-cli` 至 0.0.15+ 与 `@types/mocha`/`mocha@^11`，跑 VSCode Tier 2 UI E2E（TD-034/61 的 17 用例）验证行为不变后提交 |
+| **复现** | 本机复核：`npm audit --registry=https://registry.npmjs.org` 无法执行，原因是当前环境未安装 `npm`/Node.js；上次有记录的审计结果为 5 high。 |
+| **修复方案** | 在具备 Node.js/npm 的 CI 或开发环境中升级 `@vscode/test-cli` 至 0.0.15+ 与 `@types/mocha`/`mocha@^11`，再运行 VSCode Tier 2 UI E2E（TD-034/61 的 17 用例）验证行为不变。 |
 | **负责角色** | DevOps + Tester |
 | **验证标准** | `npm audit --registry=https://registry.npmjs.org` → 0 high；`npm test`（VSCode E2E）17/17 passing |
-| **依赖** | 无 |
-| **状态** | ⬜ 待开始 |
+| **依赖** | Node.js/npm 可用 |
+| **状态** | 🟡 环境阻塞（2026-10-23；本机无 Node.js/npm，未修改 lockfile，未宣称已修复） |
 | **生命周期** | P6 安全审查 |
 
 ### TD-071: VSCode rules-effectiveness 调用没有对应 CLI 命令
@@ -1009,7 +1009,7 @@
 | **修复方案** | release pre-test 已加入显式的多进程 SQLite 并发阻塞回归；CI 主测试安装失败现在直接失败，不再使用 `--no-deps` fallback；CI/release/nightly 的 VSCode 依赖安装改为 `npm ci`。后续仍需决定是否把完整 slow 集合纳入发布门禁，并在 clean checkout 验证 optional job 策略。 |
 | **负责角色** | DevOps + Tester |
 | **验证标准** | release workflow 包含阻塞并发回归；CI 主安装失败时非零退出；VSCode 安装使用 lockfile；clean checkout 和目标 commit 的完整 release 模拟通过；slow 测试策略和 optional job 失败语义有明确负向验证。 |
-| **状态** | 🟡 部分完成（关键误报路径已修；完整 clean checkout/release 模拟和完整 slow 门禁仍开放） |
+| **状态** | 🟡 部分完成（Python 3.12 隔离环境的非 slow 八项门禁已通过；完整 clean checkout/release 模拟、完整 slow 门禁和 optional job 负向语义仍开放） |
 | **生命周期** | P7 测试规划 → P9 测试执行 → P10 部署发布 |
 
 ### TD-076: HTTP 工具超时后的后台线程继续执行 ⚠️ 新增 (2026-10-10)
@@ -1035,7 +1035,7 @@
 | **修复方案** | 先拆分冷启动、实体图谱写入、主记忆写入、审计和指标的延迟预算；修复锁竞争后重新测量。不得只提高阈值或删除异常轮次。保留真实 TCP、多轮、真实 SQLite 测试。 |
 | **负责角色** | Architect + Coder + Tester + DevOps |
 | **验证标准** | 干净环境中真实 TCP 测试多轮通过；p99 预算有明确分层；锁竞争、超时和异常轮次均有解释；测试不通过时发布阻塞。 |
-| **状态** | ✅ 当前 working tree 已关闭本轮 SLO 红灯：真实 TCP、多轮、真实 SQLite 测试 1 passed；3 轮中位数 p99 ≤ 200ms，未提高阈值。仍需在干净 checkout、目标 commit 和完整发布负载中复验，因此发布门禁债务 TD-074 仍然开放。 |
+| **状态** | ✅ 当前 working tree 与 Python 3.12 隔离环境均关闭本轮 SLO 红灯：真实 TCP、多轮、真实 SQLite 测试通过，3 轮中位数 p99 ≤ 200ms，未提高阈值。仍需在完整 clean checkout/release 负载中复验，因此发布门禁债务 TD-074 仍然开放。 |
 | **生命周期** | P2 架构设计 → P8 实现 → P9 测试执行 → P10 部署发布 |
 
 ### TD-075: health schema 双轨与 consolidation timer close 生命周期风险 ⚠️ 新增 (2026-10-10)
@@ -1216,6 +1216,7 @@ TD-035 (AccessPolicy 集成) — 安全债，独立推进
 | 2026-10-08 | v15: Dependabot 23 条告警处置。**已修复**：urllib3 2.7.0→2.8.0（requirements-dev.txt 重编译，消 2 high）；VSCode 插件 brace-expansion 1.1.16→1.1.21 / 2.1.2→2.1.7（`npm update brace-expansion`，消 2 medium）。**豁免留痕**：13 条 pyjwt 告警（2 critical）——暴露面分析证实脆弱代码不可达（zhipuai 仅 jwt.encode 本地签名，见 TD-068 重评估），以 tolerable_risk 豁免。**登记新债**：TD-069（virtualenv 解析器停在 21.7.6，约束源待查）、TD-070（VSCode chokidar/mocha 链需破坏性升级 @vscode/test-cli 0.0.15）。本地 CI 八项门禁全绿（pytest 5103 passed / 覆盖率 83.17%） | DevSquad |
 | 2026-10-10 | v16: 继续评估当前 working tree。记录 HTTP→MCP 配置映射、HTTP cleanup/SSE 唤醒、RRF per-call 竞态修复；独立并发变异测试连续 5 次通过，但完整非 slow 门禁为 `5106 passed, 1 failed, 10 skipped, 77 deselected`，slow 多进程测试耗时 `453.3s` 超过门槛，HTTP/MCP 批次 `84 passed, 2 failed`（工具超时后后台线程继续写入；SLO 中位数 p99 `416.093ms` 超过 `200ms`）。新增 TD-071~TD-077，明确 VSCode CLI/配置消费者、真实 CRUD/reload E2E、release/CI 门禁可信度、health schema 双轨、consolidation timer close 生命周期、HTTP 超时副作用与高负载 SLO 仍未闭环。当前有 7 个未提交文件；不得将本轮结果作为已发布 0.11.2 证据，完整发布门禁需在干净 checkout/目标 commit 上重跑 | DevSquad |
 | 2026-10-16 | v17: 阶段三记忆可信和可控完成当前可交付闭环记录。MCP `update_memory`、`get_memory_history`、删除、导出恢复均有生产路径与 E2E 证据；MCP stdio 工具发现验证通过（33 个工具）。TRAE ↔ Workbuddy 已完成本机真实同步。第三客户端真实验收按用户决定跳过，仅保留 MCP 协议级可行性结论。新增 TD-078：记忆级暂停尚无统一 API，继续禁止宣传为已支持能力 | DevSquad |
+| 2026-10-23 | v18: 调查并关闭 GitHub Issue #56/#57。两项历史失败均仅由旧 nightly 的 Slow Test Suite 触发；VSCode Tier 2 UI E2E 与 Vector/Semantic Tests 同批通过，后续 nightly runs `39736182269` 和 `39913021565` 的 slow、VSCode、vector jobs 全部通过。同步修正技术债目录为 TD-001~TD-078 共 78 条明细，统计为 P0=5、P1=33、P2=25、P3=15；未将 TD-073/074/077/070/075/076/078 误标为已关闭 | DevSquad |
 
 ---
 

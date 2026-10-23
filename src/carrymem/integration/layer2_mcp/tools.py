@@ -3,7 +3,8 @@ MCP Tools definitions for CarryMem.
 
 Public MCP tools are grouped by domain:
   Core (always available): classify_message, get_classification_schema, batch_classify
-  Storage Optional (requires storage adapter): classify_and_remember, recall_memories, forget_memory, update_memory, get_memory_history
+  Storage Optional (requires storage adapter): classify_and_remember, recall_memories,
+  forget_memory, update_memory, get_memory_history
   Knowledge Optional (requires knowledge adapter): index_knowledge, recall_from_knowledge, recall_all
   Profile Optional (requires storage adapter): declare_preference, get_memory_profile
   Prompt Optional (requires storage adapter): get_system_prompt

@@ -11,7 +11,6 @@ from datetime import datetime, timezone
 from typing import Dict
 
 from carrymem.cli._base import (
-    _DEFAULT_CONFIG_DIR,
     __version__,
     _add_common_args,
     _bold,

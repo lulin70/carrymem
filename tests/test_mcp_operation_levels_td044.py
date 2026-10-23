@@ -1,8 +1,9 @@
 """Tests for TD-044: MCP tool operation-level classification.
 
 Verifies that every MCP tool registered in ``handler_map`` has an
-``OperationLevel`` annotation, and that ``Handlers.list_tools(level)``
-filters correctly. The public tools (``TOOL_NAMES``) are the primary scope; the internal ``mce_status`` diagnostic is also covered.
+``OperationLevel`` annotation, and that ``Handlers.list_tools(level)`` filters
+correctly. The public tools (``TOOL_NAMES``) are the primary scope; the internal
+``mce_status`` diagnostic is also covered.
 """
 
 import pytest

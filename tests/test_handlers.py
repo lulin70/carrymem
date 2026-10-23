@@ -32,13 +32,13 @@ from carrymem.integration.layer2_mcp.handlers import (
     handle_get_system_prompt,
     handle_index_knowledge,
     handle_mce_status,
-    handle_update_memory,
     handle_query_graph,
     handle_recall_all,
     handle_recall_from_knowledge,
     handle_recall_memories,
     handle_shortest_path,
     handle_summarize_and_store,
+    handle_update_memory,
     handler_map,
 )
 
