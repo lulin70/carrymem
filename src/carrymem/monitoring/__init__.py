@@ -2,6 +2,7 @@
 
 Provides:
 - HealthChecker: /healthz, /readyz endpoint logic
+- Health schema version 1: shared core fields for Core, MCP, and HTTP
 - MetricsCollector: counters, latency histograms, Prometheus export
 
 SLO Targets:
@@ -15,6 +16,8 @@ import threading
 import time
 from collections import deque
 from enum import Enum
+
+HEALTH_SCHEMA_VERSION = "1"
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 _LATENCY_MAX_SAMPLES = 10_000
@@ -287,10 +290,10 @@ class HealthChecker:
         self._ready = ready
 
     def check(self) -> Dict[str, Any]:
-        """Run all health checks and return status.
+        """Run all health checks and return the shared health schema.
 
         Returns:
-            {"status": "ok"|"degraded", "checks": {...}, ...}
+            {"schema_version": "1", "status": "ok"|"degraded", "checks": {...}, ...}
         """
         checks_result: Dict[str, Any] = {}
         degraded = False
@@ -335,16 +338,23 @@ class HealthChecker:
 
         status = "degraded" if degraded else "ok"
         return {
+            "schema_version": HEALTH_SCHEMA_VERSION,
             "status": status,
             "checks": checks_result,
             "slo": slo_status,
             "uptime_seconds": snapshot["uptime_seconds"],
+            "ready": self._ready,
         }
 
     def readyz(self) -> Dict[str, Any]:
-        """Return readiness status."""
+        """Return readiness status using the shared health schema."""
+        status = "ready" if self._ready else "not_ready"
         return {
-            "status": "ready" if self._ready else "not_ready",
+            "schema_version": HEALTH_SCHEMA_VERSION,
+            "status": status,
+            "checks": {},
+            "slo": [],
+            "uptime_seconds": self._metrics.get_snapshot()["uptime_seconds"],
             "ready": self._ready,
         }
 
@@ -412,6 +422,7 @@ __all__ = [
     "SLOTarget",
     "_DEFAULT_SLOS",
     "MetricsCollector",
+    "HEALTH_SCHEMA_VERSION",
     "HealthChecker",
     "get_metrics_collector",
     "mark_startup_reference",

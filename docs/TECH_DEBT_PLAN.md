@@ -2,7 +2,7 @@
 
 > **文档性质**: 活文档 (Living Document) — 每完成一项立即更新状态
 > **创建时间**: 2026-07-17
-> **最后更新**: 2026-10-23 (已调查并关闭 GitHub Issue #56/#57；后续 nightly runs `39736182269` 和 `39913021565` 全部通过。当前目录包含 TD-001~TD-078 共 78 条明细；未闭环项为 TD-070、TD-073、TD-074、TD-075、TD-076 的产品契约部分、TD-077 和 TD-078。保留真实 VSCode UI→CLI→SQLite、clean checkout/release 模拟、完整 slow 门禁、health schema、timer 生命周期、HTTP 超时副作用契约和记忆级暂停债务。已发布 `0.11.2` 的事实与当前 working tree 证据严格区分。TD-067 修复与历史批次记录见 §9 更新日志)
+ > **最后更新**: 2026-10-24（TD-075 health schema 与 consolidation timer 生命周期已完成并验证；TD-076 方案 A 契约已关闭；TD-077 运行时 SLO 债已关闭；GitHub Issue #56/#57 已调查并关闭；后续 nightly runs `39736182269` 和 `39913021565` 全部通过。当前目录包含 TD-001~TD-078 共 78 条明细；未闭环项为 TD-070、TD-073、TD-074 和 TD-078。TD-077 的发布负载级证明已并入 TD-074 跟踪。保留真实 VSCode UI→CLI→SQLite、clean checkout/release 模拟、完整 slow 门禁和记忆级暂停债务。已发布 `0.11.2` 的事实与当前 working tree 证据严格区分。TD-067 修复与历史批次记录见 §9 更新日志）
 > **基于**: 7 维度项目整理评估 (2026-07-17, B+ 77/100) + DevSquad 7 角色并行审核
 > **配套文档**: [ROADMAP_P0_P3.md](ROADMAP_P0_P3.md) — 执行路线图 (Wave 推进表 + 7-Role 投票矩阵 + 11 阶段生命周期映射)；[PRODUCT_ROLLOUT_PLAN.md](PRODUCT_ROLLOUT_PLAN.md) — 面向用户价值、首次成功、兼容性和推广的产品推进方案
 >
@@ -32,7 +32,7 @@
 | P2 中优先级 | 25 项 | ~18h | 方案+共识后推进 |
 | P3 低优先级 | 15 项 | ~4h | 日常维护渐进 |
 
-> **复核说明（2026-10-23 更新）**：上表统计当前目录中的 78 条技术债明细，按条目优先级计数，不表示开放项数量。当前未完全闭环项为 TD-070、TD-073、TD-074、TD-075、TD-076 的产品契约部分、TD-077 和 TD-078；其他条目以各自状态为准。GitHub Issue #56/#57 已调查并关闭，后续 nightly runs `39736182269` 和 `39913021565` 全部通过。
+> **复核说明（2026-10-23 更新）**：上表统计当前目录中的 78 条技术债明细，按条目优先级计数，不表示开放项数量。当前未完全闭环项为 TD-070、TD-073、TD-074、TD-075 和 TD-078；TD-076 的方案 A 产品契约已关闭，TD-077 的运行时 SLO 债已关闭，其发布负载级证明并入 TD-074。GitHub Issue #56/#57 已调查并关闭，后续 nightly runs `39736182269` 和 `39913021565` 全部通过。
 
 ### 用户价值映射 (PM 建议)
 
@@ -1022,7 +1022,7 @@
 | **修复方案** | 按方案 A 固化契约：超时只结束客户端等待，不承诺取消业务操作；JSON-RPC 错误通过 `error.data.execution=background_may_continue` 和 `error.data.side_effects=possible` 明确告知客户端；`stop()` 等待已启动 worker 完成后再释放资源。方案 B（绝对无副作用）另作为未来架构债务。 |
 | **负责角色** | Architect + Coder + Security + Tester |
 | **验证标准** | 工具超时后，客户端响应、持久化状态和审计记录符合同一契约；重复请求不产生未声明副作用；真实 TCP 测试覆盖慢工具、超时、取消和 cleanup。 |
-| **状态** | ✅ 资源生命周期已修复；保留“同步工具超时后可能继续产生副作用”的产品契约债务。真实 TCP 已验证单响应、无 stdout 协议污染、stop 等待 worker；若需要强制无副作用，仍需原生 async、幂等键或进程隔离。 |
+| **状态** | ✅ 已关闭（方案 A）。超时只结束客户端等待；已启动的同步 worker 可能继续执行并产生副作用；JSON-RPC 返回 `background_may_continue` / `side_effects=possible`；服务器关闭前等待 worker。方案 B（强制无副作用）保留为未来架构选项，不再作为当前产品契约债。 |
 | **生命周期** | P2 架构设计 → P8 实现 → P9 测试执行 |
 
 ### TD-077: 高负载 HTTP/MCP SLO 不稳定 ⚠️ 新增 (2026-10-10)
@@ -1035,7 +1035,7 @@
 | **修复方案** | 先拆分冷启动、实体图谱写入、主记忆写入、审计和指标的延迟预算；修复锁竞争后重新测量。不得只提高阈值或删除异常轮次。保留真实 TCP、多轮、真实 SQLite 测试。 |
 | **负责角色** | Architect + Coder + Tester + DevOps |
 | **验证标准** | 干净环境中真实 TCP 测试多轮通过；p99 预算有明确分层；锁竞争、超时和异常轮次均有解释；测试不通过时发布阻塞。 |
-| **状态** | ✅ 当前 working tree 与 Python 3.12 隔离环境均关闭本轮 SLO 红灯：真实 TCP、多轮、真实 SQLite 测试通过，3 轮中位数 p99 ≤ 200ms，未提高阈值。仍需在完整 clean checkout/release 负载中复验，因此发布门禁债务 TD-074 仍然开放。 |
+| **状态** | ✅ 目标代码已完成三轮真实 TCP、多轮、真实 SQLite SLO 复验，3 轮中位数 p99 ≤ 200ms，未提高阈值；同步超时/cleanup 回归也通过。TD-077 的运行时问题已关闭，发布负载级证明仍由 TD-074 跟踪，不再重复计入本条。 |
 | **生命周期** | P2 架构设计 → P8 实现 → P9 测试执行 → P10 部署发布 |
 
 ### TD-075: health schema 双轨与 consolidation timer close 生命周期风险 ⚠️ 新增 (2026-10-10)
@@ -1044,11 +1044,12 @@
 |------|-----|
 | **优先级** | P2 |
 | **位置** | MCP health handler、HTTP `/healthz` schema、consolidation timer 创建/关闭路径 |
-| **问题描述** | MCP 与 HTTP 的 health schema 仍是两套契约，消费者无法依赖统一字段和语义；consolidation timer 的 close 生命周期仍有风险，可能出现 close 后回调、重复 close 或资源未释放。两项均未在本轮闭环。 |
-| **修复方案** | 定义共享 health schema 或明确版本化转换层；为 consolidation timer 定义 owner、close 幂等性、回调取消和进程退出行为，并补状态转换测试。 |
+| **问题描述** | MCP 与 HTTP 的 health schema 曾是两套契约，消费者无法依赖统一字段和语义；consolidation timer 的 close 生命周期曾有风险，可能出现 close 后回调、重复 close 或资源未释放。 |
+| **修复方案** | 使用 `schema_version=1` 的共享 health envelope；Core、MCP 和 HTTP 保留各自诊断扩展，但共享 `schema_version`、`status`、`checks`、`slo`、`issues`、`uptime_seconds` 和 `ready` 语义。timer 使用实例级 owner、generation token、锁和条件变量；`close()` 先取消并等待正在运行的 callback，重复 close 幂等。 |
 | **负责角色** | Architect + Coder + Tester |
-| **验证标准** | MCP 与 HTTP health 响应的字段、状态语义和错误映射有同一份契约测试；timer 在 start/close/重复 close/close 后回调/异常退出场景下均可验证资源释放且无未处理回调。 |
-| **状态** | ⬜ 待开始 |
+| **验证标准** | MCP 与 HTTP health 响应包含同一份版本化核心字段；timer 在 start/stop/close/重复 close/旧 callback 和异常退出路径均无未处理回调且资源已释放。 |
+| **状态** | ✅ 已完成并验证（2026-10-24） |
+| **验证证据** | Python 3.12：health、facade、timer、MCP handler 定向回归 `11 passed`；HTTP `/healthz` 真实 TCP `1 passed`；mypy 6 个源文件通过；black/isort/flake8 通过。 |
 | **生命周期** | P2 架构设计 → P8 实现 → P9 测试执行 |
 
 ### TD-078: 记忆级暂停能力缺失 ⚠️ 新增 (2026-10-16)
@@ -1217,6 +1218,7 @@ TD-035 (AccessPolicy 集成) — 安全债，独立推进
 | 2026-10-10 | v16: 继续评估当前 working tree。记录 HTTP→MCP 配置映射、HTTP cleanup/SSE 唤醒、RRF per-call 竞态修复；独立并发变异测试连续 5 次通过，但完整非 slow 门禁为 `5106 passed, 1 failed, 10 skipped, 77 deselected`，slow 多进程测试耗时 `453.3s` 超过门槛，HTTP/MCP 批次 `84 passed, 2 failed`（工具超时后后台线程继续写入；SLO 中位数 p99 `416.093ms` 超过 `200ms`）。新增 TD-071~TD-077，明确 VSCode CLI/配置消费者、真实 CRUD/reload E2E、release/CI 门禁可信度、health schema 双轨、consolidation timer close 生命周期、HTTP 超时副作用与高负载 SLO 仍未闭环。当前有 7 个未提交文件；不得将本轮结果作为已发布 0.11.2 证据，完整发布门禁需在干净 checkout/目标 commit 上重跑 | DevSquad |
 | 2026-10-16 | v17: 阶段三记忆可信和可控完成当前可交付闭环记录。MCP `update_memory`、`get_memory_history`、删除、导出恢复均有生产路径与 E2E 证据；MCP stdio 工具发现验证通过（33 个工具）。TRAE ↔ Workbuddy 已完成本机真实同步。第三客户端真实验收按用户决定跳过，仅保留 MCP 协议级可行性结论。新增 TD-078：记忆级暂停尚无统一 API，继续禁止宣传为已支持能力 | DevSquad |
 | 2026-10-23 | v18: 调查并关闭 GitHub Issue #56/#57。两项历史失败均仅由旧 nightly 的 Slow Test Suite 触发；VSCode Tier 2 UI E2E 与 Vector/Semantic Tests 同批通过，后续 nightly runs `39736182269` 和 `39913021565` 的 slow、VSCode、vector jobs 全部通过。同步修正技术债目录为 TD-001~TD-078 共 78 条明细，统计为 P0=5、P1=33、P2=25、P3=15；未将 TD-073/074/077/070/075/076/078 误标为已关闭 | DevSquad |
+| 2026-10-24 | v19: TD-075 完成。Core、MCP、HTTP health 统一为 `schema_version=1` 核心 envelope；consolidation timer 改为实例级 owner，使用 generation token、锁和条件变量，`close()` 取消并等待 callback，重复 close 幂等。定向回归 11 passed，真实 HTTP `/healthz` 1 passed，mypy、black、isort、flake8 全部通过；未关闭 TD-070/073/074/078 | DevSquad |
 
 ---
 

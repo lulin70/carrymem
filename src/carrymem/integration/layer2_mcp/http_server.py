@@ -250,6 +250,11 @@ class MCPHTTPServer:
             status_code = 200 if health_status["status"] == "ok" else 503
             await self._send_response(writer, status_code, health_status, request_origin)
             return True
+        if path == "/readyz":
+            readiness = self._health_checker.readyz()
+            status_code = 200 if readiness["ready"] else 503
+            await self._send_response(writer, status_code, readiness, request_origin)
+            return True
         if path == "/metrics":
             metrics_text = self._metrics.to_prometheus()
             await self._send_text_response(writer, 200, metrics_text, request_origin)
@@ -421,7 +426,7 @@ class MCPHTTPServer:
         addrs = ", ".join(str(s.getsockname()) for s in self._server.sockets)
         logger.info("CarryMem MCP HTTP Server running on %s", addrs)
         logger.info("  - MCP endpoints: /sse, /message")
-        logger.info("  - Monitoring: /health, /healthz, /metrics")
+        logger.info("  - Monitoring: /health, /healthz, /readyz, /metrics")
         if self._api_key:
             logger.info("API key authentication enabled")
         else:

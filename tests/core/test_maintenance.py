@@ -184,6 +184,19 @@ class TestScheduleConsolidation(unittest.TestCase):
         result = self.cm.stop_consolidation()
         self.assertFalse(result["stopped"])
 
+    def test_close_stops_consolidation_and_is_idempotent(self):
+        self.cm.schedule_consolidation(interval_hours=1.0, dry_run=True)
+        self.cm.close()
+        self.assertIsNone(self.cm._consolidation_timer)
+        self.cm.close()
+
+    def test_stop_invalidates_callback_generation(self):
+        self.cm.schedule_consolidation(interval_hours=1.0, dry_run=True)
+        generation = self.cm._consolidation_generation
+        self.cm.stop_consolidation()
+        self.assertGreater(self.cm._consolidation_generation, generation)
+        self.assertIsNone(self.cm._consolidation_timer)
+
     def test_schedule_consolidation_min_interval(self):
         """schedule_consolidation() enforces minimum interval."""
         result = self.cm.schedule_consolidation(interval_hours=0.001, dry_run=True)

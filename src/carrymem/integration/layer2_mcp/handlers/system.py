@@ -9,6 +9,8 @@ from __future__ import annotations
 import time
 from typing import Any, Dict
 
+from carrymem.monitoring import HEALTH_SCHEMA_VERSION
+
 from ._base import _version, mcp_tool_handler
 
 
@@ -124,7 +126,16 @@ def handle_onboard(carrymem, args: Dict[str, Any]) -> Dict[str, Any]:
 @mcp_tool_handler
 def handle_health_check(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
     """Lightweight health check via MCP tool (no HTTP service started)."""
-    result: Dict[str, Any] = {"version": _version}
+    result: Dict[str, Any] = {
+        "schema_version": HEALTH_SCHEMA_VERSION,
+        "version": _version,
+        "status": "unhealthy",
+        "components": {},
+        "checks": {},
+        "slo": [],
+        "issues": [],
+        "ready": False,
+    }
 
     # Adapter health
     try:
@@ -160,6 +171,14 @@ def handle_health_check(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
     # Overall status
     adapter_status = result.get("adapter", {}).get("status", "unknown")
     result["status"] = "ok" if adapter_status in ("ok", "degraded") else "unhealthy"
+    result["components"] = {
+        "storage": {
+            "status": "ready" if adapter_status in ("ok", "degraded") else "error",
+            "type": result["adapter"].get("backend"),
+            "stats": {"memory_count": result["memory_count"]},
+        },
+    }
+    result["ready"] = result["status"] == "ok"
 
     return result
 

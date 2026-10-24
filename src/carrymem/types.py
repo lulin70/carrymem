@@ -606,7 +606,7 @@ class CorrectionUpdateInfo(TypedDict, total=False):
 # ---------------------------------------------------------------------------
 
 
-class ComponentHealth(TypedDict):
+class ComponentHealth(TypedDict, total=False):
     """Health status of a single component."""
 
     status: str  # "ready", "not_configured", "error"
@@ -615,12 +615,20 @@ class ComponentHealth(TypedDict):
     error: Optional[str]  # Error message (if error)
 
 
-class HealthCheckResult(TypedDict):
-    """Result from health_check()."""
+class HealthCheckResult(TypedDict, total=False):
+    """Canonical health response shared by Core, MCP, and HTTP."""
 
-    status: str  # "ok" or "degraded"
+    schema_version: str
+    status: str  # "ok", "degraded", or "unhealthy"
     components: Dict[str, ComponentHealth]
+    checks: Dict[str, Dict[str, Any]]
+    slo: List[Dict[str, Any]]
     issues: List[str]
+    version: str
+    memory_count: int
+    audit: Dict[str, Any]
+    uptime_seconds: float
+    ready: bool
 
 
 class ComponentStatusDict(TypedDict):

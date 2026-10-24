@@ -43,9 +43,13 @@ class TestHealthCheck:
     def test_health_check_returns_dict_with_required_keys(self):
         cm = CarryMem(storage=None)
         result = cm.health_check()
+        assert result["schema_version"] == "1"
         assert "status" in result
         assert "components" in result
+        assert "checks" in result
+        assert "slo" in result
         assert "issues" in result
+        assert "ready" in result
 
     def test_health_check_no_storage_is_degraded(self):
         cm = CarryMem(storage=None)

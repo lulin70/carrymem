@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import sqlite3
-from threading import Timer
+from threading import Condition, RLock, Timer
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, Union
 
@@ -74,13 +74,15 @@ class KnowledgeNotConfiguredError(_KnowledgeNotConfiguredError):
 class LifecycleMixin:
     """Handles object lifecycle: init, close, context-manager, and shared-state properties."""
 
-    # Class-level attribute used by MaintenanceMixin
-    _consolidation_timer: Optional[Timer] = None
+    _consolidation_timer: Optional[Timer]
 
     # ── Cross-Mixin dependencies (TD-037: explicit Protocol contract) ──
     # Declared here for type-checking only; resolved at runtime via Mixin
     # composition in the final CarryMem class.
     if TYPE_CHECKING:
+        # From MaintenanceMixin
+        def stop_consolidation(self) -> Dict[str, Any]: ...
+
         # From RecallMixin
         def recall_memories(
             self,
@@ -116,6 +118,11 @@ class LifecycleMixin:
     ) -> None:
         """Initialize storage adapter, engine, and shared lifecycle state."""
         self._engine = engine if engine is not None else MemoryClassificationEngine()
+        self._consolidation_timer = None
+        self._consolidation_generation = 0
+        self._consolidation_lock = RLock()
+        self._consolidation_condition = Condition(self._consolidation_lock)
+        self._consolidation_running = False
         self._namespace = namespace
         self._session_id: Optional[str] = None  # v0.7.0: Session dual-layer memory
 
@@ -291,6 +298,7 @@ class LifecycleMixin:
 
     def close(self) -> None:
         """Release the engine, rule engine, adapters, and cached helpers."""
+        self.stop_consolidation()
         if self._rule_engine:
             self._rule_engine = None
         if self._engine:

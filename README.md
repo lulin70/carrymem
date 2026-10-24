@@ -647,6 +647,13 @@ status = health.check()  # {"status": "ok"|"degraded", "checks": {...}, "slo": [
 In HTTP mode (`carrymem serve`) the same data is scraped from `GET /metrics`,
 and `GET /healthz` returns the SLO section (`503` when a target is violated).
 
+**HTTP timeout contract**: the request timeout ends client waiting only. A synchronous
+worker that already started may continue and may commit side effects. The JSON-RPC
+timeout response exposes `error.data.execution=background_may_continue` and
+`error.data.side_effects=possible`. The server drains started workers before closing
+CarryMem and SQLite. Clients must treat timed-out writes as potentially committed and
+use idempotent retry behavior.
+
 **SLO Targets**:
 - `classify_and_remember` P99 < 200ms
 - `recall` P99 < 500ms

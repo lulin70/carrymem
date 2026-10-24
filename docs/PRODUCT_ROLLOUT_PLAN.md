@@ -72,7 +72,7 @@ CarryMem 的目标不是继续堆积功能，而是验证并完成这条真实�
 - MCP stdio、HTTP、SSE、SQLite 并发和超时生命周期已有自动化证据。
 - 依赖安全告警已处理，Dependabot 当前不作为阻塞项。
 - 真实 VSCode UI 验收按用户决定暂缓。
-- 技术债继续记录在 [TECH_DEBT_PLAN.md](TECH_DEBT_PLAN.md)。
+- 技术债继续记录在 [TECH_DEBT_PLAN.md](TECH_DEBT_PLAN.md)。TD-076 的 HTTP 超时方案 A 契约已固化；TD-077 的目标代码 SLO 复验已完成，剩余发布负载级证明由 TD-074 跟踪。
 
 ## 4. 推进阶段
 

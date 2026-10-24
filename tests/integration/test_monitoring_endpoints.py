@@ -172,9 +172,37 @@ class TestMonitoringEndpoints:
             data = json.loads(body)
 
             # Verify structure
-            assert "status" in data
+            assert data["schema_version"] == "1"
             assert data["status"] in ["ok", "degraded"]
+            assert "checks" in data
+            assert "slo" in data
             assert "uptime_seconds" in data
+            assert "ready" in data
+        finally:
+            await server.stop()
+            server_task.cancel()
+            try:
+                await server_task
+            except asyncio.CancelledError:
+                pass
+
+    @pytest.mark.asyncio
+    async def test_readyz_endpoint(self):
+        """Test /readyz exposes the shared readiness schema."""
+        server = MCPHTTPServer(host="127.0.0.1", port=18768)
+        server_task = asyncio.create_task(server.start())
+        await _wait_for_server("127.0.0.1", 18768)
+
+        try:
+            response_str = await _http_get("127.0.0.1", 18768, "/readyz")
+            assert "200 OK" in response_str
+            body_start = response_str.find("\r\n\r\n") + 4
+            data = json.loads(response_str[body_start:])
+            assert data["schema_version"] == "1"
+            assert data["status"] == "ready"
+            assert data["ready"] is True
+            assert data["checks"] == {}
+            assert data["slo"] == []
         finally:
             await server.stop()
             server_task.cancel()

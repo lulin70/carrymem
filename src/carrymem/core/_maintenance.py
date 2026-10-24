@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+import threading
 from datetime import datetime, timezone
 from threading import Timer
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
@@ -37,6 +38,10 @@ class MaintenanceMixin:
     _namespace: str
     _rule_engine: Optional[RuleEngine]
     _consolidation_timer: Optional[Timer]
+    _consolidation_generation: int
+    _consolidation_lock: Any
+    _consolidation_condition: Any
+    _consolidation_running: bool
 
     def check_conflicts(self) -> List[Dict[str, Any]]:
         """Detect conflicts among stored memories and rule engine rules."""
@@ -241,8 +246,6 @@ class MaintenanceMixin:
         run_p2: bool = False,
     ) -> "ScheduleConsolidationResult":
         """Start periodic memory consolidation on a background timer."""
-        import threading
-
         min_interval = CONSOLIDATION_MIN_INTERVAL_HOURS
         if interval_hours < min_interval:
             interval_hours = min_interval
@@ -250,6 +253,9 @@ class MaintenanceMixin:
         self.stop_consolidation()
 
         interval_sec = interval_hours * SECONDS_PER_HOUR
+        with self._consolidation_lock:
+            self._consolidation_generation += 1
+            generation = self._consolidation_generation
         status: ScheduleConsolidationResult = {
             "scheduled": True,
             "interval_hours": interval_hours,
@@ -258,7 +264,11 @@ class MaintenanceMixin:
             "run_p2": run_p2,
         }
 
-        def _run_consolidation():
+        def _run_consolidation() -> None:
+            with self._consolidation_lock:
+                if generation != self._consolidation_generation or self._consolidation_timer is None:
+                    return
+                self._consolidation_running = True
             try:
                 logger.info("Scheduled consolidation starting (interval=%fh)", interval_hours)
                 result = self.consolidate(dry_run=dry_run, run_p1=run_p1, run_p2=run_p2)
@@ -270,23 +280,34 @@ class MaintenanceMixin:
             except (ValueError, TypeError, RuntimeError, sqlite3.Error) as e:
                 logger.error("Scheduled consolidation failed: %s", e)
             finally:
-                if self._consolidation_timer is not None:
-                    self._consolidation_timer = threading.Timer(interval_sec, _run_consolidation)
-                    self._consolidation_timer.daemon = True
-                    self._consolidation_timer.start()
+                with self._consolidation_lock:
+                    self._consolidation_running = False
+                    self._consolidation_condition.notify_all()
+                    if generation == self._consolidation_generation and self._consolidation_timer is not None:
+                        timer = threading.Timer(interval_sec, _run_consolidation)
+                        timer.daemon = True
+                        self._consolidation_timer = timer
+                        timer.start()
 
-        self._consolidation_timer = threading.Timer(interval_sec, _run_consolidation)
-        self._consolidation_timer.daemon = True
-        self._consolidation_timer.start()
+        timer = threading.Timer(interval_sec, _run_consolidation)
+        timer.daemon = True
+        with self._consolidation_lock:
+            self._consolidation_timer = timer
+        timer.start()
 
         logger.info("Consolidation scheduled every %fh", interval_hours)
         return status
 
     def stop_consolidation(self) -> Dict[str, Any]:
-        """Stop the scheduled consolidation timer."""
-        if self._consolidation_timer is not None:
-            self._consolidation_timer.cancel()
+        """Stop the scheduled consolidation timer and wait for its callback."""
+        with self._consolidation_lock:
+            timer = self._consolidation_timer
+            if timer is None:
+                return {"stopped": False, "reason": "no_active_schedule"}
+            self._consolidation_generation += 1
             self._consolidation_timer = None
-            logger.info("Consolidation schedule stopped")
-            return {"stopped": True}
-        return {"stopped": False, "reason": "no_active_schedule"}
+            timer.cancel()
+            while self._consolidation_running:
+                self._consolidation_condition.wait()
+        logger.info("Consolidation schedule stopped")
+        return {"stopped": True}

@@ -707,6 +707,9 @@ class TestHandlersClass:
         result = await handlers.handle_tool("health_check", {})
         assert result.get("success") is True
         data = result.get("data", {})
+        assert data["schema_version"] == "1"
+        assert data["ready"] is True
+        assert "components" in data
         audit = data.get("audit", {})
         # Audit should have actual stats, not just {"status": "not_available"}
         # (The SQLite adapter initializes _audit as AuditLogger on first use)

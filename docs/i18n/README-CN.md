@@ -449,6 +449,11 @@ carrymem setup-mcp --tool all
 
 33 个 MCP 工具，包含记忆修改和版本历史。可通过 `tools/list` 或 `carrymem doctor` 验证当前服务。
 
+HTTP 模式（`carrymem serve`）会从 `GET /metrics` 抓取相同数据，
+`GET /healthz` 返回 SLO 部分（目标违反时返回 `503`）。
+
+**HTTP 超时契约**：请求超时只结束客户端等待。已经启动的同步 worker 可能继续执行并产生写入副作用。JSON-RPC 超时响应会通过 `error.data.execution=background_may_continue` 和 `error.data.side_effects=possible` 明确说明这一点。服务器关闭前会等待已启动的 worker 完成并再关闭 CarryMem 和 SQLite。客户端必须把超时写入视为“可能已经提交”，重试时使用幂等方式。
+
 **客户端兼容性：**
 
 | 证据 | 客户端 | 配置方式 |

@@ -7,7 +7,7 @@ original monolithic class — `cm.method()` calls work without changes.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional
 
 from carrymem.core._backup import BackupMixin
 from carrymem.core._classification import ClassificationMixin
@@ -34,7 +34,8 @@ from carrymem.core._protocols import (
 )
 from carrymem.core._recall import RecallMixin
 from carrymem.errors import CarryMemError
-from carrymem.types import ComponentStatusDict, HealthCheckResult
+from carrymem.monitoring import HEALTH_SCHEMA_VERSION
+from carrymem.types import ComponentHealth, ComponentStatusDict, HealthCheckResult
 
 if TYPE_CHECKING:
     from carrymem.security.permissions import AccessPolicy
@@ -116,7 +117,7 @@ class CarryMem(
                 "issues": [...],
             }
         """
-        components: Dict[str, Dict[str, Any]] = {}
+        components: Dict[str, ComponentHealth] = {}
         issues: list[str] = []
 
         # -- storage / adapter --
@@ -159,7 +160,15 @@ class CarryMem(
             issues.append(f"Rule engine error: {exc}")
 
         overall = "degraded" if issues else "ok"
-        return {"status": overall, "components": components, "issues": issues}  # type: ignore[typeddict-item]
+        return {
+            "schema_version": HEALTH_SCHEMA_VERSION,
+            "status": overall,
+            "components": components,
+            "checks": {},
+            "slo": [],
+            "issues": issues,
+            "ready": overall == "ok",
+        }
 
     def get_component_status(self) -> ComponentStatusDict:
         """Return the initialisation status of every component.

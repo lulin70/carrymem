@@ -1,7 +1,7 @@
 # CarryMem — Project Status
 
 **Version**: v0.11.2
-**Last Updated**: 2026-10-23
+**Last Updated**: 2026-10-24 (TD-075 cleanup evidence recorded)
 **Maintainer**: CarryMem Team
 
 **Product rollout plan**: [PRODUCT_ROLLOUT_PLAN.md](PRODUCT_ROLLOUT_PLAN.md)
@@ -112,7 +112,7 @@ these numbers describe the tree, not the v0.11.2 tag.
 - **Version consistency**: all five machine-readable sources report `0.11.2`
 - **Gates**: eight blocking local gates (flake8, black, isort, mypy, pytest, radon,
   version-consistency, swallowed-assert) via `python3 scripts/ci_local_check.py`
-- **Tech debt**: 当前目录包含 TD-001~TD-078 共 78 条明细；TD-070、TD-073、TD-074、TD-075、TD-076 的产品契约部分、TD-077 和 TD-078 仍未完全闭环。GitHub Issue #56/#57 已调查并关闭，后续 nightly runs `39736182269` 和 `39913021565` 全部通过；详见
+- **Tech debt**: 当前目录包含 TD-001~TD-078 共 78 条明细；TD-070、TD-073、TD-074 和 TD-078 仍未完全闭环。TD-075 health schema 与 consolidation timer 生命周期已完成并验证；TD-076 方案 A 契约已关闭；TD-077 已完成目标代码三轮真实 TCP SLO 复验，发布负载级证明由 TD-074 跟踪。GitHub Issue #56/#57 已调查并关闭，后续 nightly runs `39736182269` 和 `39913021565` 全部通过；详见
   [TECH_DEBT_PLAN.md](TECH_DEBT_PLAN.md)。
 
 ### Test & Quality Metrics (v0.9.8, historical)

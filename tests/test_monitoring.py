@@ -185,6 +185,11 @@ class TestHealthChecker(unittest.TestCase):
         """Test 10: Healthy system returns status='ok'."""
         result = self.hc.check()
         self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["schema_version"], "1")
+        self.assertIn("checks", result)
+        self.assertIn("slo", result)
+        self.assertIn("uptime_seconds", result)
+        self.assertIn("ready", result)
 
     def test_check_includes_slo_section(self):
         """Test: Check result contains SLO section."""
@@ -208,6 +213,9 @@ class TestHealthChecker(unittest.TestCase):
         """Test: readyz returns not_ready before set_ready is called."""
         result = self.hc.readyz()
         self.assertFalse(result["ready"])
+        self.assertEqual(result["schema_version"], "1")
+        self.assertEqual(result["checks"], {})
+        self.assertEqual(result["slo"], [])
 
     def test_readyz_ready_after_set_ready(self):
         """Test: readyz returns ready after set_ready(True)."""
