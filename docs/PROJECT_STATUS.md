@@ -1,7 +1,7 @@
 # CarryMem — Project Status
 
 **Version**: v0.11.2
-**Last Updated**: 2026-10-24 (TD-075 cleanup evidence recorded)
+**Last Updated**: 2026-10-24 (TD-073 fail-closed VSCode chain added; local Node.js/npm environment-blocked)
 **Maintainer**: CarryMem Team
 
 **Product rollout plan**: [PRODUCT_ROLLOUT_PLAN.md](PRODUCT_ROLLOUT_PLAN.md)
@@ -18,7 +18,7 @@ The v0.11.x line carries the breaking `native_async` removal, the `cryptography>
 
 ### Release Evidence
 
-- **Regression (CI semantics)**: Python 3.12 isolated local release-style gate passed on 2026-10-23 after fixing the runtime path contract: `5124 passed, 10 skipped, 77 deselected`, `Total coverage: 83.19%` (`fail_under = 80`), `radon: no functions with complexity >= 21`; all eight blocking gates passed (flake8, black, isort, mypy, pytest, radon, version-consistency, swallowed-assert).
+- **Regression (CI semantics)**: Python 3.12 isolated local release-style gate passed on 2026-10-24: `5119 passed, 10 skipped, 77 deselected`, `Total coverage: 83.21%` (`fail_under = 80`), `radon: no functions with complexity >= 21`; all eight blocking gates passed (flake8, black, isort, mypy, pytest, radon, version-consistency, swallowed-assert). The same gate passed from a detached clean checkout at commit `0e1581d`.
 - **Release workflow**: run `35572211377` (`Release v0.11.2`) — all four jobs `success`: Pre-Release Tests / E2E Tests (User Journey Gate) / VSCode Tier 2 UI E2E / Build & Publish.
 - **PyPI**: `carrymem-0.11.2-py3-none-any.whl` (537,877 B) and `carrymem-0.11.2.tar.gz` (1,645,442 B) uploaded `2026-09-21T07:36Z`; `info.version == 0.11.2`.
 - **Fresh-install smoke** (venv + `pip install carrymem==0.11.2` from PyPI): `installed: 0.11.2`, `pip check` → `No broken requirements found.` Four storing message shapes — including two that contain pronouns and one correction — each report `counters={'classify_and_remember': 1}` with **no `recall` key**, and one explicit `recall_memories` reports `{'recall': 1}`. `LEAKING BRANCHES: none`.
@@ -58,7 +58,8 @@ The v0.11.x line carries the breaking `native_async` removal, the `cryptography>
 - **Real client evidence**: TRAE ↔ Workbuddy shared local SQLite synchronization verified. No third-client UI acceptance is claimed; other MCP clients are covered only by protocol-level feasibility.
 - **Simulated user acceptance**: isolated CLI journey passed — `init` leaves zero user memories, three memories can be added, one memory reaches version 2 after edit, backup is created, and deletion removes the PostgreSQL result from search. CLI, MCP workflow and MCP tool regression tests passed 175 tests; a real MCP stdio subprocess also passed initialize, tools/list, health_check, write, update, history, recall and delete.
 - **Documentation readiness**: English/Chinese installation and quick-start documents were audited against the CLI and MCP paths. In an isolated HOME, version, init, doctor, add, list, pack, unpack and restored search passed; 269 installation, CLI, MCP server and MCP E2E tests passed. The fallback command and pack/unpack config-file path were corrected. Documentation now states clearly that optional vector-model download failure does not block installation, MCP, memory write, recall, update, history, delete, backup, restore, rule-based classification or SQLite FTS5 search.
-- **Known limitation**: memory-level pause/resume has no unified API. Rule-level pause must not be presented as memory-level pause. Tracked as TD-078 in [TECH_DEBT_PLAN.md](TECH_DEBT_PLAN.md).
+- **VSCode Tier 2 evidence (TD-073)**: The test now runs in a real VSCode extension host. It creates an isolated temporary SQLite database, writes one rule through the real `carrymem` CLI, reads it through the extension `CarryMemClient` and `RuleTreeProvider`, updates it through the extension API, confirms the update through the real CLI, then deletes the rule and removes the temporary directory. The release `vscode-e2e` job installs Python 3.12, creates an isolated venv, runs `pip install -e .`, and sets isolated `CARRYMEM_*` paths. The test is fail-closed when the CLI is missing. This change is not locally executable because Node.js/npm are not installed; CI or a Node/npm host must provide the final evidence.
+- **Remaining technical debt**: TD-073 remains open pending a real CI/Node/npm run; Node.js/npm dependency audit (TD-070), full release workflow and slow/optional gate semantics (TD-074), and memory-level pause/resume implementation (TD-078) also remain open. TD-078 semantics are now defined: paused memories are excluded from normal recall, prompt injection, recall plans, and derived inputs; content updates remain paused; export/import and backup/restore preserve state; TTL and superseded rules remain independent. Rule-level pause must not be presented as memory-level pause. TD-075 health and timer lifecycle debt is closed.
 
 ### Current Test & Quality Metrics (working tree, 2026-10-07)
 

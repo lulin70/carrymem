@@ -50,11 +50,9 @@ async function main() {
             extensionTestsPath,
             // Use stable VSCode version
             version: 'stable',
-            // Additional launch arguments
-            launchArgs: [
-                // Open a temporary workspace
-                '--disable-extensions',
-            ],
+            // Do not disable extensions: the extension under test must activate in
+            // the real extension host for this Tier 2 E2E.
+            launchArgs: [],
         });
     } catch (err) {
         console.error('VSCode E2E tests failed:');
