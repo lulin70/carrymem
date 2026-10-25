@@ -256,6 +256,9 @@ def cmd_show(args):
     print(f"  Importance: {importance:.3f}")
     print(f"  Version:    {version}")
     print(f"  Accesses:   {access_count}")
+    print(f"  Status:     {'paused' if target.get('paused') else 'active'}")
+    if target.get("paused") and target.get("pause_reason"):
+        print(f"  Pause reason: {target.get('pause_reason')}")
     print(f"  Created:    {_format_time(created)}")
     if expires:
         print(f"  Expires:    {expires}")
@@ -265,6 +268,47 @@ def cmd_show(args):
     print()
     cm.close()
     return 0
+
+
+def cmd_pause(args):
+    """Pause a memory by key."""
+    parser = _make_parser("pause")
+    parser.add_argument("key")
+    parser.add_argument("--reason")
+    parser.add_argument("--json", action="store_true")
+    parser.add_argument("--namespace", "-n", default="default")
+    _add_common_args(parser)
+    parsed = parser.parse_args(args)
+    cm = _get_carrymem(parsed.db, parsed.namespace)
+    result = cm.pause_memory(parsed.key, reason=parsed.reason)
+    if parsed.json:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    elif result.get("paused"):
+        print(f"  {_green('Paused:')} {parsed.key}")
+    else:
+        print(f"  {_red('Memory not found:')} {parsed.key}")
+    cm.close()
+    return 0 if result.get("paused") else 1
+
+
+def cmd_resume(args):
+    """Resume a memory by key."""
+    parser = _make_parser("resume")
+    parser.add_argument("key")
+    parser.add_argument("--json", action="store_true")
+    parser.add_argument("--namespace", "-n", default="default")
+    _add_common_args(parser)
+    parsed = parser.parse_args(args)
+    cm = _get_carrymem(parsed.db, parsed.namespace)
+    result = cm.resume_memory(parsed.key)
+    if parsed.json:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    elif result.get("resumed"):
+        print(f"  {_green('Resumed:')} {parsed.key}")
+    else:
+        print(f"  {_red('Memory not found:')} {parsed.key}")
+    cm.close()
+    return 0 if result.get("resumed") else 1
 
 
 def cmd_edit(args):

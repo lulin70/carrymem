@@ -154,6 +154,7 @@ class StatsManager:
 
         conditions = [f"namespace IN ({placeholders})"]
         conditions.append("(superseded_at IS NULL OR superseded_at = '')")
+        conditions.append("paused = 0")
 
         if memory_type:
             conditions.append("type = ?")
@@ -205,6 +206,7 @@ class StatsManager:
         params: List[Any] = list(ns)
 
         conditions = [f"namespace IN ({placeholders})"]
+        conditions.append("paused = 0")
 
         words = [w for w in topic.lower().split() if len(w) > 1]
         if words:

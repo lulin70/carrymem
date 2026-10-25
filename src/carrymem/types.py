@@ -69,6 +69,9 @@ class StoredMemoryDict(MemoryEntryDict, total=False):
     storage_metadata: Dict[str, Any]
     superseded_at: Optional[str]
     supersedes: Optional[str]
+    paused: bool
+    paused_at: Optional[str]
+    pause_reason: Optional[str]
     summary: Optional[str]
     summary_level: Optional[int]
 

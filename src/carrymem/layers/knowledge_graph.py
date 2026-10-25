@@ -165,7 +165,7 @@ class KnowledgeGraph:
         query = (
             "SELECT m.* FROM memories m "
             "INNER JOIN memory_entities me ON me.memory_key = m.storage_key "
-            "WHERE " + " AND ".join(conditions) + " "
+            "WHERE m.paused = 0 AND " + " AND ".join(conditions) + " "
             "ORDER BY m.importance_score DESC "
             "LIMIT ?"
         )
@@ -233,7 +233,7 @@ class KnowledgeGraph:
             "INNER JOIN memory_relations mr ON mr.source_memory_key = m.storage_key "
             "INNER JOIN memory_entities src ON mr.src_entity_id = src.id "
             "INNER JOIN memory_entities dst ON mr.dst_entity_id = dst.id "
-            f"WHERE ({where_clause}){extra_conditions} "
+            f"WHERE m.paused = 0 AND ({where_clause}){extra_conditions} "
             "ORDER BY mr.weight DESC, m.importance_score DESC "
             "LIMIT ?"
         )
@@ -415,7 +415,8 @@ class KnowledgeGraph:
         mem_placeholders = ",".join("?" * len(mem_keys))
         try:
             mem_rows = conn.execute(
-                f"SELECT * FROM memories WHERE storage_key IN ({mem_placeholders}) " f"ORDER BY importance_score DESC",
+                f"SELECT * FROM memories WHERE storage_key IN ({mem_placeholders}) AND paused = 0 "
+                f"ORDER BY importance_score DESC",
                 mem_keys,
             ).fetchall()
             return [self._row_to_dict(row) for row in mem_rows]

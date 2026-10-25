@@ -50,6 +50,31 @@ def handle_forget_memory(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @mcp_tool_handler
+def handle_pause_memory(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Pause a memory by storage key."""
+    storage_key = arguments.get("storage_key", "")
+    reason = arguments.get("reason")
+    user_id = arguments.get("user_id")
+    if not storage_key:
+        return {"error": "Missing required field: storage_key"}
+    storage_key = _validate_input(storage_key, "storage_key")
+    if reason:
+        reason = _validate_input(reason, "reason")
+    return carrymem.pause_memory(storage_key, reason=reason, user_id=user_id)  # type: ignore[no-any-return]
+
+
+@mcp_tool_handler
+def handle_resume_memory(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Resume a memory by storage key."""
+    storage_key = arguments.get("storage_key", "")
+    user_id = arguments.get("user_id")
+    if not storage_key:
+        return {"error": "Missing required field: storage_key"}
+    storage_key = _validate_input(storage_key, "storage_key")
+    return carrymem.resume_memory(storage_key, user_id=user_id)  # type: ignore[no-any-return]
+
+
+@mcp_tool_handler
 def handle_update_memory(carrymem, arguments: Dict[str, Any]) -> Dict[str, Any]:
     """Update a memory and create a new version."""
     storage_key = arguments.get("storage_key", "")
@@ -170,6 +195,8 @@ def handle_stop_consolidation(carrymem, arguments: Dict[str, Any]) -> Dict[str, 
 __all__ = [
     "handle_classify_and_remember",
     "handle_forget_memory",
+    "handle_pause_memory",
+    "handle_resume_memory",
     "handle_index_knowledge",
     "handle_declare_preference",
     "handle_summarize_and_store",

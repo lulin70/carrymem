@@ -172,6 +172,9 @@ class StoredMemory(MemoryEntry):
     storage_metadata: Dict[str, Any] = field(default_factory=dict)
     superseded_at: Optional[datetime] = None
     supersedes: Optional[str] = None
+    paused: bool = False
+    paused_at: Optional[datetime] = None
+    pause_reason: Optional[str] = None
     summary: Optional[str] = None
     summary_level: Optional[int] = None
 
@@ -193,6 +196,9 @@ class StoredMemory(MemoryEntry):
                 "storage_metadata": self.storage_metadata,
                 "superseded_at": self.superseded_at.isoformat() if self.superseded_at else None,
                 "supersedes": self.supersedes,
+                "paused": self.paused,
+                "paused_at": self.paused_at.isoformat() if self.paused_at else None,
+                "pause_reason": self.pause_reason,
                 "memory_nature": self.memory_nature,
                 "version_chain_id": self.version_chain_id,
                 "version_number": self.version_number,
@@ -240,6 +246,7 @@ class StoredMemory(MemoryEntry):
         expires_at = _parse_datetime_field(data.get("expires_at"))
         last_accessed_at = _parse_datetime_field(data.get("last_accessed_at"))
         superseded_at = _parse_datetime_field(data.get("superseded_at"))
+        paused_at = _parse_datetime_field(data.get("paused_at"))
 
         return cls(
             id=data.get("id", ""),
@@ -263,6 +270,9 @@ class StoredMemory(MemoryEntry):
             version=data.get("version", 1),
             superseded_at=superseded_at,
             supersedes=data.get("supersedes"),
+            paused=bool(data.get("paused", False)),
+            paused_at=paused_at,
+            pause_reason=data.get("pause_reason"),
             memory_nature=data.get("memory_nature", "state"),
             version_chain_id=data.get("version_chain_id"),
             version_number=data.get("version_number", 1),
@@ -366,6 +376,19 @@ class StorageAdapter(ABC):
             StoredMemory with storage_key and all metadata fields populated.
         """
         ...
+
+    def pause_memory(
+        self,
+        storage_key: str,
+        reason: Optional[str] = None,
+        paused_at: Optional[str] = None,
+    ):
+        """Pause a memory by storage key."""
+        raise NotImplementedError(f"{self.__class__.__name__} does not implement pause_memory()")
+
+    def resume_memory(self, storage_key: str):
+        """Resume a memory by storage key."""
+        raise NotImplementedError(f"{self.__class__.__name__} does not implement resume_memory()")
 
     @abstractmethod
     def delete(self, entry_id: str) -> bool:
@@ -1028,8 +1051,22 @@ class AsyncStorageAdapter(Protocol):
     async def store_batch(self, entries: List[MemoryEntry]) -> List[StoredMemory]:
         """Batch store entries, returning full metadata for each."""
 
+    async def pause_memory(
+        self,
+        storage_key: str,
+        reason: Optional[str] = None,
+        paused_at: Optional[str] = None,
+    ):
+        """Pause a memory by storage key."""
+        ...
+
+    async def resume_memory(self, storage_key: str):
+        """Resume a memory by storage key."""
+        ...
+
     async def delete(self, entry_id: str) -> bool:
         """Delete a memory by its entry ID."""
+        ...
 
     async def delete_batch(self, storage_keys: List[str]) -> Dict[str, bool]:
         """Batch delete by storage keys, returning per-key result."""

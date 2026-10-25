@@ -140,6 +140,30 @@ class TestImportMemories(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.cm.import_memories()
 
+    def test_import_profile_restores_paused_state(self):
+        """Import keeps paused memories excluded from recall."""
+        paused_at = "2026-10-24T12:34:56+00:00"
+        import_data = {
+            "memories": [
+                {
+                    "type": "user_preference",
+                    "content": "Imported but paused",
+                    "confidence": 0.9,
+                    "paused": True,
+                    "paused_at": paused_at,
+                    "pause_reason": "source policy",
+                }
+            ],
+            "source": {"namespace": "test"},
+        }
+        result = self.cm.import_memories(data=import_data)
+        self.assertEqual(result["imported"], 1)
+        exported = self.cm.export_memories()["data"]
+        imported = next(item for item in exported["memories"] if item["content"] == "Imported but paused")
+        self.assertTrue(imported["paused"])
+        self.assertEqual(imported["pause_reason"], "source policy")
+        self.assertEqual(imported["paused_at"], paused_at)
+
     def test_import_profile_with_conflict_resolution(self):
         """import_memories() supports skip_existing merge strategy."""
         import_data = {

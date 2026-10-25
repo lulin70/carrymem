@@ -7,7 +7,7 @@ import unittest
 
 from carrymem import CarryMem
 from carrymem.core._lifecycle import StorageNotConfiguredError
-from carrymem.errors import CarryMemError
+from carrymem.errors import CarryMemError, SecurityError
 
 
 class TestDeclare(unittest.TestCase):
@@ -260,6 +260,18 @@ class TestPermissionHelpers(unittest.TestCase):
                 cm.forget_memory("key")
         finally:
             cm.close()
+
+    def test_pause_requires_write_permission(self):
+        """Pause uses the WRITE permission path."""
+        from carrymem.security.permissions import AccessPolicy
+
+        result = self.cm.declare("Permission pause target")
+        key = result["storage_keys"][0]
+        self.cm.access_policy = AccessPolicy(owner_id="alice")
+        with self.assertRaises(SecurityError):
+            self.cm.pause_memory(key)
+        paused = self.cm.pause_memory(key, user_id="alice", reason="allowed")
+        self.assertTrue(paused["paused"])
 
 
 if __name__ == "__main__":

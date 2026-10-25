@@ -256,6 +256,8 @@ class RecallEngine:
 
         if not filters.get("include_superseded", False):
             conditions.append("(superseded_at IS NULL OR superseded_at = '')")
+        if not filters.get("include_paused", False):
+            conditions.append("paused = 0")
 
         if filters.get("session_id"):
             safe_sid = (
@@ -764,6 +766,8 @@ class RecallEngine:
             params.append(filters["tier"])
         if not filters.get("include_superseded", False):
             conditions.append("(superseded_at IS NULL OR superseded_at = '')")
+        if not filters.get("include_paused", False):
+            conditions.append("paused = 0")
         if filters.get("created_after"):
             conditions.append("created_at >= ?")
             params.append(filters["created_after"])
@@ -918,6 +922,8 @@ class RecallEngine:
             params.append(filters["tier"])
         if not filters.get("include_superseded", False):
             conditions.append("(superseded_at IS NULL OR superseded_at = '')")
+        if not filters.get("include_paused", False):
+            conditions.append("paused = 0")
 
         where_clause = "WHERE " + " AND ".join(conditions)
 

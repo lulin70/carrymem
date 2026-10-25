@@ -28,6 +28,8 @@ from carrymem.cli import (
     cmd_import,
     cmd_init,
     cmd_list,
+    cmd_pause,
+    cmd_resume,
     cmd_search,
     cmd_setup_mcp,
     cmd_show,
@@ -811,6 +813,25 @@ class TestCmdShow:
         captured = capsys.readouterr()
         data = json.loads(captured.out.strip())
         assert data["storage_key"] == key
+
+    def test_pause_resume_json(self, temp_db, capsys):
+        cm = CarryMem(db_path=temp_db)
+        key = _store(cm, "CLI pause target")[0]
+        cm.close()
+
+        assert cmd_pause([key, "--reason", "CLI test", "--json", "--db", temp_db]) == 0
+        paused = json.loads(capsys.readouterr().out)
+        assert paused["paused"] is True
+        assert paused["pause_reason"] == "CLI test"
+
+        assert cmd_show([key, "--json", "--db", temp_db]) == 0
+        shown = json.loads(capsys.readouterr().out)
+        assert shown["paused"] is True
+
+        assert cmd_resume([key, "--json", "--db", temp_db]) == 0
+        resumed = json.loads(capsys.readouterr().out)
+        assert resumed["resumed"] is True
+        assert resumed["paused"] is False
 
 
 class TestCmdEdit:

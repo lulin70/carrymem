@@ -187,10 +187,14 @@ class ProfileExportMixin:
         total_count = stats.get("total_count", 0) if isinstance(stats, dict) else 0
         export_limit = max(total_count, 1)
 
-        all_memories = self._adapter.recall("", limit=export_limit)
+        all_memories = self._adapter.recall(
+            "", filters={"include_paused": True}, limit=export_limit, update_access=False
+        )
 
         if ns != "default" and self._adapter.capabilities.get("namespace_filtering", False):
-            all_memories = self._adapter.recall("", limit=export_limit, namespaces=[ns])
+            all_memories = self._adapter.recall(
+                "", filters={"include_paused": True}, limit=export_limit, namespaces=[ns], update_access=False
+            )
 
         export_data = {
             "schema_version": EXPORT_SCHEMA_VERSION,
@@ -326,7 +330,18 @@ class ProfileExportMixin:
                         "imported_at": datetime.now(timezone.utc).isoformat(),
                     },
                 )
-                self._adapter.store_entry(entry)
+                stored = self._adapter.store_entry(entry)
+                if mem_dict.get("paused"):
+                    pause = getattr(self._adapter, "pause_memory", None)
+                    if callable(pause):
+                        try:
+                            pause(
+                                stored.storage_key,
+                                mem_dict.get("pause_reason"),
+                                mem_dict.get("paused_at"),
+                            )
+                        except TypeError:
+                            pause(stored.storage_key, mem_dict.get("pause_reason"))
                 imported += 1
             except (ValueError, KeyError, TypeError) as e:
                 logger.warning("Failed to import memory entry: %s", e)

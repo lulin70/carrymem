@@ -90,6 +90,8 @@ from .write import (
     handle_declare_preference,
     handle_forget_memory,
     handle_index_knowledge,
+    handle_pause_memory,
+    handle_resume_memory,
     handle_schedule_consolidation,
     handle_stop_consolidation,
     handle_summarize_and_store,
@@ -109,6 +111,8 @@ handler_map = {
     "classify_and_remember": (handle_classify_and_remember, "carrymem"),
     "recall_memories": (handle_recall_memories, "carrymem"),
     "forget_memory": (handle_forget_memory, "carrymem"),
+    "pause_memory": (handle_pause_memory, "carrymem"),
+    "resume_memory": (handle_resume_memory, "carrymem"),
     "update_memory": (handle_update_memory, "carrymem"),
     "get_memory_history": (handle_get_memory_history, "carrymem"),
     "index_knowledge": (handle_index_knowledge, "carrymem"),
@@ -238,6 +242,8 @@ class Handlers:
         {
             "classify_and_remember",
             "forget_memory",
+            "pause_memory",
+            "resume_memory",
             "update_memory",
             "declare_preference",
         }
@@ -435,6 +441,8 @@ __all__ = [
     # Write handlers
     "handle_classify_and_remember",
     "handle_forget_memory",
+    "handle_pause_memory",
+    "handle_resume_memory",
     "handle_index_knowledge",
     "handle_declare_preference",
     "handle_summarize_and_store",

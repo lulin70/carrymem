@@ -116,6 +116,15 @@ async def test_update_memory(mock_carrymem):
 
 
 @pytest.mark.asyncio
+async def test_pause_resume_memory(mock_carrymem):
+    mock_carrymem.return_value.pause_memory.return_value = {"paused": True}
+    mock_carrymem.return_value.resume_memory.return_value = {"resumed": True}
+    async_cm = AsyncCarryMem(mock_carrymem.return_value)
+    assert await async_cm.pause_memory("key", "maintenance") == {"paused": True}
+    assert await async_cm.resume_memory("key") == {"resumed": True}
+
+
+@pytest.mark.asyncio
 async def test_get_memory_history(mock_carrymem):
     mock_carrymem.return_value.get_memory_history.return_value = [{"v": 1}]
     async_cm = AsyncCarryMem()

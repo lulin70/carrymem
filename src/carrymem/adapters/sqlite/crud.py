@@ -460,6 +460,85 @@ class CRUDOperations:
             )
         return count  # type: ignore[no-any-return]
 
+    def pause_memory(
+        self,
+        storage_key: str,
+        reason: Optional[str] = None,
+        paused_at: Optional[str] = None,
+    ) -> Optional[StoredMemory]:
+        """Pause a memory in the current namespace without changing its version."""
+        with self._conn_mgr.file_lock:
+            conn = self._conn_mgr.get_connection()
+            row = conn.execute(
+                "SELECT * FROM memories WHERE storage_key = ? AND namespace = ?",
+                (storage_key, self._adapter.namespace),
+            ).fetchone()
+            if not row:
+                if self._audit:
+                    self._audit.log_operation(operation="pause", storage_key=storage_key, success=False)
+                return None
+            if not row["paused"]:
+                now = paused_at or datetime.now(timezone.utc).isoformat()
+                conn.execute(
+                    "UPDATE memories SET paused = 1, paused_at = ?, pause_reason = ? "
+                    "WHERE storage_key = ? AND namespace = ?",
+                    (now, reason, storage_key, self._adapter.namespace),
+                )
+                conn.commit()
+            stored = self._serializer.row_to_stored(
+                conn.execute(
+                    "SELECT * FROM memories WHERE storage_key = ? AND namespace = ?",
+                    (storage_key, self._adapter.namespace),
+                ).fetchone()
+            )
+        if self._adapter.enable_cache and self._cache:
+            self._cache.invalidate_keys(self._adapter.namespace, {storage_key})
+        if self._audit:
+            self._audit.log_operation(
+                operation="pause",
+                storage_key=storage_key,
+                memory_type=stored.type if stored else None,
+                success=True,
+                details={"reason": stored.pause_reason if stored else reason},
+            )
+        return stored  # type: ignore[no-any-return]
+
+    def resume_memory(self, storage_key: str) -> Optional[StoredMemory]:
+        """Resume a memory in the current namespace without changing its version."""
+        with self._conn_mgr.file_lock:
+            conn = self._conn_mgr.get_connection()
+            row = conn.execute(
+                "SELECT * FROM memories WHERE storage_key = ? AND namespace = ?",
+                (storage_key, self._adapter.namespace),
+            ).fetchone()
+            if not row:
+                if self._audit:
+                    self._audit.log_operation(operation="resume", storage_key=storage_key, success=False)
+                return None
+            if row["paused"]:
+                conn.execute(
+                    "UPDATE memories SET paused = 0, paused_at = NULL, pause_reason = NULL "
+                    "WHERE storage_key = ? AND namespace = ?",
+                    (storage_key, self._adapter.namespace),
+                )
+                conn.commit()
+            stored = self._serializer.row_to_stored(
+                conn.execute(
+                    "SELECT * FROM memories WHERE storage_key = ? AND namespace = ?",
+                    (storage_key, self._adapter.namespace),
+                ).fetchone()
+            )
+        if self._adapter.enable_cache and self._cache:
+            self._cache.invalidate_keys(self._adapter.namespace, {storage_key})
+        if self._audit:
+            self._audit.log_operation(
+                operation="resume",
+                storage_key=storage_key,
+                memory_type=stored.type if stored else None,
+                success=True,
+            )
+        return stored  # type: ignore[no-any-return]
+
     def get_by_key(self, storage_key: str) -> Optional[StoredMemory]:
         """Return a stored memory by key, or None if not found."""
         conn = self._conn_mgr.get_connection()

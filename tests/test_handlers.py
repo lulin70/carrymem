@@ -13,6 +13,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from carrymem import CarryMem
+from carrymem.adapters.base import MemoryEntry
 from carrymem.integration.layer2_mcp.handlers import (
     Handlers,
     _build_summary,
@@ -32,10 +33,12 @@ from carrymem.integration.layer2_mcp.handlers import (
     handle_get_system_prompt,
     handle_index_knowledge,
     handle_mce_status,
+    handle_pause_memory,
     handle_query_graph,
     handle_recall_all,
     handle_recall_from_knowledge,
     handle_recall_memories,
+    handle_resume_memory,
     handle_shortest_path,
     handle_summarize_and_store,
     handle_update_memory,
@@ -753,6 +756,22 @@ class TestHandlersClass:
         data = result.get("data", result)
         assert result.get("success") is False or "error" in data
         handlers.cleanup()
+
+
+class TestPauseResumeHandlers:
+    def test_pause_and_resume_call_core_facade(self, cm):
+        stored = cm._adapter.store_entry(MemoryEntry(content="MCP pause target", type="user_preference"))
+        paused = handle_pause_memory(cm, {"storage_key": stored.storage_key, "reason": "MCP test"})
+        assert paused["paused"] is True
+        assert paused["pause_reason"] == "MCP test"
+        assert handle_recall_memories(cm, {"query": "MCP pause target"})["memories"] == []
+        resumed = handle_resume_memory(cm, {"storage_key": stored.storage_key})
+        assert resumed["resumed"] is True
+        assert handle_recall_memories(cm, {"query": "MCP pause target"})["memories"]
+
+    def test_pause_and_resume_require_storage_key(self, cm):
+        assert "error" in handle_pause_memory(cm, {})
+        assert "error" in handle_resume_memory(cm, {})
 
 
 class TestHandleSummarizeAndStore:

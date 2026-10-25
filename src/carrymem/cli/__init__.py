@@ -22,6 +22,8 @@ def show_help():
     list                 {_t('cli.cmd.list')}
     search <query>       {_t('cli.cmd.search')}
     show <key>           {_t('cli.cmd.show')}
+    pause <key>          Pause a memory
+    resume <key>         Resume a memory
     edit <key> <text>    {_t('cli.cmd.edit')}
     forget <key>         {_t('cli.cmd.forget')}
     clean                {_t('cli.cmd.clean')}
@@ -131,6 +133,8 @@ def main():
         "find": cmd_search,
         "show": cmd_show,
         "get": cmd_show,
+        "pause": cmd_pause,
+        "resume": cmd_resume,
         "edit": cmd_edit,
         "update": cmd_edit,
         "forget": cmd_forget,

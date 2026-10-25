@@ -169,6 +169,31 @@ OPTIONAL_TOOLS: List[Dict[str, Any]] = [
         },
     },
     {
+        "name": "pause_memory",
+        "description": "Pause a stored memory so recall does not return it. Requires storage adapter.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "storage_key": {"type": "string", "description": "Memory storage_key to pause"},
+                "reason": {"type": "string", "description": "Optional pause reason"},
+                "user_id": {"type": "string", "description": "Optional user identity for access control"},
+            },
+            "required": ["storage_key"],
+        },
+    },
+    {
+        "name": "resume_memory",
+        "description": "Resume a paused stored memory so recall can return it. Requires storage adapter.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "storage_key": {"type": "string", "description": "Memory storage_key to resume"},
+                "user_id": {"type": "string", "description": "Optional user identity for access control"},
+            },
+            "required": ["storage_key"],
+        },
+    },
+    {
         "name": "update_memory",
         "description": (
             "Update a stored memory and create a new version. Use recall_memories "

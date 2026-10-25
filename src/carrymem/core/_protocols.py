@@ -490,6 +490,19 @@ class MemoryCRUDOps(Protocol):
         """Alias for declare() — semantic sugar."""
         ...
 
+    def pause_memory(
+        self,
+        storage_key: str,
+        reason: Optional[str] = None,
+        user_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Pause a memory by storage key."""
+        ...
+
+    def resume_memory(self, storage_key: str, user_id: Optional[str] = None) -> Dict[str, Any]:
+        """Resume a memory by storage key."""
+        ...
+
     def forget_memory(self, memory_id: str, user_id: Optional[str] = None) -> bool:
         """Delete a single memory by ID."""
         ...

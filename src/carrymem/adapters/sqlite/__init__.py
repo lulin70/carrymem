@@ -612,6 +612,19 @@ class SQLiteAdapter(StorageAdapter):
         """
         return self._crud.store_batch(entries)
 
+    def pause_memory(
+        self,
+        storage_key: str,
+        reason: Optional[str] = None,
+        paused_at: Optional[str] = None,
+    ) -> Optional[StoredMemory]:
+        """Pause a memory in the current namespace."""
+        return self._crud.pause_memory(storage_key, reason, paused_at)
+
+    def resume_memory(self, storage_key: str) -> Optional[StoredMemory]:
+        """Resume a memory in the current namespace."""
+        return self._crud.resume_memory(storage_key)
+
     def delete(self, entry_id: str) -> bool:
         """Delete a memory by its storage_key."""
         return self._crud.forget(entry_id)
@@ -703,7 +716,7 @@ class SQLiteAdapter(StorageAdapter):
         """
         import json as _json
 
-        results = self.recall("*", limit=100000, update_access=False)
+        results = self.recall("", filters={"include_paused": True}, limit=100000, update_access=False)
         entries = [r.to_dict() for r in results]
         return _json.dumps(entries, ensure_ascii=False, default=str)
 
@@ -722,7 +735,13 @@ class SQLiteAdapter(StorageAdapter):
         count = 0
         for entry_dict in entries:
             mem_entry = MemoryEntry.from_dict(entry_dict)
-            self.store_entry(mem_entry)
+            stored = self.store_entry(mem_entry)
+            if entry_dict.get("paused"):
+                self.pause_memory(
+                    stored.storage_key,
+                    entry_dict.get("pause_reason"),
+                    entry_dict.get("paused_at"),
+                )
             count += 1
         return count
 

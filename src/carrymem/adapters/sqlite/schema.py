@@ -38,7 +38,10 @@ CREATE TABLE IF NOT EXISTS memories (
     content_hash TEXT NOT NULL,
     importance_score REAL NOT NULL DEFAULT 0.0,
     last_accessed_at TEXT,
-    version INTEGER NOT NULL DEFAULT 1
+    version INTEGER NOT NULL DEFAULT 1,
+    paused INTEGER NOT NULL DEFAULT 0,
+    paused_at TEXT,
+    pause_reason TEXT
 );
 
 CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
@@ -138,6 +141,16 @@ _V100_GRAPH_CONFIDENCE_SQL = [
 
 _V100_GRAPH_CONFIDENCE_INDEX_SQL = [
     "CREATE INDEX IF NOT EXISTS idx_relations_confidence ON memory_relations(confidence)",
+]
+
+_V230_PAUSE_MIGRATION_SQL = [
+    "ALTER TABLE memories ADD COLUMN paused INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE memories ADD COLUMN paused_at TEXT",
+    "ALTER TABLE memories ADD COLUMN pause_reason TEXT",
+]
+
+_V230_PAUSE_INDEX_SQL = [
+    "CREATE INDEX IF NOT EXISTS idx_memories_namespace_paused ON memories(namespace, paused)",
 ]
 
 _V051_ENTITY_ALIASES_SQL = """
@@ -418,6 +431,7 @@ class SchemaManager:
             self.migrate_v200()
             self.migrate_v210()
             self.migrate_v220()
+            self.migrate_v230()
 
     def migrate_namespace(self):
         """Add the namespace column to the memories table if missing."""
@@ -771,6 +785,24 @@ class SchemaManager:
         except sqlite3.Error as e:
             conn.rollback()
             raise DatabaseError(f"Migration {_V210_MIGRATION_ID} failed (fail-closed): {e}") from e
+
+    def migrate_v230(self):
+        """Add memory-level pause state; old databases default to active."""
+        conn = self._conn_mgr.get_connection()
+        try:
+            conn.execute("SELECT paused, paused_at, pause_reason FROM memories LIMIT 1")
+        except _OpError:
+            for sql in _V230_PAUSE_MIGRATION_SQL:
+                try:
+                    conn.execute(sql)
+                except _OpError:
+                    pass
+            for sql in _V230_PAUSE_INDEX_SQL:
+                try:
+                    conn.execute(sql)
+                except _OpError:
+                    pass
+            conn.commit()
 
     def migrate_v220(self):
         """Create Phase 4 reflection run/proposal tables with a tamper-evident ledger."""

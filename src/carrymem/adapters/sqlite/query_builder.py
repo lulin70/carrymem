@@ -46,6 +46,7 @@ _ALLOWED_FILTER_KEYS = {
     "include_superseded",
     "_order_oldest",
     "include_session_summary",
+    "include_paused",
 }
 
 _TIME_EXPRESSIONS = [

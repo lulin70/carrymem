@@ -526,6 +526,41 @@ class MemoryCRUDMixin:
         """Alias for :meth:`declare` storing a user preference."""
         return self.declare(message, context, user_id=user_id)
 
+    def pause_memory(
+        self,
+        storage_key: str,
+        reason: Optional[str] = None,
+        user_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Pause a memory without changing content or version history."""
+        self._check_write_permission(user_id)
+        if not self._adapter:
+            raise StorageNotConfiguredError()
+        validate_storage_key(storage_key)
+        method = getattr(self._adapter, "pause_memory", None)
+        if not callable(method):
+            raise ValueError("Memory pause is not supported by this adapter")
+        result = method(storage_key, reason)
+        self._auto_backup()
+        if result is None:
+            return {"paused": False, "storage_key": storage_key, "error": f"Memory not found: {storage_key}"}
+        return {"paused": True, **result.to_dict()}
+
+    def resume_memory(self, storage_key: str, user_id: Optional[str] = None) -> Dict[str, Any]:
+        """Resume a memory without changing content or version history."""
+        self._check_write_permission(user_id)
+        if not self._adapter:
+            raise StorageNotConfiguredError()
+        validate_storage_key(storage_key)
+        method = getattr(self._adapter, "resume_memory", None)
+        if not callable(method):
+            raise ValueError("Memory resume is not supported by this adapter")
+        result = method(storage_key)
+        self._auto_backup()
+        if result is None:
+            return {"resumed": False, "storage_key": storage_key, "error": f"Memory not found: {storage_key}"}
+        return {"resumed": True, **result.to_dict()}
+
     def forget_memory(self, memory_id: str, user_id: Optional[str] = None) -> bool:
         """Delete a memory by its storage key."""
         self._check_delete_permission(user_id)

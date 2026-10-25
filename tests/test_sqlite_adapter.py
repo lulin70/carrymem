@@ -268,6 +268,56 @@ class TestCRUDOperations:
         """get_by_key on non-existent key returns None (not raise)."""
         assert adapter.get_by_key("cm_nonexistent") is None
 
+    def test_pause_resume_round_trip_is_idempotent(self, adapter):
+        """Pause state is visible to management reads and does not version content."""
+        stored = adapter.store_entry(MemoryEntry(content="pause me", type="user_preference"))
+        paused = adapter.pause_memory(stored.storage_key, reason="maintenance")
+        assert paused is not None
+        assert paused.paused is True
+        assert paused.pause_reason == "maintenance"
+        assert paused.version == stored.version
+        assert paused.content == stored.content
+        assert paused.paused_at is not None
+
+        paused_again = adapter.pause_memory(stored.storage_key, reason="ignored")
+        assert paused_again is not None
+        assert paused_again.pause_reason == "maintenance"
+        assert paused_again.paused_at == paused.paused_at
+        assert adapter.recall("pause me", update_access=False) == []
+
+        resumed = adapter.resume_memory(stored.storage_key)
+        assert resumed is not None
+        assert resumed.paused is False
+        assert resumed.pause_reason is None
+        assert resumed.paused_at is None
+        assert resumed.version == stored.version
+        assert adapter.recall("pause me", update_access=False)
+
+        resumed_again = adapter.resume_memory(stored.storage_key)
+        assert resumed_again is not None
+        assert resumed_again.version == stored.version
+
+    def test_serializer_preserves_pause_fields(self, adapter):
+        """SQLite row and dict serializers preserve pause metadata."""
+        stored = adapter.store_entry(MemoryEntry(content="serialized pause", type="fact_declaration"))
+        adapter.pause_memory(stored.storage_key, reason="hidden")
+        row = (
+            adapter._get_connection()
+            .execute(
+                "SELECT * FROM memories WHERE storage_key = ?",
+                (stored.storage_key,),
+            )
+            .fetchone()
+        )
+        from_row = adapter._serializer.row_to_stored(row)
+        from_dict = adapter._serializer.dict_to_stored(from_row.to_dict()) if from_row else None
+        assert from_row is not None
+        assert from_row.paused is True
+        assert from_row.pause_reason == "hidden"
+        assert from_dict is not None
+        assert from_dict.paused is True
+        assert from_dict.pause_reason == "hidden"
+
     def test_forget_expired_no_expired(self, adapter_with_data):
         """forget_expired with no expired memories returns 0."""
         result = adapter_with_data.forget_expired()

@@ -90,6 +90,19 @@ class AsyncCarryMem:
         """Retrieve memories matching the query and optional filters."""
         return await self._run(self._sync.recall_memories, query, filters, limit)  # type: ignore[no-any-return]
 
+    async def pause_memory(
+        self,
+        storage_key: str,
+        reason: Optional[str] = None,
+        user_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Pause a memory entry asynchronously."""
+        return await self._run(self._sync.pause_memory, storage_key, reason, user_id)  # type: ignore[no-any-return]
+
+    async def resume_memory(self, storage_key: str, user_id: Optional[str] = None) -> Dict[str, Any]:
+        """Resume a memory entry asynchronously."""
+        return await self._run(self._sync.resume_memory, storage_key, user_id)  # type: ignore[no-any-return]
+
     async def forget_memory(self, memory_id: str) -> bool:
         """Delete a memory entry by its ID."""
         return await self._run(self._sync.forget_memory, memory_id)  # type: ignore[no-any-return]

@@ -178,6 +178,8 @@ def _collect_mode_rows(
         if not plan.include_superseded and str(memory.get("superseded_at") or ""):
             superseded_count += 1
             continue
+        if bool(memory.get("paused", False)):
+            continue
         candidates.append((mode_name, memory))
         if len(candidates) >= candidate_cap:
             return superseded_count, True

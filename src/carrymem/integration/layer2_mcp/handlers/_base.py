@@ -78,6 +78,8 @@ _TOOL_OPERATION_LEVELS: Dict[str, OperationLevel] = {
     "classify_and_remember": OperationLevel.WRITE,
     "recall_memories": OperationLevel.READ,
     "forget_memory": OperationLevel.DELETE,
+    "pause_memory": OperationLevel.WRITE,
+    "resume_memory": OperationLevel.WRITE,
     "update_memory": OperationLevel.WRITE,
     "get_memory_history": OperationLevel.READ,
     # ── Knowledge (index builds/refreshes; recall is READ) ──
