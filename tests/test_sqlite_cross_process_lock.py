@@ -4,6 +4,8 @@ import multiprocessing
 import sqlite3
 from pathlib import Path
 
+import pytest
+
 
 def _write_rows(db_path: str, start: int, count: int) -> None:
     from carrymem.adapters.sqlite.connection import ConnectionManager
@@ -19,6 +21,7 @@ def _write_rows(db_path: str, start: int, count: int) -> None:
         manager.close()
 
 
+@pytest.mark.release_gate
 def test_cross_process_writes_are_serialized(tmp_path: Path) -> None:
     db_path = str(tmp_path / "carrymem.db")
     with sqlite3.connect(db_path) as conn:

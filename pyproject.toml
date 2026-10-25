@@ -18,6 +18,7 @@ addopts = [
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "release_gate: marks stable release-critical regression tests",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
     "asyncio: marks tests as async (requires pytest-asyncio)",

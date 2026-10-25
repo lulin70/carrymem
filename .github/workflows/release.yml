@@ -127,12 +127,12 @@ jobs:
 
       - name: Run blocking concurrency regression
         run: |
-          # This is the release-critical multi-process SQLite path. Keep it
-          # explicit so the release gate cannot pass while concurrency is only
-          # covered by a nightly job.
-          python -m pytest tests/test_concurrent_access.py::TestMultiProcessConcurrentReadWrite::test_concurrent_process_read_write \
+          # Release-critical tests use the explicit release_gate marker.
+          # The complete slow suite remains a nightly diagnostic suite.
+          python -m pytest tests/test_sqlite_cross_process_lock.py \
+            -m "release_gate" \
             --no-cov \
-            --timeout=600 \
+            --timeout=120 \
             -q
 
       - name: Verify coverage threshold

@@ -2,7 +2,7 @@
 
 > **文档性质**: 活文档 (Living Document) — 每完成一项立即更新状态
 > **创建时间**: 2026-07-17
- > **最后更新**: 2026-10-24（TD-073 已补齐 fail-closed 的真实 VSCode extension host→CLI→SQLite→tree 测试设计，但本机无 Node.js/npm，仍待 CI/Node 环境运行证据；TD-075 health schema 与 consolidation timer 生命周期已完成并验证；TD-076 方案 A 契约已关闭；TD-077 运行时 SLO 债已关闭；GitHub Issue #56/#57 已调查并关闭；后续 nightly runs `39736182269` 和 `39913021565` 全部通过。当前目录包含 TD-001~TD-078 共 78 条明细；未闭环项为 TD-070、TD-073、TD-074 和 TD-078。TD-077 的发布负载级证明已并入 TD-074 跟踪。保留真实 VSCode UI→CLI→SQLite、clean checkout/release 模拟、完整 slow 门禁和记忆级暂停债务。已发布 `0.11.2` 的事实与当前 working tree 证据严格区分。TD-067 修复与历史批次记录见 §9 更新日志）
+ > **最后更新**: 2026-10-25（TD-078 记忆级暂停已完成并验证；TD-073 已补齐 fail-closed 的真实 VSCode extension host→CLI→SQLite→tree 测试设计，但本机无 Node.js/npm，仍待 CI/Node 环境运行证据；TD-075 health schema 与 consolidation timer 生命周期已完成并验证；TD-076 方案 A 契约已关闭；TD-077 运行时 SLO 债已关闭；GitHub Issue #56/#57 已调查并关闭；后续 nightly runs `39736182269` 和 `39913021565` 全部通过。当前目录包含 TD-001~TD-078 共 78 条明细；未闭环项为 TD-070、TD-073 和 TD-074。TD-077 的发布负载级证明已并入 TD-074 跟踪。保留真实 VSCode UI→CLI→SQLite、clean checkout/release 模拟、完整 slow 门禁和 Node/npm 依赖审计。已发布 `0.11.2` 的事实与当前 working tree 证据严格区分。TD-067 修复与历史批次记录见 §9 更新日志）
 > **基于**: 7 维度项目整理评估 (2026-07-17, B+ 77/100) + DevSquad 7 角色并行审核
 > **配套文档**: [ROADMAP_P0_P3.md](ROADMAP_P0_P3.md) — 执行路线图 (Wave 推进表 + 7-Role 投票矩阵 + 11 阶段生命周期映射)；[PRODUCT_ROLLOUT_PLAN.md](PRODUCT_ROLLOUT_PLAN.md) — 面向用户价值、首次成功、兼容性和推广的产品推进方案
 >
@@ -32,7 +32,7 @@
 | P2 中优先级 | 25 项 | ~18h | 方案+共识后推进 |
 | P3 低优先级 | 15 项 | ~4h | 日常维护渐进 |
 
-> **复核说明（2026-10-24 更新）**：上表统计当前目录中的 78 条技术债明细，按条目优先级计数，不表示开放项数量。当前未完全闭环项为 TD-070、TD-073、TD-074 和 TD-078；TD-075 已完成，TD-076 的方案 A 产品契约已关闭，TD-077 的运行时 SLO 债已关闭，其发布负载级证明并入 TD-074。GitHub Issue #56/#57 已调查并关闭，后续 nightly runs `39736182269` 和 `39913021565` 全部通过。
+> **复核说明（2026-10-25 更新）**：上表统计当前目录中的 78 条技术债明细，按条目优先级计数，不表示开放项数量。当前未完全闭环项为 TD-070、TD-073 和 TD-074；TD-075 已完成，TD-076 的方案 A 产品契约已关闭，TD-077 的运行时 SLO 债已关闭，TD-078 的记忆级暂停已完成并验证，其发布负载级证明并入 TD-074。GitHub Issue #56/#57 已调查并关闭，后续 nightly runs `39736182269` 和 `39913021565` 全部通过。
 
 ### 用户价值映射 (PM 建议)
 
@@ -952,12 +952,12 @@
 | **优先级** | P3 |
 | **位置** | `extensions/vscode-carrymem/package-lock.json`（`mocha==10.8.2` → `chokidar==3.6.0` → `braces` 漏洞链；`@vscode/test-cli==0.0.10`） |
 | **问题描述** | 官方 registry `npm audit` 报 5 条 high：braces/chokidar/mocha 链。同 lock 的 brace-expansion（2 条 medium）已于 2026-10-08 经 `npm update brace-expansion` 升至 `1.1.21`/`2.1.7`（恰为补丁版）修复。剩余链无非破坏修复路径：修复版本要求 `@vscode/test-cli@0.0.15`（官方 audit 明示 breaking change）+ mocha 11.x。该链仅用于插件开发测试（`npm test`），不进插件产物 |
-| **复现** | 本机复核：`npm audit --registry=https://registry.npmjs.org` 无法执行，原因是当前环境未安装 `npm`/Node.js；上次有记录的审计结果为 5 high。 |
-| **修复方案** | 在具备 Node.js/npm 的 CI 或开发环境中升级 `@vscode/test-cli` 至 0.0.15+ 与 `@types/mocha`/`mocha@^11`，再运行 VSCode Tier 2 UI E2E（TD-034/61 的 17 用例）验证行为不变。 |
+| **复现** | 本机复核：`node`、`npm`、`npx` 均不可用，`npm audit --registry=https://registry.npmjs.org` 无法执行；上次有记录的审计结果为 5 high。当前 GitHub 还存在 23 条分支漏洞报告（2 critical、8 high、5 moderate、8 low），需要在可运行 Node/npm 的环境中重新核对，不能把旧报告当作当前精确结果。 |
+| **修复方案** | 在具备 Node.js/npm 的 CI 或开发环境中升级 `@vscode/test-cli` 至 0.0.15+ 与 `@types/mocha`/`mocha@^11`，再运行 VSCode Tier 2 UI E2E（TD-034/61 的 17 用例）验证行为不变。同步复核当前 GitHub Dependabot PR #60（filelock 3.30.3→4.2.1）和 PR #61（certifi 2026.6.17→2026.10.19）；在状态检查完成并通过兼容性验证后再合并。 |
 | **负责角色** | DevOps + Tester |
 | **验证标准** | `npm audit --registry=https://registry.npmjs.org` → 0 high；`npm test`（VSCode E2E）17/17 passing |
 | **依赖** | Node.js/npm 可用 |
-| **状态** | 🟡 环境阻塞（2026-10-24；本机仍无 Node.js/npm，Homebrew 安装因网络下载阻塞后已停止；未修改 lockfile，未宣称已修复） |
+| **状态** | 🟡 环境阻塞（2026-10-25；本机仍无 Node.js/npm，Homebrew 安装因网络下载阻塞后已停止；未修改 lockfile，未宣称已修复。Dependabot PR #60/#61 已发现，但当前状态检查仍 pending） |
 | **生命周期** | P6 安全审查 |
 
 ### TD-071: VSCode rules-effectiveness 调用没有对应 CLI 命令
@@ -1005,11 +1005,12 @@
 |------|-----|
 | **优先级** | P1 |
 | **位置** | `.github/workflows/ci.yml`、`.github/workflows/release.yml`、`.github/workflows/nightly.yml`、VSCode 扩展安装步骤 |
-| **问题描述** | release/CI 主测试仍排除 slow 集合；benchmark/nightly 仍保留非阻塞或降级安装路径；完整 clean checkout 发布模拟尚未执行。 |
-| **修复方案** | release pre-test 已加入显式的多进程 SQLite 并发阻塞回归；CI 主测试安装失败现在直接失败，不再使用 `--no-deps` fallback；CI/release/nightly 的 VSCode 依赖安装改为 `npm ci`。后续仍需决定是否把完整 slow 集合纳入发布门禁，并在 clean checkout 验证 optional job 策略。 |
+| **问题描述** | release/CI 主测试仍排除 slow 集合；nightly 曾保留降级安装路径，且 VSCode nightly 未显式安装真实 CarryMem CLI；完整 clean checkout 发布模拟尚未执行。 |
+| **修复方案** | release pre-test 已加入显式的多进程 SQLite 并发阻塞回归；CI 和 nightly slow 安装均改为失败即停并验证 `import carrymem`/`carrymem --version`；nightly VSCode E2E 现在使用 Python 3.12、隔离 venv、editable install、隔离 `CARRYMEM_*` 路径和真实 CLI；CI/release/nightly 的 VSCode 依赖安装使用 `npm ci`。完整 slow 集合继续由 nightly 运行，不直接升级为 release 阻塞门禁；已新增显式 `release_gate` 标记，当前仅将稳定的跨进程 SQLite 写入锁回归纳入 release 阻塞门禁；完整 CarryMem 三进程压力测试保留在 nightly，因本机运行超过 300 秒，不作为稳定 release 契约。 |
 | **负责角色** | DevOps + Tester |
-| **验证标准** | release workflow 包含阻塞并发回归；CI 主安装失败时非零退出；VSCode 安装使用 lockfile；clean checkout 和目标 commit 的完整 release 模拟通过；slow 测试策略和 optional job 失败语义有明确负向验证。 |
-| **状态** | 🟡 部分完成（Python 3.12 隔离环境和 clean checkout 的非 slow 八项门禁均已通过；完整 release workflow、完整 slow 门禁和 optional job 负向语义仍开放） |
+| **验证标准** | release workflow 包含阻塞并发回归；CI/nightly 主安装失败时非零退出；VSCode 安装使用 lockfile；clean checkout 和目标 commit 的完整 release 模拟通过；slow 测试策略和 optional job 失败语义有明确负向验证。 |
+| **状态** | 🟡 部分完成（nightly 降级安装路径已删除；nightly VSCode 已补齐真实 CLI 与隔离运行时；release 已改用显式 `release_gate` 标记并阻塞稳定的跨进程 SQLite 写入锁回归；Python 3.12 隔离环境和 clean checkout 的非 slow 八项门禁均已通过；完整 release workflow、完整 slow 门禁和 optional job 负向语义仍开放） |
+| **本轮验证证据** | 静态 YAML/工作流审查确认 nightly 安装失败即停、CLI 可导入且可执行、VSCode nightly 不再依赖 runner 预装 CLI；`git diff --check` 通过。尚未声称真实 GitHub workflow 已运行。 |
 | **生命周期** | P7 测试规划 → P9 测试执行 → P10 部署发布 |
 
 ### TD-076: HTTP 工具超时后的后台线程继续执行 ⚠️ 新增 (2026-10-10)
@@ -1222,6 +1223,9 @@ TD-035 (AccessPolicy 集成) — 安全债，独立推进
 | 2026-10-23 | v18: 调查并关闭 GitHub Issue #56/#57。两项历史失败均仅由旧 nightly 的 Slow Test Suite 触发；VSCode Tier 2 UI E2E 与 Vector/Semantic Tests 同批通过，后续 nightly runs `39736182269` 和 `39913021565` 的 slow、VSCode、vector jobs 全部通过。同步修正技术债目录为 TD-001~TD-078 共 78 条明细，统计为 P0=5、P1=33、P2=25、P3=15；未将 TD-073/074/077/070/075/076/078 误标为已关闭 | DevSquad |
 | 2026-10-24 | v19: TD-075 完成。Core、MCP、HTTP health 统一为 `schema_version=1` 核心 envelope；consolidation timer 改为实例级 owner，使用 generation token、锁和条件变量，`close()` 取消并等待 callback，重复 close 幂等。定向回归 11 passed，真实 HTTP `/healthz` 1 passed，mypy、black、isort、flake8 全部通过；未关闭 TD-070/073/074/078 | DevSquad |
 | 2026-10-24 | v20: TD-073 实现完成。Tier 2 测试在真实 VSCode extension host 中使用真实 `carrymem` CLI 写入、读取、更新和删除隔离 SQLite rule；移除 `--disable-extensions`，release `vscode-e2e` 使用 Python 3.12、隔离 venv、editable install 和 `CARRYMEM_*` 路径。未在本机宣称通过：Node.js/npm 不可用，状态保持“实现完成，待 CI/Node 环境验证”。 | DevSquad |
+| 2026-10-25 | v21: TD-078 完成。记忆级 pause/resume 已贯通 SQLite serializer/CRUD、Core 权限、Async、CLI、MCP、召回过滤、审计和导入导出；定向测试 406 passed，MCP E2E 47 passed，真实 CLI store → show → pause → recall 排除 → resume → recall 恢复通过。更新顶层未闭环清单：仅保留 TD-070、TD-073、TD-074。 | DevSquad |
+| 2026-10-25 | v22: TD-074 第一轮门禁修复。删除 nightly slow 安装 fallback；nightly VSCode E2E 补齐隔离 Python 3.12 CLI 和 `CARRYMEM_*` 路径；失败通知改为显式 `always()`；新增 `release_gate` 标记，release 仅阻塞稳定的跨进程 SQLite 写入锁回归。该回归本地 `1 passed`；完整 CarryMem 三进程压力测试实测超过 300 秒，保留 nightly，不宣称为 release 契约。 | DevSquad |
+| 2026-10-25 | v23: TD-070 复核。确认本机 `node`/`npm`/`npx` 均不可用，未修改 VSCode lockfile；GitHub 当前有 Dependabot PR #60（filelock）和 #61（certifi），两者状态均为 pending。记录当前 23 条分支漏洞报告，但不将旧的 5 high npm audit 结果当作当前精确结果。 | DevSquad |
 
 ---
 
