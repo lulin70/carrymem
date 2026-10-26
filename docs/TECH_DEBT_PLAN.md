@@ -2,7 +2,7 @@
 
 > **文档性质**: 活文档 (Living Document) — 每完成一项立即更新状态
 > **创建时间**: 2026-07-17
- > **最后更新**: 2026-10-26（修复 CI 暴露的 radon 复杂度回归和知识图谱测试 schema 漂移；完整非 slow 门禁本地通过 `5138 passed, 1 skipped, 77 deselected`；MCP 工具事实已从 33 更新为 35。TD-078 记忆级暂停已完成并验证；TD-073 已补齐 fail-closed 的真实 VSCode extension host→CLI→SQLite→tree 测试设计，但本机无 Node.js/npm，仍待 CI/Node 环境运行证据；TD-075 health schema 与 consolidation timer 生命周期已完成并验证；TD-076 方案 A 契约已关闭；TD-077 运行时 SLO 债已关闭；GitHub Issue #56/#57 已调查并关闭。当前目录包含 TD-001~TD-078 共 78 条明细；未闭环项为 TD-070、TD-073 和 TD-074。TD-077 的发布负载级证明已并入 TD-074 跟踪。保留真实 VSCode UI→CLI→SQLite、clean checkout/release 模拟、完整 slow 门禁和 Node/npm 依赖审计。已发布 `0.11.2` 的事实与当前 working tree 证据严格区分。TD-067 修复与历史批次记录见 §9 更新日志）
+ > **最后更新**: 2026-10-26（修复 CI 暴露的 radon 复杂度回归和知识图谱测试 schema 漂移；本地完整非 slow 门禁在本轮改动前通过 `5138 passed, 1 skipped, 77 deselected`；MCP 工具事实已从 33 更新为 35。CI run `40251593665` 已完成但被取消：质量、构建、安全、VSCode 门禁通过，Ubuntu/macOS 测试失败并出现 `Event loop is closed`；已开始修复 stdio pipe、SSE task 和 MCP HTTP 生命周期清理，待本地和远端验证。TD-078 记忆级暂停已完成并验证；TD-073 已补齐 fail-closed 的真实 VSCode extension host→CLI→SQLite→tree 测试设计，但本机无 Node.js/npm，仍待 CI/Node 环境运行证据；TD-075 health schema 与 consolidation timer 生命周期已完成并验证；TD-076 方案 A 契约已关闭；TD-077 运行时 SLO 债已关闭；GitHub Issue #56/#57 已调查并关闭。当前目录包含 TD-001~TD-078 共 78 条明细；未闭环项为 TD-070、TD-073 和 TD-074。TD-077 的发布负载级证明已并入 TD-074 跟踪。保留真实 VSCode UI→CLI→SQLite、clean checkout/release 模拟、完整 slow 门禁和 Node/npm 依赖审计。已发布 `0.11.2` 的事实与当前 working tree 证据严格区分。TD-067 修复与历史批次记录见 §9 更新日志）
 > **基于**: 7 维度项目整理评估 (2026-07-17, B+ 77/100) + DevSquad 7 角色并行审核
 > **配套文档**: [ROADMAP_P0_P3.md](ROADMAP_P0_P3.md) — 执行路线图 (Wave 推进表 + 7-Role 投票矩阵 + 11 阶段生命周期映射)；[PRODUCT_ROLLOUT_PLAN.md](PRODUCT_ROLLOUT_PLAN.md) — 面向用户价值、首次成功、兼容性和推广的产品推进方案
 >
@@ -1226,7 +1226,7 @@ TD-035 (AccessPolicy 集成) — 安全债，独立推进
 | 2026-10-25 | v21: TD-078 完成。记忆级 pause/resume 已贯通 SQLite serializer/CRUD、Core 权限、Async、CLI、MCP、召回过滤、审计和导入导出；定向测试 406 passed，MCP E2E 47 passed，真实 CLI store → show → pause → recall 排除 → resume → recall 恢复通过。更新顶层未闭环清单：仅保留 TD-070、TD-073、TD-074。 | DevSquad |
 | 2026-10-25 | v22: TD-074 第一轮门禁修复。删除 nightly slow 安装 fallback；nightly VSCode E2E 补齐隔离 Python 3.12 CLI 和 `CARRYMEM_*` 路径；失败通知改为显式 `always()`；新增 `release_gate` 标记，release 仅阻塞稳定的跨进程 SQLite 写入锁回归。该回归本地 `1 passed`；完整 CarryMem 三进程压力测试实测超过 300 秒，保留 nightly，不宣称为 release 契约。 | DevSquad |
 | 2026-10-25 | v23: TD-070 复核。确认本机 `node`/`npm`/`npx` 均不可用，未修改 VSCode lockfile；GitHub 当前有 Dependabot PR #60（filelock）和 #61（certifi），两者状态均为 pending。记录当前 23 条分支漏洞报告，但不将旧的 5 high npm audit 结果当作当前精确结果。 | DevSquad |
-| 2026-10-26 | v24: 处理 commit `f3da286` 暴露的 CI 回归。拆分 `import_memories` 与 SQLite 行序列化以清除 radon D 级复杂度；补齐知识图谱测试夹具的 pause 列，修复 8 个知识图谱查询失败。mypy、radon、black、isort、flake8、版本一致性和 swallowed-assert 门禁通过；修改相关回归共 212 passed；完整非 slow 门禁 `5138 passed, 1 skipped, 77 deselected`。同步 MCP 工具事实为 35 个。GitHub CI 失败日志下载接口因权限返回 403，根因由 job 元数据和本地同等命令复现确认；尚未推送本轮修改。 | DevSquad |
+| 2026-10-26 | v24: 处理 commit `f3da286` 暴露的 CI 回归。拆分 `import_memories` 与 SQLite 行序列化以清除 radon D 级复杂度；补齐知识图谱测试夹具的 pause 列，修复 8 个知识图谱查询失败。mypy、radon、black、isort、flake8、版本一致性和 swallowed-assert 门禁通过；修改相关回归共 212 passed；完整非 slow 门禁在本轮生命周期修复前为 `5138 passed, 1 skipped, 77 deselected`。同步 MCP 工具事实为 35 个。修复已提交并推送为 `73d337d`；CI run `40251593665` 已完成但被取消，质量/构建/安全/VSCode 门禁通过，Ubuntu 和 macOS 测试失败并出现 `Event loop is closed`。本地已修复 stdio pipe transport、SSE task 和 MCP HTTP 生命周期清理，待远端验证。 | DevSquad |
 
 ---
 

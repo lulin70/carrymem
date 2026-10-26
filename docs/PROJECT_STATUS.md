@@ -1,12 +1,12 @@
 # CarryMem — Project Status
 
 **Version**: v0.11.2
-**Last Updated**: 2026-10-26 (CI radon/schema regressions fixed locally; TD-074 awaiting rerun evidence; TD-073 remains pending CI/Node.js/npm evidence)
+**Last Updated**: 2026-10-26 (CI run `40251593665` completed cancelled: quality/build/security/VSCode gates passed, Ubuntu and macOS tests failed with `Event loop is closed`; stdio/HTTP cleanup fix is local and awaits validation)
 **Maintainer**: CarryMem Team
 
 **Product rollout plan**: [PRODUCT_ROLLOUT_PLAN.md](PRODUCT_ROLLOUT_PLAN.md)
 
-**Current product milestone**: 阶段三“记忆可信和可控”、阶段五文档首轮重做和阶段六首轮隔离 CLI/MCP 模拟验收已完成；外部用户试点执行表、最小测试指引和反馈模板已准备，当前进入招募待开始阶段；TRAE ↔ Workbuddy 本机同步已验证，第三客户端真实验收按用户决定跳过，其他客户端仅保留 MCP 协议级可行性结论。
+**Current product milestone**: 阶段三“记忆可信和可控”、阶段五文档首轮重做和阶段六首轮隔离 CLI/MCP 模拟验收已完成；外部用户试点执行表、最小测试指引和反馈模板已准备，但当前仍暂停招募，先修复并验证 CI 暴露的 Python 3.12 MCP 生命周期问题；TRAE ↔ Workbuddy 本机同步已验证，第三客户端真实验收按用户决定跳过，其他客户端仅保留 MCP 协议级可行性结论。
 
 ---
 

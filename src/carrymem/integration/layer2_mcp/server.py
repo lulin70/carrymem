@@ -65,6 +65,7 @@ class MCPServer:
         )
         self.handlers = Handlers(self.config_path, self.data_path, namespace=self.namespace)
         self.request_id = 0
+        self._stdin_transport: Optional[asyncio.BaseTransport] = None
 
         logger.info("MCP Server initialized")
         if self.config_path:
@@ -78,12 +79,12 @@ class MCPServer:
         """Start the MCP server and listen for requests."""
         logger.info("MCP Server starting (request_timeout=%ds)...", self.request_timeout)
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         reader = asyncio.StreamReader()
         protocol = asyncio.StreamReaderProtocol(reader)
-        await loop.connect_read_pipe(lambda: protocol, sys.stdin)
 
         try:
+            self._stdin_transport, _ = await loop.connect_read_pipe(lambda: protocol, sys.stdin)
             while True:
                 try:
                     line = await asyncio.wait_for(
@@ -124,6 +125,9 @@ class MCPServer:
         except Exception as e:
             logger.error("Server error: %s", e)
         finally:
+            if self._stdin_transport is not None:
+                self._stdin_transport.close()
+                self._stdin_transport = None
             await self.cleanup()
 
     @staticmethod
