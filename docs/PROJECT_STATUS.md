@@ -1,7 +1,7 @@
 # CarryMem — Project Status
 
 **Version**: v0.11.2
-**Last Updated**: 2026-10-25 (TD-078 verified; TD-074 nightly/release gate credibility improved; TD-073 remains pending CI/Node.js/npm evidence)
+**Last Updated**: 2026-10-26 (CI radon/schema regressions fixed locally; TD-074 awaiting rerun evidence; TD-073 remains pending CI/Node.js/npm evidence)
 **Maintainer**: CarryMem Team
 
 **Product rollout plan**: [PRODUCT_ROLLOUT_PLAN.md](PRODUCT_ROLLOUT_PLAN.md)
@@ -52,11 +52,11 @@ The v0.11.x line carries the breaking `native_async` removal, the `cryptography>
 
 ### Current Product-Control Evidence (working tree, 2026-10-16)
 
-- **MCP memory control**: `update_memory` and `get_memory_history` are discoverable through real stdio `initialize` / `tools/list`; the public MCP tool set contains 33 tools.
+- **MCP memory control**: `update_memory`, `get_memory_history`, `pause_memory` and `resume_memory` are discoverable through real stdio `initialize` / `tools/list`; the public MCP tool set contains 35 tools.
 - **Focused regression**: MCP workflow, MCP tool contract, operation-level and handler tests — 178 passed.
 - **Memory lifecycle E2E**: CRUD, version history, preference replacement, export/import and full lifecycle — 67 passed.
 - **Real client evidence**: TRAE ↔ Workbuddy shared local SQLite synchronization verified. No third-client UI acceptance is claimed; other MCP clients are covered only by protocol-level feasibility.
-- **Simulated user acceptance**: isolated CLI journey passed — `init` leaves zero user memories, three memories can be added, one memory reaches version 2 after edit, backup is created, and deletion removes the PostgreSQL result from search. CLI, MCP workflow and MCP tool regression tests passed 175 tests; a real MCP stdio subprocess also passed initialize, tools/list, health_check, write, update, history, recall and delete.
+- **Simulated user acceptance**: isolated CLI journey passed — `init` leaves zero user memories, three memories can be added, one memory reaches version 2 after edit, backup is created, and deletion removes the PostgreSQL result from search. CLI, MCP workflow and MCP tool regression tests passed 175 tests; a real MCP stdio subprocess also passed initialize, tools/list, health_check, write, update, history, recall and delete. The current non-slow local gate passed `5138 passed, 1 skipped, 77 deselected`; the run emitted 143 pre-existing TUI coroutine/deprecation warnings.
 - **Documentation readiness**: English/Chinese installation and quick-start documents were audited against the CLI and MCP paths. In an isolated HOME, version, init, doctor, add, list, pack, unpack and restored search passed; 269 installation, CLI, MCP server and MCP E2E tests passed. The fallback command and pack/unpack config-file path were corrected. Documentation now states clearly that optional vector-model download failure does not block installation, MCP, memory write, recall, update, history, delete, backup, restore, rule-based classification or SQLite FTS5 search.
 - **VSCode Tier 2 evidence (TD-073)**: The test now runs in a real VSCode extension host. It creates an isolated temporary SQLite database, writes one rule through the real `carrymem` CLI, reads it through the extension `CarryMemClient` and `RuleTreeProvider`, updates it through the extension API, confirms the update through the real CLI, then deletes the rule and removes the temporary directory. The release `vscode-e2e` job installs Python 3.12, creates an isolated venv, runs `pip install -e .`, and sets isolated `CARRYMEM_*` paths. The test is fail-closed when the CLI is missing. This change is not locally executable because Node.js/npm are not installed; CI or a Node/npm host must provide the final evidence.
 - **Remaining technical debt**: TD-073 remains open pending a real CI/Node/npm run; Node.js/npm dependency audit (TD-070) and full release workflow and slow/optional gate semantics (TD-074) also remain open. TD-074 progress: nightly fallback installation was removed, nightly VSCode E2E now provisions an isolated Python 3.12 CarryMem CLI and isolated `CARRYMEM_*` paths, release uses an explicit `release_gate` marker for the stable cross-process SQLite write-lock regression, and failure notification uses an explicit `always()` condition. TD-070 remains environment-blocked: Node.js/npm are unavailable; Dependabot PR #60/#61 are open with pending checks, so no dependency lockfile change is claimed. TD-078 memory-level pause/resume is implemented and verified through SQLite, Core, Async, CLI, MCP, recall filtering, audit, and import/export paths. Rule-level pause remains distinct from memory-level pause. TD-075 health and timer lifecycle debt is closed.
@@ -133,7 +133,7 @@ these numbers describe the tree, not the v0.11.2 tag.
 | Dimension | Score | Status |
 |-----------|-------|--------|
 | Architecture | B+ | PromptDelegateMixin MRO corrected, doctor Python 3.12 aligned |
-| Modularity | A- | ✅ All 33 MCP tools have handlers; `update_memory` and `get_memory_history` are covered by MCP E2E tests (historical ghost findings are recorded in [V0.11.0_PROJECT_REVIEW.md](design/V0.11.0_PROJECT_REVIEW.md) §4) |
+| Modularity | A- | ✅ All 35 MCP tools have handlers; `update_memory`, `get_memory_history`, `pause_memory` and `resume_memory` are covered by MCP E2E tests (historical ghost findings are recorded in [V0.11.0_PROJECT_REVIEW.md](design/V0.11.0_PROJECT_REVIEW.md) §4) |
 | Security | B+ | MCP XSS strict_mode enabled, SecurityError propagation fixed |
 | Performance | B | Smoke tests added to CI (4 tests, not marked slow) |
 | Maintainability | B+ | Documentation consistency verified across 15 files |

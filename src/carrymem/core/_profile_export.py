@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from carrymem.__version__ import __version__ as _version
-from carrymem.adapters.base import MemoryEntry
+from carrymem.adapters.base import MemoryEntry, StoredMemory
 from carrymem.constants import (
     CORRECTION_RECALL_LIMIT,
     DEFAULT_CONFIDENCE_SCORE,
@@ -260,6 +260,74 @@ class ProfileExportMixin:
             "data": export_data if not output_path else None,
         }
 
+    @staticmethod
+    def _has_imported_content_hash(existing: List[Any], content_hash: str) -> bool:
+        """Return whether an existing memory has the imported content hash."""
+        return any(
+            (
+                getattr(entry, "content_hash", None) == content_hash
+                or (isinstance(entry, dict) and entry.get("content_hash") == content_hash)
+                or (
+                    hasattr(entry, "metadata")
+                    and isinstance(entry.metadata, dict)
+                    and entry.metadata.get("content_hash") == content_hash
+                )
+            )
+            for entry in existing
+        )
+
+    def _pause_imported_memory(self, stored: StoredMemory, mem_dict: Dict[str, Any]) -> None:
+        """Restore the pause state of an imported memory when supported."""
+        if not mem_dict.get("paused"):
+            return
+        adapter = self._adapter
+        if adapter is None:
+            raise StorageNotConfiguredError()
+        pause = getattr(adapter, "pause_memory", None)
+        if callable(pause):
+            try:
+                pause(stored.storage_key, mem_dict.get("pause_reason"), mem_dict.get("paused_at"))
+            except TypeError:
+                pause(stored.storage_key, mem_dict.get("pause_reason"))
+
+    def _import_memory_entry(self, mem_dict: Dict[str, Any], import_data: Dict[str, Any], merge_strategy: str) -> bool:
+        """Import one memory and return whether it was stored."""
+        adapter = self._adapter
+        if adapter is None:
+            raise StorageNotConfiguredError()
+
+        content = mem_dict.get("content", "")
+        if content:
+            content = _import_validator.validate_content(content, "imported_content")
+
+        content_hash = mem_dict.get("content_hash", "")
+        if merge_strategy == "skip_existing" and content_hash:
+            existing = adapter.recall(
+                mem_dict.get("content", "")[:IMPORT_CONTENT_SEARCH_LENGTH], limit=CORRECTION_RECALL_LIMIT
+            )
+            if self._has_imported_content_hash(existing, content_hash):
+                return False
+
+        entry = MemoryEntry(
+            id=mem_dict.get("id", ""),
+            type=mem_dict.get("type", "unknown"),
+            content=content,
+            confidence=mem_dict.get("confidence", DEFAULT_CONFIDENCE_SCORE),
+            tier=mem_dict.get("tier", 2),
+            source_layer=mem_dict.get("source_layer", "import"),
+            reasoning=mem_dict.get("reasoning", ""),
+            suggested_action="store",
+            recall_hint=mem_dict.get("recall_hint"),
+            metadata={
+                **mem_dict.get("metadata", {}),
+                "imported_from": import_data.get("source", {}).get("namespace", "unknown"),
+                "imported_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+        stored = adapter.store_entry(entry)
+        self._pause_imported_memory(stored, mem_dict)
+        return True
+
     def import_memories(
         self,
         input_path: Optional[str] = None,
@@ -284,65 +352,16 @@ class ProfileExportMixin:
 
         target_ns = namespace or self._namespace
         memories = import_data.get("memories", [])
-
         imported = 0
         skipped = 0
         errors = 0
 
         for mem_dict in memories:
             try:
-                content = mem_dict.get("content", "")
-                if content:
-                    content = _import_validator.validate_content(content, "imported_content")
-                content_hash = mem_dict.get("content_hash", "")
-                if merge_strategy == "skip_existing" and content_hash:
-                    existing = self._adapter.recall(
-                        mem_dict.get("content", "")[:IMPORT_CONTENT_SEARCH_LENGTH], limit=CORRECTION_RECALL_LIMIT
-                    )
-                    if any(
-                        (
-                            getattr(e, "content_hash", None) == content_hash
-                            or (isinstance(e, dict) and e.get("content_hash") == content_hash)
-                            or (
-                                hasattr(e, "metadata")
-                                and isinstance(e.metadata, dict)
-                                and e.metadata.get("content_hash") == content_hash
-                            )
-                        )
-                        for e in existing
-                    ):
-                        skipped += 1
-                        continue
-
-                entry = MemoryEntry(
-                    id=mem_dict.get("id", ""),
-                    type=mem_dict.get("type", "unknown"),
-                    content=content,
-                    confidence=mem_dict.get("confidence", DEFAULT_CONFIDENCE_SCORE),
-                    tier=mem_dict.get("tier", 2),
-                    source_layer=mem_dict.get("source_layer", "import"),
-                    reasoning=mem_dict.get("reasoning", ""),
-                    suggested_action="store",
-                    recall_hint=mem_dict.get("recall_hint"),
-                    metadata={
-                        **mem_dict.get("metadata", {}),
-                        "imported_from": import_data.get("source", {}).get("namespace", "unknown"),
-                        "imported_at": datetime.now(timezone.utc).isoformat(),
-                    },
-                )
-                stored = self._adapter.store_entry(entry)
-                if mem_dict.get("paused"):
-                    pause = getattr(self._adapter, "pause_memory", None)
-                    if callable(pause):
-                        try:
-                            pause(
-                                stored.storage_key,
-                                mem_dict.get("pause_reason"),
-                                mem_dict.get("paused_at"),
-                            )
-                        except TypeError:
-                            pause(stored.storage_key, mem_dict.get("pause_reason"))
-                imported += 1
+                if self._import_memory_entry(mem_dict, import_data, merge_strategy):
+                    imported += 1
+                else:
+                    skipped += 1
             except (ValueError, KeyError, TypeError) as e:
                 logger.warning("Failed to import memory entry: %s", e)
                 errors += 1
