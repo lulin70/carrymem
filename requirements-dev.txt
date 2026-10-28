@@ -381,7 +381,7 @@ urllib3==2.8.0
     #   id
     #   requests
     #   twine
-virtualenv==21.14.6
+virtualenv==21.14.13
     # via
     #   -r requirements-dev.in
     #   pre-commit
