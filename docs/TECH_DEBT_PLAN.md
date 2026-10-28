@@ -1009,8 +1009,8 @@
 | **修复方案** | release pre-test 已加入显式的多进程 SQLite 并发阻塞回归；CI 和 nightly slow 安装均改为失败即停并验证 `import carrymem`/`carrymem --version`；nightly VSCode E2E 现在使用 Python 3.12、隔离 venv、editable install、隔离 `CARRYMEM_*` 路径和真实 CLI；CI/release/nightly 的 VSCode 依赖安装使用 `npm ci`。完整 slow 集合继续由 nightly 运行，不直接升级为 release 阻塞门禁；已新增显式 `release_gate` 标记，当前仅将稳定的跨进程 SQLite 写入锁回归纳入 release 阻塞门禁；完整 CarryMem 三进程压力测试保留在 nightly，因本机运行超过 300 秒，不作为稳定 release 契约。 |
 | **负责角色** | DevOps + Tester |
 | **验证标准** | release workflow 包含阻塞并发回归；CI/nightly 主安装失败时非零退出；VSCode 安装使用 lockfile；clean checkout 和目标 commit 的完整 release 模拟通过；slow 测试策略和 optional job 失败语义有明确负向验证。 |
-| **状态** | 🟡 部分完成（nightly 降级安装路径已删除；nightly VSCode 已补齐真实 CLI 与隔离运行时；release 已改用显式 `release_gate` 标记并阻塞稳定的跨进程 SQLite 写入锁回归；CI run `40266181465` 的质量、构建、安全和 VSCode 门禁通过，但 Ubuntu/macOS 测试门禁仍失败；完整 release workflow、完整 slow 门禁、optional job 负向语义和失败测试的可验证日志仍开放） |
-| **本轮验证证据** | CI run `40266181465` 已真实运行：Syntax、Lint、Build、Security、VSCode、Docs 和 i18n 通过；Ubuntu/macOS 测试 job 均以 exit code 1 失败；Optional Deps job 按 advisory 规则运行 20 分钟后取消。GitHub 页面/API 仅提供 job 失败结果，日志下载因缺少 repository admin 权限不可用，因此尚未确认失败测试名称和堆栈。本机 Python 3.12 的 MCP/HTTP 定向回归为 `126 passed`，`release_gate` 为 `1 passed`；完整非 slow 门禁现已完成，为 `5139 passed, 1 skipped, 77 deselected`，耗时 5m21s，产生 143 条已有 TUI coroutine/deprecation warnings。随后在独立 clean checkout 应用当前补丁复验：`5139 passed, 1 skipped, 77 deselected`，覆盖率 `83.64%`，`release_gate` `1 passed`，版本/断言门禁通过；复用本机 venv，未宣称远端 runner 或全新安装证据。`ci_local_check.py` 已补齐同一 `release-gate` 子门禁；CI/release/nightly workflow 现在会把测试输出最后 120 行写入 GitHub Step Summary，仍待 slow/optional 负向验证和远端新 run。 |
+| **状态** | 🟡 部分完成（nightly 降级安装路径已删除；nightly VSCode 已补齐真实 CLI 与隔离运行时；release 已改用显式 `release_gate` 标记并阻塞稳定的跨进程 SQLite 写入锁回归；远端 run `40625234996` 暴露的默认路径门禁回归已定位并修复，等待新 run；完整 release workflow、完整 slow 门禁和最终远端验证仍开放） |
+| **本轮验证证据** | 远端 run `40625234996` 的 Syntax、Lint、Build、Security、VSCode、Docs、i18n 和 Optional Deps 门禁通过；Ubuntu/macOS 测试均失败于相同的两项默认路径断言：CI 全局 `CARRYMEM_*` 覆盖了隔离 `HOME` 下应验证的 `~/.carrymem/memories.db`。修复后 workflow 主测试仅注入隔离 `HOME`，不再注入 `CARRYMEM_CONFIG_DIR`、`CARRYMEM_DB_PATH`、`CARRYMEM_DATA_PATH` 等覆盖变量；本机在临时 HOME 且清除这些变量后，CLI 增强回归 `88 passed`，`release_gate` `1 passed`，三份 workflow YAML 和 diff 检查通过。此前独立 clean checkout 的完整非 slow 模拟为 `5139 passed, 1 skipped, 77 deselected`，覆盖率 `83.64%`；该模拟复用本机 venv，未宣称全新依赖安装或远端 runner 证据。`ci_local_check.py` 已补齐同一 `release-gate` 子门禁；CI/release/nightly workflow 现在会把测试输出最后 120 行写入 GitHub Step Summary，仍待新远端 run、slow 门禁负向验证和正式 release tag 模拟。 |
 | **生命周期** | P7 测试规划 → P9 测试执行 → P10 部署发布 |
 
 ### TD-076: HTTP 工具超时后的后台线程继续执行 ⚠️ 新增 (2026-10-10)
@@ -1233,6 +1233,7 @@ TD-035 (AccessPolicy 集成) — 安全债，独立推进
 | 2026-10-27 | v28: TD-074 本地完整非 slow 门禁复验通过：`5139 passed, 1 skipped, 77 deselected`，耗时 5m21s；发现 143 条已有 TUI coroutine/deprecation warnings，未发现测试失败。TD-074 仍保持部分完成，剩余 clean checkout、slow/optional 负向验证和远端新 CI run。 | DevSquad |
 | 2026-10-27 | v29: TD-074 门禁失败语义补强。optional-deps 增加 `pipefail` 和 Step Summary，保持 advisory 但不再隐藏 pytest 失败；nightly slow suite 增加 `pipefail`、`tee` 和 Step Summary，失败仍阻断 nightly。 | DevSquad |
 | 2026-10-27 | v30: 在独立 clean checkout worktree 应用当前补丁并完成发布模拟：完整非 slow `5139 passed, 1 skipped, 77 deselected`，覆盖率 `83.64%`（门槛 `80%`），`release_gate` `1 passed`，版本一致性和 swallowed-assert 均通过，三份 workflow YAML 解析通过。该模拟复用了本机 Python 3.12 venv，未宣称全新依赖安装或远端 runner 证据；TD-074 仍待远端新 CI run。 | DevSquad |
+| 2026-10-28 | v31: 远端 CI run `40625234996` 取得失败测试日志：Ubuntu/macOS 均只失败 `tests/test_cli_enhanced.py::TestBuildMcpServerConfig::test_default_db_path` 与 `TestSetupMcpGlobal::test_global_env_has_data_path`，根因是 workflow 全局导出 `CARRYMEM_*` 路径覆盖了隔离 HOME 的默认路径契约。CI、release、nightly 主测试环境现仅注入隔离 `HOME`；本机临时 HOME 清除覆盖变量后 CLI 增强回归 `88 passed`，`release_gate` `1 passed`。已提交并等待下一次远端 CI 验证。 | DevSquad |
 
 ---
 
