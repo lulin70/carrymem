@@ -54,24 +54,12 @@ jobs:
 
       # Job-level `env:` cannot use the `runner` context — a workflow carrying
       # `runner.*` in a job env block is rejected at parse time (startup_failure,
-      # 0s, zero jobs). Inject the isolated runtime via $GITHUB_ENV instead;
-      # RUNNER_TEMP is the step-level equivalent of runner.temp.
+      # 0s, zero jobs). Inject only HOME via $GITHUB_ENV so default-path tests
+      # still exercise ~/.carrymem while remaining isolated from the runner.
       - name: Set up isolated runtime
         run: |
-          for d in carrymem-home carrymem-config carrymem-data carrymem-cache carrymem-logs carrymem-backups; do
-            mkdir -p "${RUNNER_TEMP}/${d}"
-          done
-          {
-            echo "HOME=${RUNNER_TEMP}/carrymem-home"
-            echo "CARRYMEM_CONFIG_DIR=${RUNNER_TEMP}/carrymem-config"
-            echo "CARRYMEM_CONFIG_FILE=${RUNNER_TEMP}/carrymem-config/config.yaml"
-            echo "CARRYMEM_DB_PATH=${RUNNER_TEMP}/carrymem-data/memories.db"
-            echo "CARRYMEM_DATA_PATH=${RUNNER_TEMP}/carrymem-data"
-            echo "CARRYMEM_CACHE_DIR=${RUNNER_TEMP}/carrymem-cache"
-            echo "CARRYMEM_LOG_DIR=${RUNNER_TEMP}/carrymem-logs"
-            echo "CARRYMEM_BACKUP_DIR=${RUNNER_TEMP}/carrymem-backups"
-            echo "CARRYMEM_LOCK_FILE=${RUNNER_TEMP}/carrymem-config/carrymem.lock"
-          } >> "${GITHUB_ENV}"
+          mkdir -p "${RUNNER_TEMP}/carrymem-home"
+          echo "HOME=${RUNNER_TEMP}/carrymem-home" >> "${GITHUB_ENV}"
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v7
@@ -108,6 +96,18 @@ jobs:
             --timeout=120 \
             -m "not slow" \
             -q 2>&1 | tee /tmp/test_output.txt
+
+      - name: Publish test failure summary
+        if: always()
+        run: |
+          {
+            echo "## Test output (last 120 lines)"
+            if [ -f /tmp/test_output.txt ]; then
+              tail -n 120 /tmp/test_output.txt
+            else
+              echo "No test output file was created."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload test results
         if: always()
@@ -375,10 +375,31 @@ jobs:
 
       - name: Run optional-dep tests
         run: |
-          python -m pytest tests/ \
+          set -o pipefail
+          # Exercise optional paths directly. Do not rerun the complete suite:
+          # the main test matrix already owns that gate, while this job verifies
+          # TUI, onboarding, async, language and LLM extras within its budget.
+          python -m pytest \
+            tests/test_tui.py \
+            tests/test_onboarding.py \
+            tests/test_async_sqlite.py \
+            tests/test_phase4.py \
+            tests/test_consolidation_extra.py \
+            --no-cov \
             --timeout=120 \
-            -m "not slow" \
             -q 2>&1 | tee /tmp/optional_test_output.txt
+
+      - name: Publish optional-dep summary
+        if: always()
+        run: |
+          {
+            echo "## Optional dependency test output (last 120 lines)"
+            if [ -f /tmp/optional_test_output.txt ]; then
+              tail -n 120 /tmp/optional_test_output.txt
+            else
+              echo "No optional dependency test output file was created."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # ═══════════════════════════════════════
   # VSCode Extension Tests (Tier 1 — unit/integration, no VSCode required)

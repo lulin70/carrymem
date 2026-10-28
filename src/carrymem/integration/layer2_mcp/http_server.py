@@ -191,7 +191,7 @@ class MCPHTTPServer:
                 self._request_tasks.discard(task)
             try:
                 writer.close()
-            except OSError as e:
+            except (OSError, RuntimeError) as e:
                 logger.debug("Failed to close connection: %s", e)
 
     @staticmethod
@@ -316,6 +316,8 @@ class MCPHTTPServer:
         writer.write(f"event: endpoint\ndata: {endpoint_data}\n\n".encode())
         await writer.drain()
 
+        queue_task = None
+        close_task = None
         try:
             while True:
                 queue_task = asyncio.create_task(client.queue.get())
@@ -343,6 +345,11 @@ class MCPHTTPServer:
         except (ConnectionError, asyncio.CancelledError):
             pass
         finally:
+            pending_tasks = tuple(task for task in (queue_task, close_task) if task is not None and not task.done())
+            for task in pending_tasks:
+                task.cancel()
+            if pending_tasks:
+                await asyncio.gather(*pending_tasks, return_exceptions=True)
             client.close()
             self._clients.pop(client_id, None)
             self._metrics.set_gauge("carrymem_sse_clients", len(self._clients))

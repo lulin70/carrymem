@@ -42,31 +42,34 @@ class RowSerializer:
         except (ValueError, TypeError):
             return default
 
-    def row_to_stored(self, row) -> Optional[StoredMemory]:
-        """Convert a sqlite3.Row to StoredMemory."""
+    @staticmethod
+    def _load_json(row, key, default):
+        """Load a JSON field from a row, returning default on invalid data."""
+        if not row[key]:
+            return default
+        try:
+            return json.loads(row[key])
+        except (json.JSONDecodeError, TypeError):
+            return default
 
-        if not row:
-            return None
+    @staticmethod
+    def _row_value(row, key, default=None):
+        """Return an optional row value without changing row access semantics."""
+        return row[key] if key in row.keys() else default
 
-        metadata = {}
-        if row["metadata"]:
-            try:
-                metadata = json.loads(row["metadata"])
-            except (json.JSONDecodeError, TypeError):
-                metadata = {}
+    def _decrypt_optional(self, row, key, default=""):
+        """Decrypt an optional field when it exists in the row."""
+        if key not in row.keys():
+            return default
+        return self._adapter.decrypt_field(row[key])
 
-        recall_hint = None
-        if row["recall_hint"]:
-            try:
-                recall_hint = json.loads(row["recall_hint"])
-            except (json.JSONDecodeError, TypeError):
-                recall_hint = None
-
+    def _build_stored(self, row, metadata, recall_hint) -> StoredMemory:
+        """Build a StoredMemory from the extracted row fields."""
         return StoredMemory(
             id=row["id"],
             type=row["type"],
             content=self._adapter.decrypt_field(row["content"]),
-            raw_text=self._adapter.decrypt_field(row["raw_text"]) if "raw_text" in row.keys() else "",
+            raw_text=self._decrypt_optional(row, "raw_text"),
             confidence=row["confidence"],
             tier=row["tier"],
             source_layer=row["source_layer"] or "unknown",
@@ -75,25 +78,34 @@ class RowSerializer:
             recall_hint=recall_hint,
             metadata=metadata,
             storage_key=row["storage_key"],
-            namespace=row["namespace"] if "namespace" in row.keys() else self._adapter.namespace,
+            namespace=self._row_value(row, "namespace", self._adapter.namespace),
             created_at=self.safe_get_datetime(row, "created_at"),
             updated_at=self.safe_get_datetime(row, "updated_at"),
             expires_at=self.safe_get_datetime(row, "expires_at"),
             access_count=row["access_count"] or 0,
             importance_score=self.safe_get_float(row, "importance_score"),
             last_accessed_at=self.safe_get_datetime(row, "last_accessed_at"),
-            version=row["version"] if "version" in row.keys() else 1,
+            version=self._row_value(row, "version", 1),
             superseded_at=self.safe_get_datetime(row, "superseded_at"),
-            supersedes=row["supersedes"] if "supersedes" in row.keys() else None,
-            memory_nature=row["memory_nature"] if "memory_nature" in row.keys() else "state",
-            version_chain_id=row["version_chain_id"] if "version_chain_id" in row.keys() else None,
-            version_number=row["version_number"] if "version_number" in row.keys() else 1,
-            summary=row["summary"] if "summary" in row.keys() else None,
-            summary_level=row["summary_level"] if "summary_level" in row.keys() else None,
-            paused=bool(row["paused"]) if "paused" in row.keys() else False,
+            supersedes=self._row_value(row, "supersedes"),
+            memory_nature=self._row_value(row, "memory_nature", "state"),
+            version_chain_id=self._row_value(row, "version_chain_id"),
+            version_number=self._row_value(row, "version_number", 1),
+            summary=self._row_value(row, "summary"),
+            summary_level=self._row_value(row, "summary_level"),
+            paused=bool(self._row_value(row, "paused", False)),
             paused_at=self.safe_get_datetime(row, "paused_at"),
-            pause_reason=row["pause_reason"] if "pause_reason" in row.keys() else None,
+            pause_reason=self._row_value(row, "pause_reason"),
         )
+
+    def row_to_stored(self, row) -> Optional[StoredMemory]:
+        """Convert a sqlite3.Row to StoredMemory."""
+        if not row:
+            return None
+        metadata = self._load_json(row, "metadata", {})
+        recall_hint = self._load_json(row, "recall_hint", None)
+        stored = self._build_stored(row, metadata, recall_hint)
+        return stored
 
     def dict_to_stored(self, d: Dict) -> Optional[StoredMemory]:
         """Convert a dict back to StoredMemory (for merged results)."""

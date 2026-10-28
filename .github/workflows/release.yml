@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   # ═══════════════════════════════════════
@@ -18,24 +19,12 @@ jobs:
 
       # Job-level `env:` cannot use the `runner` context — a workflow carrying
       # `runner.*` in a job env block is rejected at parse time (startup_failure,
-      # 0s, zero jobs). Inject the isolated runtime via $GITHUB_ENV instead;
-      # RUNNER_TEMP is the step-level equivalent of runner.temp.
+      # 0s, zero jobs). Inject only HOME via $GITHUB_ENV so default-path tests
+      # still exercise ~/.carrymem while remaining isolated from the runner.
       - name: Set up isolated runtime
         run: |
-          for d in carrymem-home carrymem-config carrymem-data carrymem-cache carrymem-logs carrymem-backups; do
-            mkdir -p "${RUNNER_TEMP}/${d}"
-          done
-          {
-            echo "HOME=${RUNNER_TEMP}/carrymem-home"
-            echo "CARRYMEM_CONFIG_DIR=${RUNNER_TEMP}/carrymem-config"
-            echo "CARRYMEM_CONFIG_FILE=${RUNNER_TEMP}/carrymem-config/config.yaml"
-            echo "CARRYMEM_DB_PATH=${RUNNER_TEMP}/carrymem-data/memories.db"
-            echo "CARRYMEM_DATA_PATH=${RUNNER_TEMP}/carrymem-data"
-            echo "CARRYMEM_CACHE_DIR=${RUNNER_TEMP}/carrymem-cache"
-            echo "CARRYMEM_LOG_DIR=${RUNNER_TEMP}/carrymem-logs"
-            echo "CARRYMEM_BACKUP_DIR=${RUNNER_TEMP}/carrymem-backups"
-            echo "CARRYMEM_LOCK_FILE=${RUNNER_TEMP}/carrymem-config/carrymem.lock"
-          } >> "${GITHUB_ENV}"
+          mkdir -p "${RUNNER_TEMP}/carrymem-home"
+          echo "HOME=${RUNNER_TEMP}/carrymem-home" >> "${GITHUB_ENV}"
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -116,14 +105,38 @@ jobs:
             --timeout=120 \
             -q
 
+      - name: Verify test failure propagation
+        run: |
+          # This is an intentional negative check for the release shell contract.
+          # A failed producer must remain failed after tee, so a summary step
+          # cannot turn a red test process into a green release gate.
+          set +e
+          bash -o pipefail -c 'exit 17 | tee /tmp/release_negative_output.txt'
+          rc=$?
+          set -e
+          test "$rc" -eq 17
+
       - name: Run tests (gate — must pass before publish)
         run: |
+          set -o pipefail
           python -m pytest tests/ \
             --cov=carrymem \
             --cov-report=term-missing \
             --timeout=120 \
             -m "not slow" \
-            -q
+            -q 2>&1 | tee /tmp/release_test_output.txt
+
+      - name: Publish test failure summary
+        if: always()
+        run: |
+          {
+            echo "## Release test output (last 120 lines)"
+            if [ -f /tmp/release_test_output.txt ]; then
+              tail -n 120 /tmp/release_test_output.txt
+            else
+              echo "No release test output file was created."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run blocking concurrency regression
         run: |
@@ -264,7 +277,9 @@ jobs:
     # optionally configured with required reviewers / wait timers / branch restrictions.
     # Once OIDC Trusted Publisher is verified (step 4), the PYPI_API_TOKEN secret
     # can be removed entirely from this environment.
-    environment: pypi
+    # Use the protected PyPI environment only for real tag publishes. A manual
+    # preflight must not wait for release approval or gain publish credentials.
+    environment: ${{ github.event_name == 'push' && 'pypi' || 'release-preflight' }}
     permissions:
       contents: write
       # TD-015 step 1 (code-side): id-token: write is required for PyPI OIDC
@@ -303,7 +318,12 @@ jobs:
       - name: Check package
         run: twine check dist/*
 
+      - name: Verify current version consistency (manual preflight)
+        if: github.event_name == 'workflow_dispatch'
+        run: python scripts/check_version_consistency.py
+
       - name: Verify version consistency (tag == built wheel)
+        if: github.event_name == 'push'
         run: |
           # Extract tag version (strip leading 'v')
           TAG_VERSION="${GITHUB_REF_NAME#v}"
@@ -339,12 +359,19 @@ jobs:
       # The `environment: pypi` and `id-token: write` declarations are kept
       # (harmless with password-based auth) for potential future OIDC migration.
       - name: Publish to PyPI
+        if: github.event_name == 'push'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
 
       - name: Create GitHub Release
+        if: github.event_name == 'push'
         uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
           files: dist/*
+
+      - name: Confirm release preflight completed without publishing
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "Release preflight passed. Publishing was intentionally skipped."
