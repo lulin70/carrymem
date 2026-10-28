@@ -7,7 +7,8 @@ The commands and tool versions intentionally mirror the blocking gates in
 script exits, so the result does not depend on packages installed globally.
 
 The test gate runs the suite exactly the way the release gate does
-(``--cov=carrymem``, ``--timeout=120``, ``-m "not slow"``).  That equivalence
+(``--cov=carrymem``, ``--timeout=120``, ``-m "not slow"``).  The release gate
+also runs the stable cross-process SQLite lock regression locally. That equivalence
 matters: running the suite without ``--cov`` is not the same measurement, because
 coverage instrumentation alone slowed the first core operation from 7.5ms to
 106ms locally — enough to hide a release-blocking failure.  The 80% floor is
@@ -229,6 +230,20 @@ def main() -> int:
                     "-q",
                 ],
             ),
+            (
+                "release-gate",
+                [
+                    str(python),
+                    "-m",
+                    "pytest",
+                    "tests/test_sqlite_cross_process_lock.py",
+                    "-m",
+                    "release_gate",
+                    "--no-cov",
+                    "--timeout=120",
+                    "-q",
+                ],
+            ),
             ("version-consistency", [str(python), str(ROOT / "scripts" / "check_version_consistency.py")]),
             (
                 "swallowed-assert",
@@ -256,8 +271,8 @@ def main() -> int:
             print("\nFAILED gates: " + ", ".join(failures))
             return 1
         print(
-            "\nAll eight blocking local CI gates passed "
-            "(flake8, black, isort, mypy, pytest, radon, version-consistency, swallowed-assert)."
+            "\nAll nine blocking local CI gates passed "
+            "(flake8, black, isort, mypy, pytest, release-gate, radon, version-consistency, swallowed-assert)."
         )
         return 0
 

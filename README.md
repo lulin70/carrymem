@@ -721,7 +721,7 @@ carrymem setup-mcp --tool claude-code
 carrymem setup-mcp --tool all
 ```
 
-33 MCP tools available, including memory update and version history. Use `tools/list` or `carrymem doctor` to verify the installed server.
+35 MCP tools available, including memory update, version history, pause and resume controls. Use `tools/list` or `carrymem doctor` to verify the installed server.
 
 **Client Compatibility:**
 
