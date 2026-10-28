@@ -54,7 +54,7 @@
 
 ### 2.2 测试验证
 
-- [ ] 本地运行 `python3 scripts/ci_local_check.py` 八项阻塞门禁全过（flake8 / black / isort / mypy / **pytest** / radon / version-consistency / swallowed-assert）
+- [ ] 本地运行 `python3 scripts/ci_local_check.py` 九项阻塞门禁全过（flake8 / black / isort / mypy / **pytest** / release-gate / radon / version-consistency / swallowed-assert）
       —— 该脚本用与 `release.yml` 完全相同的口径跑测试
       （`--cov=carrymem --timeout=120 -m "not slow"`），**不要**用不带 `--cov` 的命令代替：
       覆盖插桩会把首次核心调用从 7.5ms 拖到 106ms（实测 14 倍），
@@ -66,6 +66,9 @@
 - [ ] 本地运行 `bandit -r src/ -lll` 无 HIGH 漏洞
 - [ ] 本地运行 `pip-audit` 无已知 CVE
 - [ ] 覆盖率 `pytest --cov=carrymem` ≥ 80%
+- [ ] 远端 CI 主门禁成功：run `40631718480`（Ubuntu/macOS、Docker、构建、质量、安全、VSCode、bounded optional-deps）
+- [ ] 远端 nightly 门禁成功：run `40633794111`（slow、VSCode Tier 2 UI E2E、vector/semantic）
+- [ ] 执行 release.yml 的 `workflow_dispatch` 预检；确认发布前测试、E2E、VSCode 和构建通过，且 PyPI/GitHub Release 步骤均为 skipped
 
 ### 2.3 版本一致性验证
 
@@ -162,17 +165,22 @@
 
 ### 3.1 自动化发布流程（推荐）
 
-release.yml 工作流包含 4 个 job，按依赖顺序执行：
+release.yml 工作流包含 4 个 job，按依赖顺序执行。它支持两种触发方式：
+
+- `push` 到 `v*` tag：执行完整发布，包括 PyPI 和 GitHub Release。
+- `workflow_dispatch`：执行安全预检；执行测试、E2E、VSCode 和构建，但跳过发布。
 
 ```
-pre-release-test (lint+test+coverage)
+pre-release-test (lint+test+coverage+release-gate)
         ├── e2e-gate (E2E 用户旅程测试)
-        └── release (build + PyPI publish + GitHub Release)
-              [needs: pre-release-test, e2e-gate]
+        ├── vscode-e2e (真实 VSCode extension host 用户旅程)
+        └── release (build + optional publish + GitHub Release)
+              [needs: pre-release-test, e2e-gate, vscode-e2e]
 ```
 
-> 注：`vscode-e2e` job 存在但**未纳入 needs 阻塞链**（编译脚本待修，
-> 见 release.yml 中 TODO 注释），不阻塞发布。
+`release` job 在手动预检中使用 `release-preflight` 环境，并跳过
+`Verify version consistency (tag == built wheel)`、PyPI 上传和 GitHub Release 创建。
+真实 tag 发布才使用 `pypi` 环境和发布凭据。
 
 **操作步骤**:
 
@@ -191,7 +199,7 @@ pre-release-test (lint+test+coverage)
    gh run view <run-id> --log-failed
    gh run view <run-id> --job=<job-id> --log
    ```
-   - 等待 `pre-release-test` → `e2e-gate` → `release` 依次通过（`vscode-e2e` 独立运行，不阻塞）
+   - 等待 `pre-release-test` → `e2e-gate`、`vscode-e2e` → `release` 依次通过；`vscode-e2e` 是发布阻塞门禁
 
 3. **验证发布结果**（三项全绿才算发布完成）:
    ```bash
