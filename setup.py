@@ -120,7 +120,7 @@ setup(
             "pycld2>=0.41",
             "langdetect>=1.0.9",
             "flake8==7.3.0",
-            "black==26.5.1",
+            "black==26.10.1",
             "isort==6.1.0",
             "mypy==2.3.0",
             "radon==6.0.1",
