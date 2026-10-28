@@ -34,7 +34,7 @@ cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink
     # via torch
 distro==1.9.0
     # via openai
-filelock==3.30.3
+filelock==4.2.1
     # via
     #   huggingface-hub
     #   torch
