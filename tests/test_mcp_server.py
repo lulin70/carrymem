@@ -185,6 +185,25 @@ class TestMCPHTTPServer:
 
 class TestMCPServer:
     @pytest.mark.asyncio
+    async def test_start_closes_stdin_transport(self, tmp_path):
+        server = MCPServer(data_path=str(tmp_path))
+        reader = MagicMock()
+        reader.readline = AsyncMock(return_value=b"")
+        protocol = MagicMock()
+        transport = MagicMock()
+        loop = asyncio.get_running_loop()
+
+        with (
+            patch("carrymem.integration.layer2_mcp.server.asyncio.StreamReader", return_value=reader),
+            patch("carrymem.integration.layer2_mcp.server.asyncio.StreamReaderProtocol", return_value=protocol),
+            patch.object(loop, "connect_read_pipe", new=AsyncMock(return_value=(transport, protocol))),
+        ):
+            await server.start()
+
+        transport.close.assert_called_once_with()
+        assert server._stdin_transport is None
+
+    @pytest.mark.asyncio
     async def test_init(self, tmp_path):
         server = MCPServer(data_path=str(tmp_path))
         assert server.handlers is not None

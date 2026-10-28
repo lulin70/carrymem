@@ -447,7 +447,7 @@ carrymem setup-mcp --tool claude-code
 carrymem setup-mcp --tool all
 ```
 
-33 个 MCP 工具，包含记忆修改和版本历史。可通过 `tools/list` 或 `carrymem doctor` 验证当前服务。
+35 个 MCP 工具，包含记忆修改、版本历史、暂停和恢复控制。可通过 `tools/list` 或 `carrymem doctor` 验证当前服务。
 
 HTTP 模式（`carrymem serve`）会从 `GET /metrics` 抓取相同数据，
 `GET /healthz` 返回 SLO 部分（目标违反时返回 `503`）。

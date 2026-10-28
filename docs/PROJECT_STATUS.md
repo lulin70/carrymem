@@ -1,12 +1,12 @@
 # CarryMem — Project Status
 
 **Version**: v0.11.2
-**Last Updated**: 2026-10-25 (TD-078 verified; TD-074 nightly/release gate credibility improved; TD-073 remains pending CI/Node.js/npm evidence)
+**Last Updated**: 2026-10-28 (CI run `40631718480`, nightly run `40633794111`, and safe release preflight `40636261327` all passed. The preflight covered release tests, E2E, real VSCode UI E2E, build, and version checks; PyPI upload and GitHub Release creation were skipped.)
 **Maintainer**: CarryMem Team
 
 **Product rollout plan**: [PRODUCT_ROLLOUT_PLAN.md](PRODUCT_ROLLOUT_PLAN.md)
 
-**Current product milestone**: 阶段三“记忆可信和可控”、阶段五文档首轮重做和阶段六首轮隔离 CLI/MCP 模拟验收已完成；外部用户试点执行表、最小测试指引和反馈模板已准备，当前进入招募待开始阶段；TRAE ↔ Workbuddy 本机同步已验证，第三客户端真实验收按用户决定跳过，其他客户端仅保留 MCP 协议级可行性结论。
+**Current product milestone**: 阶段三“记忆可信和可控”、阶段五文档首轮重做和阶段六首轮隔离 CLI/MCP 模拟验收已完成；外部用户试点执行表、最小测试指引和反馈模板已准备，但当前仍暂停招募。CI run `40631718480` 已验证 Ubuntu/macOS 主测试、Docker、构建、质量、安全、VSCode 和新的 bounded optional-deps 门禁；nightly run `40633794111` 已验证 slow、VSCode Tier 2 UI E2E、vector/semantic 门禁；安全 release preflight `40636261327` 已验证发布前测试、E2E、真实 VSCode UI E2E 和构建，且跳过发布。TRAE ↔ Workbuddy 本机同步已验证，第三客户端真实验收按用户决定跳过，其他客户端仅保留 MCP 协议级可行性结论。
 
 ---
 
@@ -18,7 +18,7 @@ The v0.11.x line carries the breaking `native_async` removal, the `cryptography>
 
 ### Release Evidence
 
-- **Regression (CI semantics)**: Python 3.12 isolated local release-style gate passed on 2026-10-24: `5119 passed, 10 skipped, 77 deselected`, `Total coverage: 83.21%` (`fail_under = 80`), `radon: no functions with complexity >= 21`; all eight blocking gates passed (flake8, black, isort, mypy, pytest, radon, version-consistency, swallowed-assert). The same gate passed from a detached clean checkout at commit `0e1581d`.
+- **Regression (CI semantics)**: Python 3.12 isolated local release-style gate passed on 2026-10-24: `5119 passed, 10 skipped, 77 deselected`, `Total coverage: 83.21%` (`fail_under = 80`), `radon: no functions with complexity >= 21`; all eight original blocking gates passed (flake8, black, isort, mypy, pytest, radon, version-consistency, swallowed-assert). The same gate passed from a detached clean checkout at commit `0e1581d`. The current local script now adds the ninth `release-gate` concurrency regression. A later clean-checkout simulation with the previous workflow patch passed `5139 passed, 1 skipped, 77 deselected`, coverage `83.64%`, and `release_gate` `1 passed`; it reused the existing local Python 3.12 venv and is not remote-runner evidence. Remote run `40625234996` then exposed two identical default-path assertion failures on Ubuntu and macOS; the workflow-wide path overrides were removed in the follow-up patch, with `HOME` isolation retained.
 - **Release workflow**: run `35572211377` (`Release v0.11.2`) — all four jobs `success`: Pre-Release Tests / E2E Tests (User Journey Gate) / VSCode Tier 2 UI E2E / Build & Publish.
 - **PyPI**: `carrymem-0.11.2-py3-none-any.whl` (537,877 B) and `carrymem-0.11.2.tar.gz` (1,645,442 B) uploaded `2026-09-21T07:36Z`; `info.version == 0.11.2`.
 - **Fresh-install smoke** (venv + `pip install carrymem==0.11.2` from PyPI): `installed: 0.11.2`, `pip check` → `No broken requirements found.` Four storing message shapes — including two that contain pronouns and one correction — each report `counters={'classify_and_remember': 1}` with **no `recall` key**, and one explicit `recall_memories` reports `{'recall': 1}`. `LEAKING BRANCHES: none`.
@@ -52,14 +52,14 @@ The v0.11.x line carries the breaking `native_async` removal, the `cryptography>
 
 ### Current Product-Control Evidence (working tree, 2026-10-16)
 
-- **MCP memory control**: `update_memory` and `get_memory_history` are discoverable through real stdio `initialize` / `tools/list`; the public MCP tool set contains 33 tools.
+- **MCP memory control**: `update_memory`, `get_memory_history`, `pause_memory` and `resume_memory` are discoverable through real stdio `initialize` / `tools/list`; the public MCP tool set contains 35 tools.
 - **Focused regression**: MCP workflow, MCP tool contract, operation-level and handler tests — 178 passed.
 - **Memory lifecycle E2E**: CRUD, version history, preference replacement, export/import and full lifecycle — 67 passed.
 - **Real client evidence**: TRAE ↔ Workbuddy shared local SQLite synchronization verified. No third-client UI acceptance is claimed; other MCP clients are covered only by protocol-level feasibility.
-- **Simulated user acceptance**: isolated CLI journey passed — `init` leaves zero user memories, three memories can be added, one memory reaches version 2 after edit, backup is created, and deletion removes the PostgreSQL result from search. CLI, MCP workflow and MCP tool regression tests passed 175 tests; a real MCP stdio subprocess also passed initialize, tools/list, health_check, write, update, history, recall and delete.
+- **Simulated user acceptance**: isolated CLI journey passed — `init` leaves zero user memories, three memories can be added, one memory reaches version 2 after edit, backup is created, and deletion removes the PostgreSQL result from search. CLI, MCP workflow and MCP tool regression tests passed 175 tests; a real MCP stdio subprocess also passed initialize, tools/list, health_check, write, update, history, recall and delete. The current non-slow local gate passed `5139 passed, 1 skipped, 77 deselected` in 5m21s; the run emitted 143 pre-existing TUI coroutine/deprecation warnings.
 - **Documentation readiness**: English/Chinese installation and quick-start documents were audited against the CLI and MCP paths. In an isolated HOME, version, init, doctor, add, list, pack, unpack and restored search passed; 269 installation, CLI, MCP server and MCP E2E tests passed. The fallback command and pack/unpack config-file path were corrected. Documentation now states clearly that optional vector-model download failure does not block installation, MCP, memory write, recall, update, history, delete, backup, restore, rule-based classification or SQLite FTS5 search.
-- **VSCode Tier 2 evidence (TD-073)**: The test now runs in a real VSCode extension host. It creates an isolated temporary SQLite database, writes one rule through the real `carrymem` CLI, reads it through the extension `CarryMemClient` and `RuleTreeProvider`, updates it through the extension API, confirms the update through the real CLI, then deletes the rule and removes the temporary directory. The release `vscode-e2e` job installs Python 3.12, creates an isolated venv, runs `pip install -e .`, and sets isolated `CARRYMEM_*` paths. The test is fail-closed when the CLI is missing. This change is not locally executable because Node.js/npm are not installed; CI or a Node/npm host must provide the final evidence.
-- **Remaining technical debt**: TD-073 remains open pending a real CI/Node/npm run; Node.js/npm dependency audit (TD-070) and full release workflow and slow/optional gate semantics (TD-074) also remain open. TD-074 progress: nightly fallback installation was removed, nightly VSCode E2E now provisions an isolated Python 3.12 CarryMem CLI and isolated `CARRYMEM_*` paths, release uses an explicit `release_gate` marker for the stable cross-process SQLite write-lock regression, and failure notification uses an explicit `always()` condition. TD-070 remains environment-blocked: Node.js/npm are unavailable; Dependabot PR #60/#61 are open with pending checks, so no dependency lockfile change is claimed. TD-078 memory-level pause/resume is implemented and verified through SQLite, Core, Async, CLI, MCP, recall filtering, audit, and import/export paths. Rule-level pause remains distinct from memory-level pause. TD-075 health and timer lifecycle debt is closed.
+- **VSCode Tier 2 evidence (TD-073)**: The test runs in a real VSCode extension host. It creates an isolated temporary SQLite database, writes one rule through the real `carrymem` CLI, reads it through the extension `CarryMemClient` and `RuleTreeProvider`, updates it through the extension API, confirms the update through the real CLI, then deletes the rule and removes the temporary directory. The remote nightly run `40633794111` and release preflight `40636261327` both passed this chain with Python 3.12, `npm ci`, TypeScript compilation, `@vscode/test-electron`, and isolated `CARRYMEM_*` paths. The test is fail-closed when the CLI is missing. Local Node.js/npm remains unavailable, so no local execution is claimed.
+- **Remaining technical debt**: TD-070 remains environment-blocked because local Node.js/npm are unavailable. TD-073 and TD-074 are closed with remote CI, nightly, E2E, and safe release-preflight evidence. TD-074 progress: nightly fallback installation was removed, nightly VSCode E2E now provisions an isolated Python 3.12 CarryMem CLI and isolated paths, release uses an explicit `release_gate` marker for the stable cross-process SQLite write-lock regression, `scripts/ci_local_check.py` now runs the same release-gate regression locally, and failure notification uses an explicit `always()` condition. Remote CI run `40631718480` passed all jobs, including the bounded optional-dependency gate; nightly run `40633794111` passed slow, VSCode Tier 2 UI E2E, and vector/semantic gates. Local evidence includes CLI default-path regression `88 passed`, release-gate `1 passed`, optional-path `308 passed`, and E2E user journey `253 passed, 20 deselected`. A manual `workflow_dispatch` release preflight now runs the release checks and build without PyPI or GitHub Release publication; run `40636261327` passed all preflight jobs, with both publication steps skipped. TD-070 remains environment-blocked: Node.js/npm are unavailable; Dependabot PR #60/#61 are open with pending checks, so no dependency lockfile change or npm audit result is claimed. TD-078 memory-level pause/resume is implemented and verified through SQLite, Core, Async, CLI, MCP, recall filtering, audit, and import/export paths. Rule-level pause remains distinct from memory-level pause. TD-075 health and timer lifecycle debt is closed.
 
 ### Current Test & Quality Metrics (working tree, 2026-10-07)
 
@@ -111,8 +111,7 @@ these numbers describe the tree, not the v0.11.2 tag.
 - **Lint**: flake8 clean, black clean, isort clean, mypy `Success: no issues found in 163 source files`
 - **Complexity**: `radon: no functions with complexity >= 21`
 - **Version consistency**: all five machine-readable sources report `0.11.2`
-- **Gates**: eight blocking local gates (flake8, black, isort, mypy, pytest, radon,
-  version-consistency, swallowed-assert) via `python3 scripts/ci_local_check.py`
+- **Gates**: nine blocking local gates via `python3 scripts/ci_local_check.py`: flake8, black, isort, mypy, pytest, release-gate, radon, version-consistency and swallowed-assert
 - **Tech debt**: 当前目录包含 TD-001~TD-078 共 78 条明细；TD-070、TD-073 和 TD-074 仍未完全闭环，TD-078 记忆级 pause/resume 已于 2026-10-25 完成并验证。TD-075 health schema 与 consolidation timer 生命周期已完成并验证；TD-076 方案 A 契约已关闭；TD-077 已完成目标代码三轮真实 TCP SLO 复验，发布负载级证明由 TD-074 跟踪。GitHub Issue #56/#57 已调查并关闭，后续 nightly runs `39736182269` 和 `39913021565` 全部通过；详见
   [TECH_DEBT_PLAN.md](TECH_DEBT_PLAN.md)。
 
@@ -133,7 +132,7 @@ these numbers describe the tree, not the v0.11.2 tag.
 | Dimension | Score | Status |
 |-----------|-------|--------|
 | Architecture | B+ | PromptDelegateMixin MRO corrected, doctor Python 3.12 aligned |
-| Modularity | A- | ✅ All 33 MCP tools have handlers; `update_memory` and `get_memory_history` are covered by MCP E2E tests (historical ghost findings are recorded in [V0.11.0_PROJECT_REVIEW.md](design/V0.11.0_PROJECT_REVIEW.md) §4) |
+| Modularity | A- | ✅ All 35 MCP tools have handlers; `update_memory`, `get_memory_history`, `pause_memory` and `resume_memory` are covered by MCP E2E tests (historical ghost findings are recorded in [V0.11.0_PROJECT_REVIEW.md](design/V0.11.0_PROJECT_REVIEW.md) §4) |
 | Security | B+ | MCP XSS strict_mode enabled, SecurityError propagation fixed |
 | Performance | B | Smoke tests added to CI (4 tests, not marked slow) |
 | Maintainability | B+ | Documentation consistency verified across 15 files |
