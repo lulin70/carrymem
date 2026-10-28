@@ -16,7 +16,7 @@ anyio==4.14.2
     #   openai
 cachetools==7.1.4
     # via zai-sdk
-certifi==2026.6.17
+certifi==2026.10.19
     # via
     #   httpcore
     #   httpx
