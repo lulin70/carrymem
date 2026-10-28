@@ -2,7 +2,7 @@
 
 > **文档性质**: 活文档 (Living Document) — 每完成一项立即更新状态
 > **创建时间**: 2026-07-17
- > **最后更新**: 2026-10-25（TD-078 记忆级暂停已完成并验证；TD-073 已补齐 fail-closed 的真实 VSCode extension host→CLI→SQLite→tree 测试设计，但本机无 Node.js/npm，仍待 CI/Node 环境运行证据；TD-075 health schema 与 consolidation timer 生命周期已完成并验证；TD-076 方案 A 契约已关闭；TD-077 运行时 SLO 债已关闭；GitHub Issue #56/#57 已调查并关闭；后续 nightly runs `39736182269` 和 `39913021565` 全部通过。当前目录包含 TD-001~TD-078 共 78 条明细；未闭环项为 TD-070、TD-073 和 TD-074。TD-077 的发布负载级证明已并入 TD-074 跟踪。保留真实 VSCode UI→CLI→SQLite、clean checkout/release 模拟、完整 slow 门禁和 Node/npm 依赖审计。已发布 `0.11.2` 的事实与当前 working tree 证据严格区分。TD-067 修复与历史批次记录见 §9 更新日志）
+ > **最后更新**: 2026-10-28（CI run `40631718480`、nightly run `40633794111` 和安全 release preflight `40636261327` 全部通过。preflight 覆盖发布前测试、E2E、真实 VSCode UI E2E、构建、版本检查和失败传播负向检查；PyPI 与 GitHub Release 均跳过。TD-073、TD-074 已完成并关闭；TD-078 记忆级暂停已完成并验证；TD-075 health schema 与 consolidation timer 生命周期已完成并验证；TD-076 方案 A 契约已关闭；TD-077 运行时 SLO 债已关闭；GitHub Issue #56/#57 已调查并关闭。当前未闭环项为 TD-070；本机无 Node.js/npm，因此保留 TD-070 的环境阻塞状态，不宣称 npm audit 或 lockfile 修复完成。已发布 `0.11.2` 的事实与当前 working tree 证据严格区分。TD-067 修复与历史批次记录见 §9 更新日志）
 > **基于**: 7 维度项目整理评估 (2026-07-17, B+ 77/100) + DevSquad 7 角色并行审核
 > **配套文档**: [ROADMAP_P0_P3.md](ROADMAP_P0_P3.md) — 执行路线图 (Wave 推进表 + 7-Role 投票矩阵 + 11 阶段生命周期映射)；[PRODUCT_ROLLOUT_PLAN.md](PRODUCT_ROLLOUT_PLAN.md) — 面向用户价值、首次成功、兼容性和推广的产品推进方案
 >
@@ -986,7 +986,7 @@
 | **状态** | ✅ 已完成（删除 `autoMatch` 幽灵配置；`defaultScope` 已接入 `RuleEditorPanel`；真实作用域持久化验证通过） |
 | **生命周期** | P2 架构设计 → P5 交互设计 → P9 测试执行 |
 
-### TD-073: VSCode E2E 尚未证明真实 VSCode UI→CLI→SQLite
+### TD-073: VSCode E2E 真实 VSCode UI→CLI→SQLite 链路
 
 | 字段 | 值 |
 |------|-----|
@@ -995,8 +995,8 @@
 | **问题描述** | 当前 Tier 2 E2E 原先主要覆盖 VSCode 壳层或静态契约，并在 CLI 缺失时允许 refresh 测试通过。真实 CLI→SQLite CRUD 与 reload 已由独立真实进程验收；本轮补上真实 VSCode extension host 中的 CLI→SQLite→CarryMemClient→RuleTreeProvider 链路。 |
 | **修复方案** | Tier 2 在 extension host 中创建临时隔离数据库，调用真实 `carrymem` CLI 写入一条 rule，再由扩展 API 的 `CarryMemClient` 和 `RuleTreeProvider` 读取并断言；测试结束删除 rule 并删除临时目录。release `vscode-e2e` job 显式安装 Python 3.12、项目 editable install 和隔离 `CARRYMEM_*` 路径。 |
 | **负责角色** | UI + Tester + DevOps |
-| **验证标准** | 在 Python 3.12、项目 editable install、Node.js/npm 和 `@vscode/test-electron` 可用的环境执行 `cd extensions/vscode-carrymem && npm ci --no-audit --no-fund && npm run compile && npm run test:e2e`；必须在真实 VSCode extension host 中通过。CLI 缺失、SQLite 写入失败、extension client/tree 读取失败均必须失败。测试不使用 mock CLI 调用，且结束后无测试数据库残留。当前本机 `node`/`npm` 不可用，验证状态为 environment-blocked。 |
-| **状态** | 🟡 实现完成，待 CI/具备 Node/npm 环境验证（本机无 Node.js/npm，当前 environment-blocked，不能宣称关闭） |
+| **验证标准** | 在 Python 3.12、项目 editable install、Node.js/npm 和 `@vscode/test-electron` 可用的环境执行 `cd extensions/vscode-carrymem && npm ci --no-audit --no-fund && npm run compile && npm run test:e2e`；必须在真实 VSCode extension host 中通过。CLI 缺失、SQLite 写入失败、extension client/tree 读取失败均必须失败。测试不使用 mock CLI 调用，且结束后无测试数据库残留。 |
+| **状态** | ✅ 已完成并验证（2026-10-28：远端 nightly run `40633794111` 和 release preflight run `40636261327` 均通过真实 VSCode extension host E2E） |
 | **生命周期** | P5 交互设计 → P7 测试规划 → P9 测试执行 → P10 部署发布 |
 
 ### TD-074: release/CI 门禁可信度仍有缺口
@@ -1009,8 +1009,8 @@
 | **修复方案** | release pre-test 已加入显式的多进程 SQLite 并发阻塞回归；CI 和 nightly slow 安装均改为失败即停并验证 `import carrymem`/`carrymem --version`；nightly VSCode E2E 现在使用 Python 3.12、隔离 venv、editable install、隔离 `CARRYMEM_*` 路径和真实 CLI；CI/release/nightly 的 VSCode 依赖安装使用 `npm ci`。完整 slow 集合继续由 nightly 运行，不直接升级为 release 阻塞门禁；已新增显式 `release_gate` 标记，当前仅将稳定的跨进程 SQLite 写入锁回归纳入 release 阻塞门禁；完整 CarryMem 三进程压力测试保留在 nightly，因本机运行超过 300 秒，不作为稳定 release 契约。 |
 | **负责角色** | DevOps + Tester |
 | **验证标准** | release workflow 包含阻塞并发回归；CI/nightly 主安装失败时非零退出；VSCode 安装使用 lockfile；clean checkout 和目标 commit 的完整 release 模拟通过；slow 测试策略和 optional job 失败语义有明确负向验证。 |
-| **状态** | 🟡 部分完成（nightly 降级安装路径已删除；nightly VSCode 已补齐真实 CLI 与隔离运行时；release 已改用显式 `release_gate` 标记并阻塞稳定的跨进程 SQLite 写入锁回归；Python 3.12 隔离环境和 clean checkout 的非 slow 八项门禁均已通过；完整 release workflow、完整 slow 门禁和 optional job 负向语义仍开放） |
-| **本轮验证证据** | 静态 YAML/工作流审查确认 nightly 安装失败即停、CLI 可导入且可执行、VSCode nightly 不再依赖 runner 预装 CLI；`git diff --check` 通过。尚未声称真实 GitHub workflow 已运行。 |
+| **状态** | ✅ 已完成并验证（2026-10-28）。nightly 降级安装路径已删除；nightly VSCode 已补齐真实 CLI 与隔离运行时；release 使用显式 `release_gate` 标记并阻塞稳定的跨进程 SQLite 写入锁回归；CI run `40631718480` 验证 Ubuntu/macOS 主测试、Docker、构建、质量、安全、VSCode 和 bounded optional-deps 门禁；nightly run `40633794111` 验证 slow、VSCode Tier 2 UI E2E 和 vector/semantic 门禁；安全 preflight run `40636261327` 验证 release pre-test、E2E、真实 VSCode UI E2E、构建、版本检查和失败传播负向检查，PyPI/GitHub Release 步骤均 skipped。正式 release tag 未创建，发布本身仍遵循 tag + PyPI 双证据规则。 |
+| **本轮验证证据** | 远端 CI run `40631718480` 的 Ubuntu/macOS 主测试、Docker、Build & Install、Lint、Security、VSCode、Syntax、Docs、i18n 和 bounded optional-deps 门禁全部通过；远端 nightly run `40633794111` 的 slow、VSCode Tier 2 UI E2E、vector/semantic 门禁全部通过；安全 release preflight run `40636261327` 的 pre-release、E2E、真实 VSCode UI E2E 和 Build & Publish 全部通过，其中 `Verify current version consistency (manual preflight)` 和 `Confirm release preflight completed without publishing` 成功，tag 版本校验、PyPI 上传和 GitHub Release 创建均 skipped。主测试已确认仅注入隔离 `HOME`，保留 `~/.carrymem/memories.db` 默认路径契约。本机 CLI 增强回归 `88 passed`，`release_gate` `1 passed`；可选路径定向回归 `308 passed`；本地 E2E 用户旅程 `253 passed, 20 deselected`。Bash 负向验证确认 `exit 17 | tee` 在 `pipefail` 下仍返回 `17`。此前独立 clean checkout 的完整非 slow 模拟为 `5139 passed, 1 skipped, 77 deselected`，覆盖率 `83.64%`；该模拟复用本机 venv，未宣称全新依赖安装或远端 runner 证据。 |
 | **生命周期** | P7 测试规划 → P9 测试执行 → P10 部署发布 |
 
 ### TD-076: HTTP 工具超时后的后台线程继续执行 ⚠️ 新增 (2026-10-10)
@@ -1219,13 +1219,25 @@ TD-035 (AccessPolicy 集成) — 安全债，独立推进
 | 2026-09-21 | v14: v0.11.2 事实复核 (对照 PROJECT_STATUS.md + CHANGELOG.md)。头部测试数（旧快照值已过时）更正为 `4891 passed, 10 skipped, 77 deselected` (4978 collected) + e2e 265 passed；§1 增加"全部 TD 项已完成"复核说明；新增 **TD-067**（`types.py:350-356` 的 `ScheduleConsolidationResult` 声明字段 `scheduled/interval_hours/dry_run/message` 与 `core/_maintenance.py:254-260` 实际返回的 `scheduled/interval_hours/dry_run/run_p1/run_p2` 漂移，状态 ⬜ 待开始）。本次复核同时核对：`plugins/` 目录与 `SummaryLayer` 类已于 v0.11.0 删除、`AsyncCarryMem(native_async=True)` 模式已删除、`AsyncSQLiteAdapter` 对 `encryption_key` fail-closed——本文档原无与这些事实冲突的表述 | DevSquad |
 | 2026-10-08 | v15: Dependabot 23 条告警处置。**已修复**：urllib3 2.7.0→2.8.0（requirements-dev.txt 重编译，消 2 high）；VSCode 插件 brace-expansion 1.1.16→1.1.21 / 2.1.2→2.1.7（`npm update brace-expansion`，消 2 medium）。**豁免留痕**：13 条 pyjwt 告警（2 critical）——暴露面分析证实脆弱代码不可达（zhipuai 仅 jwt.encode 本地签名，见 TD-068 重评估），以 tolerable_risk 豁免。**登记新债**：TD-069（virtualenv 解析器停在 21.7.6，约束源待查）、TD-070（VSCode chokidar/mocha 链需破坏性升级 @vscode/test-cli 0.0.15）。本地 CI 八项门禁全绿（pytest 5103 passed / 覆盖率 83.17%） | DevSquad |
 | 2026-10-10 | v16: 继续评估当前 working tree。记录 HTTP→MCP 配置映射、HTTP cleanup/SSE 唤醒、RRF per-call 竞态修复；独立并发变异测试连续 5 次通过，但完整非 slow 门禁为 `5106 passed, 1 failed, 10 skipped, 77 deselected`，slow 多进程测试耗时 `453.3s` 超过门槛，HTTP/MCP 批次 `84 passed, 2 failed`（工具超时后后台线程继续写入；SLO 中位数 p99 `416.093ms` 超过 `200ms`）。新增 TD-071~TD-077，明确 VSCode CLI/配置消费者、真实 CRUD/reload E2E、release/CI 门禁可信度、health schema 双轨、consolidation timer close 生命周期、HTTP 超时副作用与高负载 SLO 仍未闭环。当前有 7 个未提交文件；不得将本轮结果作为已发布 0.11.2 证据，完整发布门禁需在干净 checkout/目标 commit 上重跑 | DevSquad |
-| 2026-10-16 | v17: 阶段三记忆可信和可控完成当前可交付闭环记录。MCP `update_memory`、`get_memory_history`、删除、导出恢复均有生产路径与 E2E 证据；MCP stdio 工具发现验证通过（33 个工具）。TRAE ↔ Workbuddy 已完成本机真实同步。第三客户端真实验收按用户决定跳过，仅保留 MCP 协议级可行性结论。新增 TD-078：记忆级暂停尚无统一 API，继续禁止宣传为已支持能力 | DevSquad |
+| 2026-10-16 | v17: 阶段三记忆可信和可控完成当前可交付闭环记录。MCP `update_memory`、`get_memory_history`、删除、导出恢复均有生产路径与 E2E 证据；MCP stdio 工具发现验证通过（35 个工具，包含 pause_memory 和 resume_memory）。TRAE ↔ Workbuddy 已完成本机真实同步。第三客户端真实验收按用户决定跳过，仅保留 MCP 协议级可行性结论。新增 TD-078：记忆级暂停尚无统一 API，继续禁止宣传为已支持能力 | DevSquad |
 | 2026-10-23 | v18: 调查并关闭 GitHub Issue #56/#57。两项历史失败均仅由旧 nightly 的 Slow Test Suite 触发；VSCode Tier 2 UI E2E 与 Vector/Semantic Tests 同批通过，后续 nightly runs `39736182269` 和 `39913021565` 的 slow、VSCode、vector jobs 全部通过。同步修正技术债目录为 TD-001~TD-078 共 78 条明细，统计为 P0=5、P1=33、P2=25、P3=15；未将 TD-073/074/077/070/075/076/078 误标为已关闭 | DevSquad |
 | 2026-10-24 | v19: TD-075 完成。Core、MCP、HTTP health 统一为 `schema_version=1` 核心 envelope；consolidation timer 改为实例级 owner，使用 generation token、锁和条件变量，`close()` 取消并等待 callback，重复 close 幂等。定向回归 11 passed，真实 HTTP `/healthz` 1 passed，mypy、black、isort、flake8 全部通过；未关闭 TD-070/073/074/078 | DevSquad |
 | 2026-10-24 | v20: TD-073 实现完成。Tier 2 测试在真实 VSCode extension host 中使用真实 `carrymem` CLI 写入、读取、更新和删除隔离 SQLite rule；移除 `--disable-extensions`，release `vscode-e2e` 使用 Python 3.12、隔离 venv、editable install 和 `CARRYMEM_*` 路径。未在本机宣称通过：Node.js/npm 不可用，状态保持“实现完成，待 CI/Node 环境验证”。 | DevSquad |
 | 2026-10-25 | v21: TD-078 完成。记忆级 pause/resume 已贯通 SQLite serializer/CRUD、Core 权限、Async、CLI、MCP、召回过滤、审计和导入导出；定向测试 406 passed，MCP E2E 47 passed，真实 CLI store → show → pause → recall 排除 → resume → recall 恢复通过。更新顶层未闭环清单：仅保留 TD-070、TD-073、TD-074。 | DevSquad |
 | 2026-10-25 | v22: TD-074 第一轮门禁修复。删除 nightly slow 安装 fallback；nightly VSCode E2E 补齐隔离 Python 3.12 CLI 和 `CARRYMEM_*` 路径；失败通知改为显式 `always()`；新增 `release_gate` 标记，release 仅阻塞稳定的跨进程 SQLite 写入锁回归。该回归本地 `1 passed`；完整 CarryMem 三进程压力测试实测超过 300 秒，保留 nightly，不宣称为 release 契约。 | DevSquad |
 | 2026-10-25 | v23: TD-070 复核。确认本机 `node`/`npm`/`npx` 均不可用，未修改 VSCode lockfile；GitHub 当前有 Dependabot PR #60（filelock）和 #61（certifi），两者状态均为 pending。记录当前 23 条分支漏洞报告，但不将旧的 5 high npm audit 结果当作当前精确结果。 | DevSquad |
+| 2026-10-26 | v24: 处理 commit `f3da286` 暴露的 CI 回归。拆分 `import_memories` 与 SQLite 行序列化以清除 radon D 级复杂度；补齐知识图谱测试夹具的 pause 列，修复 8 个知识图谱查询失败。mypy、radon、black、isort、flake8、版本一致性和 swallowed-assert 门禁通过；修改相关回归共 212 passed；完整非 slow 门禁在本轮生命周期修复前为 `5138 passed, 1 skipped, 77 deselected`。同步 MCP 工具事实为 35 个。修复已提交并推送为 `73d337d`；CI run `40251593665` 已完成但被取消，质量/构建/安全/VSCode 门禁通过，Ubuntu 和 macOS 测试失败并出现 `Event loop is closed`。本地已修复 stdio pipe transport、SSE task 和 MCP HTTP 生命周期清理，待远端验证。 | DevSquad |
+| 2026-10-27 | v25: 远端 CI run `40266181465` 已完成但失败。Syntax、Lint、Build、Security、VSCode、Docs 和 i18n 通过；Ubuntu/macOS 测试 job 仍以 exit code 1 失败；Optional Deps job 运行 20 分钟后按 advisory 规则取消。GitHub 页面/API 未提供失败测试日志，TD-074 保持开放。 | DevSquad |
+| 2026-10-27 | v26: TD-074 本地门禁一致性修复。`scripts/ci_local_check.py` 新增与 release.yml 同契约的 `release-gate` 子门禁；本机 Python 3.12 的 MCP/HTTP 定向回归 `126 passed`，跨进程锁回归 `1 passed`。完整非 slow 门禁本机运行时间过长后停止，未宣称通过；TD-070/TD-073 仍因无 Node.js/npm 保持 environment-blocked。 | DevSquad |
+| 2026-10-27 | v27: TD-074 可观测性修复。CI 和 release 测试步骤将最后 120 行输出写入 GitHub Step Summary；release 测试使用 `pipefail` + `tee`，避免输出摘要步骤掩盖测试失败。YAML、Python 编译、`release_gate` 和版本/断言门禁通过；完整远端 workflow 尚未重新运行。 | DevSquad |
+| 2026-10-27 | v28: TD-074 本地完整非 slow 门禁复验通过：`5139 passed, 1 skipped, 77 deselected`，耗时 5m21s；发现 143 条已有 TUI coroutine/deprecation warnings，未发现测试失败。TD-074 仍保持部分完成，剩余 clean checkout、slow/optional 负向验证和远端新 CI run。 | DevSquad |
+| 2026-10-27 | v29: TD-074 门禁失败语义补强。optional-deps 增加 `pipefail` 和 Step Summary，保持 advisory 但不再隐藏 pytest 失败；nightly slow suite 增加 `pipefail`、`tee` 和 Step Summary，失败仍阻断 nightly。 | DevSquad |
+| 2026-10-27 | v30: 在独立 clean checkout worktree 应用当前补丁并完成发布模拟：完整非 slow `5139 passed, 1 skipped, 77 deselected`，覆盖率 `83.64%`（门槛 `80%`），`release_gate` `1 passed`，版本一致性和 swallowed-assert 均通过，三份 workflow YAML 解析通过。该模拟复用了本机 Python 3.12 venv，未宣称全新依赖安装或远端 runner 证据；TD-074 仍待远端新 CI run。 | DevSquad |
+| 2026-10-28 | v31: 远端 CI run `40625234996` 取得失败测试日志：Ubuntu/macOS 均只失败 `tests/test_cli_enhanced.py::TestBuildMcpServerConfig::test_default_db_path` 与 `TestSetupMcpGlobal::test_global_env_has_data_path`，根因是 workflow 全局导出 `CARRYMEM_*` 路径覆盖了隔离 HOME 的默认路径契约。CI、release、nightly 主测试环境现仅注入隔离 `HOME`；本机临时 HOME 清除覆盖变量后 CLI 增强回归 `88 passed`，`release_gate` `1 passed`。已提交并等待下一次远端 CI 验证。 |
+| 2026-10-28 | v32: CI run `40628470638` 验证默认路径修复：Ubuntu/macOS 主测试、Docker、构建、质量、安全和 VSCode 门禁全部通过。Optional Deps 仍按旧实现重跑完整非 slow 套件，在 20 分钟上限被取消；未将取消误记为通过。将 optional-deps 改为直接运行 TUI、onboarding、async、language 和 LLM 路径测试，保留 `pipefail`、`tee` 和 Step Summary；本机定向回归 `308 passed`。等待下一次远端 run，再检查正式 release tag 模拟和 slow 门禁证据。 | DevSquad |
+| 2026-10-28 | v33: CI run `40631718480` 全部通过，包含 bounded optional-deps 门禁；nightly run `40633794111` 的 slow、VSCode Tier 2 UI E2E 和 vector/semantic 门禁全部通过。补充 Bash `pipefail` 负向验证：`exit 17 | tee` 仍返回 `17`。release.yml 增加安全的 `workflow_dispatch` 预检：执行发布前测试、E2E、VSCode、构建、版本检查和负向门禁，但跳过 PyPI 与 GitHub Release 发布；YAML、diff-check 已通过，尚未远端执行预检，TD-074 仍保持部分完成。 | DevSquad |
+| 2026-10-28 | v34: 安全 release preflight run `40636261327` 成功：Pre-Release Tests 19m8s、E2E 58s、真实 VSCode Tier 2 UI E2E 1m11s、Build & Publish 19s 全部通过；手动版本一致性检查和预检完成确认通过，tag 版本检查、PyPI 上传和 GitHub Release 创建 skipped。TD-074 按逐项证据审计关闭；未创建正式 release tag，仍不将 preflight 误报为已发布。 | DevSquad |
+| 2026-10-28 | v35: TD-073 按远端真实链路证据关闭。nightly run `40633794111` 和 release preflight `40636261327` 均通过真实 VSCode extension host：隔离 SQLite 中由真实 `carrymem` CLI 创建 rule，扩展 `CarryMemClient`/`RuleTreeProvider` 读取，扩展 API 更新后由真实 CLI 验证持久化，随后删除 rule 并清理临时目录。测试使用 `npm ci`、TypeScript 编译、`@vscode/test-electron` 和隔离运行时；本机无 Node/npm 不影响远端验收。 | DevSquad |
 
 ---
 

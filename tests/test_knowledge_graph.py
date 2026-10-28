@@ -75,7 +75,10 @@ def _init_graph_schema(conn: sqlite3.Connection) -> None:
             content_hash TEXT NOT NULL,
             importance_score REAL NOT NULL DEFAULT 0.0,
             last_accessed_at TEXT,
-            version INTEGER NOT NULL DEFAULT 1
+            version INTEGER NOT NULL DEFAULT 1,
+            paused INTEGER NOT NULL DEFAULT 0,
+            paused_at TEXT,
+            pause_reason TEXT
         );
 
         CREATE TABLE IF NOT EXISTS memory_entities (
