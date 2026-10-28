@@ -66,9 +66,9 @@
 - [ ] 本地运行 `bandit -r src/ -lll` 无 HIGH 漏洞
 - [ ] 本地运行 `pip-audit` 无已知 CVE
 - [ ] 覆盖率 `pytest --cov=carrymem` ≥ 80%
-- [ ] 远端 CI 主门禁成功：run `40631718480`（Ubuntu/macOS、Docker、构建、质量、安全、VSCode、bounded optional-deps）
-- [ ] 远端 nightly 门禁成功：run `40633794111`（slow、VSCode Tier 2 UI E2E、vector/semantic）
-- [ ] 执行 release.yml 的 `workflow_dispatch` 预检；确认发布前测试、E2E、VSCode 和构建通过，且 PyPI/GitHub Release 步骤均为 skipped
+- [x] 远端 CI 主门禁成功：run `40631718480`（Ubuntu/macOS、Docker、构建、质量、安全、VSCode、bounded optional-deps）
+- [x] 远端 nightly 门禁成功：run `40633794111`（slow、VSCode Tier 2 UI E2E、vector/semantic）
+- [x] 执行 release.yml 的 `workflow_dispatch` 预检；run `40636261327` 确认发布前测试、E2E、VSCode 和构建通过，且 PyPI/GitHub Release 步骤均为 skipped
 
 ### 2.3 版本一致性验证
 
