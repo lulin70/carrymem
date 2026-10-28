@@ -376,9 +376,17 @@ jobs:
       - name: Run optional-dep tests
         run: |
           set -o pipefail
-          python -m pytest tests/ \
+          # Exercise optional paths directly. Do not rerun the complete suite:
+          # the main test matrix already owns that gate, while this job verifies
+          # TUI, onboarding, async, language and LLM extras within its budget.
+          python -m pytest \
+            tests/test_tui.py \
+            tests/test_onboarding.py \
+            tests/test_async_sqlite.py \
+            tests/test_phase4.py \
+            tests/test_consolidation_extra.py \
+            --no-cov \
             --timeout=120 \
-            -m "not slow" \
             -q 2>&1 | tee /tmp/optional_test_output.txt
 
       - name: Publish optional-dep summary
