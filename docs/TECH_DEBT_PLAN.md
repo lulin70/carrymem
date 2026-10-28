@@ -1009,8 +1009,8 @@
 | **修复方案** | release pre-test 已加入显式的多进程 SQLite 并发阻塞回归；CI 和 nightly slow 安装均改为失败即停并验证 `import carrymem`/`carrymem --version`；nightly VSCode E2E 现在使用 Python 3.12、隔离 venv、editable install、隔离 `CARRYMEM_*` 路径和真实 CLI；CI/release/nightly 的 VSCode 依赖安装使用 `npm ci`。完整 slow 集合继续由 nightly 运行，不直接升级为 release 阻塞门禁；已新增显式 `release_gate` 标记，当前仅将稳定的跨进程 SQLite 写入锁回归纳入 release 阻塞门禁；完整 CarryMem 三进程压力测试保留在 nightly，因本机运行超过 300 秒，不作为稳定 release 契约。 |
 | **负责角色** | DevOps + Tester |
 | **验证标准** | release workflow 包含阻塞并发回归；CI/nightly 主安装失败时非零退出；VSCode 安装使用 lockfile；clean checkout 和目标 commit 的完整 release 模拟通过；slow 测试策略和 optional job 失败语义有明确负向验证。 |
-| **状态** | 🟡 部分完成（nightly 降级安装路径已删除；nightly VSCode 已补齐真实 CLI 与隔离运行时；release 已改用显式 `release_gate` 标记并阻塞稳定的跨进程 SQLite 写入锁回归；Python 3.12 隔离环境和 clean checkout 的非 slow 八项门禁均已通过；完整 release workflow、完整 slow 门禁和 optional job 负向语义仍开放） |
-| **本轮验证证据** | 静态 YAML/工作流审查确认 nightly 安装失败即停、CLI 可导入且可执行、VSCode nightly 不再依赖 runner 预装 CLI；`git diff --check` 通过。尚未声称真实 GitHub workflow 已运行。 |
+| **状态** | 🟡 部分完成（nightly 降级安装路径已删除；nightly VSCode 已补齐真实 CLI 与隔离运行时；release 已改用显式 `release_gate` 标记并阻塞稳定的跨进程 SQLite 写入锁回归；CI run `40266181465` 的质量、构建、安全和 VSCode 门禁通过，但 Ubuntu/macOS 测试门禁仍失败；完整 release workflow、完整 slow 门禁、optional job 负向语义和失败测试的可验证日志仍开放） |
+| **本轮验证证据** | CI run `40266181465` 已真实运行：Syntax、Lint、Build、Security、VSCode、Docs 和 i18n 通过；Ubuntu/macOS 测试 job 均以 exit code 1 失败；Optional Deps job 按 advisory 规则运行 20 分钟后取消。GitHub 页面/API 仅提供 job 失败结果，日志下载因缺少 repository admin 权限不可用，因此尚未确认失败测试名称和堆栈。本机 Python 3.12 的 MCP/HTTP 定向回归为 `126 passed`，`release_gate` 为 `1 passed`；完整非 slow 门禁现已完成，为 `5139 passed, 1 skipped, 77 deselected`，耗时 5m21s，产生 143 条已有 TUI coroutine/deprecation warnings。随后在独立 clean checkout 应用当前补丁复验：`5139 passed, 1 skipped, 77 deselected`，覆盖率 `83.64%`，`release_gate` `1 passed`，版本/断言门禁通过；复用本机 venv，未宣称远端 runner 或全新安装证据。`ci_local_check.py` 已补齐同一 `release-gate` 子门禁；CI/release/nightly workflow 现在会把测试输出最后 120 行写入 GitHub Step Summary，仍待 slow/optional 负向验证和远端新 run。 |
 | **生命周期** | P7 测试规划 → P9 测试执行 → P10 部署发布 |
 
 ### TD-076: HTTP 工具超时后的后台线程继续执行 ⚠️ 新增 (2026-10-10)
@@ -1227,6 +1227,12 @@ TD-035 (AccessPolicy 集成) — 安全债，独立推进
 | 2026-10-25 | v22: TD-074 第一轮门禁修复。删除 nightly slow 安装 fallback；nightly VSCode E2E 补齐隔离 Python 3.12 CLI 和 `CARRYMEM_*` 路径；失败通知改为显式 `always()`；新增 `release_gate` 标记，release 仅阻塞稳定的跨进程 SQLite 写入锁回归。该回归本地 `1 passed`；完整 CarryMem 三进程压力测试实测超过 300 秒，保留 nightly，不宣称为 release 契约。 | DevSquad |
 | 2026-10-25 | v23: TD-070 复核。确认本机 `node`/`npm`/`npx` 均不可用，未修改 VSCode lockfile；GitHub 当前有 Dependabot PR #60（filelock）和 #61（certifi），两者状态均为 pending。记录当前 23 条分支漏洞报告，但不将旧的 5 high npm audit 结果当作当前精确结果。 | DevSquad |
 | 2026-10-26 | v24: 处理 commit `f3da286` 暴露的 CI 回归。拆分 `import_memories` 与 SQLite 行序列化以清除 radon D 级复杂度；补齐知识图谱测试夹具的 pause 列，修复 8 个知识图谱查询失败。mypy、radon、black、isort、flake8、版本一致性和 swallowed-assert 门禁通过；修改相关回归共 212 passed；完整非 slow 门禁在本轮生命周期修复前为 `5138 passed, 1 skipped, 77 deselected`。同步 MCP 工具事实为 35 个。修复已提交并推送为 `73d337d`；CI run `40251593665` 已完成但被取消，质量/构建/安全/VSCode 门禁通过，Ubuntu 和 macOS 测试失败并出现 `Event loop is closed`。本地已修复 stdio pipe transport、SSE task 和 MCP HTTP 生命周期清理，待远端验证。 | DevSquad |
+| 2026-10-27 | v25: 远端 CI run `40266181465` 已完成但失败。Syntax、Lint、Build、Security、VSCode、Docs 和 i18n 通过；Ubuntu/macOS 测试 job 仍以 exit code 1 失败；Optional Deps job 运行 20 分钟后按 advisory 规则取消。GitHub 页面/API 未提供失败测试日志，TD-074 保持开放。 | DevSquad |
+| 2026-10-27 | v26: TD-074 本地门禁一致性修复。`scripts/ci_local_check.py` 新增与 release.yml 同契约的 `release-gate` 子门禁；本机 Python 3.12 的 MCP/HTTP 定向回归 `126 passed`，跨进程锁回归 `1 passed`。完整非 slow 门禁本机运行时间过长后停止，未宣称通过；TD-070/TD-073 仍因无 Node.js/npm 保持 environment-blocked。 | DevSquad |
+| 2026-10-27 | v27: TD-074 可观测性修复。CI 和 release 测试步骤将最后 120 行输出写入 GitHub Step Summary；release 测试使用 `pipefail` + `tee`，避免输出摘要步骤掩盖测试失败。YAML、Python 编译、`release_gate` 和版本/断言门禁通过；完整远端 workflow 尚未重新运行。 | DevSquad |
+| 2026-10-27 | v28: TD-074 本地完整非 slow 门禁复验通过：`5139 passed, 1 skipped, 77 deselected`，耗时 5m21s；发现 143 条已有 TUI coroutine/deprecation warnings，未发现测试失败。TD-074 仍保持部分完成，剩余 clean checkout、slow/optional 负向验证和远端新 CI run。 | DevSquad |
+| 2026-10-27 | v29: TD-074 门禁失败语义补强。optional-deps 增加 `pipefail` 和 Step Summary，保持 advisory 但不再隐藏 pytest 失败；nightly slow suite 增加 `pipefail`、`tee` 和 Step Summary，失败仍阻断 nightly。 | DevSquad |
+| 2026-10-27 | v30: 在独立 clean checkout worktree 应用当前补丁并完成发布模拟：完整非 slow `5139 passed, 1 skipped, 77 deselected`，覆盖率 `83.64%`（门槛 `80%`），`release_gate` `1 passed`，版本一致性和 swallowed-assert 均通过，三份 workflow YAML 解析通过。该模拟复用了本机 Python 3.12 venv，未宣称全新依赖安装或远端 runner 证据；TD-074 仍待远端新 CI run。 | DevSquad |
 
 ---
 

@@ -109,6 +109,18 @@ jobs:
             -m "not slow" \
             -q 2>&1 | tee /tmp/test_output.txt
 
+      - name: Publish test failure summary
+        if: always()
+        run: |
+          {
+            echo "## Test output (last 120 lines)"
+            if [ -f /tmp/test_output.txt ]; then
+              tail -n 120 /tmp/test_output.txt
+            else
+              echo "No test output file was created."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v7
@@ -375,10 +387,23 @@ jobs:
 
       - name: Run optional-dep tests
         run: |
+          set -o pipefail
           python -m pytest tests/ \
             --timeout=120 \
             -m "not slow" \
             -q 2>&1 | tee /tmp/optional_test_output.txt
+
+      - name: Publish optional-dep summary
+        if: always()
+        run: |
+          {
+            echo "## Optional dependency test output (last 120 lines)"
+            if [ -f /tmp/optional_test_output.txt ]; then
+              tail -n 120 /tmp/optional_test_output.txt
+            else
+              echo "No optional dependency test output file was created."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # ═══════════════════════════════════════
   # VSCode Extension Tests (Tier 1 — unit/integration, no VSCode required)

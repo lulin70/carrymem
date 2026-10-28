@@ -61,12 +61,25 @@ jobs:
         env:
           CI: "true"
         run: |
+          set -o pipefail
           python -m pytest tests/ \
             -m "slow" \
             --no-cov \
             --tb=long \
             --timeout=1800 \
-            -q
+            -q 2>&1 | tee /tmp/slow_test_output.txt
+
+      - name: Publish slow-test summary
+        if: always()
+        run: |
+          {
+            echo "## Slow test output (last 120 lines)"
+            if [ -f /tmp/slow_test_output.txt ]; then
+              tail -n 120 /tmp/slow_test_output.txt
+            else
+              echo "No slow test output file was created."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # ═══════════════════════════════════════
   # Nightly: VSCode Extension Tier 2 UI E2E (TD-034)

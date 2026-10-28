@@ -118,12 +118,25 @@ jobs:
 
       - name: Run tests (gate — must pass before publish)
         run: |
+          set -o pipefail
           python -m pytest tests/ \
             --cov=carrymem \
             --cov-report=term-missing \
             --timeout=120 \
             -m "not slow" \
-            -q
+            -q 2>&1 | tee /tmp/release_test_output.txt
+
+      - name: Publish test failure summary
+        if: always()
+        run: |
+          {
+            echo "## Release test output (last 120 lines)"
+            if [ -f /tmp/release_test_output.txt ]; then
+              tail -n 120 /tmp/release_test_output.txt
+            else
+              echo "No release test output file was created."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run blocking concurrency regression
         run: |
