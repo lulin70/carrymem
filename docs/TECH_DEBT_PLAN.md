@@ -945,19 +945,19 @@
 | **状态** | ✅ 已完成（2026-10-10）。 |
 | **生命周期** | P6 安全审查 |
 
-### TD-070: VSCode 插件 dev 链 chokidar/mocha 高危告警需破坏性升级 ⚠️ 新增 (2026-10-08)
+### TD-070: VSCode 插件 dev 链与 serialize-javascript XSS 告警需处理 ⚠️ 更新 (2026-11-05)
 
 | 字段 | 值 |
 |------|-----|
 | **优先级** | P3 |
-| **位置** | `extensions/vscode-carrymem/package-lock.json`（`mocha==10.8.2` → `chokidar==3.6.0` → `braces` 漏洞链；`@vscode/test-cli==0.0.10`） |
-| **问题描述** | 官方 registry `npm audit` 报 5 条 high：braces/chokidar/mocha 链。同 lock 的 brace-expansion（2 条 medium）已于 2026-10-08 经 `npm update brace-expansion` 升至 `1.1.21`/`2.1.7`（恰为补丁版）修复。剩余链无非破坏修复路径：修复版本要求 `@vscode/test-cli@0.0.15`（官方 audit 明示 breaking change）+ mocha 11.x。该链仅用于插件开发测试（`npm test`），不进插件产物 |
-| **复现** | 本机复核：`node`、`npm`、`npx` 均不可用，`npm audit --registry=https://registry.npmjs.org` 无法执行；上次有记录的审计结果为 5 high。当前 GitHub 还存在 23 条分支漏洞报告（2 critical、8 high、5 moderate、8 low），需要在可运行 Node/npm 的环境中重新核对，不能把旧报告当作当前精确结果。 |
-| **修复方案** | 在具备 Node.js/npm 的 CI 或开发环境中升级 `@vscode/test-cli` 至 0.0.15+ 与 `@types/mocha`/`mocha@^11`，再运行 VSCode Tier 2 UI E2E（TD-034/61 的 17 用例）验证行为不变。同步复核当前 GitHub Dependabot PR #60（filelock 3.30.3→4.2.1）和 PR #61（certifi 2026.6.17→2026.10.19）；在状态检查完成并通过兼容性验证后再合并。 |
-| **负责角色** | DevOps + Tester |
-| **验证标准** | `npm audit --registry=https://registry.npmjs.org` → 0 high；`npm test`（VSCode E2E）17/17 passing |
-| **依赖** | Node.js/npm 可用 |
-| **状态** | 🟡 环境阻塞（2026-10-25；本机仍无 Node.js/npm，Homebrew 安装因网络下载阻塞后已停止；未修改 lockfile，未宣称已修复。Dependabot PR #60/#61 已发现，但当前状态检查仍 pending） |
+| **位置** | `extensions/vscode-carrymem/package-lock.json`、`package.json` |
+| **问题描述** | **历史告警（2026-10-08）**: mocha→chokidar→braces 链 5 条 high，其中 brace-expansion 已于 2026-10-08 修复。<br/>**当前告警（2026-11-05）**: **Dependabot Alert #50** — serialize-javascript < 7.1.3 存在 XSS 漏洞（GHSA-m5mm-p8h7-m29v，severity: Low）。漏洞详情：未转义 `</script>` 标签可导致 XSS 攻击。First patched version: 7.1.3。该依赖为 VSCode 扩展的传递依赖（仅开发测试链），不进入插件发布产物。GitHub 安全扫描显示全仓共 23 条告警（2 critical/8 high/5 moderate/8 low），其中 4 条主要 Python 依赖告警（#58/#59/#60/#61）已于 2026-11-01 全部合并，当前仅剩低优先级告警 #50 |
+| **复现** | 本机无 `node`/`npm`/`npx`，无法执行 `npm audit` 或 `npm audit fix`。当前 `package.json` 已含 `overrides: {"serialize-javascript": "^7.0.5"}`（不确定是否已生效，需在 Node 环境执行 `npm install` 和 `npm ls serialize-javascript` 验证）|
+| **修复方案（方案 A，推荐）** | **在具备 Node.js/npm 的环境中**执行：<br/>(1) `cd extensions/vscode-carrymem`<br/>(2) `npm install` — 应用 package.json 的 overrides 规则<br/>(3) `npm ls serialize-javascript` — 验证所有传递依赖已升至 ≥7.1.3<br/>(4) `npm audit --registry=https://registry.npmjs.org` — 验证 serialize-javascript 告警消失<br/>(5) `npm test` — 运行 VSCode E2E 17 用例验证无回归<br/>(6) 提交更新后的 package-lock.json。**历史遗留高危告警**（mocha/chokidar 链）需同步升级 `@vscode/test-cli@0.0.15+` 和 `mocha@^11`，但该升级为破坏性变更，建议单独验证 |
+| **负责角色** | DevOps + Security |
+| **验证标准** | (1) `npm ls serialize-javascript --all` 输出全部 ≥7.1.3；(2) `npm audit --registry=https://registry.npmjs.org` 无 serialize-javascript 相关告警；(3) `npm test` 17/17 passing；(4) GitHub Dependabot Alert #50 自动关闭 |
+| **依赖** | Node.js/npm 环境可用 |
+| **状态** | 🟡 环境阻塞（2026-11-05；本机无 Node.js/npm 环境，package.json overrides 规则已添加但未验证生效。4 个 Python 依赖安全 PR #58/#59/#60/#61 已合并，仅剩告警 #50。待有 Node 环境时按方案 A 执行修复和验证） |
 | **生命周期** | P6 安全审查 |
 
 ### TD-071: VSCode rules-effectiveness 调用没有对应 CLI 命令
