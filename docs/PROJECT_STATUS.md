@@ -1,7 +1,7 @@
 # CarryMem — Project Status
 
 **Version**: v0.11.2
-**Last Updated**: 2026-10-28 (CI run `40631718480`, nightly run `40633794111`, and safe release preflight `40636261327` all passed. The preflight covered release tests, E2E, real VSCode UI E2E, build, and version checks; PyPI upload and GitHub Release creation were skipped.)
+**Last Updated**: 2026-11-01 (All 4 Dependabot security PRs merged: #58 black 26.5.1→26.10.1, #59 virtualenv 21.14.6→21.14.13, #60 filelock 3.30.3→4.2.1, #61 certifi 2026.6.17→2026.10.19. CI run `40631718480`, nightly run `40633794111`, and safe release preflight `40636261327` all passed. No open PRs or Issues.)
 **Maintainer**: CarryMem Team
 
 **Product rollout plan**: [PRODUCT_ROLLOUT_PLAN.md](PRODUCT_ROLLOUT_PLAN.md)
