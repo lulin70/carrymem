@@ -891,7 +891,7 @@ python -m pytest tests/ --tb=short -q --no-cov
   retained (5 total) — these are conditional skipif with explicit environment
   requirements, not unconditional skips
 
-## [0.9.3rc1] - 2026-07-22 — TD-015 Password-based publish restored (OIDC abandoned)
+## [0.9.3rc1] - 2026-07-22 — DevSquad P0-P3 consensus evaluation (Vector/Docker/VSCode fixes)
 
 ### Summary
 DevSquad 7-role consensus evaluation of P0-P2 issues. P0-2 (Vector/Semantic Tests)
@@ -968,7 +968,7 @@ black --check --line-length=120 src/carrymem/llm/__init__.py
 - Docker smoke test overrides CMD to verify import works (stdio mode exits
   immediately on stdin EOF, which is expected behavior).
 
-## [0.9.3rc1] - 2026-07-22 — TD-015 Password-based publish restored (OIDC abandoned)
+## [0.9.3rc2] - 2026-07-22 — TD-015 Password-based publish restored (OIDC abandoned)
 
 ### Summary
 User decided NOT to configure PyPI Trusted Publisher. Reverted to traditional

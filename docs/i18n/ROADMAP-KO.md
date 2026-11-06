@@ -62,7 +62,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 │  │  • Cross-language semantic recall (FTS5)          │    │
 │  │  • Session-aware storage + knowledge supersession (v0.1.7)   │    │
 │  │  • Time reasoning + structured prompt injection (v0.1.7)     │    │
-│  │|  •  4907 tests passing, 83.19% coverage         ││    │
+│  │|  •  4907 tests passing, 83.64% coverage         ││    │
 │  └──────────────────────────────────────────────────┘    │
 │              ↑ reads from          ↑ injects into         │
 │  Layer 1: Knowledge (WHAT you know) ← v0.3.0 계획         │
@@ -745,4 +745,4 @@ carrymem unpack team-identity.carry
 **Next Milestone**: next minor (planning TBD)
 
 Note: v0.11.2 released (2026-09-21, PyPI). See CHANGELOG.md for the v0.9.0 ~ v0.11.2 series.
-**Status**: ✅ **Current tree: 4994 collected / 4907 passed, 83.19% coverage; latest realistic user E2E: 245 passed, 20 deselected, 2 warnings in 82.24s; previous 77.08s run retained as a historical baseline; v0.11.2 released (PyPI)**
+**Status**: ✅ **Current tree: 5217 collected / 5139 passed, 83.64% coverage; latest realistic user E2E: 245 passed, 20 deselected, 2 warnings in 82.24s; previous 77.08s run retained as a historical baseline; v0.11.2 released (PyPI)**
