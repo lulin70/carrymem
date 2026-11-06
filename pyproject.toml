@@ -1,6 +1,81 @@
 [build-system]
-requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=10.2.1"]
+requires = ["setuptools>=84.1.0", "wheel", "setuptools_scm[toml]>=10.2.1"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "carrymem"
+version = "0.11.2"
+description = "Portable AI memory for MCP-compatible local clients. Classify, store, and recall what matters."
+requires-python = ">=3.12"
+authors = [{name = "lulin70", email = "lulin70@gmail.com"}]
+license = {text = "MIT"}
+keywords = ["ai", "memory", "classification", "mcp", "agent", "persistence", "portable"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "PyYAML>=5.0",
+    "cryptography>=50.0.0",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+language = [
+    "pycld2>=0.41",
+    "langdetect>=1.0.9",
+]
+semantic = [
+    "sqlite-vec>=0.1.0",
+    "pysqlite3>=0.6.0",
+    "sentence-transformers>=5.6.0",
+]
+async = [
+    "aiosqlite>=0.19",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "pytest-cov>=4.0",
+    "pytest-mock>=3.10",
+    "pytest-timeout>=2.0",
+    "coverage[toml]>=7.0",
+    "pre-commit>=3.0",
+    "build>=0.10",
+    "twine>=4.0",
+    "pycld2>=0.41",
+    "langdetect>=1.0.9",
+    "flake8==7.3.0",
+    "black==26.10.1",
+    "isort==6.1.0",
+    "mypy==2.3.0",
+    "radon==6.0.1",
+    "bandit==1.7.10",
+    "pip-audit==2.7.0",
+]
+llm = [
+    "openai>=1.0",
+    "zai-sdk>=0.2.3",
+]
+tui = [
+    "textual>=8.2.8",
+]
+full = [
+    "pycld2>=0.41",
+    "langdetect>=1.0.9",
+    "textual>=8.2.8",
+    "sqlite-vec>=0.1.0",
+    "pysqlite3>=0.6.0",
+    "sentence-transformers>=5.6.0",
+    "openai>=1.0",
+    "zai-sdk>=0.2.3",
+    "aiosqlite>=0.19",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -11,7 +86,7 @@ addopts = [
     "-v",
     "--strict-markers",
     "--tb=short",
-    "--cov=carrymem",
+    "--cov=src/carrymem",
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-report=xml",

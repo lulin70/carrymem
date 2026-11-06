@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+> 注：以下变更已全部合入 `new-main` 分支（CI 门禁持续通过，最新 run `40631718480`）。
+
 ### Added
 
 - **CI/runtime isolation for all blocking gates** (Phase 1 verification closure,
@@ -2056,39 +2058,6 @@ result = cm.store_messages(messages)
 ### Internal
 - `CRUDOperations.remember()` and `CRUDOperations.forget()` retained as internal implementations (called by `store_entry()` and `delete()` respectively). Not part of public API.
 - `CRUDOperations.remember_batch()` deprecated delegate removed (was added in v0.5.4).
-
-## [Unreleased]
-
-### Added
-- 134 unit tests for 7 core Mixins (tests/core/)
-- health_check MCP tool (28 tools total)
-- TUI delete (d) and edit (e) functionality
-- CLI rules subcommand grouping (carrymem rules add/list/match...)
-- Audit logger defaults to SQLite persistence (~/.carrymem/audit.db)
-- mypy type check and bandit security scan in CI
-- **Security upgrade test suite**: 29 tests in `test_security_crypto_upgrade.py`
-  covering PBKDF2 iterations, key rotation round-trip, digest tampering detection,
-  security level attributes, fallback warnings, and full backward compatibility.
-- **Security constants**: `PBKDF2_ITERATIONS = 260000` and
-  `PBKDF2_ITERATIONS_LEGACY = 100000` in `constants.py`.
-
-### Changed
-- StorageAdapterProtocol merged into StorageAdapter (interface simplified)
-- Removed 9 @runtime_checkable decorators (zero runtime overhead)
-- All Any types replaced with specific types (24→0)
-- CLI old flat commands (add-rule etc.) deprecated, use rules subcommands
-- **Security**: PBKDF2_ITERATIONS raised from 260000 → 600000 (OWASP 2023 recommendation
-  for PBKDF2-HMAC-SHA256). Existing keys remain verifiable via stored iteration metadata.
-
-### Fixed
-- handlers.cleanup() async→sync (RuntimeWarning)
-- ConnectionManager.close() pysqlite3 exception handling
-- Path traversal validation in CarryMem.__init__
-- InputValidator.sanitize_namespace() + empty namespace check
-- Black/flake8 CI configuration (line-length=120 alignment)
-- **MCP server**: Fixed `notifications/initialized` method name mismatch and added protocol version negotiation (2025-11-25 support)
-- **Memory leak**: Fixed `lru_cache` on instance method pinning `self` in `semantic/expander.py` (18% → 91% GC recovery)
-- **CI gate**: Fixed `| tee` swallowing pytest exit code and removed `--maxfail=10` limit
 
 ## [0.5.4] - 2026-07-09 (Batch API — Phase 2)
 

@@ -46,7 +46,7 @@ CLI 入口：`carrymem`（`entry_points` → `carrymem.cli:main`），也可 `py
 
 ## 测试命令
 
-pytest 配置位于 `pyproject.toml` 的 `[tool.pytest.ini_options]`：默认开启 `--cov=carrymem`、`--strict-markers`、`asyncio_mode = "auto"`，覆盖率门槛 `fail_under = 75`。
+pytest 配置位于 `pyproject.toml` 的 `[tool.pytest.ini_options]`：默认开启 `--cov=src/carrymem`、`--strict-markers`、`asyncio_mode = "auto"`，覆盖率门槛 `fail_under = 80`。
 
 ```bash
 # 全量测试（默认带覆盖率，输出 term/html/xml 三份报告）
@@ -142,7 +142,7 @@ src/carrymem/
 │   ├── conflict_detector.py / merge_protocol.py
 │   ├── failure_experience.py / experience_bridge.py
 │   ├── pattern_detector.py / skill.py / templates.py / models.py / storage.py
-├── integration/layer2_mcp/  # MCP 服务器（共 31 个工具，分 9 类）
+├── integration/layer2_mcp/  # MCP 服务器（共 35 个工具，分 9 类）
 │   ├── server.py / http_server.py / __main__.py
 │   ├── tools.py             #   工具定义（CORE/OPTIONAL/KNOWLEDGE/PROFILE/PROMPT/CONSOLIDATION/RULE/HEALTH_CHECK/GRAPH）
 │   └── handlers/            #   工具分发处理（TD-039 拆分的域子包：_base/read/write/graph/rule/system）
@@ -167,9 +167,9 @@ src/carrymem/
 └── __version__.py           # 版本号唯一来源
 ```
 
-**MCP 31 工具清单**（`src/carrymem/integration/layer2_mcp/tools.py`）：
+**MCP 35 工具清单**（`src/carrymem/integration/layer2_mcp/tools.py`）：
 - CORE(3)：classify_message、get_classification_schema、batch_classify
-- OPTIONAL(3)：classify_and_remember、recall_memories、forget_memory
+- OPTIONAL(7)：classify_and_remember、recall_memories、forget_memory、pause_memory、resume_memory、update_memory、get_memory_history
 - KNOWLEDGE(3)：index_knowledge、recall_from_knowledge、recall_all
 - PROFILE(2)：declare_preference、get_memory_profile
 - PROMPT(2)：get_system_prompt、summarize_and_store
@@ -199,7 +199,7 @@ src/carrymem/
 
 8. **CI 默认分支为 `new-main`**，PR 与 push 的 gate 触发分支均为 `new-main`，勿误用 `main`。
 
-9. **覆盖率门槛 75%**（`pyproject.toml` `[tool.coverage.report] fail_under = 75`）。新增代码需维持覆盖率。
+9. **覆盖率门槛 80%**（`pyproject.toml` `[tool.coverage.report] fail_under = 80`）。新增代码需维持覆盖率。
 
 10. **i18n 约束**：非 i18n 白名单文件不得出现 CJK 字符（CI `i18n` job 会扫描）。中文文案应放入 `src/carrymem/i18n/zh_CN.py` 等白名单文件。
 

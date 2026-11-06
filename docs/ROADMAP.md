@@ -51,7 +51,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 - Second digit changes for GA milestones (API stability guarantee)
 - No "v1.0.0 jump" — earn it through proven production usage
 
-> **Note**: The v0.3.0–v0.11.2 versions listed above represent the project's development history through v0.11.2. **Current version is v0.11.2**: v0.5.x (Entity Normalizer, Summary Layer, store_entry/store_batch core APIs), v0.6.x (deprecated API removal, architecture cleanup decoupling core from SQLiteAdapter, CVE-2026-34073 security fix, recency decay weighting), v0.7.0 (SQLite-native Knowledge Graph + Session dual-layer O(1) recall), v0.7.1 (multi-mode retrieval: recall_by_time/recall_semantic/recall_hybrid/recall_multi_mode), v0.7.2 (MemifyEngine three-phase dynamic refinement + AsyncSQLiteAdapter native async I/O), v0.7.3 (HMAC-CTR fallback removed, cryptography hard dependency, WAL throttle, input validator defense-in-depth, batched LIKE queries), v0.8.0 (3 MCP graph tools: query_graph/shortest_path/get_memory_impact, edge confidence labels EXTRACTED/INFERRED/AMBIGUOUS, schema migration v100), v0.9.x (UI/UX Overhaul + Morandi Aesthetic, mypy 0 baseline, tech debt cleanup TD series, OIDC→token publish decision), v0.9.9 (methodology docs: orthogonal classification table + design space positioning), v0.10.0 (repeat-correction upgrade: detect_repeat_correction() + semantic dedup + security-keyword bypass), v0.10.1 (CLI startup cost fix, L-V0100-006), v0.11.0 (breaking async API cleanup: `AsyncCarryMem(native_async=True)` removed, `cryptography>=50.0.0` floor, real observability instrumentation), v0.11.1 (release-gate fix + first `recall` metric correction), v0.11.2 (completes the `recall` metric correction). **4994 tests collected / 4907 passed (10 skipped, 77 deselected; incl. 265 E2E), 83.19% coverage, mypy 0 errors. The latest realistic non-slow E2E run passed 245 tests (20 deselected, 2 warnings, 82.24s); the previous 77.08s run remains a historical baseline. Eight blocking local gates pass, including the swallowed-assert false-green check.** Next milestone: the next MINOR is not yet scoped (TBD based on user feedback and the architecture evolution plan).
+> **Note**: The v0.3.0–v0.11.2 versions listed above represent the project's development history through v0.11.2. **Current version is v0.11.2**: v0.5.x (Entity Normalizer, Summary Layer, store_entry/store_batch core APIs), v0.6.x (deprecated API removal, architecture cleanup decoupling core from SQLiteAdapter, CVE-2026-34073 security fix, recency decay weighting), v0.7.0 (SQLite-native Knowledge Graph + Session dual-layer O(1) recall), v0.7.1 (multi-mode retrieval: recall_by_time/recall_semantic/recall_hybrid/recall_multi_mode), v0.7.2 (MemifyEngine three-phase dynamic refinement + AsyncSQLiteAdapter native async I/O), v0.7.3 (HMAC-CTR fallback removed, cryptography hard dependency, WAL throttle, input validator defense-in-depth, batched LIKE queries), v0.8.0 (3 MCP graph tools: query_graph/shortest_path/get_memory_impact, edge confidence labels EXTRACTED/INFERRED/AMBIGUOUS, schema migration v100), v0.9.x (UI/UX Overhaul + Morandi Aesthetic, mypy 0 baseline, tech debt cleanup TD series, OIDC→token publish decision), v0.9.9 (methodology docs: orthogonal classification table + design space positioning), v0.10.0 (repeat-correction upgrade: detect_repeat_correction() + semantic dedup + security-keyword bypass), v0.10.1 (CLI startup cost fix, L-V0100-006), v0.11.0 (breaking async API cleanup: `AsyncCarryMem(native_async=True)` removed, `cryptography>=50.0.0` floor, real observability instrumentation), v0.11.1 (release-gate fix + first `recall` metric correction), v0.11.2 (completes the `recall` metric correction). **5217 tests collected / 5139 passed (1 skipped, 77 deselected; incl. 265 E2E), 83.64% coverage, mypy 0 errors. The latest realistic non-slow E2E run passed 245 tests (20 deselected, 2 warnings, 82.24s); the previous 77.08s run remains a historical baseline. Eight blocking local gates pass, including the swallowed-assert false-green check.** Next milestone: the next MINOR is not yet scoped (TBD based on user feedback and the architecture evolution plan).
 
 ---
 
@@ -81,7 +81,7 @@ v0.1.7 ─── Memory Layer Enhancement (Session + Supersession + Time Reasoni
 │  │  • Cross-language semantic recall (FTS5)          │    │
 │  │  • Session-aware storage + knowledge supersession (v0.1.7)    │    │
 │  │  • Time reasoning + structured prompt injection (v0.1.7)      │    │
-│  │|  •  4907 tests passing, 80%+ coverage           ││    │
+│  │|  •  5217 tests collected (5139 passed), 83%+ coverage           ││    │
 │  └──────────────────────────────────────────────────┘    │
 │              ↑ reads from          ↑ injects into         │
 │  Layer 1: Knowledge (WHAT you know) ← v0.3.0 PLANNED     │
@@ -382,15 +382,16 @@ See CHANGELOG.md for detailed history.
 - [x] Conditional preference support — `condition` field for if-then rules
 - [x] Implicit preference inference — `_detect_implicit_preferences()` from memory patterns
 
-**MCP Tools** (31 tools):
+**MCP Tools** (35 tools):
 - Core (3): classify_message, get_classification_schema, batch_classify
-- Storage (3): classify_and_remember, recall_memories, forget_memory
+- Memory/Storage (7): classify_and_remember, recall_memories, forget_memory, pause_memory, resume_memory, update_memory, get_memory_history
 - Knowledge (3): index_knowledge, recall_from_knowledge, recall_all
 - Graph (3): query_graph, shortest_path, get_memory_impact
 - Profile (2): declare_preference, get_memory_profile
 - Prompt (2): get_system_prompt, summarize_and_store
 - Consolidation (3): consolidate_memories, schedule_consolidation, stop_consolidation
 - Rules (11): add_rule, list_rules, match_rules, inject_rules, my_rules, delete_rule, suggest_rules, promote_rules, update_rule, my_profile, onboard
+- Health (1): health_check
 
 ### v0.1.7 — Memory Layer Enhancement (Intelligent Memory Layer) ✅
 

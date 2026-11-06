@@ -1,8 +1,10 @@
 # CarryMem P0-P3 技术债推进路线图 (Living Document)
 
+> ⚠️ **归档说明**（2026-11-06）：本文档内容已全部合入主 ROADMAP，不再单独维护。当前唯一权威文档为 [`docs/ROADMAP.md`](../ROADMAP.md)。数字以主文档为准（MCP 35 tools, 测试 5217 collected, coverage 83.64%）。本文档保留仅供历史参考。
+>
 > **文档性质**: 活文档 (Living Document) — 每完成一个 Wave 立即更新状态
 > **创建时间**: 2026-07-17
-> **最后更新**: 2026-09-26 (v0.11.2 working tree 事实复核：全部 TD 项已完成；测试 `4907 passed, 10 skipped, 77 deselected` (4994 collected)；本次真实用户 E2E 为 `245 passed, 20 deselected, 2 warnings in 82.24s`（265 collected，前次 77.08s 作为历史基线保留）；coverage 83.19%；mypy `160 source files`；radon 无 ≥21 函数；八项阻塞门禁通过。数字依据 `docs/PROJECT_STATUS.md` §"Current Test & Quality Metrics (post-release tree, 2026-09-26)"；历史批次记录见 §3/§4)
+> **最后更新**: 2026-11-01 (v0.11.2 working tree 事实复核：全部 TD 项已完成；测试 `5139 passed, 1 skipped, 77 deselected` (5217 collected)；真实用户 E2E 为 `245 passed, 20 deselected, 2 warnings in 82.24s`（265 collected，前次 77.08s 作为历史基线保留）；coverage 83.64%；mypy `163 source files`；radon 无 ≥21 函数；八项阻塞门禁通过。数字依据 `docs/PROJECT_STATUS.md` §"Current Test & Quality Metrics (post-release tree)"；历史批次记录见 §3/§4)
 > **基于**: TECH_DEBT_PLAN.md (技术债目录) + DevSquad V4.1.0 7-Role 共识机制 + 11 阶段生命周期
 > **用户规则映射**:
 >   - 推进 P0-P1 按项目生命周期，文档先行，充分验证，推送 Git

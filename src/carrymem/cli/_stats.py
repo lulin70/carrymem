@@ -403,6 +403,7 @@ class _DoctorCheck:
     status: str  # ok | fail | warn | info | skip
     message: str
     detail: Optional[Dict[str, Any]] = None
+    fix_hint: Optional[str] = None  # Actionable fix suggestion
 
 
 @dataclass
@@ -420,7 +421,12 @@ def _check_python_version(ctx: _DoctorContext) -> _DoctorCheck:
     py_str = f"{py_ver.major}.{py_ver.minor}.{py_ver.micro}"
     if py_ver >= (3, 12):
         return _DoctorCheck("python_version", "ok", f"Python {py_str} (>= 3.12)")
-    return _DoctorCheck("python_version", "fail", f"Python {py_str} (need >= 3.12)")
+    return _DoctorCheck(
+        "python_version",
+        "fail",
+        f"Python {py_str} (need >= 3.12)",
+        fix_hint="Install Python 3.12+: https://www.python.org/downloads/",
+    )
 
 
 def _check_carrymem_import(ctx: _DoctorContext) -> _DoctorCheck:
@@ -429,7 +435,12 @@ def _check_carrymem_import(ctx: _DoctorContext) -> _DoctorCheck:
 
         return _DoctorCheck("carrymem_import", "ok", f"CarryMem v{__version__}")
     except ImportError as e:
-        return _DoctorCheck("carrymem_import", "fail", f"CarryMem import: {e}")
+        return _DoctorCheck(
+            "carrymem_import",
+            "fail",
+            f"CarryMem import: {e}",
+            fix_hint="Install CarryMem: pip install carrymem",
+        )
 
 
 def _check_config_dir(ctx: _DoctorContext) -> _DoctorCheck:
@@ -437,7 +448,12 @@ def _check_config_dir(ctx: _DoctorContext) -> _DoctorCheck:
         return _DoctorCheck("config_dir", "ok", f"Config directory: {ctx.config_dir}")
     if ctx.fix:
         ctx.config_dir.mkdir(parents=True, exist_ok=True)
-    return _DoctorCheck("config_dir", "warn", f"Config directory missing: {ctx.config_dir}")
+    return _DoctorCheck(
+        "config_dir",
+        "warn",
+        f"Config directory missing: {ctx.config_dir}",
+        fix_hint=f"Run: carrymem doctor --fix OR mkdir -p {ctx.config_dir}",
+    )
 
 
 def _check_database_file(ctx: _DoctorContext) -> _DoctorCheck:
@@ -726,24 +742,45 @@ _DOCTOR_CHECKS: List[Callable[[_DoctorContext], _DoctorCheck]] = [
 
 def _format_doctor_output(check_results: List[_DoctorCheck], parsed) -> int:
     """Render doctor results in JSON or human-readable form; return exit code."""
-    issues = [c.message for c in check_results if c.status == "fail"]
+    issues = [c for c in check_results if c.status == "fail"]
+    warnings = [c for c in check_results if c.status == "warn"]
     checks_passed = sum(1 for c in check_results if c.status == "ok")
-    checks_total = len(check_results)
+    checks_total = len([c for c in check_results if c.status != "skip"])
+    
+    # Calculate health score: ok=100, warn=50, fail=0, skip=excluded
+    scored_checks = [c for c in check_results if c.status in ("ok", "warn", "fail")]
+    if scored_checks:
+        score_map = {"ok": 100, "warn": 50, "fail": 0}
+        health_score = sum(score_map[c.status] for c in scored_checks) / len(scored_checks)
+    else:
+        health_score = 0
 
     if parsed.json:
         print(
             json.dumps(
                 {
                     "version": __version__,
+                    "health_score": round(health_score, 1),
                     "checks_passed": checks_passed,
                     "checks_total": checks_total,
-                    "issues": issues,
+                    "issues_count": len(issues),
+                    "warnings_count": len(warnings),
+                    "issues": [
+                        {
+                            "message": c.message,
+                            "fix_hint": c.fix_hint,
+                            "detail": c.detail,
+                        }
+                        for c in issues
+                    ],
+                    "warnings": [c.message for c in warnings],
                     "checks": [
                         {
                             "name": c.name,
                             "status": c.status,
                             "message": c.message,
                             "detail": c.detail,
+                            "fix_hint": c.fix_hint,
                         }
                         for c in check_results
                     ],
@@ -768,13 +805,31 @@ def _format_doctor_output(check_results: List[_DoctorCheck], parsed) -> int:
         icon = status_icons.get(cr.status, _dim("[???]"))
         print(f"  {icon} {cr.message}")
 
+    # Health score summary
     print(f"\n  {'=' * 45}")
+    if health_score >= 90:
+        score_color = _green
+    elif health_score >= 70:
+        score_color = _yellow
+    else:
+        score_color = _red
+    print(f"  Health Score: {score_color(f'{health_score:.0f}/100')}")
+    print(f"  {'=' * 45}")
+    
     if issues:
         print(f"  {_red(f'Issues found ({len(issues)}):')}")
         for issue in issues:
-            print(f"    - {issue}")
+            print(f"    - {issue.message}")
+            if issue.fix_hint:
+                print(f"      {_dim('Fix:')} {issue.fix_hint}")
         if not parsed.fix:
             print(f"\n  {_dim('Tip: Run')} carrymem doctor --fix {_dim('to auto-fix issues')}")
+    elif warnings:
+        print(f"  {_yellow(f'Warnings ({len(warnings)}):')}")
+        for warn in warnings:
+            print(f"    - {warn.message}")
+            if warn.fix_hint:
+                print(f"      {_dim('Fix:')} {warn.fix_hint}")
     else:
         print(f"  {_green(f'All checks passed ({checks_passed}/{checks_total})')}")
 
