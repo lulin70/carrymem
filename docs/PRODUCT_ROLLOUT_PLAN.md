@@ -140,9 +140,9 @@ carrymem doctor
 
 ### 阶段三：记忆可信和可控
 
-**状态**：当前可交付闭环完成。MCP 已增加 `update_memory` 和 `get_memory_history`；修改、版本历史和删除已有生产路径与 E2E 证据。导出/导入已有 API 和 E2E 证据。记忆级“暂停”尚无统一 API，暂不作为已支持能力宣传，已登记为 TD-078。
+**状态**：✅ 已完成（2026-11-06 更新）。MCP 已增加 `update_memory`、`get_memory_history`、`pause_memory` 和 `resume_memory`；修改、版本历史、删除、暂停/恢复已有生产路径与 E2E 证据。导出/导入已有 API 和 E2E 证据，并保留暂停状态。
 
-**本轮证据**：MCP 工作流、MCP 工具契约和 handler 测试共 178 passed；CRUD、版本历史、导出恢复和偏好替代 E2E 共 67 passed。
+**本轮证据**：MCP 工作流、MCP 工具契约和 handler 测试共 178 passed；CRUD、版本历史、导出恢复和偏好替代 E2E 共 67 passed。TD-078 记忆级暂停/恢复已完成（2026-10-25）：SQLite/Core/Async/MCP/CLI/导入导出定向测试 406 passed + MCP E2E 47 passed；真实 CLI 暂停后召回排除、恢复后召回恢复验证通过。
 
 **目标**：用户知道记住了什么、为什么记住、何时生效，并能控制它。
 
@@ -215,6 +215,23 @@ carrymem doctor
 ### 阶段六：小范围真实用户测试
 
 **状态**：进入外部用户试点准备完成、招募待开始阶段。首轮隔离环境模拟真实用户 CLI/MCP 验收已通过；外部用户尚未招募，MCP 客户端真实对话、用户独立完成率和留存仍待验证。
+
+**暂停原因（2026-11-01 更新）**：
+1. 文档-代码三向漂移（MCP 工具数 31→35、测试数 4994→5217、pyproject.toml PEP 621 缺失）——本次修复 D-001~D-007 已解决
+2. VSCode 扩展本地验证环境阻塞（TD-070：Node.js 不可用）
+3. 安全门禁（bandit/pip-audit）本地无法复刻——本次修复 D-002 已解决
+
+**重启触发条件（必须全部满足）**：
+
+| # | 条件 | 验证方式 | 当前状态 |
+|---|------|---------|---------|
+| 1 | CI 9 项阻塞门禁连续通过 ≥3 次 | 查看 GitHub Actions 历史 run | ✅ 通过 |
+| 2 | 安全门禁（bandit High=0, pip-audit 无 Critical）本地可复刻 | `.venv/bin/python -m bandit -r src/ -lll` + `pip-audit` | ⚠️ 修复 D-002 后 bandit 本地可跑，pip-audit 发现 1 个 setuptools 漏洞（Windows 相关），建议升级 setuptools |
+| 3 | pyproject.toml PEP 621 合规 | `pip install -e ".[dev]"` 正常工作 | ✅ D-001 已修复 |
+| 4 | 关键文档数字全部对齐（MCP=35 tools, 测试数=5217） | grep ROADMAP.md/CLAUDE.md | ✅ D-003 已修复 |
+| 5 | VSCode 扩展本地验证闭环 | `brew install node && cd extensions/vscode-carrymem && npm ci && npm run compile && npm run test` | ❌ TD-070 未闭环 |
+| 6 | 隔离环境真实用户 E2E 通过率 100%（≥245 tests） | `pytest tests/e2e/ -v` | ✅ 通过 |
+| 7 | 至少 1 轮真实 MCP 客户端对话记录完成 | 在外部招募后采集 | ❌ 未开始 |
 
 **目标**：验证用户是否能独立完成任务，并确认持续价值。
 
