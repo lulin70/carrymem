@@ -211,6 +211,67 @@ CarryMem auto-classifies your inputs into 7 memory types:
 
 ---
 
+## Memory Control
+
+CarryMem provides memory-level pause and resume capabilities (added in v0.11.2 / TD-078).
+
+### Pause a Memory
+
+Temporarily exclude a memory from recall without deleting it:
+
+```python
+from carrymem import CarryMem
+cm = CarryMem()
+
+# Pause by storage_key
+cm.pause_memory(memory_id="mem_abc123")
+```
+
+Or use MCP tool in your AI client:
+
+```
+Please pause the memory with ID mem_abc123.
+```
+
+**What happens**: The memory status changes to `paused`; it will not appear in recall results until resumed.
+
+### Resume a Memory
+
+Re-activate a paused memory:
+
+```python
+cm.resume_memory(memory_id="mem_abc123")
+```
+
+Or via MCP:
+
+```
+Please resume the memory with ID mem_abc123.
+```
+
+### Check Pause Status
+
+Use `recall_memories` with `include_paused=True` to see paused memories:
+
+```python
+results = cm.recall_memories(query="Python", include_paused=True)
+for mem in results:
+    print(f"{mem['storage_key']}: status={mem.get('status', 'active')}")
+```
+
+Or use MCP:
+
+```
+Show all memories about Python, including paused ones.
+```
+
+**Use cases**:
+- Temporarily disable outdated preferences without permanent deletion
+- Test recall behavior with/without specific memories
+- Maintain audit trail while controlling active memory set
+
+---
+
 ## 知识图谱
 
 CarryMem v0.7.0 引入了 SQLite 原生知识图谱，支持实体抽取和关系建模。
