@@ -745,7 +745,7 @@ def _format_doctor_output(check_results: List[_DoctorCheck], parsed) -> int:
     issues = [c for c in check_results if c.status == "fail"]
     warnings = [c for c in check_results if c.status == "warn"]
     checks_passed = sum(1 for c in check_results if c.status == "ok")
-    checks_total = len([c for c in check_results if c.status != "skip"])
+    checks_total = len(check_results)  # Total includes all checks (ok/warn/fail/skip/info)
 
     # Calculate health score: ok=100, warn=50, fail=0, skip=excluded
     scored_checks = [c for c in check_results if c.status in ("ok", "warn", "fail")]
@@ -830,6 +830,7 @@ def _format_doctor_output(check_results: List[_DoctorCheck], parsed) -> int:
             print(f"    - {warn.message}")
             if warn.fix_hint:
                 print(f"      {_dim('Fix:')} {warn.fix_hint}")
+        print(f"\n  {_green(f'{checks_passed}/{checks_total} checks passed')}")
     else:
         print(f"  {_green(f'All checks passed ({checks_passed}/{checks_total})')}")
 
