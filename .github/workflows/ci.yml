@@ -2,7 +2,7 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [new-main]
+    branches: [new-main, "release/**"]
     tags: ['v*']
   pull_request:
     branches: [new-main]

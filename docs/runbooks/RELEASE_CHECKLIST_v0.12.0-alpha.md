@@ -160,15 +160,18 @@ Priority areas:
 - Tier 4→1 degradation scenarios
 - Cross-platform compatibility
 
-See [ALPHA_TESTING_GUIDE.md](ALPHA_TESTING_GUIDE.md) for testing scenarios.
+See [ALPHA_TESTING_GUIDE.md](../testing/ALPHA_TESTING_GUIDE.md) for testing scenarios.
 
 ## 📦 Installation
 
 ```bash
-pip install carrymem==0.12.0-alpha
+git clone https://github.com/lulin70/carrymem.git
+cd carrymem
+git checkout v0.12.0-alpha
+pip install -e .
 ```
 
-Full release notes: [RELEASE_NOTES_v0.12.0-alpha.md](RELEASE_NOTES_v0.12.0-alpha.md)
+Full release notes: [RELEASE_NOTES_v0.12.0-alpha.md](../releases/RELEASE_NOTES_v0.12.0-alpha.md)
 
 ## 💬 Feedback
 

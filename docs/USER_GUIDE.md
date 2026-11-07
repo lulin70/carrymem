@@ -193,6 +193,131 @@ cm.schedule_consolidation(interval_hours=1.0)
 cm.stop_consolidation()
 ```
 
+### 13. Get Memory Profile (P0)
+
+```python
+# Retrieve a consolidated summary of the user's memory profile
+profile = cm.get_memory_profile()
+
+print(profile["total_memories"])       # Total number of stored memories
+print(profile["memory_types"])         # Distribution by type
+print(profile["recent_memories"])      # Most recent memories
+print(profile["top_keywords"])         # Most frequent keywords
+
+# MCP usage: "Show me my memory profile"
+# Returns structured JSON with profile statistics
+```
+
+### 14. Summarize and Store Session (P0)
+
+```python
+# Summarize all memories from a session and prepare for storage
+result = cm.summarize_and_store(
+    session_id="project_alpha_2026_11",
+    max_tokens=2000,
+    namespace="default"
+)
+
+if result["action"] == "summarize":
+    print(f"Found {result['memory_count']} memories")
+    print(f"Content to summarize:\n{result['content']}")
+    # Use result['instruction'] to guide LLM summarization
+
+# MCP usage: "Summarize my memories from session project_alpha_2026_11"
+```
+
+### 15. Generate Context-Aware System Prompt (P1)
+
+```python
+# Build a system prompt dynamically from memories and knowledge
+prompt = cm.build_system_prompt(
+    context="Python API development session",
+    max_memories=10,
+    max_knowledge=5,
+    language="en"
+)
+
+# Pass to any LLM:
+# - OpenAI ChatCompletion API
+# - Anthropic Claude API
+# - Local LLM (Ollama, LM Studio)
+
+# MCP usage: "Generate a system prompt for database design context"
+```
+
+### 16. Suggest Rules from Usage Patterns (P1)
+
+```python
+# AI analyzes memory patterns and suggests behavioral rules
+suggestions = cm.suggest_rules(
+    context="backend development",
+    limit=5
+)
+
+for rule in suggestions["suggested_rules"]:
+    print(f"Trigger: {rule['trigger']}")
+    print(f"Action: {rule['action']}")
+    print(f"Confidence: {rule['confidence']}")
+    
+    # Review and add to rule engine if appropriate
+    if rule["confidence"] > 0.8:
+        cm.add_rule(rule["trigger"], rule["action"])
+
+# MCP usage: "Suggest rules based on my recent work"
+```
+
+### 17. Index External Knowledge (P1)
+
+```python
+# Index a document or knowledge source for future recall
+result = cm.index_knowledge(
+    content="PostgreSQL performance tuning guide...",
+    metadata={
+        "source": "postgresql_docs",
+        "topic": "database optimization",
+        "url": "https://example.com/pg-tuning"
+    }
+)
+
+print(result["indexed_chunks"])  # Number of chunks indexed
+print(result["knowledge_id"])    # Unique ID for this knowledge
+
+# MCP usage: "Index this PostgreSQL guide for future reference"
+```
+
+### 18. Recall from Knowledge Base (P1)
+
+```python
+# Query indexed external knowledge
+knowledge = cm.recall_from_knowledge(
+    query="PostgreSQL index optimization",
+    limit=5
+)
+
+for item in knowledge:
+    print(f"Source: {item['metadata']['source']}")
+    print(f"Content: {item['content']}")
+    print(f"Relevance: {item['relevance_score']}")
+
+# MCP usage: "Find knowledge about PostgreSQL optimization"
+```
+
+### 19. Evaluate Memory Graph Impact (P1)
+
+```python
+# Compute the graph impact score of a memory (centrality measure)
+impact = cm.get_memory_impact(memory_id="mem_abc123")
+
+print(impact["impact_score"])        # 0.0-1.0 centrality score
+print(impact["connected_entities"])  # Entities linked to this memory
+print(impact["relationship_count"])  # Number of graph relationships
+
+# High impact memories are central to your knowledge graph
+# Use this to identify "keystone" memories for review or protection
+
+# MCP usage: "What is the graph impact of memory mem_abc123?"
+```
+
 ---
 
 ## Memory System

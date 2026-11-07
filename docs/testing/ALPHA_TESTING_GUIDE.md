@@ -208,8 +208,8 @@ Alpha testers who contribute valuable feedback will be:
 
 ## 🔗 Resources
 
-- **Installation**: See [RELEASE_NOTES_v0.12.0-alpha.md](RELEASE_NOTES_v0.12.0-alpha.md)
-- **Technical Docs**: [LLM_INTEGRATION_GUIDE.md](LLM_INTEGRATION_GUIDE.md)
+- **Installation**: See [RELEASE_NOTES_v0.12.0-alpha.md](../releases/RELEASE_NOTES_v0.12.0-alpha.md)
+- **Technical Docs**: [LLM_INTEGRATION_GUIDE.md](../LLM_INTEGRATION_GUIDE.md)
 - **Report Issues**: https://github.com/lulin70/carrymem/issues
 - **Discussions**: https://github.com/lulin70/carrymem/discussions
 

@@ -4,7 +4,7 @@
 > **创建时间**: 2026-07-17
  > **最后更新**: 2026-11-01（所有 4 个 Dependabot 安全 PR 已合并：#58 black 26.5.1→26.10.1、#59 virtualenv 21.14.6→21.14.13、#60 filelock 3.30.3→4.2.1、#61 certifi 2026.6.17→2026.10.19。CI run `40631718480`、nightly run `40633794111` 和安全 release preflight `40636261327` 全部通过。preflight 覆盖发布前测试、E2E、真实 VSCode UI E2E、构建、版本检查和失败传播负向检查；PyPI 与 GitHub Release 均跳过。TD-073、TD-074 已完成并关闭；TD-078 记忆级暂停已完成并验证；TD-075 health schema 与 consolidation timer 生命周期已完成并验证；TD-076 方案 A 契约已关闭；TD-077 运行时 SLO 债已关闭；GitHub Issue #56/#57 已调查并关闭。当前未闭环项为 TD-070；本机无 Node.js/npm，因此保留 TD-070 的环境阻塞状态，不宣称 npm audit 或 lockfile 修复完成。已发布 `0.11.2` 的事实与当前 working tree 证据严格区分。TD-067 修复与历史批次记录见 §9 更新日志）
 > **基于**: 7 维度项目整理评估 (2026-07-17, B+ 77/100) + DevSquad 7 角色并行审核
-> **配套文档**: [ROADMAP_P0_P3.md](ROADMAP_P0_P3.md) — 执行路线图 (Wave 推进表 + 7-Role 投票矩阵 + 11 阶段生命周期映射)；[PRODUCT_ROLLOUT_PLAN.md](PRODUCT_ROLLOUT_PLAN.md) — 面向用户价值、首次成功、兼容性和推广的产品推进方案
+> **配套文档**: [ROADMAP_P0_P3.md](archive/ROADMAP_P0_P3.md) — 执行路线图 (Wave 推进表 + 7-Role 投票矩阵 + 11 阶段生命周期映射)；[PRODUCT_ROLLOUT_PLAN.md](PRODUCT_ROLLOUT_PLAN.md) — 面向用户价值、首次成功、兼容性和推广的产品推进方案
 >
 > **文档分工**:
 > - 本文档 (TECH_DEBT_PLAN.md) = 技术债**目录** (TD-001~TD-078 共 78 条明细 + 验证标准 + 风险矩阵)

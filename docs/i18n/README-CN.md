@@ -695,12 +695,13 @@ cm.import_memories(input_path="backup.json")
 
 ## 项目状态
 
-**当前版本**：v0.11.2
-**测试**：4907 passed, 10 skipped, 77 deselected；最新真实用户 E2E：245 passed, 20 deselected, 2 warnings（82.24 秒；此前 77.08 秒作为历史基线保留）
-**覆盖率**：83.19%
+**当前版本**：v0.12.0-alpha（`0.12.0a0`，源码发布）
+**测试**：5167 passed, 1 skipped, 77 deselected（当前非 slow 全量回归）
+**覆盖率**：83.49%（最近一次全量覆盖率运行；CI 门槛 80%）
 **质量门禁**：八项阻塞门禁全部通过（flake8 / Black / isort / mypy / pytest / radon / version-consistency / swallowed-assert）
 
 **更新日志**：
+- **v0.12.0-alpha**：Phase 4 可选宿主 LLM 增强 —— MCP `sampling/createMessage`（Tier 4）、同步与异步合并的 LLM 客户端、真实的 sampling 响应路由、如实上报 tier。修复 `0.12.0a0` 破坏的旧同步 LLM API。六个版本号来源统一并由 CI 校验。详见 [CHANGELOG.md](../../CHANGELOG.md)。
 - **v0.11.0**：破坏性异步 API 清理 —— `AsyncCarryMem` 现在仅是 executor 包装的异步门面；需要独立的原生异步 SQLite I/O 请直接使用 `AsyncSQLiteAdapter`。核心加密库下限提升到 `cryptography>=50.0.0`。详见 [CHANGELOG.md](../../CHANGELOG.md) 与 [ADR-009](../architecture/decisions/ADR-009-async-pipeline.md)。
 - **v0.2.0**：USB 携带加密、自动备份、并发安全、PrefEval 83.0%（200 条）、8 客户端 MCP 配置
 - **v0.2.3**（重置前）：定时整合（schedule/stop）、PrefEval 标准化

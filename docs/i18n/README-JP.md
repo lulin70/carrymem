@@ -10,7 +10,7 @@
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI バージョン"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-4907%20passed%2C%2010%20skipped-brightgreen" alt="テスト">
+  <img src="https://img.shields.io/badge/tests-5167%20passed-brightgreen-brightgreen" alt="テスト">
   <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="カバレッジ">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval 学術ベンチマーク"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
@@ -638,12 +638,13 @@ AI にはメモリが必要だと知っている。プロンプトファイル�
 
 ## プロジェクトステータス
 
-**現在のバージョン**: v0.11.2
-**テスト**: 4907 passed, 10 skipped, 77 deselected；最新リアルユーザー E2E: 245 passed, 20 deselected, 警告 2 件（82.24 秒；以前の 77.08 秒は履歴ベースラインとして保持）
-**カバレッジ**: 83.19%
+**現在のバージョン**: v0.12.0-alpha（`0.12.0a0`、ソースリリース）
+**テスト**: 5167 passed, 1 skipped, 77 deselected（現在の非 slow 全量回帰）
+**カバレッジ**: 83.49%（直近の全量カバレッジ実行。CI ゲートは 80%）
 **品質ゲート**: 8 つのブロッキングゲート（flake8 / Black / isort / mypy / pytest / radon / version-consistency / swallowed-assert）すべて合格
 
 **チェンジログ**:
+- **v0.12.0-alpha**: Phase 4 の任意ホスト LLM 拡張 —— MCP `sampling/createMessage`（Tier 4）、同期と非同期を統合した LLM クライアント、実際の sampling 応答ルーティング、正確な tier 報告。`0.12.0a0` が壊した旧同期 LLM API を復元。6 つのバージョンソースを統一し CI で検証。詳細は [CHANGELOG.md](../../CHANGELOG.md)。
 - **v0.11.0**: 破壊的な非同期 API クリーンアップ —— `AsyncCarryMem` は executor ベースの非同期ファサードのみとなりました。単体のネイティブ非同期 SQLite I/O が必要な場合は `AsyncSQLiteAdapter` を直接使用してください。コア暗号化ライブラリの下限を `cryptography>=50.0.0` に引き上げました。詳細は [CHANGELOG.md](../../CHANGELOG.md) と [ADR-009](../architecture/decisions/ADR-009-async-pipeline.md) を参照。
 - **v0.2.0**: USB 携帯暗号化、自動バックアップ、並行安全性、PrefEval 83.0%（200項目）、8クライアントMCP設定
 - **v0.2.3**（リセット前）: 定期統合（schedule/stop）、PrefEval 標準化

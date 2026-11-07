@@ -65,6 +65,14 @@ class RowSerializer:
 
     def _build_stored(self, row, metadata, recall_hint) -> StoredMemory:
         """Build a StoredMemory from the extracted row fields."""
+        # Relevance ranking adds relevance_score to the SELECT list. Keep it
+        # in storage_metadata so callers can use it for ordering decisions.
+        storage_metadata: Dict = {}
+        if "relevance_score" in row.keys():
+            score = self.safe_get_float(row, "relevance_score", None)
+            if score is not None:
+                storage_metadata["relevance_score"] = score
+
         return StoredMemory(
             id=row["id"],
             type=row["type"],
@@ -96,6 +104,7 @@ class RowSerializer:
             paused=bool(self._row_value(row, "paused", False)),
             paused_at=self.safe_get_datetime(row, "paused_at"),
             pause_reason=self._row_value(row, "pause_reason"),
+            storage_metadata=storage_metadata,
         )
 
     def row_to_stored(self, row) -> Optional[StoredMemory]:

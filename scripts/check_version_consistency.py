@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Verify that every machine-readable version stamp agrees with ``VERSION``.
 
-The release version is declared in five places read by different consumers
-(PyPI metadata, the Python package, the MCP registry, the container image, and
-the Smithery directory).  A release that updates only some of them ships a
-mislabelled artifact: the v0.11.2 review found ``Dockerfile`` still stamped
+The release version is declared in six places read by different consumers
+(PyPI metadata, the Python package, the MCP registry, the container image, the
+Smithery directory, and the project metadata).  A release that updates only
+some of them ships a mislabelled artifact: the v0.11.2 review found ``Dockerfile`` still stamped
 ``0.9.8`` and ``smithery.yaml`` still ``0.10.1`` while ``VERSION`` was already
 ``0.11.2``.  This gate fails loudly, printing the offending file and value,
 instead of letting a stale stamp reach a registry.
@@ -71,6 +71,15 @@ def collect_versions() -> list[tuple[str, int, str]]:
     if smithery_match is None:
         raise SystemExit("Could not find a top-level 'version:' in smithery.yaml")
     sources.append(("smithery.yaml", _line_of(smithery_text, "version:"), smithery_match.group(1)))
+
+    # package metadata decides the version that PyPI publishes, so it must
+    # agree with VERSION as well (a drift here was found by the v0.12.0 review).
+    pyproject_text = _read_text("pyproject.toml")
+    pyproject_match = re.search(r'^version\s*=\s*["\']([^"\']+)["\']', pyproject_text, re.MULTILINE)
+    if pyproject_match is None:
+        raise SystemExit("Could not find a project 'version =' in pyproject.toml")
+    pyproject_line = pyproject_text[: pyproject_match.start()].count("\n") + 1
+    sources.append(("pyproject.toml", pyproject_line, pyproject_match.group(1)))
 
     return sources
 

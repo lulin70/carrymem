@@ -66,7 +66,7 @@ carrymem status
 | [Project Status](PROJECT_STATUS.md) | Current release, release evidence, open follow-ups |
 | [Roadmap](ROADMAP.md) | Product roadmap |
 | [Technical Debt Plan](TECH_DEBT_PLAN.md) | Living technical debt tracker |
-| [P0–P3 Debt Roadmap](ROADMAP_P0_P3.md) | Wave-by-wave debt execution plan |
+| [P0–P3 Debt Roadmap](archive/ROADMAP_P0_P3.md) | Wave-by-wave debt execution plan (archived) |
 | [Release Runbook](RELEASE_RUNBOOK.md) | Release and rollback procedure |
 | [Project Review](PROJECT_REVIEW.md) | v0.8.0 consolidation assessment (historical) |
 

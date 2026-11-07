@@ -142,43 +142,38 @@ def handle_summarize_and_store(carrymem, arguments: Dict[str, Any]) -> Dict[str,
     llm_client = arguments.get("_llm_client")
     if llm_client is not None:
         try:
+            from carrymem.llm import run_coroutine_sync
             from carrymem.llm.enhancements import summarize_session_via_host_llm
-            import asyncio
-            
-            # Run async LLM call
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                summary_result = loop.run_until_complete(
-                    summarize_session_via_host_llm(
-                        llm_client=llm_client,
-                        memories=memories,
-                        session_id=session_id,
-                        max_tokens=max_tokens
-                    )
+
+            # Run the async LLM call from this synchronous handler.
+            summary_result = run_coroutine_sync(
+                summarize_session_via_host_llm(
+                    llm_client=llm_client, memories=memories, session_id=session_id, max_tokens=max_tokens
                 )
-                
-                if summary_result:
-                    return {
-                        "action": "llm_summary",
-                        "tier": "llm_enhanced",
-                        "session_id": session_id,
-                        "namespace": namespace,
-                        "summary": summary_result.get("summary", ""),
-                        "key_themes": summary_result.get("key_themes", []),
-                        "decisions": summary_result.get("decisions", []),
-                        "patterns": summary_result.get("patterns", []),
-                        "memory_count": len(memories),
-                        "instruction": (
-                            "Call classify_and_remember with the summary above, "
-                            "setting message type context to 'session_summary'."
-                        ),
-                    }
-            finally:
-                loop.close()
+            )
+
+            # The enhancement falls back to a template summary on failure.
+            # Report the real source, not an optimistic tier label.
+            if summary_result and summary_result.get("source") == "llm":
+                return {
+                    "action": "llm_summary",
+                    "tier": "llm_enhanced",
+                    "session_id": session_id,
+                    "namespace": namespace,
+                    "summary": summary_result.get("summary", ""),
+                    "key_themes": summary_result.get("key_themes", []),
+                    "decisions": summary_result.get("decisions", []),
+                    "patterns": summary_result.get("patterns", []),
+                    "memory_count": len(memories),
+                    "instruction": (
+                        "Call classify_and_remember with the summary above, "
+                        "setting message type context to 'session_summary'."
+                    ),
+                }
         except Exception as e:
             # Gracefully degrade to template-based
             import logging
+
             logging.getLogger(__name__).info(f"LLM summary failed, degrading to template: {e}")
 
     # Tier 1: Fallback to template-based summary

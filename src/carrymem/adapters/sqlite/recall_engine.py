@@ -660,17 +660,26 @@ class RecallEngine:
             safe_query = QueryBuilder.sanitize_fts_query(query)
             if not safe_query:
                 return []
+            # UX-1 fix: Use FTS5 bm25() for relevance ranking.
+            # Negative bm25 scores are better (closer to 0 = more relevant).
+            # We sort by relevance first (bm25 ASC), then by importance/confidence
+            # for ties. This ensures "Python+SQLite" ranks above "番茄炒蛋".
+            #
+            # CRITICAL: safe_query goes FIRST in params, BEFORE where_clause params,
+            # because the subquery's MATCH ? comes before the outer WHERE clause.
             fts_sql = f"""
-                SELECT m.* FROM memories m
-                JOIN memories_fts f ON m.rowid = f.rowid
+                SELECT m.*, f.bm25 AS relevance_score
+                FROM memories m
+                JOIN (
+                    SELECT rowid, bm25(memories_fts) AS bm25
+                    FROM memories_fts
+                    WHERE memories_fts MATCH ?
+                ) f ON m.rowid = f.rowid
                 {where_clause}
-                AND m.rowid IN (
-                    SELECT rowid FROM memories_fts WHERE memories_fts MATCH ?
-                )
-                ORDER BY m.importance_score DESC, m.confidence DESC
+                ORDER BY f.bm25 ASC, m.importance_score DESC, m.confidence DESC
                 LIMIT ?
             """
-            params_with_query = params + [safe_query, limit]
+            params_with_query = [safe_query] + params + [limit]
             return conn.execute(fts_sql, params_with_query).fetchall()
         except sqlite3.OperationalError as e:
             logger.debug("FTS5 search failed: %s", e)
@@ -679,18 +688,32 @@ class RecallEngine:
     def _like_search(self, query, where_clause, params, limit):
         conn = self._conn_mgr.get_connection()
         escaped = escape_like(query)
+
+        # UX-1 fix: Add relevance scoring for LIKE search.
+        # relevance_score = (content_matches * 2 + raw_text_matches + original_message_matches) / total_fields
+        # Higher score means better match (opposite of BM25 where lower is better).
+        # This helps rank "偏好 in Python context" above "偏好 in unrelated context".
         like_clause = (
             " AND (content LIKE ? ESCAPE '\\' OR raw_text LIKE ? " "ESCAPE '\\' OR original_message LIKE ? ESCAPE '\\')"
         )
         like_params = [f"%{escaped}%", f"%{escaped}%", f"%{escaped}%"]
+
+        # Calculate relevance score based on match counts in different fields
+        # (content has 2x weight as it's the processed canonical text)
         sql = f"""
-            SELECT * FROM memories
+            SELECT *,
+                   ((CASE WHEN content LIKE ? ESCAPE '\\' THEN 2 ELSE 0 END) +
+                    (CASE WHEN raw_text LIKE ? ESCAPE '\\' THEN 1 ELSE 0 END) +
+                    (CASE WHEN original_message LIKE ? ESCAPE '\\' THEN 1 ELSE 0 END)
+                   ) * 1.0 / 4.0 AS relevance_score
+            FROM memories
             {where_clause}
             {like_clause}
-            ORDER BY importance_score DESC, confidence DESC
+            ORDER BY relevance_score DESC, importance_score DESC, confidence DESC
             LIMIT ?
         """
-        all_params = params + like_params + [limit]
+        # Parameter order: SELECT LIKE params + WHERE clause params + WHERE LIKE params + LIMIT
+        all_params = like_params + params + like_params + [limit]
         return conn.execute(sql, all_params).fetchall()
 
     def _combined_like_search(self, terms, where_clause, params, limit):

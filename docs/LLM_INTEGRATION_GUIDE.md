@@ -32,19 +32,19 @@ Phase 4 introduces **optional LLM integration** to enhance CarryMem's memory ana
 └─────────────────────────────────────────────────────────────┘
                         ↓ Degrades on failure
 ┌─────────────────────────────────────────────────────────────┐
-│  Tier 3: Cloud API (OpenAI/Anthropic)                       │
+│  Tier 3: Cloud API (OpenAI-compatible)                      │
 │  • Requires API key (explicit opt-in)                       │
 │  • High quality responses                                   │
 │  • Network dependency                                       │
-│  • Status: Planned for Phase 4.2                            │
+│  • Status: Available (needs the openai package)             │
 └─────────────────────────────────────────────────────────────┘
                         ↓ Degrades on failure
 ┌─────────────────────────────────────────────────────────────┐
-│  Tier 2: Local LLM (Ollama/LM Studio)                       │
-│  • No API keys required                                     │
+│  Tier 2: Local LLM (OpenAI-compatible endpoint)             │
+│  • No cloud key required                                    │
 │  • Fully offline capable                                    │
 │  • Lower quality than Tier 3/4                              │
-│  • Status: Planned for Phase 4.1                            │
+│  • Status: Available (loopback CARRYMEM_LLM_BASE_URL)       │
 └─────────────────────────────────────────────────────────────┘
                         ↓ Always available fallback
 ┌─────────────────────────────────────────────────────────────┐
@@ -190,22 +190,38 @@ else:
     print("○ Host LLM unavailable, using Tier 1")
 ```
 
-### Tier 3: Cloud API (Planned)
+### Tier 3: Cloud API
 
-```python
-# Phase 4.2: Explicit API key configuration
-llm_client = LLMClient(
-    provider="openai",
-    config={"api_key": "sk-...", "model": "gpt-4"}
-)
+Tier 3 uses an OpenAI-compatible client. It needs explicit configuration.
+
+```bash
+export CARRYMEM_LLM_ENABLED=true
+export CARRYMEM_LLM_API_KEY=sk-...
+export CARRYMEM_LLM_BASE_URL=https://api.openai.com/v1
+export CARRYMEM_LLM_MODEL=gpt-4o-mini
 ```
 
-### Tier 2: Local LLM (Planned)
-
 ```python
-# Phase 4.1: Auto-detect Ollama/LM Studio
-llm_client = LLMClient(provider="ollama")
+from carrymem.llm import LLMClient
+
+client = LLMClient()  # reads CARRYMEM_LLM_* variables
+print(client.get_status())  # {"active_tier": 3, ...}
 ```
+
+### Tier 2: Local LLM
+
+Tier 2 uses the same client with a loopback endpoint. The provider reports
+Tier 2 when the endpoint host is `localhost`, `127.0.0.1`, `::1` or `0.0.0.0`.
+
+```bash
+export CARRYMEM_LLM_ENABLED=true
+export CARRYMEM_LLM_API_KEY=local
+export CARRYMEM_LLM_BASE_URL=http://localhost:11434/v1
+export CARRYMEM_LLM_MODEL=qwen3:8b
+```
+
+The `openai` package is required for Tier 2 and Tier 3. It is not a core
+dependency.
 
 ---
 
@@ -216,16 +232,19 @@ llm_client = LLMClient(provider="ollama")
 The system automatically tries tiers in order (4 → 3 → 2 → 1) until one succeeds:
 
 ```python
-# Example: Tier 4 fails, degrades to Tier 1
+# Example: every LLM tier fails -> the caller falls back to rule-based output
 import logging
 logging.basicConfig(level=logging.INFO)
 
 llm_client = LLMClient(mcp_server=broken_server)
-result = await llm_client.generate("Suggest rules...")
+try:
+    result = await llm_client.generate("Suggest rules...")
+except LLMUnavailableError:
+    result = suggest_rules_pattern_based(memories)
 
 # Log output:
-# WARNING - Tier 4 failed: Sampling request timed out, degrading to next tier...
-# INFO - Generation succeeded with Tier 1
+# WARNING - LLM tier 4 failed: Sampling request timed out
+# WARNING - LLM tier 3 failed: ...
 ```
 
 ### Manual Tier Selection
@@ -323,13 +342,13 @@ for p in status['provider_status']:
 ## FAQ
 
 **Q: Do I need an API key to use LLM features?**  
-A: No! Tier 4 (Host LLM) requires zero configuration. Tier 3 (Cloud API) will require API keys when released.
+A: No. Tier 4 (host LLM) needs no key. Tier 3 and Tier 2 need `CARRYMEM_LLM_API_KEY`; Tier 2 also needs a loopback base URL.
 
 **Q: Can I use CarryMem offline?**  
-A: Yes! Tier 1 (rule-based) works completely offline. Tier 2 (local LLM, coming soon) will also be offline-capable.
+A: Yes. Tier 1 works offline with no dependencies. Tier 2 works with a local OpenAI-compatible endpoint.
 
 **Q: What happens if Tier 4 fails?**  
-A: The system automatically falls back to Tier 1 (rule-based). You'll get a result, just with lower quality.
+A: The client tries Tier 3, then Tier 2. If all tiers fail, `generate()` raises `LLMUnavailableError`. The caller then uses the rule-based path.
 
 **Q: How do I force Tier 1 (no LLM)?**  
 A: Initialize with `LLMClient(mcp_server=None)` or use MCP handlers without `_llm_client` injection.

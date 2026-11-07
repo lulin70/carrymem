@@ -5,6 +5,47 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0-alpha] - 2026-11-07
+
+### Added
+
+- **Optional host-LLM enhancement (Tier 4)** through MCP `sampling/createMessage`.
+  The MCP server now routes host responses back to the waiting request future.
+  Before this change, `request_sampling` used an unconnected `StreamReader`, so
+  every call timed out after 30 seconds.
+- **Cloud (Tier 3) and local endpoint (Tier 2) provider** in `carrymem.llm`.
+  Both use the OpenAI-compatible client. The `tier` value is 2 for loopback
+  endpoints and 3 for remote endpoints. The blocking SDK call runs in a worker
+  thread.
+- **Async LLM API** — `LLMClient.generate()` and `LLMClient.achat()` raise
+  `LLMUnavailableError` when no tier can answer. `run_coroutine_sync()` lets
+  synchronous handlers call the async API under an active event loop.
+
+### Fixed
+
+- **Legacy LLM contract restored.** The first `0.12.0a0` commit removed
+  `is_available()`, `count_tokens()` and the synchronous `chat()`. That broke
+  31 tests and three production call sites (`_prompt_delegate.py`,
+  `session_summarizer.py`, `semantic_aggregator.py`).
+- **Honest tier reporting.** Rule and write handlers report `llm_enhanced` only
+  when the LLM produced the result. A silent fallback now reports the rule
+  engine.
+- **Exception-narrowing test no longer passes vacuously.** It used a hardcoded
+  working directory, so CI scanned no files. It now uses the repository root
+  and the documented ±3-line `NOTE` window.
+- **Version consistency covers `pyproject.toml`.** Six sources must agree.
+- **CI runs on `release/**` branches.** Tag-only and `new-main`-only triggers
+  left release-branch pushes unvalidated.
+
+### Changed
+
+- Version sources are `0.12.0a0` in `VERSION`, `src/carrymem/__version__.py`,
+  `server.json`, `smithery.yaml`, `Dockerfile` and `pyproject.toml`.
+- Project documents moved to `docs/releases/`, `docs/runbooks/`,
+  `docs/testing/`, `docs/design/` and `docs/archive/`.
+- README and the i18n READMEs now quote measured latency with its machine and
+  date. The unverifiable P99 1.3 ms claim is removed.
+
 ## [Unreleased]
 
 > 注：以下变更已全部合入 `new-main` 分支（CI 门禁持续通过，最新 run `40631718480`）。

@@ -199,9 +199,10 @@ class Handlers:
         self._default_user_id = default_user_id
         self._inflight: set[asyncio.Future] = set()
         self._closing = False
-        
+
         # Phase 4: Initialize LLMClient with host LLM support
         from carrymem.llm import LLMClient
+
         self._llm_client = LLMClient(mcp_server=mcp_server)
 
         # TD-035: AccessPolicy integration into the MCP tool invocation chain.
@@ -262,7 +263,7 @@ class Handlers:
             "promote_rules",
         }
     )
-    
+
     # Tools that need LLM client for enhancement (Phase 4)
     _LLM_ENHANCEMENT_TOOLS = frozenset(
         {
@@ -384,7 +385,7 @@ class Handlers:
         # P0-2: Inject _carrymem for rule_engine handlers that need memory recall
         if tool_name in self._CARRYMEM_INJECTION_TOOLS:
             injected_args = {**injected_args, "_carrymem": self._carrymem}
-        
+
         # Phase 4: Inject _llm_client for enhancement tools
         if tool_name in self._LLM_ENHANCEMENT_TOOLS:
             injected_args = {**injected_args, "_llm_client": self._llm_client}

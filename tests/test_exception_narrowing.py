@@ -279,27 +279,27 @@ class TestBroadExceptionJustification(unittest.TestCase):
 
     def find_files_with_broad_exceptions(self):
         """Find all files with except Exception that lack justification."""
-        import subprocess
+        import pathlib
 
-        result = subprocess.run(
-            ["grep", "-rn", "except Exception", "src/"],
-            capture_output=True,
-            text=True,
-            cwd="/Users/lin/trae_projects/carrymem",
-        )
-
+        root = pathlib.Path(__file__).resolve().parents[1]
         unjustified = []
-        for line in result.stdout.split("\n"):
-            if line.strip():
-                file_path = line.split(":")[0]
-                # Check if line has NOTE comment within 3 lines
-                # This is a simplified check; real implementation would parse AST
-                if "NOTE" not in line and "intentional" not in line:
-                    unjustified.append(line)
-
+        for path in sorted((root / "src").rglob("*.py")):
+            try:
+                lines = path.read_text(encoding="utf-8").splitlines()
+            except (OSError, UnicodeDecodeError):
+                continue
+            for index, line in enumerate(lines):
+                if "except Exception" not in line:
+                    continue
+                # A justification is a NOTE or "intentional" marker within
+                # three lines above or below the handler.
+                window = lines[max(0, index - 3) : index + 4]
+                if any("NOTE" in item or "intentional" in item for item in window):
+                    continue
+                rel = path.relative_to(root)
+                unjustified.append(f"{rel}:{index + 1}:{line.strip()}")
         return unjustified
 
-    @unittest.skipUnless(os.path.exists("/Users/lin/trae_projects/carrymem/src"), "Source directory not available")
     def test_all_broad_exceptions_justified(self):
         """Verify all remaining broad exceptions have justification."""
         unjustified = self.find_files_with_broad_exceptions()

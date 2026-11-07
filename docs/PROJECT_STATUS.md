@@ -1,12 +1,33 @@
 # CarryMem — Project Status
 
-**Version**: v0.11.2
-**Last Updated**: 2026-11-01 (All 4 Dependabot security PRs merged: #58 black 26.5.1→26.10.1, #59 virtualenv 21.14.6→21.14.13, #60 filelock 3.30.3→4.2.1, #61 certifi 2026.6.17→2026.10.19. CI run `40631718480`, nightly run `40633794111`, and safe release preflight `40636261327` all passed. No open PRs or Issues.)
+**Version**: v0.12.0-alpha (`0.12.0a0`, source release; not on PyPI)
+**Last Updated**: 2026-11-07 (Phase 4 host-LLM assessment and cleanup. Six version sources are unified. CI now also runs on `release/**` branches.)
 **Maintainer**: CarryMem Team
 
 **Product rollout plan**: [PRODUCT_ROLLOUT_PLAN.md](PRODUCT_ROLLOUT_PLAN.md)
 
 **Current product milestone**: 阶段三“记忆可信和可控”、阶段五文档首轮重做和阶段六首轮隔离 CLI/MCP 模拟验收已完成；外部用户试点执行表、最小测试指引和反馈模板已准备，但当前仍暂停招募。CI run `40631718480` 已验证 Ubuntu/macOS 主测试、Docker、构建、质量、安全、VSCode 和新的 bounded optional-deps 门禁；nightly run `40633794111` 已验证 slow、VSCode Tier 2 UI E2E、vector/semantic 门禁；安全 release preflight `40636261327` 已验证发布前测试、E2E、真实 VSCode UI E2E 和构建，且跳过发布。TRAE ↔ Workbuddy 本机同步已验证，第三客户端真实验收按用户决定跳过，其他客户端仅保留 MCP 协议级可行性结论。
+
+---
+
+## v0.12.0-alpha Project Status (2026-11-07)
+
+**Current State**: **Source release only.** `0.12.0a0` is not on PyPI. The first tag
+`v0.12.0-alpha` failed CI and Release preflight. The fixes are in the working
+tree on `release/v0.12.0-alpha` and need a push and a green CI run.
+
+**What this phase adds**:
+- Optional host LLM (Tier 4) through MCP sampling. No API key.
+- Tier 3 cloud and Tier 2 local providers. Both use an OpenAI-compatible client.
+- `tier` in the tool response reports the tier that produced the answer.
+- Six version sources agree on `0.12.0a0`.
+
+**Known gaps**:
+- No real-client UI acceptance for host sampling. Only protocol-level tests exist.
+- `classify_and_remember` P99 is 1260.8 ms. The target is 200 ms.
+- No benchmark gate in CI.
+
+**Evidence**: [docs/assessment/ASSESSMENT_v0.12.0-alpha.md](assessment/ASSESSMENT_v0.12.0-alpha.md)
 
 ---
 

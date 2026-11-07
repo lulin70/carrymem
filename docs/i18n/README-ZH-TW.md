@@ -10,7 +10,7 @@
   <a href="https://github.com/lulin70/carrymem"><img src="https://img.shields.io/github/stars/lulin70/carrymem?style=flat-square&logo=github" alt="GitHub Stars"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/v/carrymem?color=blue" alt="PyPI 版本"></a>
   <a href="https://pypi.org/project/carrymem/"><img src="https://img.shields.io/pypi/dm/carrymem?color=blue" alt="PyPI Downloads"></a>
-  <img src="https://img.shields.io/badge/tests-4322-brightgreen" alt="測試">
+  <img src="https://img.shields.io/badge/tests-5167%20passed-brightgreen-brightgreen" alt="測試">
   <img src="https://img.shields.io/badge/coverage-80%25%2B-green" alt="覆蓋率">
   <a href="https://arxiv.org/abs/2410.01373"><img src="https://img.shields.io/badge/PrefEval-83.0%25%20(ICLR%202025%20Oral)-9B59B6?logo=arxiv" alt="PrefEval 學術基準"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python">
@@ -650,12 +650,13 @@ cm.import_memories(input_path="backup.json")
 
 ## 專案狀態
 
-**目前版本**：v0.11.2
-**測試**：4907 passed, 10 skipped, 77 deselected；最新真實使用者 E2E：245 passed, 20 deselected, 2 則警告（82.24 秒；此前 77.08 秒執行保留為歷史基線）
-**覆蓋率**：83.19%
+**目前版本**：v0.12.0-alpha（`0.12.0a0`，原始碼發布）
+**測試**：5167 passed, 1 skipped, 77 deselected（目前非 slow 全量回歸）
+**覆蓋率**：83.49%（最近一次全量覆蓋率執行；CI 門檻 80%）
 **品質門檻**：八項阻塞門檻全部通過（flake8 / Black / isort / mypy / pytest / radon / version-consistency / swallowed-assert）
 
 **更新日誌**：
+- **v0.12.0-alpha**：Phase 4 可選宿主 LLM 增強 —— MCP `sampling/createMessage`（Tier 4）、同步與非同步合併的 LLM 客戶端、真實的 sampling 回應路由、如實回報 tier。修復 `0.12.0a0` 破壞的舊同步 LLM API。六個版本號來源統一並由 CI 校驗。詳見 [CHANGELOG.md](../../CHANGELOG.md)。
 - **v0.11.0**：破壞性非同步 API 清理 —— `AsyncCarryMem` 現在僅是 executor 包裝的非同步門面；需要獨立的原生非同步 SQLite I/O 請直接使用 `AsyncSQLiteAdapter`。核心加密函式庫下限提升至 `cryptography>=50.0.0`。詳見 [CHANGELOG.md](../../CHANGELOG.md) 與 [ADR-009](../architecture/decisions/ADR-009-async-pipeline.md)。
 - **v0.2.0**：USB 攜帶加密、自動備份、並行安全、PrefEval 83.0%（200 條）、8 用戶端 MCP 設定
 - **v0.2.3**（重置前）：定時整合（schedule/stop）、PrefEval 標準化

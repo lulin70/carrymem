@@ -199,47 +199,44 @@ def handle_suggest_rules(engine, args: Dict[str, Any]) -> Dict[str, Any]:
             "total": 0,
             "message": "No memories found to analyze",
         }
-    
+
     # Phase 4: Try LLM-enhanced suggestion first (Tier 4)
     llm_client = args.get("_llm_client")
     if llm_client is not None:
         try:
+            from carrymem.llm import run_coroutine_sync
             from carrymem.llm.enhancements import suggest_rules_via_host_llm
-            import asyncio
-            
-            # Run async LLM call
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                suggestions = loop.run_until_complete(
-                    suggest_rules_via_host_llm(
-                        llm_client=llm_client,
-                        memories=memories,
-                        context=memory_type,
-                        limit=max_candidates
-                    )
+
+            suggestions = run_coroutine_sync(
+                suggest_rules_via_host_llm(
+                    llm_client=llm_client,
+                    memories=memories,
+                    context=memory_type,
+                    limit=max_candidates,
                 )
-                
-                if suggestions:
-                    return {
-                        "total": len(suggestions),
-                        "tier": "llm_enhanced",
-                        "suggestions": [
-                            {
-                                "trigger": s.get("trigger", ""),
-                                "action": s.get("action", ""),
-                                "rule_type": "prefer",
-                                "confidence": s.get("confidence", 0.5),
-                                "reasoning": s.get("reasoning", ""),
-                            }
-                            for s in suggestions
-                        ],
-                    }
-            finally:
-                loop.close()
+            )
+
+            # The enhancement falls back to pattern rules on failure.
+            # Report the real source, not an optimistic tier label.
+            if suggestions and suggestions[0].get("source") == "llm":
+                return {
+                    "total": len(suggestions),
+                    "tier": "llm_enhanced",
+                    "suggestions": [
+                        {
+                            "trigger": s.get("trigger", ""),
+                            "action": s.get("action", ""),
+                            "rule_type": "prefer",
+                            "confidence": s.get("confidence", 0.5),
+                            "reasoning": s.get("reasoning", ""),
+                        }
+                        for s in suggestions
+                    ],
+                }
         except Exception as e:
             # Gracefully degrade to rule-based
             import logging
+
             logging.getLogger(__name__).info(f"LLM suggestion failed, degrading to rule-based: {e}")
 
     # Tier 1: Fallback to pattern-based suggestion

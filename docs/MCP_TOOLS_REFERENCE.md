@@ -42,9 +42,9 @@ Requires knowledge adapter.
 
 | Tool | Description | User Guide |
 |------|-------------|------------|
-| `index_knowledge` | Index external knowledge sources | ⚠️ Limited coverage |
+| `index_knowledge` | Index external knowledge sources | ✅ Covered in Common Use Cases #17 |
 | `recall_all` | Recall memories from all sources | ✅ Covered in 多模式检索 |
-| `recall_from_knowledge` | Recall from knowledge base | ⚠️ Limited coverage |
+| `recall_from_knowledge` | Recall from knowledge base | ✅ Covered in Common Use Cases #18 |
 
 ### 4. PROFILE (2 tools)
 
@@ -53,7 +53,7 @@ Requires storage adapter.
 | Tool | Description | User Guide |
 |------|-------------|------------|
 | `declare_preference` | Declare user preferences | ✅ Covered in Common Use Cases |
-| `get_memory_profile` | Get user memory profile summary | ⚠️ Limited coverage |
+| `get_memory_profile` | Get user memory profile summary | ✅ Covered in Common Use Cases #13 |
 
 ### 5. PROMPT (2 tools)
 
@@ -61,8 +61,8 @@ Requires storage adapter.
 
 | Tool | Description | User Guide |
 |------|-------------|------------|
-| `get_system_prompt` | Generate context-aware system prompt | ⚠️ Limited coverage |
-| `summarize_and_store` | Summarize conversation and store | ⚠️ Limited coverage |
+| `get_system_prompt` | Generate context-aware system prompt | ✅ Covered in Common Use Cases #15 |
+| `summarize_and_store` | Summarize conversation and store | ✅ Covered in Common Use Cases #14 |
 
 ### 6. CONSOLIDATION (3 tools)
 
@@ -89,7 +89,7 @@ Rule engine operations.
 | `my_rules` | Get personal rules | ✅ Covered in Rule Engine |
 | `onboard` | Initialize user onboarding | ✅ Covered in Rule Engine |
 | `promote_rules` | Promote rules across scopes | ✅ Covered in Rule Scopes |
-| `suggest_rules` | AI-suggest rules from usage | ⚠️ Limited coverage |
+| `suggest_rules` | AI-suggest rules from usage | ✅ Covered in Common Use Cases #16 |
 | `update_rule` | Update an existing rule | ✅ Covered in Rule Engine |
 
 ### 8. HEALTH_CHECK (1 tool)
@@ -106,7 +106,7 @@ Knowledge graph operations, requires graph capability.
 
 | Tool | Description | User Guide |
 |------|-------------|------------|
-| `get_memory_impact` | Compute graph impact score of a memory | ⚠️ Limited coverage |
+| `get_memory_impact` | Compute graph impact score of a memory | ✅ Covered in Common Use Cases #19 |
 | `query_graph` | Query knowledge graph with Cypher-like syntax | ✅ Covered in 图查询 MCP 工具 |
 | `shortest_path` | Find shortest path between entities | ✅ Covered in 图查询 MCP 工具 |
 
@@ -116,23 +116,13 @@ Knowledge graph operations, requires graph capability.
 
 | Status | Count | Percentage |
 |--------|-------|------------|
-| ✅ Fully Covered | 26 | 74% |
-| ⚠️ Limited Coverage | 9 | 26% |
+| ✅ Fully Covered | 35 | 100% |
+| ⚠️ Limited Coverage | 0 | 0% |
 | ❌ No Coverage | 0 | 0% |
 
-### Tools Needing Documentation Enhancement
+### Documentation Milestone: 100% Coverage ✅
 
-The following 9 tools have limited or no user-facing examples in USER_GUIDE.md:
-
-1. `index_knowledge`
-2. `recall_from_knowledge`
-3. `get_memory_profile`
-4. `get_system_prompt`
-5. `summarize_and_store`
-6. `suggest_rules`
-7. `get_memory_impact`
-
-**Recommendation**: Add practical examples for these tools in USER_GUIDE.md before external user testing (Phase 6).
+All 35 MCP tools now have practical examples and usage documentation in USER_GUIDE.md. Phase 2-3 documentation requirement completed (2026-11-07).
 
 ---
 

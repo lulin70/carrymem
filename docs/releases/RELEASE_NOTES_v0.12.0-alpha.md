@@ -2,7 +2,13 @@
 
 **Release Date**: 2026-11-07  
 **Code Name**: Phase 4.0 - Intelligent Enhancement Layer  
-**Status**: Alpha Release (Feature Complete, Testing Invited)
+**Status**: Alpha Release (source only; not on PyPI)
+
+> **Correction (2026-11-07)**: The first `v0.12.0-alpha` tag failed CI and
+> Release preflight. That commit removed the legacy synchronous LLM API and
+> broke 31 tests. This revision restores the legacy contract, adds the async
+> tier API, and fixes sampling response routing. Check the CI result before
+> you use this alpha. Prefer tag `v0.12.0a1` when it becomes available.
 
 ---
 
@@ -48,22 +54,27 @@ result = summarize_and_store(session_id="session_123", max_tokens=500)
 #### 🏗️ Four-Tier Architecture
 
 ```
-Tier 4: Host LLM (MCP Sampling)     ← NEW! Zero config
+Tier 4: Host LLM (MCP Sampling)     ← NEW! No API key
          ↓ degrades on failure
-Tier 3: Cloud API (OpenAI/Claude)   ← Planned (Phase 4.2)
-         ↓ degrades on failure  
-Tier 2: Local LLM (Ollama/LM Studio) ← Planned (Phase 4.1)
+Tier 3: Cloud API (OpenAI-compatible) ← requires CARRYMEM_LLM_API_KEY
+         ↓ degrades on failure
+Tier 2: Local LLM (OpenAI-compatible) ← local CARRYMEM_LLM_BASE_URL
          ↓ always available fallback
 Tier 1: Rule-based (Zero Dependencies) ← Guaranteed to work
 ```
 
+Tier 2 and Tier 3 share one provider. The provider reports Tier 2 when the
+endpoint host is a loopback address. It reports Tier 3 for all other hosts.
+
 ### Design Guarantees
 
-✅ **Zero Configuration**: Tier 4 works automatically in Claude Desktop/Cursor  
-✅ **Zero Dependencies**: Core features work without LLM  
-✅ **Privacy First**: No external API calls by default  
-✅ **Graceful Degradation**: Automatic fallback ensures features always work  
-✅ **Backward Compatible**: Existing code continues to work unchanged
+✅ **Zero Configuration**: Tier 4 needs no key. The client must support sampling
+✅ **Zero Dependencies**: Core features work without LLM
+✅ **Privacy First**: No external API calls by default
+✅ **Graceful Degradation**: The response `tier` field reports the tier that
+   actually answered
+✅ **Stable API**: The synchronous `chat`, `is_available` and `count_tokens`
+   contract is preserved
 
 ---
 
@@ -84,8 +95,13 @@ pip install -e .
 
 ### Fresh Installation
 
+This alpha is a source release. It is not on PyPI.
+
 ```bash
-pip install carrymem==0.12.0-alpha
+git clone https://github.com/lulin70/carrymem.git
+cd carrymem
+git checkout v0.12.0-alpha
+pip install -e .
 ```
 
 ---
@@ -124,9 +140,9 @@ print(f"Active tier: {status['active_tier']}")  # Should be 4 if in MCP mode
 
 ## 📖 Documentation
 
-- **[LLM Integration Guide](LLM_INTEGRATION_GUIDE.md)**: Complete technical documentation
-- **[Design Principles](DESIGN_PRINCIPLES.md)**: Core philosophy and decision framework
-- **[Phase 4 Plan](PHASE_4_INTELLIGENT_ENHANCEMENT_PLAN.md)**: Detailed roadmap
+- **[LLM Integration Guide](../LLM_INTEGRATION_GUIDE.md)**: Complete technical documentation
+- **[Design Principles](../DESIGN_PRINCIPLES.md)**: Core philosophy and decision framework
+- **[Phase 4 Plan](../design/PHASE_4_INTELLIGENT_ENHANCEMENT_PLAN.md)**: Detailed roadmap
 
 ---
 
@@ -146,7 +162,11 @@ Phase 4.0 includes comprehensive test coverage:
   - Backward compatibility verification
   - Zero-dependency guarantee validation
 
-**All tests passing** ✓
+**Test status**: The full non-slow regression on the corrected tree reports
+`5167 passed, 1 skipped, 77 deselected`. The first alpha tag did not report
+this: 31 tests failed, because the legacy synchronous LLM API was removed.
+The corrected tree restores that API and adds 4 tests for the Tier 2/3
+provider. The CI result on the pushed commit is the release evidence.
 
 ---
 
@@ -192,16 +212,16 @@ Please report issues with:
 
 ### Alpha Release Constraints
 
-1. **Tier 2/3 Not Implemented**: Local LLM and Cloud API support planned for Phase 4.1/4.2
+1. **Tier 2/3 Need the `openai` Package**: Each uses an OpenAI-compatible endpoint. Install `openai` and set the `CARRYMEM_LLM_*` variables.
 2. **MCP Sampling Protocol**: Requires MCP client with sampling support (Claude Desktop 2024-11+, Cursor 0.40+)
 3. **Limited Prompt Customization**: Custom prompts planned for Phase 4.3
 4. **Real-world Integration Untested**: Mock-based testing only, community validation needed
 
 ### Workarounds
 
-- If Tier 4 unavailable: System auto-degrades to Tier 1 (rule-based)
+- If Tier 4 unavailable: System auto-degrades to Tier 3, Tier 2 or Tier 1
 - If you encounter sampling errors: Check MCP client version and logs
-- If you need offline LLM: Wait for Phase 4.1 (Ollama support)
+- If you need offline LLM: Use a local OpenAI-compatible endpoint (Tier 2)
 - If you need custom prompts: Use Tier 1 or wait for Phase 4.3
 
 ---
@@ -209,12 +229,12 @@ Please report issues with:
 ## 🛣️ Roadmap
 
 ### Phase 4.1 (Q4 2026)
-- ✨ Local LLM support (Ollama, LM Studio, llama.cpp)
+- ✨ Local LLM provider: shipped in this alpha as Tier 2 (OpenAI-compatible)
 - 🔧 Auto-detection of local models
 - 📊 Offline semantic analysis
 
 ### Phase 4.2 (Q1 2027)
-- ☁️ Cloud API integration (OpenAI GPT-4, Anthropic Claude)
+- ☁️ Provider auto-detection and failover tuning
 - 🔐 Explicit API key management
 - 💰 Token usage tracking
 
@@ -248,7 +268,7 @@ This is an **alpha release** — community testing and feedback actively sought!
 - 🐛 **Report bugs**: [GitHub Issues](https://github.com/lulin70/carrymem/issues)
 - 💡 **Feature requests**: [GitHub Discussions](https://github.com/lulin70/carrymem/discussions)
 - 📧 **Email**: lulin70@gmail.com
-- 📚 **Docs**: [README.md](README.md), [LLM_INTEGRATION_GUIDE.md](LLM_INTEGRATION_GUIDE.md)
+- 📚 **Docs**: [README.md](../../README.md), [LLM_INTEGRATION_GUIDE.md](../LLM_INTEGRATION_GUIDE.md)
 
 **When reporting issues, please include**:
 - MCP client name and version
@@ -280,8 +300,8 @@ MIT License - see [LICENSE](LICENSE)
 
 - **GitHub**: https://github.com/lulin70/carrymem
 - **PyPI**: https://pypi.org/project/carrymem/
-- **Documentation**: [LLM_INTEGRATION_GUIDE.md](LLM_INTEGRATION_GUIDE.md)
-- **Changelog**: [CHANGELOG_PHASE4.md](CHANGELOG_PHASE4.md)
+- **Documentation**: [LLM_INTEGRATION_GUIDE.md](../LLM_INTEGRATION_GUIDE.md)
+- **Changelog**: [CHANGELOG_PHASE4.md](../archive/CHANGELOG_PHASE4.md)
 
 ---
 

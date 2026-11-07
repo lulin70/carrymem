@@ -251,9 +251,9 @@ These are what make CarryMem different from every other memory solution:
 - Single .db file — carry your identity anywhere
 - Works with MCP clients that support local stdio MCP servers
 
-### 4. Industrial-Grade Engineering — 4907 Tests / mypy 0 / flake8 0
-- **4907 tests passed, 10 skipped** in the current full regression (optional vector/semantic dependencies account for the skips); E2E and TUI suites are included in the repository test run.
-- **mypy 0 errors** across 160 source files — fully type-safe (CI blocking gate)
+### 4. Industrial-Grade Engineering — 5167 Tests / mypy 0 / flake8 0
+- **5167 tests passed, 1 skipped, 77 deselected** in the current full regression (non-slow gate); E2E and TUI suites are included in the repository test run.
+- **mypy 0 errors** across 168 source files — fully type-safe (CI blocking gate)
 - **flake8 0 errors** — clean codebase, no lint violations (black + isort formatted)
 - **24 sensitive-pattern redaction** — auto-detects API keys, passwords, tokens before storage
 - **PatternAnalyzer God Class split** (1547→171 LOC facade + 3 modules) — maintainable architecture
@@ -662,6 +662,15 @@ use idempotent retry behavior.
   `sentence_transformers`/torch are imported lazily (only when vector search is
   actually enabled), so they are **not** part of `startup`.
 
+**Measured on 2026-11-07 (local macOS dev machine, non-slow benchmark)**:
+- `classify_and_remember`: cold start 16.4ms, warm average 144.2ms, p95 398.3ms,
+  p99 1260.8ms, throughput 7 ops/s. This **exceeds** the P99 target above.
+  Reproduce with `pytest tests/test_performance_benchmark.py -k classify_and_remember -s`.
+- `recall` (FTS5): average 5.5–5.9ms for 100–1000 records (p95 6.9–8.0ms),
+  which is **inside** the target. Reproduce with `python tests/benchmark_phase3_recall.py`.
+- Treat the targets as goals, not as published results. Quote the measured
+  numbers with their machine and date.
+
 **Honest boundaries**:
 - Metrics are **per process** and reset on restart — CarryMem is a local
   single-instance tool, so no cross-process aggregation is attempted.
@@ -732,6 +741,45 @@ carrymem setup-mcp --tool all
 | ❌ No MCP interface | Closed clients without MCP support | CarryMem cannot be connected through the standard MCP path |
 
 The third-client real UI acceptance is intentionally skipped in the current local rollout. Do not treat protocol-level compatibility as client UI acceptance.
+
+### Optional Host-LLM Enhancement (v0.12.0-alpha)
+
+CarryMem works with zero LLM. You can also let the host client improve rule
+suggestions and session summaries. This path needs no API key and no cloud
+account.
+
+The server sends an MCP `sampling/createMessage` request to the host client.
+The host client answers with its own model. The four tiers degrade in this order:
+
+| Tier | Provider | Requirement |
+|------|----------|-------------|
+| 4 | Host LLM (MCP sampling) | Client supports `sampling/createMessage` |
+| 3 | Cloud API | `CARRYMEM_LLM_API_KEY` is set |
+| 2 | Local LLM | Local endpoint is reachable |
+| 1 | Rule-based | Always available, no LLM |
+
+```bash
+# Optional: use a cloud API instead of the host client (Tier 3)
+export CARRYMEM_LLM_ENABLED=true
+export CARRYMEM_LLM_API_KEY=sk-...
+export CARRYMEM_LLM_MODEL=gpt-4o-mini
+
+# Optional: use a local OpenAI-compatible endpoint (Tier 2)
+export CARRYMEM_LLM_ENABLED=true
+export CARRYMEM_LLM_API_KEY=local
+export CARRYMEM_LLM_BASE_URL=http://localhost:11434/v1
+export CARRYMEM_LLM_MODEL=qwen3:8b
+```
+
+The `openai` package is required for Tier 2 and Tier 3. It is not a core
+dependency.
+
+**Honest boundaries**:
+- A client that does not support sampling returns no answer. CarryMem then
+  falls back to Tier 1. Results stay correct, but they are pattern-based.
+- The `tier` field in the tool response reports the tier that actually
+  produced the answer.
+- Host sampling has a 30-second timeout.
 
 > **🔒 Your memories stay on your machine.** CarryMem stores all data locally in `~/.carrymem/` (SQLite). Each user gets an independent database — just like Git, everyone uses the same tool but keeps their own repos. No cloud sync, no shared state, no cross-user conflicts.
 
@@ -899,7 +947,7 @@ Sample: 200 items, 10 inter-turns, Claude Sonnet 4
 | | Advantage | Result |
 |---|-----------|--------|
 | 💰 | Zero-LLM Ingestion | Historical internal snapshot: **88%** of sampled inputs took the rule-based path; dataset artifact not currently versioned |
-| ⚡ | P99 Latency | Historical internal result: **1.3ms**; current reproducible benchmark is `pytest tests/test_performance_benchmark.py -k classify_and_remember -s` |
+| ⚡ | Latency | Measured on a local macOS dev machine (2026-11-07): FTS5 recall avg **5.5–5.9ms** (p50 5.4–5.8ms, p95 6.9–8.0ms) for 100–1000 records; LIKE recall avg 10.5–15.1ms. Reproduce with `python tests/benchmark_phase3_recall.py` |
 | 🔬 | Mem0 comparison | Historical **93x** comparison is not a current release claim; no reproducible comparison harness is shipped |
 | 🪶 | Dependencies | **SQLite only** — no vector DB |
 | 🛡️ | Rule Engine | Built-in rule engine; competitor comparison requires a versioned harness |
@@ -1078,16 +1126,17 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 
 ## Project Status
 
-**Current Version**: v0.11.2
-**Tests**: 4907 passed, 10 skipped, 77 deselected in the current full regression; 265 E2E tests collected, with the latest realistic non-slow user-path run at 245 passed, 20 deselected, 2 warnings in 82.24s (the previous 77.08s run is retained as a historical baseline)
-**Coverage**: 83.19%
-**mypy**: 0 errors (160 source files, CI blocking gate)
+**Current Version**: v0.12.0-alpha (`0.12.0a0`, source release)
+**Tests**: 5167 passed, 1 skipped, 77 deselected in the current full regression (non-slow gate)
+**Coverage**: 83.49% (last full coverage run; CI gate is 80%)
+**mypy**: 0 errors (168 source files, CI blocking gate)
 **flake8**: 0 errors (black + isort formatted)
 **radon**: 0 D/E/F functions (CI blocking gate)
 **Blocking gates**: eight local gates pass, including version-consistency and swallowed-assert
-**Maturity**: 80/100 (B) per 7-dimension DevSquad evaluation
+**Maturity**: 78/100 (B−) per 7-dimension DevSquad assessment — see [docs/assessment/ASSESSMENT_v0.12.0-alpha.md](docs/assessment/ASSESSMENT_v0.12.0-alpha.md)
 
 **Changelog**:
+- **v0.12.0-alpha**: Phase 4 optional host-LLM enhancement — MCP `sampling/createMessage` (Tier 4), a merged sync + async LLM client, real sampling-response routing, and honest tier reporting. Restores the legacy sync LLM API that `0.12.0a0` had broken. Version sources are now unified and checked by CI. See [CHANGELOG.md](CHANGELOG.md).
 - **v0.11.2**: Completes the `recall` metric correction — the coreference and correction-history reads inside `core/_classification.py` no longer count as user recalls, and the guard that missed them now covers four message shapes plus a control group. See [CHANGELOG.md](CHANGELOG.md).
 - **v0.11.1**: Fixes the release gate that blocked `v0.11.0` (a steady-state SLO assertion ran on the first call of a process), corrects the first `recall` leak, and adds the full regression as a blocking local CI gate.
 - **v0.11.0**: Breaking async API cleanup — `AsyncCarryMem` is the executor-backed async facade only; standalone native async SQLite I/O remains available through `AsyncSQLiteAdapter`. The core encryption floor is `cryptography>=50.0.0`. See [CHANGELOG.md](CHANGELOG.md) and [ADR-009](docs/architecture/decisions/ADR-009-async-pipeline.md).
