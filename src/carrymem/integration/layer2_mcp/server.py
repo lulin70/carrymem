@@ -63,7 +63,13 @@ class MCPServer:
         self.request_timeout = request_timeout or int(
             os.environ.get("CARRYMEM_REQUEST_TIMEOUT", self.DEFAULT_REQUEST_TIMEOUT)
         )
-        self.handlers = Handlers(self.config_path, self.data_path, namespace=self.namespace)
+        # Phase 4: Pass self to Handlers for host LLM support
+        self.handlers = Handlers(
+            self.config_path, 
+            self.data_path, 
+            namespace=self.namespace,
+            mcp_server=self
+        )
         self.request_id = 0
         self._stdin_transport: Optional[asyncio.BaseTransport] = None
 
@@ -315,6 +321,95 @@ class MCPServer:
         error_response = self.make_error_response(request_id, code, message, data)
         await self.send_response(error_response)
         return error_response
+    
+    async def request_sampling(
+        self,
+        messages: list,
+        max_tokens: int = 1000,
+        temperature: float = 0.7,
+        **kwargs
+    ) -> Any:
+        """Request LLM sampling from MCP host client.
+        
+        Phase 4: Enables host LLM integration via MCP sampling protocol.
+        This method sends a sampling/createMessage request to the MCP client
+        (Claude Desktop, Cursor, etc.) and returns the generated response.
+        
+        Args:
+            messages: List of message dicts with 'role' and 'content'
+            max_tokens: Maximum tokens to generate
+            temperature: Sampling temperature (0.0-1.0)
+            **kwargs: Additional sampling parameters
+        
+        Returns:
+            Response object with 'content' attribute containing generated text
+        
+        Raises:
+            RuntimeError: If sampling is not supported by the client
+        """
+        # Generate unique request ID
+        self.request_id += 1
+        request_id = self.request_id
+        
+        # Build MCP sampling request
+        sampling_request = {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "method": "sampling/createMessage",
+            "params": {
+                "messages": messages,
+                "maxTokens": max_tokens,
+                "temperature": temperature,
+                **kwargs
+            }
+        }
+        
+        # Send request to client via stdout
+        request_json = json.dumps(sampling_request, ensure_ascii=False)
+        sys.stdout.write(request_json + "\n")
+        sys.stdout.flush()
+        logger.debug("Sent sampling request: %s", request_id)
+        
+        # Read response from stdin (blocking)
+        # Note: In production, this should have timeout and async handling
+        loop = asyncio.get_running_loop()
+        reader = asyncio.StreamReader()
+        protocol = asyncio.StreamReaderProtocol(reader)
+        
+        try:
+            # Wait for response with timeout
+            line = await asyncio.wait_for(
+                reader.readline(),
+                timeout=30.0  # 30 second timeout for LLM generation
+            )
+            
+            if not line:
+                raise RuntimeError("Sampling request: connection closed by client")
+            
+            response = json.loads(line.strip())
+            
+            # Check for error response
+            if "error" in response:
+                error = response["error"]
+                raise RuntimeError(f"Sampling failed: {error.get('message', 'unknown error')}")
+            
+            # Extract result
+            result = response.get("result", {})
+            content = result.get("content", "")
+            
+            # Create response object that mimics expected structure
+            class SamplingResponse:
+                def __init__(self, content: str):
+                    self.content = content
+            
+            return SamplingResponse(content)
+            
+        except asyncio.TimeoutError:
+            logger.error("Sampling request timed out")
+            raise RuntimeError("Sampling request timed out")
+        except json.JSONDecodeError as e:
+            logger.error("Invalid JSON in sampling response: %s", e)
+            raise RuntimeError(f"Invalid sampling response: {e}")
 
     async def cleanup(self):
         """Drain active tools, then cleanup resources."""

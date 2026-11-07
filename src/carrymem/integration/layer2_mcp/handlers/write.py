@@ -138,6 +138,50 @@ def handle_summarize_and_store(carrymem, arguments: Dict[str, Any]) -> Dict[str,
             "message": "No memories found for this session. Nothing to summarize.",
         }
 
+    # Phase 4: Try LLM-enhanced summary first (Tier 4)
+    llm_client = arguments.get("_llm_client")
+    if llm_client is not None:
+        try:
+            from carrymem.llm.enhancements import summarize_session_via_host_llm
+            import asyncio
+            
+            # Run async LLM call
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                summary_result = loop.run_until_complete(
+                    summarize_session_via_host_llm(
+                        llm_client=llm_client,
+                        memories=memories,
+                        session_id=session_id,
+                        max_tokens=max_tokens
+                    )
+                )
+                
+                if summary_result:
+                    return {
+                        "action": "llm_summary",
+                        "tier": "llm_enhanced",
+                        "session_id": session_id,
+                        "namespace": namespace,
+                        "summary": summary_result.get("summary", ""),
+                        "key_themes": summary_result.get("key_themes", []),
+                        "decisions": summary_result.get("decisions", []),
+                        "patterns": summary_result.get("patterns", []),
+                        "memory_count": len(memories),
+                        "instruction": (
+                            "Call classify_and_remember with the summary above, "
+                            "setting message type context to 'session_summary'."
+                        ),
+                    }
+            finally:
+                loop.close()
+        except Exception as e:
+            # Gracefully degrade to template-based
+            import logging
+            logging.getLogger(__name__).info(f"LLM summary failed, degrading to template: {e}")
+
+    # Tier 1: Fallback to template-based summary
     content_parts = []
     total_len = 0
     for m in memories:
@@ -151,6 +195,7 @@ def handle_summarize_and_store(carrymem, arguments: Dict[str, Any]) -> Dict[str,
 
     return {
         "action": "summarize",
+        "tier": "rule_based",
         "session_id": session_id,
         "namespace": namespace,
         "content": content_to_summarize,
