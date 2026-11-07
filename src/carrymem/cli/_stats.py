@@ -740,57 +740,69 @@ _DOCTOR_CHECKS: List[Callable[[_DoctorContext], _DoctorCheck]] = [
 ]
 
 
-def _format_doctor_output(check_results: List[_DoctorCheck], parsed) -> int:
-    """Render doctor results in JSON or human-readable form; return exit code."""
-    issues = [c for c in check_results if c.status == "fail"]
-    warnings = [c for c in check_results if c.status == "warn"]
-    checks_passed = sum(1 for c in check_results if c.status == "ok")
-    checks_total = len(check_results)  # Total includes all checks (ok/warn/fail/skip/info)
-
-    # Calculate health score: ok=100, warn=50, fail=0, skip=excluded
+def _calculate_health_score(check_results: List[_DoctorCheck]) -> float:
+    """Calculate health score from check results (0-100)."""
     scored_checks = [c for c in check_results if c.status in ("ok", "warn", "fail")]
-    if scored_checks:
-        score_map = {"ok": 100, "warn": 50, "fail": 0}
-        health_score = sum(score_map[c.status] for c in scored_checks) / len(scored_checks)
-    else:
-        health_score = 0
+    if not scored_checks:
+        return 0.0
+    score_map = {"ok": 100, "warn": 50, "fail": 0}
+    return sum(score_map[c.status] for c in scored_checks) / len(scored_checks)
 
-    if parsed.json:
-        print(
-            json.dumps(
-                {
-                    "version": __version__,
-                    "health_score": round(health_score, 1),
-                    "checks_passed": checks_passed,
-                    "checks_total": checks_total,
-                    "issues_count": len(issues),
-                    "warnings_count": len(warnings),
-                    "issues": [
-                        {
-                            "message": c.message,
-                            "fix_hint": c.fix_hint,
-                            "detail": c.detail,
-                        }
-                        for c in issues
-                    ],
-                    "warnings": [c.message for c in warnings],
-                    "checks": [
-                        {
-                            "name": c.name,
-                            "status": c.status,
-                            "message": c.message,
-                            "detail": c.detail,
-                            "fix_hint": c.fix_hint,
-                        }
-                        for c in check_results
-                    ],
-                },
-                ensure_ascii=False,
-                indent=2,
-            )
+
+def _render_json_output(
+    check_results: List[_DoctorCheck],
+    issues: List[_DoctorCheck],
+    warnings: List[_DoctorCheck],
+    checks_passed: int,
+    checks_total: int,
+    health_score: float,
+) -> None:
+    """Render doctor output as JSON."""
+    print(
+        json.dumps(
+            {
+                "version": __version__,
+                "health_score": round(health_score, 1),
+                "checks_passed": checks_passed,
+                "checks_total": checks_total,
+                "issues_count": len(issues),
+                "warnings_count": len(warnings),
+                "issues": [
+                    {
+                        "message": c.message,
+                        "fix_hint": c.fix_hint,
+                        "detail": c.detail,
+                    }
+                    for c in issues
+                ],
+                "warnings": [c.message for c in warnings],
+                "checks": [
+                    {
+                        "name": c.name,
+                        "status": c.status,
+                        "message": c.message,
+                        "detail": c.detail,
+                        "fix_hint": c.fix_hint,
+                    }
+                    for c in check_results
+                ],
+            },
+            ensure_ascii=False,
+            indent=2,
         )
-        return 0 if not issues else 1
+    )
 
+
+def _render_human_output(
+    check_results: List[_DoctorCheck],
+    issues: List[_DoctorCheck],
+    warnings: List[_DoctorCheck],
+    checks_passed: int,
+    checks_total: int,
+    health_score: float,
+    parsed,
+) -> None:
+    """Render doctor output in human-readable form."""
     print(f"\n  {_bold('CarryMem Doctor')} - Diagnostics\n")
     print(f"  {'=' * 45}")
 
@@ -835,6 +847,21 @@ def _format_doctor_output(check_results: List[_DoctorCheck], parsed) -> int:
         print(f"  {_green(f'All checks passed ({checks_passed}/{checks_total})')}")
 
     print()
+
+
+def _format_doctor_output(check_results: List[_DoctorCheck], parsed) -> int:
+    """Render doctor results in JSON or human-readable form; return exit code."""
+    issues = [c for c in check_results if c.status == "fail"]
+    warnings = [c for c in check_results if c.status == "warn"]
+    checks_passed = sum(1 for c in check_results if c.status == "ok")
+    checks_total = len(check_results)  # Total includes all checks (ok/warn/fail/skip/info)
+    health_score = _calculate_health_score(check_results)
+
+    if parsed.json:
+        _render_json_output(check_results, issues, warnings, checks_passed, checks_total, health_score)
+    else:
+        _render_human_output(check_results, issues, warnings, checks_passed, checks_total, health_score, parsed)
+
     return 0 if not issues else 1
 
 
