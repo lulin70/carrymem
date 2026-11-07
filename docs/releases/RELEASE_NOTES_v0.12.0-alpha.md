@@ -7,8 +7,8 @@
 > **Correction (2026-11-07)**: The first `v0.12.0-alpha` tag failed CI and
 > Release preflight. That commit removed the legacy synchronous LLM API and
 > broke 31 tests. This revision restores the legacy contract, adds the async
-> tier API, and fixes sampling response routing. Check the CI result before
-> you use this alpha. Prefer tag `v0.12.0a1` when it becomes available.
+> tier API, and fixes sampling response routing. CI run `42387757587` on commit
+> `51277fd` passed every job. Prefer tag `v0.12.0a1` when it becomes available.
 
 ---
 

@@ -16,7 +16,7 @@
 | 覆盖率 | 83.49%（同一轮；CI 门槛 80%） |
 | 静态门禁 | flake8 0 / black 0 / isort 0 / mypy 0（168 文件）/ radon 0 个 D+ |
 | 安全扫描 | bandit：0 High，45 Medium（全部为参数化 `IN (...)` 的 B608），64 Low；pip-audit：无已知漏洞 |
-| 已发布 tag 状态 | `v0.12.0-alpha` 的 CI 与 Release 预检**失败**。修复已在本工作树完成，尚未推送验证 |
+| 已发布 tag 状态 | `v0.12.0-alpha` 的旧 CI 与 Release 预检**失败**。修复提交 `51277fd` 的 CI run `42387757587` **全绿**（Linux/macOS 测试、Lint、安全、构建、Docker、VSCode） |
 | 主要风险 | 宿主 LLM 只在协议层验证；分类 P99 超标；发布流程曾被破坏的 API 阻断 |
 
 **一句话判断**：代码工程质量高。发布纪律和真实用户验证不足。本轮已修复 4 个 P0 缺陷，并统一版本源。下一步应推送修复、验证 CI 全绿，并用真实客户端验证宿主 LLM。
@@ -154,10 +154,13 @@
 - CI 触发分支增加 `release/**`。
 - 版本一致性检查覆盖 6 处。
 
+**结果**
+- 提交 `51277fd` 已推送。CI run `42387757587` 结论为 `success`。
+- 全部作业通过：Syntax、Lint、Tests（Ubuntu/macOS）、Build & Install、Security、Docker Build、VSCode Extension、Docs、i18n、Optional Deps。
+
 **待办**
-- 推送 `release/v0.12.0-alpha`。
-- 确认 CI 与 Release 预检全绿。
-- 不要强移已发布 tag。建议用新 tag `v0.12.0a1` 重新发布。
+- 建议用新 tag `v0.12.0a1` 重新发布。不要强移已发布 tag。
+- 发布后更新 GitHub Release 说明。
 
 ---
 

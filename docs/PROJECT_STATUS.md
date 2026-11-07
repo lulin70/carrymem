@@ -13,8 +13,8 @@
 ## v0.12.0-alpha Project Status (2026-11-07)
 
 **Current State**: **Source release only.** `0.12.0a0` is not on PyPI. The first tag
-`v0.12.0-alpha` failed CI and Release preflight. The fixes are in the working
-tree on `release/v0.12.0-alpha` and need a push and a green CI run.
+`v0.12.0-alpha` failed CI and Release preflight. The fix is commit `51277fd` on
+`release/v0.12.0-alpha`. CI run `42387757587` passed every job.
 
 **What this phase adds**:
 - Optional host LLM (Tier 4) through MCP sampling. No API key.
