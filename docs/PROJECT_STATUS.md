@@ -14,7 +14,10 @@
 
 **Current State**: Published as a **PyPI pre-release** (`0.12.0a1`). The first tag
 `v0.12.0-alpha` failed CI and was withdrawn. The fix is commit `51277fd`. CI
-run `42387757587` passed every job. Use `pip install --pre carrymem==0.12.0a1`.
+run `42387757587` passed every job. Release workflow run `42436293206` passed
+pre-release tests, E2E, VSCode UI E2E, and publish.
+Install: `pip install --pre carrymem==0.12.0a1`.
+Release: [v0.12.0a1](https://github.com/lulin70/carrymem/releases/tag/v0.12.0a1).
 
 **What this phase adds**:
 - Optional host LLM (Tier 4) through MCP sampling. No API key.

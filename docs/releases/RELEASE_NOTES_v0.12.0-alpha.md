@@ -82,24 +82,30 @@ endpoint host is a loopback address. It reports Tier 3 for all other hosts.
 ### Upgrade from v0.11.x
 
 ```bash
-# Existing installation
-pip install --upgrade carrymem
+# Existing installation (pre-release requires --pre)
+pip install --pre --upgrade carrymem
 
 # Or from source
 cd carrymem
-git pull origin main
-git checkout v0.12.0-alpha
+git fetch origin
+git checkout v0.12.0a1
 pip install -e .
 ```
 
 ### Fresh Installation
 
-This alpha is a source release. It is not on PyPI.
+This alpha is a PyPI pre-release. Use the `--pre` flag.
+
+```bash
+pip install --pre carrymem==0.12.0a1
+```
+
+Source install:
 
 ```bash
 git clone https://github.com/lulin70/carrymem.git
 cd carrymem
-git checkout v0.12.0-alpha
+git checkout v0.12.0a1
 pip install -e .
 ```
 

@@ -16,7 +16,7 @@
 | 覆盖率 | 83.49%（同一轮；CI 门槛 80%） |
 | 静态门禁 | flake8 0 / black 0 / isort 0 / mypy 0（168 文件）/ radon 0 个 D+ |
 | 安全扫描 | bandit：0 High，45 Medium（全部为参数化 `IN (...)` 的 B608），64 Low；pip-audit：无已知漏洞 |
-| 发布状态 | 旧 tag `v0.12.0-alpha` 失败并撤回。修复提交 `51277fd` 的 CI run `42387757587` **全绿**。新版本 `v0.12.0-alpha1`（`0.12.0a1`）已发布 |
+| 发布状态 | 旧 tag `v0.12.0-alpha` 失败并撤回。修复提交 `51277fd` 的 CI run `42387757587` **全绿**。Release run `42436293206` 全绿。`v0.12.0-alpha1`（`0.12.0a1`）已发布到 PyPI 与 GitHub Release |
 | 主要风险 | 宿主 LLM 只在协议层验证；分类 P99 超标；发布流程曾被破坏的 API 阻断 |
 
 **一句话判断**：代码工程质量高。发布纪律和真实用户验证不足。本轮已修复 4 个 P0 缺陷，并统一版本源。下一步应推送修复、验证 CI 全绿，并用真实客户端验证宿主 LLM。
@@ -157,11 +157,13 @@
 **结果**
 - 提交 `51277fd` 已推送。CI run `42387757587` 结论为 `success`。
 - 全部作业通过：Syntax、Lint、Tests（Ubuntu/macOS）、Build & Install、Security、Docker Build、VSCode Extension、Docs、i18n、Optional Deps。
-- 新版本 `v0.12.0-alpha1`（`0.12.0a1`）已打 tag 并发布。六个版本源一致。
+- 版本提升到 `0.12.0a1`。提交 `53b24f9` 的 CI run `42433593654` 全绿。
+- Tag `v0.12.0a1` 触发 Release run `42436293206`：预发布测试、E2E、VSCode UI E2E、构建与发布全部成功。
+- PyPI 已有 `carrymem-0.12.0a1` 的 wheel 与 sdist。GitHub Release 已标记为 pre-release。
 
 **待办**
-- 在 GitHub Release 页面确认 a1 的说明与产物。
 - 保留旧 tag `v0.12.0-alpha`，不要移动。
+- 开始真实客户端宿主 LLM 验收（P1）。
 
 ---
 

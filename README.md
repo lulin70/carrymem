@@ -1127,6 +1127,8 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 ## Project Status
 
 **Current Version**: v0.12.0-alpha1 (`0.12.0a1`, pre-release on PyPI)
+**Install**: `pip install --pre carrymem==0.12.0a1`
+**Release**: [github.com/lulin70/carrymem/releases/tag/v0.12.0a1](https://github.com/lulin70/carrymem/releases/tag/v0.12.0a1)
 **Tests**: 5167 passed, 1 skipped, 77 deselected in the current full regression (non-slow gate)
 **Coverage**: 83.49% (last full coverage run; CI gate is 80%)
 **mypy**: 0 errors (168 source files, CI blocking gate)
