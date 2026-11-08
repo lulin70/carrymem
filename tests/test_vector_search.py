@@ -234,3 +234,45 @@ class TestRuntimeToggle:
     def test_cannot_enable_without_deps(self, adapter_no_vector):
         adapter_no_vector.enable_vector_search(True)
         assert adapter_no_vector.capabilities["vector_search"] is False
+
+
+class TestFacadeVectorSearchDefault:
+    """Vector search is opt-in on the CarryMem facade (P1 performance fix)."""
+
+    def test_facade_defaults_to_off(self, tmp_path, monkeypatch):
+        from carrymem import CarryMem
+
+        monkeypatch.delenv("CARRYMEM_ENABLE_VECTOR_SEARCH", raising=False)
+        cm = CarryMem(db_path=str(tmp_path / "facade_off.db"))
+        try:
+            assert cm._adapter is not None
+            assert cm._adapter.capabilities["vector_search"] is False
+        finally:
+            cm.close()
+
+    def test_env_enables_vector_search(self, tmp_path, monkeypatch):
+        if not VECTOR_AVAILABLE:
+            pytest.importorskip("sqlite_vec")
+        from carrymem import CarryMem
+
+        monkeypatch.setenv("CARRYMEM_ENABLE_VECTOR_SEARCH", "1")
+        cm = CarryMem(db_path=str(tmp_path / "facade_on.db"))
+        try:
+            assert cm._adapter is not None
+            assert cm._adapter.capabilities["vector_search"] is True
+        finally:
+            cm.close()
+
+    def test_config_overrides_env(self, tmp_path, monkeypatch):
+        from carrymem import CarryMem
+
+        monkeypatch.setenv("CARRYMEM_ENABLE_VECTOR_SEARCH", "1")
+        cm = CarryMem(
+            db_path=str(tmp_path / "facade_override.db"),
+            config={"enable_vector_search": False},
+        )
+        try:
+            assert cm._adapter is not None
+            assert cm._adapter.capabilities["vector_search"] is False
+        finally:
+            cm.close()

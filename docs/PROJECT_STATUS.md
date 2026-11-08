@@ -26,9 +26,9 @@ Release: [v0.12.0a1](https://github.com/lulin70/carrymem/releases/tag/v0.12.0a1)
 - Six version sources agree on `0.12.0a1`.
 
 **Known gaps**:
-- No real-client UI acceptance for host sampling. Only protocol-level tests exist.
-- `classify_and_remember` P99 is 1260.8 ms. The target is 200 ms.
-- No benchmark gate in CI.
+- Host sampling has real stdio coverage (`tests/e2e/test_host_sampling_stdio.py`). No Claude Desktop / Cursor UI acceptance yet.
+- Vector search costs about 40 ms per write and 11 s of startup. It is off by default. With it on, P99 is 368 ms.
+- The `perf-gate` job covers hot paths only. The classify benchmark stays advisory.
 
 **Evidence**: [docs/assessment/ASSESSMENT_v0.12.0-alpha.md](assessment/ASSESSMENT_v0.12.0-alpha.md)
 

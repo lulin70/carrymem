@@ -5,6 +5,35 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+P1 follow-up after the v0.12.0-alpha assessment.
+
+### Fixed
+
+- MCP stdio server no longer blocks the stdin read loop while a tool runs.
+  Each request now runs as a task, and `request_sampling` creates and awaits
+  its future on the reader loop. Host sampling answers arrive before the
+  30-second timeout.
+
+### Changed
+
+- `CarryMem` disables vector search by default. Enable it with
+  `config={"enable_vector_search": True}` or `CARRYMEM_ENABLE_VECTOR_SEARCH=1`.
+  Each write embedded the text before this change. That cost produced a
+  1260.8 ms P99 and an 11 s startup.
+- `ci.yml` gains a blocking `perf-gate` job. It runs the low-jitter hot-path
+  benchmarks: FTS5 recall, batch insert, export, and graph queries.
+
+### Verified
+
+- `tests/e2e/test_host_sampling_stdio.py` starts the real server over stdio and
+  answers `sampling/createMessage`. Both cases pass: host answer →
+  `tier="llm_enhanced"`; host error -32601 → `tier="rule_based"`.
+- `classify_and_remember` with the new default: cold 3.7 ms, warm avg 26.8 ms,
+  p95 44.5 ms, P99 53.0 ms, 37 ops/s. All 16 performance benchmarks pass.
+- Vector search on for comparison: startup 11334 ms, P99 368.0 ms, 13 ops/s.
+
 ## [0.12.0-alpha1] - 2026-11-08
 
 First usable Phase 4 alpha. The first `v0.12.0-alpha` tag failed CI and was

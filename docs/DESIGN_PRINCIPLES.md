@@ -121,12 +121,13 @@ Tier 3: Cloud API (OpenAI, optional)
 - ❌ Blocking on slow network calls in critical path
 - ❌ Unbounded memory growth
 
-**Benches (measured 2026-11-07, local macOS dev machine)**:
+**Benches (measured 2026-11-08, local macOS dev machine, default config)**:
 - FTS5 recall: 5.53–5.85ms average (p50 5.45–5.81ms, p95 6.9–8.0ms) for 100–500–1000 records
 - LIKE recall: 10.5–15.1ms average
-- `classify_and_remember`: cold start 16.4ms, warm average 144.2ms, p95 398.3ms, p99 1260.8ms
+- `classify_and_remember`: cold start 3.7ms, warm average 26.8ms, p95 44.5ms, p99 53.0ms
+- `classify_and_remember` with vector search on: startup 11334ms, warm average 75.8ms, p99 368.0ms
 
-The recall target is met on this machine. The classification target is **not** met.
+Vector search is opt-in. That is why the default numbers meet the target.
 Treat every number as a measurement with a date and a machine, not as a constant.
 
 ---

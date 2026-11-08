@@ -662,12 +662,15 @@ use idempotent retry behavior.
   `sentence_transformers`/torch are imported lazily (only when vector search is
   actually enabled), so they are **not** part of `startup`.
 
-**Measured on 2026-11-07 (local macOS dev machine, non-slow benchmark)**:
-- `classify_and_remember`: cold start 16.4ms, warm average 144.2ms, p95 398.3ms,
-  p99 1260.8ms, throughput 7 ops/s. This **exceeds** the P99 target above.
+**Measured on 2026-11-08 (local macOS dev machine, default config)**:
+- `classify_and_remember`: cold start 3.7ms, warm average 26.8ms, p95 44.5ms,
+  p99 53.0ms, throughput 37 ops/s. This is **inside** the P99 target above.
   Reproduce with `pytest tests/test_performance_benchmark.py -k classify_and_remember -s`.
 - `recall` (FTS5): average 5.5–5.9ms for 100–1000 records (p95 6.9–8.0ms),
   which is **inside** the target. Reproduce with `python tests/benchmark_phase3_recall.py`.
+- Vector search **on** (`CARRYMEM_ENABLE_VECTOR_SEARCH=1`): startup 11334ms,
+  warm average 75.8ms, p99 368.0ms, 13 ops/s. Vector search costs about 40ms
+  per write and 11s of startup. That is why it is opt-in.
 - Treat the targets as goals, not as published results. Quote the measured
   numbers with their machine and date.
 
@@ -678,8 +681,9 @@ use idempotent retry behavior.
   this process yet. If it runs and still shows `no_data`, that is an
   instrumentation bug, not health.
 - `sentence_transformers` is probed lazily: importing carrymem does not import
-  it or torch. Enabling vector search (`enable_vector_search=True` with the
-  vector extra installed) still loads the embedding model during
+  it or torch. Vector search is **off by default**. Turn it on with
+  `enable_vector_search=True` (requires the vector extra) or
+  `CARRYMEM_ENABLE_VECTOR_SEARCH=1`. When on, the embedding model loads during
   `SQLiteAdapter` construction — that is the explicit cost of vector search, not
   an import side effect.
 

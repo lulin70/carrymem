@@ -49,6 +49,18 @@ def _validate_file_path(path: str, allowed_base: Optional[str] = None) -> str:
     return resolved
 
 
+def _resolve_vector_search(config: Optional[Dict[str, Any]]) -> bool:
+    """Return the vector-search switch: explicit config, then env, else off.
+
+    Vector search is opt-in. When sentence-transformers is installed, enabling
+    it loads 103 model weights and embeds every stored memory. That cost is not
+    acceptable on the default hot path (measured: +40 ms per write, +7 s startup).
+    """
+    if config and "enable_vector_search" in config:
+        return bool(config["enable_vector_search"])
+    return os.environ.get("CARRYMEM_ENABLE_VECTOR_SEARCH", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 class StorageNotConfiguredError(_StorageNotConfiguredError):
     """Raised when no storage adapter is configured, with a setup hint."""
 
@@ -190,7 +202,7 @@ class LifecycleMixin:
                     db_path=db_path,
                     namespace=namespace,
                     encryption_key=encryption_key,
-                    enable_vector_search=config.get("enable_vector_search", True) if config else True,
+                    enable_vector_search=_resolve_vector_search(config),
                     embedding_model=(
                         config.get("embedding_model", "all-MiniLM-L6-v2") if config else "all-MiniLM-L6-v2"
                     ),

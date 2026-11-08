@@ -70,6 +70,12 @@ class MCPServer:
         # Pending sampling requests, keyed by JSON-RPC id. The stdin loop
         # resolves these futures when the host client answers.
         self._pending_sampling: Dict[Any, asyncio.Future] = {}
+        # The loop that owns stdin/stdout. Sampling futures must live here so
+        # that a response from the read loop can resolve them safely.
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        # In-flight request tasks. The read loop must stay free while a tool
+        # runs, otherwise a sampling response cannot be read.
+        self._request_tasks: "set[asyncio.Task]" = set()
 
         logger.info("MCP Server initialized")
         if self.config_path:
@@ -84,6 +90,7 @@ class MCPServer:
         logger.info("MCP Server starting (request_timeout=%ds)...", self.request_timeout)
 
         loop = asyncio.get_running_loop()
+        self._loop = loop
         reader = asyncio.StreamReader()
         protocol = asyncio.StreamReaderProtocol(reader)
 
@@ -114,9 +121,12 @@ class MCPServer:
                         # A response to our sampling request, not a new request.
                         self._resolve_sampling_response(message)
                         continue
-                    response = await self.execute_request(message)
-                    if response:
-                        await self.send_response(response)
+                    # Run each request in a task. The read loop must keep
+                    # reading so that a sampling response can arrive while the
+                    # tool that waits for it is still running.
+                    task = asyncio.create_task(self._process_request(message))
+                    self._request_tasks.add(task)
+                    task.add_done_callback(self._request_tasks.discard)
                 except json.JSONDecodeError as e:
                     logger.error("Invalid JSON: %s", e)
                     await self.send_response(self.make_error_response(None, -32700, "Parse error"))
@@ -137,6 +147,18 @@ class MCPServer:
                 self._stdin_transport.close()
                 self._stdin_transport = None
             await self.cleanup()
+
+    async def _process_request(self, message: Dict[str, Any]) -> None:
+        """Execute one request and send its response without blocking the reader."""
+        try:
+            response = await self.execute_request(message)
+            if response:
+                await self.send_response(response)
+        # NOTE: Broad exception in request task is intentional. One failed
+        # request must not stop the server or other requests.
+        except Exception as e:
+            logger.error("Error handling request: %s", e)
+            await self.send_response(self.make_error_response(message.get("id"), -32603, "Internal error"))
 
     @staticmethod
     def make_error_response(
@@ -365,6 +387,24 @@ class MCPServer:
         Raises:
             RuntimeError: If sampling is not supported by the client
         """
+        # Tool handlers run in an executor thread with their own event loop.
+        # The stdin reader lives on self._loop. Always create and await the
+        # sampling future on the reader loop, so that the response can resolve
+        # it from that loop.
+        current_loop = asyncio.get_running_loop()
+        if self._loop is not None and self._loop is not current_loop and self._loop.is_running():
+            return await asyncio.wrap_future(
+                asyncio.run_coroutine_threadsafe(
+                    self._request_sampling_on_loop(messages, max_tokens, temperature, **kwargs),
+                    self._loop,
+                )
+            )
+        return await self._request_sampling_on_loop(messages, max_tokens, temperature, **kwargs)
+
+    async def _request_sampling_on_loop(
+        self, messages: list, max_tokens: int, temperature: float, **kwargs: Any
+    ) -> Any:
+        """Send one sampling request on the stdin reader loop and await the answer."""
         # Generate unique request ID
         self.request_id += 1
         request_id = self.request_id
@@ -377,18 +417,18 @@ class MCPServer:
             "params": {"messages": messages, "maxTokens": max_tokens, "temperature": temperature, **kwargs},
         }
 
+        # Register the future before the request leaves the process. A fast
+        # client can answer before the next loop tick; registering late made
+        # that answer look like an unknown id and the call timed out.
+        loop = asyncio.get_running_loop()
+        future: asyncio.Future = loop.create_future()
+        self._pending_sampling[request_id] = future
+
         # Send request to client via stdout
         request_json = json.dumps(sampling_request, ensure_ascii=False)
         sys.stdout.write(request_json + "\n")
         sys.stdout.flush()
         logger.debug("Sent sampling request: %s", request_id)
-
-        # The stdin loop owns the read side. Register a future and let that loop
-        # resolve it when the matching response arrives. A separate reader would
-        # never receive data and would always time out.
-        loop = asyncio.get_running_loop()
-        future: asyncio.Future = loop.create_future()
-        self._pending_sampling[request_id] = future
 
         try:
             response = await asyncio.wait_for(future, timeout=30.0)
@@ -423,6 +463,15 @@ class MCPServer:
         logger.info("Cleaning up resources...")
         self.handlers.start_shutdown()
         await self.handlers.wait_idle()
+        # Fail any sampling request that is still pending before the loop stops.
+        for future in self._pending_sampling.values():
+            if not future.done():
+                future.cancel()
+        self._pending_sampling.clear()
+        for task in list(self._request_tasks):
+            task.cancel()
+        if self._request_tasks:
+            await asyncio.gather(*self._request_tasks, return_exceptions=True)
         self.handlers.cleanup()
 
 

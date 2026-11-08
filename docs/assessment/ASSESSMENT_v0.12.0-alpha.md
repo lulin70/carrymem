@@ -12,12 +12,12 @@
 | 项目 | 结果 |
 |------|------|
 | 代码规模 | 168 个源文件，58,908 行；176 个测试文件 |
-| 全量回归（非 slow，2026-11-07 终版） | `5167 passed, 1 skipped, 77 deselected`，耗时 28 分 48 秒，exit 0 |
-| 覆盖率 | 83.49%（同一轮；CI 门槛 80%） |
+| 全量回归（非 slow，2026-11-08 P1 修复后） | `5172 passed, 1 skipped, 77 deselected`，耗时 20 分 05 秒，exit 0 |
+| 覆盖率 | 83.27%（同一轮；CI 门槛 80%） |
 | 静态门禁 | flake8 0 / black 0 / isort 0 / mypy 0（168 文件）/ radon 0 个 D+ |
 | 安全扫描 | bandit：0 High，45 Medium（全部为参数化 `IN (...)` 的 B608），64 Low；pip-audit：无已知漏洞 |
 | 发布状态 | 旧 tag `v0.12.0-alpha` 失败并撤回。修复提交 `51277fd` 的 CI run `42387757587` **全绿**。Release run `42436293206` 全绿。`v0.12.0-alpha1`（`0.12.0a1`）已发布到 PyPI 与 GitHub Release |
-| 主要风险 | 宿主 LLM 只在协议层验证；分类 P99 超标；发布流程曾被破坏的 API 阻断 |
+| 主要风险 | 向量检索开启时分类 P99 仍为 368 ms；宿主 LLM 只验证了两个 stdio 用例 |
 
 **一句话判断**：代码工程质量高。发布纪律和真实用户验证不足。本轮已修复 4 个 P0 缺陷，并统一版本源。下一步应推送修复、验证 CI 全绿，并用真实客户端验证宿主 LLM。
 
@@ -85,13 +85,25 @@
 | `classify_and_remember` P99 | 1260.8 ms | < 200 ms | **超标 6.3 倍** |
 | 吞吐 | 7 ops/s | — | 偏低 |
 
-**原因分析**
+**P1 复测（2026-11-08，本机 macOS，200 次写入）**
+
+| 配置 | 启动 | 热平均 | p95 | P99 | 吞吐 |
+|------|------|--------|-----|-----|------|
+| 向量检索开（旧默认） | 11334 ms | 75.8 ms | 113.2 ms | 368.0 ms | 13 ops/s |
+| 向量检索关（新默认） | 75 ms | 55.6 ms | 74.5 ms | 81.2 ms | 18 ops/s |
+
+基准套件复测（`pytest tests/test_performance_benchmark.py`，新默认）：冷启动 3.7 ms，热平均 26.8 ms，p95 44.5 ms，P99 53.0 ms，37 ops/s。全部 16 项通过。
+
+**原因与修复**
+- 原因确认：默认 `enable_vector_search=True`。每条写入计算 embedding。启动加载 103 个模型权重。这是 P99 与启动成本的主因；不是 FTS5。
+- 修复：`CarryMem` 门面改为默认关闭向量检索。用 `config={"enable_vector_search": True}` 或环境变量 `CARRYMEM_ENABLE_VECTOR_SEARCH=1` 开启。`SQLiteAdapter` 直接构造时的默认值不变。
+- 结果：P99 从 1260.8 ms 降到 53–81 ms，进入 < 200 ms 目标。启动成本从 11.3 s 降到 75 ms。
 - README 与 DESIGN_PRINCIPLES 的原数字（P99 1.3 ms、召回 2.54–3.01 ms）不可复现。已改为实测值并标注机器与日期。
-- 分类慢的主要疑点是默认向量检索：写入时计算 embedding。该结论待专项测量确认。
 
 **结论**
 - 召回满足交互使用。
-- 分类不满足 SLO。内测可接受。公开宣传前必须修复或调整目标。
+- 分类在默认配置下满足 SLO。开启向量检索后，P99 回到 368 ms。文档必须写明这一取舍。
+
 
 ---
 
@@ -119,9 +131,9 @@
 - 测试自身有缺陷：异常收窄测试曾空跑。已修复。
 
 **不足**
-- 宿主 LLM 只有 mock 与协议测试。没有真实支持 sampling 的客户端 UI 验收。
+- 宿主 LLM 已有真实 stdio 客户端用例。尚未覆盖 Claude Desktop / Cursor 的界面验收。
 - UI E2E 只覆盖 VSCode 扩展，且在 nightly 运行。
-- 性能测试不是阻塞门禁。
+- 热路径性能已设为阻塞门禁（`perf-gate`）。分类基准仍在建议性作业中运行。
 
 ---
 
@@ -163,7 +175,7 @@
 
 **待办**
 - 保留旧 tag `v0.12.0-alpha`，不要移动。
-- 开始真实客户端宿主 LLM 验收（P1）。
+- 真实客户端宿主 LLM 验收已完成 stdio 层。界面验收待做。
 
 ---
 
@@ -190,11 +202,11 @@
 | 架构 | 8.5 | 分层清楚，适配器可插拔，核心零 LLM |
 | 正确性 | 7.5 | 修复了 4 个 P0；alpha 曾带缺陷发布 |
 | 可维护性 | 8.0 | 静态门禁全绿，债少，复杂度受控 |
-| 性能 | 6.5 | 召回达标边缘；分类 P99 超标 |
+| 性能 | 6.5 → 8.0 | P1 修复后，默认配置 P99 为 53–81 ms；开启向量检索为 368 ms |
 | 安全 | 8.0 | 0 High，依赖无漏洞；需处理 45 个 Medium 噪声 |
-| 测试 | 8.5 | 5,167 个测试；缺真实宿主 LLM UI 验收 |
+| 测试 | 8.5 | 5,167 个测试；新增真实 stdio 宿主 LLM 用例；缺界面验收 |
 | 文档 | 7.0 | 本轮修正；历史文档仍有旧数字 |
-| **加权总分** | **78/100（B−）** | 可内测，不可称稳定版 |
+| **加权总分** | **78 → 80（B）** | P1 已解决；待全量回归复评 |
 
 ---
 
@@ -206,9 +218,9 @@
 3. 在 Release 说明中标注：旧 alpha 的 LLM 路径不可用。**已完成**。
 
 ### P1（内测质量）
-4. 用真实支持 sampling 的客户端跑一次端到端：调用 `suggest_rules`，确认返回 `tier="llm_enhanced"`。客户端不支持时确认降级为规则结果。
-5. 测量 `classify_and_remember` 的 P99。区分"向量检索开/关"两组。若确认是 embedding 成本，改为按需启用。
-6. 把性能基准设为 CI 门禁。阈值用实测值加余量，不用历史宣传值。
+4. 用真实支持 sampling 的客户端跑一次端到端：调用 `suggest_rules`，确认返回 `tier="llm_enhanced"`。客户端不支持时确认降级为规则结果。**已完成**。证据：`tests/e2e/test_host_sampling_stdio.py`。该测试启动真实 stdio 服务器进程，客户端应答 `sampling/createMessage`。两项用例通过：宿主应答时返回 `llm_enhanced`；宿主返回 -32601 时降级为 `rule_based`。修复内容：读循环改为按请求建任务，sampling Future 桥接到读循环，避免 30 秒超时。
+5. 测量 `classify_and_remember` 的 P99。区分"向量检索开/关"两组。若确认是 embedding 成本，改为按需启用。**已完成**。证据见第 4 节。默认关闭后 P99 为 53–81 ms。
+6. 把性能基准设为 CI 门禁。阈值用实测值加余量，不用历史宣传值。**已完成**。`ci.yml` 新增阻塞作业 `perf-gate`，运行低抖动的热路径基准（召回、批量写入、导出、图查询）。分类基准保留在 `benchmark.yml`（建议性）与 `nightly.yml`（失败即红）中运行。
 
 ### P2（工程卫生）
 7. 为 45 个 B608 加 `# nosec` 与理由。
@@ -236,6 +248,14 @@ python3 scripts/check_version_consistency.py
 # 性能
 python tests/benchmark_phase3_recall.py
 .venv/bin/python -m pytest tests/test_performance_benchmark.py -k classify_and_remember -s
+
+# 宿主 LLM 真实 stdio 端到端
+.venv/bin/python -m pytest tests/e2e/test_host_sampling_stdio.py -q --no-cov
+
+# CI 热路径性能门禁（本地复刻）
+CI=true .venv/bin/python -m pytest tests/test_performance_benchmark.py \
+  -k "test_recall_1000_records or test_batch_insert_100_fast_path or TestExportProfileLarge or TestGraphPerformanceBenchmark" \
+  --no-cov -q
 
 # 安全
 .venv/bin/python -m bandit -q -r src -ll
