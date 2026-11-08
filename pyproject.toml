@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "carrymem"
-version = "0.12.0a0"
+version = "0.12.0a1"
 description = "Portable AI memory for MCP-compatible local clients. Classify, store, and recall what matters."
 readme = "README.md"
 requires-python = ">=3.12"

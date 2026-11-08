@@ -650,13 +650,14 @@ cm.import_memories(input_path="backup.json")
 
 ## 專案狀態
 
-**目前版本**：v0.12.0-alpha（`0.12.0a0`，原始碼發布）
+**目前版本**：v0.12.0-alpha1（`0.12.0a1`，PyPI 預發布）
 **測試**：5167 passed, 1 skipped, 77 deselected（目前非 slow 全量回歸）
 **覆蓋率**：83.49%（最近一次全量覆蓋率執行；CI 門檻 80%）
 **品質門檻**：八項阻塞門檻全部通過（flake8 / Black / isort / mypy / pytest / radon / version-consistency / swallowed-assert）
 
 **更新日誌**：
-- **v0.12.0-alpha**：Phase 4 可選宿主 LLM 增強 —— MCP `sampling/createMessage`（Tier 4）、同步與非同步合併的 LLM 客戶端、真實的 sampling 回應路由、如實回報 tier。修復 `0.12.0a0` 破壞的舊同步 LLM API。六個版本號來源統一並由 CI 校驗。詳見 [CHANGELOG.md](../../CHANGELOG.md)。
+- **v0.12.0-alpha1**：首個可用的 Phase 4 alpha。恢復舊同步 LLM API，修復 MCP sampling 回應路由，接入 Tier 2/3 提供商，並讓 CI 覆蓋 release 分支。CI run `42387757587` 全綠。
+- **v0.12.0-alpha**：Phase 4 可選宿主 LLM 增強 —— MCP `sampling/createMessage`（Tier 4）、同步與非同步合併的 LLM 客戶端。該 tag 的 CI 失敗，已撤回。詳見 [CHANGELOG.md](../../CHANGELOG.md)。
 - **v0.11.0**：破壞性非同步 API 清理 —— `AsyncCarryMem` 現在僅是 executor 包裝的非同步門面；需要獨立的原生非同步 SQLite I/O 請直接使用 `AsyncSQLiteAdapter`。核心加密函式庫下限提升至 `cryptography>=50.0.0`。詳見 [CHANGELOG.md](../../CHANGELOG.md) 與 [ADR-009](../architecture/decisions/ADR-009-async-pipeline.md)。
 - **v0.2.0**：USB 攜帶加密、自動備份、並行安全、PrefEval 83.0%（200 條）、8 用戶端 MCP 設定
 - **v0.2.3**（重置前）：定時整合（schedule/stop）、PrefEval 標準化

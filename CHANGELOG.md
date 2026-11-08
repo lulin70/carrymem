@@ -5,6 +5,34 @@ All notable changes to CarryMem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0-alpha1] - 2026-11-08
+
+First usable Phase 4 alpha. The first `v0.12.0-alpha` tag failed CI and was
+withdrawn. This release contains the repair and the evidence.
+
+### Fixed
+
+- Legacy synchronous LLM API restored (`chat`, `is_available`, `count_tokens`).
+  `0.12.0a0` removed it and broke 31 tests plus three production call sites.
+- MCP sampling responses now resolve the waiting request future. The old code
+  used an unconnected stream, so every host-LLM call timed out after 30s.
+- Tier 2 (local endpoint) and Tier 3 (remote API) providers now sit in the
+  `generate()` chain. A configured API key is no longer ignored.
+- Rule and write handlers report `llm_enhanced` only when the LLM answered.
+
+### Changed
+
+- Six version sources report `0.12.0a1`.
+- CI also runs on `release/**` branches.
+- The exception-narrowing test scans the repository root.
+- README and the i18n READMEs quote measured latency with machine and date.
+
+### Verified
+
+- Full regression: 5167 passed, 1 skipped, 77 deselected, coverage 83.49%.
+- CI run `42387757587`: every job passed.
+- Static gates: flake8, black, isort, mypy, radon, version consistency, swallowed assert.
+
 ## [0.12.0-alpha] - 2026-11-07
 
 ### Added

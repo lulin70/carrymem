@@ -2,13 +2,12 @@
 
 **Release Date**: 2026-11-07  
 **Code Name**: Phase 4.0 - Intelligent Enhancement Layer  
-**Status**: Alpha Release (source only; not on PyPI)
+**Status**: Alpha Release. Published as `v0.12.0-alpha1` (`0.12.0a1`) on PyPI.
 
-> **Correction (2026-11-07)**: The first `v0.12.0-alpha` tag failed CI and
+> **Correction (2026-11-08)**: The first `v0.12.0-alpha` tag failed CI and
 > Release preflight. That commit removed the legacy synchronous LLM API and
-> broke 31 tests. This revision restores the legacy contract, adds the async
-> tier API, and fixes sampling response routing. CI run `42387757587` on commit
-> `51277fd` passed every job. Prefer tag `v0.12.0a1` when it becomes available.
+> broke 31 tests. The corrected code is released as **`v0.12.0-alpha1`**
+> (`0.12.0a1`). CI run `42387757587` on commit `51277fd` passed every job.
 
 ---
 

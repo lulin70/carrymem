@@ -638,13 +638,14 @@ AI にはメモリが必要だと知っている。プロンプトファイル�
 
 ## プロジェクトステータス
 
-**現在のバージョン**: v0.12.0-alpha（`0.12.0a0`、ソースリリース）
+**現在のバージョン**: v0.12.0-alpha1（`0.12.0a1`、PyPI プレリリース）
 **テスト**: 5167 passed, 1 skipped, 77 deselected（現在の非 slow 全量回帰）
 **カバレッジ**: 83.49%（直近の全量カバレッジ実行。CI ゲートは 80%）
 **品質ゲート**: 8 つのブロッキングゲート（flake8 / Black / isort / mypy / pytest / radon / version-consistency / swallowed-assert）すべて合格
 
 **チェンジログ**:
-- **v0.12.0-alpha**: Phase 4 の任意ホスト LLM 拡張 —— MCP `sampling/createMessage`（Tier 4）、同期と非同期を統合した LLM クライアント、実際の sampling 応答ルーティング、正確な tier 報告。`0.12.0a0` が壊した旧同期 LLM API を復元。6 つのバージョンソースを統一し CI で検証。詳細は [CHANGELOG.md](../../CHANGELOG.md)。
+- **v0.12.0-alpha1**: 最初に使用可能な Phase 4 alpha。旧同期 LLM API を復元し、MCP sampling 応答ルーティングを修正し、Tier 2/3 プロバイダーを接続しました。CI run `42387757587` は全ジョブ合格。
+- **v0.12.0-alpha**: Phase 4 の任意ホスト LLM 拡張 —— MCP `sampling/createMessage`（Tier 4）、同期と非同期を統合した LLM クライアント。この tag は CI が失敗したため撤回しました。詳細は [CHANGELOG.md](../../CHANGELOG.md)。
 - **v0.11.0**: 破壊的な非同期 API クリーンアップ —— `AsyncCarryMem` は executor ベースの非同期ファサードのみとなりました。単体のネイティブ非同期 SQLite I/O が必要な場合は `AsyncSQLiteAdapter` を直接使用してください。コア暗号化ライブラリの下限を `cryptography>=50.0.0` に引き上げました。詳細は [CHANGELOG.md](../../CHANGELOG.md) と [ADR-009](../architecture/decisions/ADR-009-async-pipeline.md) を参照。
 - **v0.2.0**: USB 携帯暗号化、自動バックアップ、並行安全性、PrefEval 83.0%（200項目）、8クライアントMCP設定
 - **v0.2.3**（リセット前）: 定期統合（schedule/stop）、PrefEval 標準化

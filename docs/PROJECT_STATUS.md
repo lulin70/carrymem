@@ -1,6 +1,6 @@
 # CarryMem — Project Status
 
-**Version**: v0.12.0-alpha (`0.12.0a0`, source release; not on PyPI)
+**Version**: v0.12.0-alpha1 (`0.12.0a1`, pre-release on PyPI)
 **Last Updated**: 2026-11-07 (Phase 4 host-LLM assessment and cleanup. Six version sources are unified. CI now also runs on `release/**` branches.)
 **Maintainer**: CarryMem Team
 
@@ -10,17 +10,17 @@
 
 ---
 
-## v0.12.0-alpha Project Status (2026-11-07)
+## v0.12.0-alpha1 Project Status (2026-11-08)
 
-**Current State**: **Source release only.** `0.12.0a0` is not on PyPI. The first tag
-`v0.12.0-alpha` failed CI and Release preflight. The fix is commit `51277fd` on
-`release/v0.12.0-alpha`. CI run `42387757587` passed every job.
+**Current State**: Published as a **PyPI pre-release** (`0.12.0a1`). The first tag
+`v0.12.0-alpha` failed CI and was withdrawn. The fix is commit `51277fd`. CI
+run `42387757587` passed every job. Use `pip install --pre carrymem==0.12.0a1`.
 
 **What this phase adds**:
 - Optional host LLM (Tier 4) through MCP sampling. No API key.
 - Tier 3 cloud and Tier 2 local providers. Both use an OpenAI-compatible client.
 - `tier` in the tool response reports the tier that produced the answer.
-- Six version sources agree on `0.12.0a0`.
+- Six version sources agree on `0.12.0a1`.
 
 **Known gaps**:
 - No real-client UI acceptance for host sampling. Only protocol-level tests exist.

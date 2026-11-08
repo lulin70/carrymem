@@ -1,4 +1,4 @@
-# CarryMem v0.12.0-alpha - Community Testing Guide
+# CarryMem v0.12.0-alpha1 - Community Testing Guide
 
 **For Alpha Testers**  
 **Target**: Early adopters, MCP client users, LLM integration enthusiasts
@@ -24,7 +24,7 @@ Phase 4.0 introduces **Host LLM integration** via MCP sampling. As an alpha rele
 
 1. Install CarryMem alpha:
    ```bash
-   pip install carrymem==0.12.0-alpha
+   pip install --pre carrymem==0.12.0a1
    ```
 
 2. Configure in Claude Desktop:
@@ -180,7 +180,7 @@ Phase 4.0 introduces **Host LLM integration** via MCP sampling. As an alpha rele
 - OS: macOS 14.2 / Windows 11 / Linux
 - Python: 3.12.x
 - MCP Client: Claude Desktop x.x.x / Cursor x.x.x
-- CarryMem: 0.12.0-alpha
+- CarryMem: 0.12.0a1
 
 **Scenario**: [Scenario number from above]
 

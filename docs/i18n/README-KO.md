@@ -766,13 +766,14 @@ AI에 기억이 필요하다는 건 이미 알고 있습니다. 프롬프트 파
 
 ## 프로젝트 상태
 
-**현재 버전**: v0.12.0-alpha (`0.12.0a0`, 소스 릴리스)
+**현재 버전**: v0.12.0-alpha1 (`0.12.0a1`, PyPI 프리릴리스)
 **테스트**: 5167 passed, 1 skipped, 77 deselected (현재 non-slow 전체 회귀)
 **커버리지**: 83.49% (최근 전체 커버리지 실행, CI 게이트는 80%)
 **품질 게이트**: 8개 차단 게이트 모두 통과 (flake8 / Black / isort / mypy / pytest / radon / version-consistency / swallowed-assert)
 
 **변경 로그**:
-- **v0.12.0-alpha**: Phase 4 선택적 호스트 LLM 확장 —— MCP `sampling/createMessage`(Tier 4), 동기와 비동기를 통합한 LLM 클라이언트, 실제 sampling 응답 라우팅, 정확한 tier 보고. `0.12.0a0`이 깨뜨린 기존 동기 LLM API를 복원했습니다. 6개 버전 소스를 통일하고 CI에서 검증합니다. 자세한 내용은 [CHANGELOG.md](../../CHANGELOG.md)를 참조하세요.
+- **v0.12.0-alpha1**: 처음 사용 가능한 Phase 4 alpha. 기존 동기 LLM API를 복원하고 MCP sampling 응답 라우팅을 수정했으며 Tier 2/3 공급자를 연결했습니다. CI run `42387757587`의 모든 작업이 통과했습니다.
+- **v0.12.0-alpha**: Phase 4 선택적 호스트 LLM 확장 —— MCP `sampling/createMessage`(Tier 4), 동기와 비동기를 통합한 LLM 클라이언트. 이 tag는 CI 실패로 철회했습니다. 자세한 내용은 [CHANGELOG.md](../../CHANGELOG.md)를 참조하세요.
 - **v0.11.0**: 파괴적 비동기 API 정리 —— `AsyncCarryMem`은 이제 executor 기반 비동기 파사드일 뿐입니다. 독립적인 네이티브 비동기 SQLite I/O가 필요하면 `AsyncSQLiteAdapter`를 직접 사용하세요. 핵심 암호화 라이브러리 하한을 `cryptography>=50.0.0`으로 상향했습니다. 자세한 내용은 [CHANGELOG.md](../../CHANGELOG.md) 및 [ADR-009](../architecture/decisions/ADR-009-async-pipeline.md)를 참조하세요.
 - **v0.2.4**: 베타 릴리스 — CI 루트 수정, 24개 보안 수정, Glama TDQS 향상, 6게이트 CI 파이프라인
 - **v0.2.0**: USB 휴대 암호화, 자동 백업, 동시성 안전, PrefEval 83.0% (200 항목), 8 클라이언트 MCP 설정

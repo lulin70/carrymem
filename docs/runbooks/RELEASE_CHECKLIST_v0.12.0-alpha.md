@@ -1,5 +1,9 @@
 # CarryMem v0.12.0-alpha - Release Checklist
 
+> **Superseded (2026-11-08)**: This checklist records the first alpha attempt,
+> which failed CI. The published release is `v0.12.0-alpha1` (`0.12.0a1`).
+> Use the same steps with the new version string.
+
 **Release Date**: 2026-11-07  
 **Release Manager**: lulin70  
 **Status**: ✅ Ready for Alpha Release

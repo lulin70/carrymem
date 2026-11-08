@@ -1126,7 +1126,7 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 
 ## Project Status
 
-**Current Version**: v0.12.0-alpha (`0.12.0a0`, source release)
+**Current Version**: v0.12.0-alpha1 (`0.12.0a1`, pre-release on PyPI)
 **Tests**: 5167 passed, 1 skipped, 77 deselected in the current full regression (non-slow gate)
 **Coverage**: 83.49% (last full coverage run; CI gate is 80%)
 **mypy**: 0 errors (168 source files, CI blocking gate)
@@ -1136,7 +1136,8 @@ Your agents forget users between sessions. You need a memory layer that's lightw
 **Maturity**: 78/100 (B−) per 7-dimension DevSquad assessment — see [docs/assessment/ASSESSMENT_v0.12.0-alpha.md](docs/assessment/ASSESSMENT_v0.12.0-alpha.md)
 
 **Changelog**:
-- **v0.12.0-alpha**: Phase 4 optional host-LLM enhancement — MCP `sampling/createMessage` (Tier 4), a merged sync + async LLM client, real sampling-response routing, and honest tier reporting. Restores the legacy sync LLM API that `0.12.0a0` had broken. Version sources are now unified and checked by CI. See [CHANGELOG.md](CHANGELOG.md).
+- **v0.12.0-alpha1**: First usable Phase 4 alpha. Restores the legacy synchronous LLM API, fixes MCP sampling response routing, adds the Tier 2/3 provider, and turns on CI for release branches. CI run `42387757587` passed every job.
+- **v0.12.0-alpha**: Phase 4 optional host-LLM enhancement — MCP `sampling/createMessage` (Tier 4), a merged sync + async LLM client, real sampling-response routing, and honest tier reporting. This tag failed CI and was withdrawn. See [CHANGELOG.md](CHANGELOG.md).
 - **v0.11.2**: Completes the `recall` metric correction — the coreference and correction-history reads inside `core/_classification.py` no longer count as user recalls, and the guard that missed them now covers four message shapes plus a control group. See [CHANGELOG.md](CHANGELOG.md).
 - **v0.11.1**: Fixes the release gate that blocked `v0.11.0` (a steady-state SLO assertion ran on the first call of a process), corrects the first `recall` leak, and adds the full regression as a blocking local CI gate.
 - **v0.11.0**: Breaking async API cleanup — `AsyncCarryMem` is the executor-backed async facade only; standalone native async SQLite I/O remains available through `AsyncSQLiteAdapter`. The core encryption floor is `cryptography>=50.0.0`. See [CHANGELOG.md](CHANGELOG.md) and [ADR-009](docs/architecture/decisions/ADR-009-async-pipeline.md).

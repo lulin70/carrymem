@@ -1,7 +1,7 @@
 # CarryMem 项目整理评估 — v0.12.0-alpha
 
-**评估日期**: 2026-11-07
-**评估对象**: 工作树 `release/v0.12.0-alpha`（`0.12.0a0`）
+**评估日期**: 2026-11-07（发布更新：2026-11-08）
+**评估对象**: `v0.12.0-alpha1`（`0.12.0a1`）
 **评估方法**: DevSquad 七维评估 + 真实命令取证
 **结论**: **78/100（B−）**。可继续内测。不满足稳定版发布条件。
 
@@ -16,7 +16,7 @@
 | 覆盖率 | 83.49%（同一轮；CI 门槛 80%） |
 | 静态门禁 | flake8 0 / black 0 / isort 0 / mypy 0（168 文件）/ radon 0 个 D+ |
 | 安全扫描 | bandit：0 High，45 Medium（全部为参数化 `IN (...)` 的 B608），64 Low；pip-audit：无已知漏洞 |
-| 已发布 tag 状态 | `v0.12.0-alpha` 的旧 CI 与 Release 预检**失败**。修复提交 `51277fd` 的 CI run `42387757587` **全绿**（Linux/macOS 测试、Lint、安全、构建、Docker、VSCode） |
+| 发布状态 | 旧 tag `v0.12.0-alpha` 失败并撤回。修复提交 `51277fd` 的 CI run `42387757587` **全绿**。新版本 `v0.12.0-alpha1`（`0.12.0a1`）已发布 |
 | 主要风险 | 宿主 LLM 只在协议层验证；分类 P99 超标；发布流程曾被破坏的 API 阻断 |
 
 **一句话判断**：代码工程质量高。发布纪律和真实用户验证不足。本轮已修复 4 个 P0 缺陷，并统一版本源。下一步应推送修复、验证 CI 全绿，并用真实客户端验证宿主 LLM。
@@ -157,10 +157,11 @@
 **结果**
 - 提交 `51277fd` 已推送。CI run `42387757587` 结论为 `success`。
 - 全部作业通过：Syntax、Lint、Tests（Ubuntu/macOS）、Build & Install、Security、Docker Build、VSCode Extension、Docs、i18n、Optional Deps。
+- 新版本 `v0.12.0-alpha1`（`0.12.0a1`）已打 tag 并发布。六个版本源一致。
 
 **待办**
-- 建议用新 tag `v0.12.0a1` 重新发布。不要强移已发布 tag。
-- 发布后更新 GitHub Release 说明。
+- 在 GitHub Release 页面确认 a1 的说明与产物。
+- 保留旧 tag `v0.12.0-alpha`，不要移动。
 
 ---
 
@@ -198,9 +199,9 @@
 ## 11. 下一步建议
 
 ### P0（发布阻断）
-1. 提交并推送本轮修复。确认 CI 与 Release 预检全绿。
-2. 用新 tag `v0.12.0a1` 发布。旧 tag 保留，不移动。
-3. 在 Release 说明中标注：旧 alpha 的 LLM 路径不可用。
+1. 提交并推送本轮修复。确认 CI 与 Release 预检全绿。**已完成**。
+2. 用新 tag `v0.12.0-alpha1` 发布。旧 tag 保留，不移动。**已完成**。
+3. 在 Release 说明中标注：旧 alpha 的 LLM 路径不可用。**已完成**。
 
 ### P1（内测质量）
 4. 用真实支持 sampling 的客户端跑一次端到端：调用 `suggest_rules`，确认返回 `tier="llm_enhanced"`。客户端不支持时确认降级为规则结果。
