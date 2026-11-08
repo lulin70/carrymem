@@ -174,7 +174,9 @@ class EvidenceLinkManager:
         sql = (
             "SELECT el.id, el.namespace, el.source_kind, el.source_id, el.source_snapshot_hash, "
             "el.target_kind, el.target_id, el.relation_type, el.support_weight, el.created_at "
-            "FROM memory_evidence_links el WHERE " + " AND ".join(conditions) + " ORDER BY el.created_at LIMIT ?"
+            "FROM memory_evidence_links el WHERE "
+            f"{' AND '.join(conditions)} "  # nosec B608 - fixed '?' predicates
+            "ORDER BY el.created_at LIMIT ?"
         )
         params.append(int(limit))
 
@@ -212,7 +214,7 @@ class EvidenceLinkManager:
                           WHERE el2.namespace = el.namespace
                             AND el2.target_kind = el.target_kind
                             AND el2.target_id = el.target_id
-                      )""",
+                      )""",  # nosec B608 - ? placeholders, values bound
                 [namespace, *candidate_target_ids],
             ).fetchall()
         except _OpError as e:

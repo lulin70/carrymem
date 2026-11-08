@@ -101,7 +101,7 @@ class BackupManager:
 
         try:
             test_conn = sqlite3.connect(backup_path)
-            test_conn.execute(f"SELECT COUNT(*) FROM {self.TABLE_NAME}")
+            test_conn.execute(f"SELECT COUNT(*) FROM {self.TABLE_NAME}")  # nosec B608 - TABLE_NAME is a constant
             test_conn.close()
         except sqlite3.Error as e:
             raise ValueError(f"Invalid backup file: {e}") from e
@@ -143,7 +143,9 @@ class BackupManager:
 
                     try:
                         conn = sqlite3.connect(filepath)
-                        count = conn.execute(f"SELECT COUNT(*) FROM {self.TABLE_NAME}").fetchone()[0]
+                        count = conn.execute(
+                            f"SELECT COUNT(*) FROM {self.TABLE_NAME}"  # nosec B608 - constant table name
+                        ).fetchone()[0]
                         conn.close()
                         memory_count = count
                     except sqlite3.Error as e:

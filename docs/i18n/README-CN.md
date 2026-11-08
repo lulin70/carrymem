@@ -581,7 +581,7 @@ carrymem tui
 | | 优势 | 结果 |
 |---|------|------|
 | 💰 | 零 LLM 摄入 | 历史内部快照：抽样输入中 88% 走规则路径；数据集 artifact 当前未版本化 |
-| ⚡ | P99 延迟 | 历史内部结果：1.3ms；当前可复现 benchmark：`pytest tests/test_performance_benchmark.py -k classify_and_remember -s` |
+| ⚡ | P99 延迟 | 实测 53.0ms（2026-11-08，默认配置）；复现命令：`pytest tests/test_performance_benchmark.py -k classify_and_remember -s` |
 | 🔬 | Mem0 对比 | 历史 93x 对比不属于当前发布声明；仓库未提供可复现对比 harness |
 | 🪶 | 依赖 | **仅需 SQLite** — 无需向量数据库 |
 | 🛡️ | 规则引擎 | **唯一拥有**规则引擎（竞争对手：0%） |

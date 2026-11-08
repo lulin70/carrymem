@@ -221,6 +221,10 @@ jobs:
       - name: Version consistency
         run: python3 scripts/check_version_consistency.py
 
+      - name: "i18n docs consistency (blocking)"
+        continue-on-error: false
+        run: python3 scripts/check_i18n_docs.py
+
       - name: "Swallowed assert check (blocking, no false-green)"
         continue-on-error: false
         run: python3 scripts/check_swallowed_assert.py

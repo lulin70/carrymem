@@ -276,7 +276,7 @@ class RecallEngine:
             {where_clause}
             ORDER BY importance_score DESC, confidence DESC
             LIMIT ?
-        """
+        """  # nosec B608 - fixed '?' predicates, values bound
         params.append(limit)
         return conn.execute(sql, params).fetchall()
 
@@ -589,7 +589,7 @@ class RecallEngine:
                 AND v.embedding MATCH ?
                 AND k = ?
                 ORDER BY v.distance
-            """.format(where_clause=where_clause)
+            """.format(where_clause=where_clause)  # nosec B608 - fixed '?' predicates, values bound
             vec_params = params + [
                 struct.pack(f"{self._embedding_dim}f", *query_embedding.tolist()),
                 limit,
@@ -678,7 +678,7 @@ class RecallEngine:
                 {where_clause}
                 ORDER BY f.bm25 ASC, m.importance_score DESC, m.confidence DESC
                 LIMIT ?
-            """
+            """  # nosec B608 - fixed '?' predicates, values bound
             params_with_query = [safe_query] + params + [limit]
             return conn.execute(fts_sql, params_with_query).fetchall()
         except sqlite3.OperationalError as e:
@@ -711,7 +711,7 @@ class RecallEngine:
             {like_clause}
             ORDER BY relevance_score DESC, importance_score DESC, confidence DESC
             LIMIT ?
-        """
+        """  # nosec B608 - fixed '?' predicates, values bound
         # Parameter order: SELECT LIKE params + WHERE clause params + WHERE LIKE params + LIMIT
         all_params = like_params + params + like_params + [limit]
         return conn.execute(sql, all_params).fetchall()
@@ -740,7 +740,7 @@ class RecallEngine:
             {like_clause}
             ORDER BY importance_score DESC, confidence DESC
             LIMIT ?
-        """
+        """  # nosec B608 - fixed '?' predicates, values bound
         all_params = params + like_params + [limit]
         return conn.execute(sql, all_params).fetchall()
 
@@ -957,7 +957,7 @@ class RecallEngine:
                 {where_clause}
                 ORDER BY created_at DESC
                 LIMIT ?
-            """
+            """  # nosec B608 - fixed '?' predicates, values bound
             params.append(limit)
             rows = conn.execute(sql, params).fetchall()
             results = [self._serializer.row_to_stored(r) for r in rows if r]

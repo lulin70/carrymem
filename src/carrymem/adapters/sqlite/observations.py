@@ -147,7 +147,8 @@ class ObservationManager:
         rows = (
             self._adapter.get_raw_connection()
             .execute(
-                "SELECT * FROM memory_observations WHERE " + " AND ".join(conditions) + " "
+                f"SELECT * FROM memory_observations "
+                f"WHERE {' AND '.join(conditions)} "  # nosec B608 - fixed '?' predicates
                 "ORDER BY observed_at DESC LIMIT ?",
                 params,
             )

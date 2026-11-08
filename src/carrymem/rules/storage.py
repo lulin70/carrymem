@@ -624,7 +624,10 @@ class RuleStorage:
         conn = self._get_connection()
         try:
             with self._write_lock:
-                conn.execute(f"UPDATE rules SET {', '.join(set_clauses)} WHERE id = ?", params)
+                conn.execute(
+                    f"UPDATE rules SET {', '.join(set_clauses)} WHERE id = ?",  # nosec B608 - allowlisted columns
+                    params,
+                )
                 conn.commit()
         except (sqlite3.IntegrityError, sqlite3.OperationalError) as e:
             _logger.debug("[RuleStorage] update failed: %s", e)

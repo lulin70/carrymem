@@ -204,7 +204,7 @@ class CloudLLMProvider(LLMProvider):
     MCP event loop stays free.
     """
 
-    _LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1", "0.0.0.0"}
+    _LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1", "0.0.0.0"}  # nosec B104 - host set, not a bind address
 
     def __init__(self, client: Any, backend: Optional[str], model: Optional[str], base_url: Optional[str]) -> None:
         self._client = client

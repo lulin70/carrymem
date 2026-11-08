@@ -663,7 +663,8 @@ class SQLiteAdapter(StorageAdapter):
                 params.append(filter_["namespace"])
             if conditions:
                 cursor.execute(
-                    "SELECT COUNT(*) FROM memories WHERE " + " AND ".join(conditions),
+                    "SELECT COUNT(*) FROM memories "
+                    f"WHERE {' AND '.join(conditions)}",  # nosec B608 - fixed '?' predicates
                     params,
                 )
                 return int(cursor.fetchone()[0])

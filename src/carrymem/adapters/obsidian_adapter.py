@@ -253,7 +253,10 @@ class ObsidianAdapter(StorageAdapter):
                     conditions.append("tags LIKE ? ESCAPE '\\'")
                     params.append(f'%"{escape_like(tag)}"%')
                 where_clause = "WHERE " + " AND ".join(conditions)
-                result = conn.execute(f"SELECT COUNT(*) FROM notes {where_clause}", params).fetchone()
+                result = conn.execute(
+                    f"SELECT COUNT(*) FROM notes {where_clause}",  # nosec B608 - fixed '?' predicates
+                    params,
+                ).fetchone()
                 return result[0]  # type: ignore[no-any-return]
             return conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]  # type: ignore[no-any-return]
 
@@ -415,7 +418,7 @@ class ObsidianAdapter(StorageAdapter):
             {where_clause}
             ORDER BY rank
             LIMIT ?
-        """
+        """  # nosec B608 - fixed '?' predicates, values bound
         params_with_query = [fts_query] + params + [limit]
 
         try:
@@ -471,7 +474,10 @@ class ObsidianAdapter(StorageAdapter):
 
         where_clause = "WHERE " + " AND ".join(conditions)
 
-        sql = f"SELECT * FROM notes {where_clause} ORDER BY indexed_at DESC LIMIT ?"
+        sql = (
+            f"SELECT * FROM notes {where_clause} "
+            "ORDER BY indexed_at DESC LIMIT ?"  # nosec B608 - fixed '?' predicates
+        )
         params.append(limit)
         return self._get_connection().execute(sql, params).fetchall()
 
@@ -493,7 +499,10 @@ class ObsidianAdapter(StorageAdapter):
         if conditions:
             where_clause = "WHERE " + " AND ".join(conditions)
 
-        sql = f"SELECT * FROM notes {where_clause} ORDER BY indexed_at DESC LIMIT ?"
+        sql = (
+            f"SELECT * FROM notes {where_clause} "
+            "ORDER BY indexed_at DESC LIMIT ?"  # nosec B608 - fixed '?' predicates
+        )
         params.append(limit)
         rows = self._get_connection().execute(sql, params).fetchall()
 

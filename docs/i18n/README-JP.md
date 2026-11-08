@@ -523,7 +523,7 @@ carrymem tui
 | | 利点 | 結果 |
 |---|------|------|
 | 💰 | ゼロLLM取り込み | 過去の内部スナップショット：サンプル入力の88%がルール経路。データセットは未バージョン化 |
-| ⚡ | P99レイテンシ | 過去の内部結果：1.3ms。現在の再現可能 benchmark：`pytest tests/test_performance_benchmark.py -k classify_and_remember -s` |
+| ⚡ | P99レイテンシ | 実測 53.0ms（2026-11-08、デフォルト設定）。再現コマンド：`pytest tests/test_performance_benchmark.py -k classify_and_remember -s` |
 | 🔬 | Mem0比較 | 過去の93x比較は現在のリリース声明ではありません。再現可能な比較 harness は未提供 |
 
 | 🪶 | 依存関係 | **SQLiteのみ** — ベクトルDB不要 |

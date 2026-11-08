@@ -354,7 +354,7 @@ class AuditLogger:
         query = (
             f"SELECT id, timestamp, action, resource, user_id, result, details, ip_address "
             f"FROM audit_log {where} "
-            f"ORDER BY timestamp DESC LIMIT ?"
+            f"ORDER BY timestamp DESC LIMIT ?"  # nosec B608 - fixed '?' predicates, values bound
         )
         params.append(filter_.limit)
 

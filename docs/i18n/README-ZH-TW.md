@@ -535,7 +535,7 @@ carrymem tui
 | | 優勢 | 結果 |
 |---|------|------|
 | 💰 | 零 LLM 攝入 | 歷史內部快照：抽樣輸入中 88% 走規則路徑；資料集 artifact 目前未版本化 |
-| ⚡ | P99 延遲 | 歷史內部結果：1.3ms；目前可重現 benchmark：`pytest tests/test_performance_benchmark.py -k classify_and_remember -s` |
+| ⚡ | P99 延遲 | 實測 53.0ms（2026-11-08，預設配置）；重現指令：`pytest tests/test_performance_benchmark.py -k classify_and_remember -s` |
 | 🔬 | Mem0 對比 | 歷史 93x 對比不屬於目前發布聲明；儲存庫未提供可重現對比 harness |
 
 | 🪶 | 相依性 | **僅需 SQLite** — 無需向量資料庫 |

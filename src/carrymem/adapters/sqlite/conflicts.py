@@ -118,7 +118,8 @@ class ConflictManager:
         rows = (
             self._adapter.get_raw_connection()
             .execute(
-                "SELECT * FROM memory_conflicts WHERE " + " AND ".join(conditions) + " "
+                f"SELECT * FROM memory_conflicts "
+                f"WHERE {' AND '.join(conditions)} "  # nosec B608 - fixed '?' predicates
                 "ORDER BY created_at DESC LIMIT ?",
                 params,
             )

@@ -165,7 +165,8 @@ class KnowledgeGraph:
         query = (
             "SELECT m.* FROM memories m "
             "INNER JOIN memory_entities me ON me.memory_key = m.storage_key "
-            "WHERE m.paused = 0 AND " + " AND ".join(conditions) + " "
+            "WHERE m.paused = 0 AND "
+            f"{' AND '.join(conditions)} "  # nosec B608 - fixed '?' predicates
             "ORDER BY m.importance_score DESC "
             "LIMIT ?"
         )
@@ -235,7 +236,7 @@ class KnowledgeGraph:
             "INNER JOIN memory_entities dst ON mr.dst_entity_id = dst.id "
             f"WHERE m.paused = 0 AND ({where_clause}){extra_conditions} "
             "ORDER BY mr.weight DESC, m.importance_score DESC "
-            "LIMIT ?"
+            "LIMIT ?"  # nosec B608 - fixed '?' predicates, values bound
         )
         params.append(limit)
 
@@ -300,7 +301,8 @@ class KnowledgeGraph:
             return [
                 row["id"]
                 for row in conn.execute(
-                    f"SELECT id FROM memory_entities WHERE entity_text = ? {ns_filter}",
+                    f"SELECT id FROM memory_entities WHERE entity_text = ? "
+                    f"{ns_filter}",  # nosec B608 - constant ns filter
                     [safe_entity] + ns_params,
                 ).fetchall()
             ]
@@ -332,7 +334,7 @@ class KnowledgeGraph:
                 rows = conn.execute(
                     f"SELECT src_entity_id, dst_entity_id, source_memory_key "
                     f"FROM memory_relations "
-                    f"WHERE src_entity_id IN ({placeholders}) {ns_filter}",
+                    f"WHERE src_entity_id IN ({placeholders}) {ns_filter}",  # nosec B608 - ? placeholders, values bound
                     current_frontier + ns_params,
                 ).fetchall()
                 for row in rows:
@@ -348,7 +350,7 @@ class KnowledgeGraph:
                 rows = conn.execute(
                     f"SELECT src_entity_id, dst_entity_id, source_memory_key "
                     f"FROM memory_relations "
-                    f"WHERE dst_entity_id IN ({placeholders}) {ns_filter}",
+                    f"WHERE dst_entity_id IN ({placeholders}) {ns_filter}",  # nosec B608 - ? placeholders, values bound
                     current_frontier + ns_params,
                 ).fetchall()
                 for row in rows:
@@ -394,7 +396,7 @@ class KnowledgeGraph:
         try:
             entity_rows = conn.execute(
                 f"SELECT DISTINCT entity_text, entity_type FROM memory_entities "
-                f"WHERE id IN ({entity_placeholders})",
+                f"WHERE id IN ({entity_placeholders})",  # nosec B608 - ? placeholders, values bound
                 list(visited_entities),
             ).fetchall()
             return [{"entity_text": row["entity_text"], "entity_type": row["entity_type"]} for row in entity_rows]
@@ -416,7 +418,7 @@ class KnowledgeGraph:
         try:
             mem_rows = conn.execute(
                 f"SELECT * FROM memories WHERE storage_key IN ({mem_placeholders}) AND paused = 0 "
-                f"ORDER BY importance_score DESC",
+                f"ORDER BY importance_score DESC",  # nosec B608 - ? placeholders, values bound
                 mem_keys,
             ).fetchall()
             return [self._row_to_dict(row) for row in mem_rows]
@@ -504,7 +506,8 @@ class KnowledgeGraph:
             return [
                 row["id"]
                 for row in conn.execute(
-                    f"SELECT id FROM memory_entities WHERE entity_text = ? {ns_filter}",
+                    f"SELECT id FROM memory_entities WHERE entity_text = ? "
+                    f"{ns_filter}",  # nosec B608 - constant ns filter
                     [entity_text] + ns_params,
                 ).fetchall()
             ]
@@ -604,7 +607,7 @@ class KnowledgeGraph:
             # Outgoing edges: frontier → neighbors
             rows = conn.execute(
                 f"SELECT src_entity_id, dst_entity_id FROM memory_relations "
-                f"WHERE src_entity_id IN ({placeholders}) {ns_filter}",
+                f"WHERE src_entity_id IN ({placeholders}) {ns_filter}",  # nosec B608 - ? placeholders, values bound
                 frontier + ns_params,
             ).fetchall()
             for row in rows:
@@ -616,7 +619,7 @@ class KnowledgeGraph:
             # Incoming edges: neighbors → frontier
             rows = conn.execute(
                 f"SELECT src_entity_id, dst_entity_id FROM memory_relations "
-                f"WHERE dst_entity_id IN ({placeholders}) {ns_filter}",
+                f"WHERE dst_entity_id IN ({placeholders}) {ns_filter}",  # nosec B608 - ? placeholders, values bound
                 frontier + ns_params,
             ).fetchall()
             for row in rows:
@@ -651,7 +654,8 @@ class KnowledgeGraph:
             id_to_text = {
                 row["id"]: row["entity_text"]
                 for row in conn.execute(
-                    f"SELECT id, entity_text FROM memory_entities WHERE id IN ({placeholders})",
+                    f"SELECT id, entity_text FROM memory_entities "
+                    f"WHERE id IN ({placeholders})",  # nosec B608 - ? placeholders, values bound
                     entity_ids,
                 ).fetchall()
             }
@@ -888,7 +892,7 @@ class KnowledgeGraph:
             f"FROM memory_entities {where} "
             f"GROUP BY entity_text, entity_type "
             f"ORDER BY memory_count DESC, max_confidence DESC "
-            f"LIMIT ?"
+            f"LIMIT ?"  # nosec B608 - fixed '?' predicates, values bound
         )
         params.append(limit)
 
@@ -934,7 +938,7 @@ class KnowledgeGraph:
             "INNER JOIN memory_entities dst ON mr.dst_entity_id = dst.id "
             f"{where} "
             "ORDER BY mr.weight DESC "
-            "LIMIT ?"
+            "LIMIT ?"  # nosec B608 - fixed '?' predicates, values bound
         )
         params.append(limit)
 
@@ -963,16 +967,18 @@ class KnowledgeGraph:
 
         try:
             entity_count = conn.execute(
-                f"SELECT COUNT(DISTINCT entity_text) FROM memory_entities {ns_filter}",
+                f"SELECT COUNT(DISTINCT entity_text) FROM memory_entities "
+                f"{ns_filter}",  # nosec B608 - constant ns filter
                 ns_params,
             ).fetchone()[0]
             relation_count = conn.execute(
-                f"SELECT COUNT(*) FROM memory_relations {ns_filter}",
+                f"SELECT COUNT(*) FROM memory_relations {ns_filter}",  # nosec B608 - constant '?' predicate
                 ns_params,
             ).fetchone()[0]
             memory_linked = conn.execute(
                 f"SELECT COUNT(DISTINCT memory_key) FROM memory_entities "
-                f"WHERE memory_key IS NOT NULL" + (f" AND namespace = ?" if namespace else ""),
+                f"WHERE memory_key IS NOT NULL"
+                f"{' AND namespace = ?' if namespace else ''}",  # nosec B608 - constant '?' predicate
                 ns_params,
             ).fetchone()[0]
             return {

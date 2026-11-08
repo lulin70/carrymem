@@ -10,7 +10,7 @@
 
 CarryMem이 이 문제를 해결합니다. 가볍고 의존성이 없는 기억 시스템으로 **당신이 누구인지**를 저장하고 그 정체성을 어떤 AI 도구든 사용할 수 있게 합니다. AI는 당신의 선호, 과거 결정, 한 교정들을 기억하게 되므로 — 반복 말하기 대신 개발에 집중할 수 있습니다.
 
-**English** | [中文](README-CN.md) | [日本語](README-JP.md) | **한국어** (본 파일) | [繁體中文](README-ZH-TW.md)
+[English](../../README.md) | [中文](README-CN.md) | [日本語](README-JP.md) | **한국어** (본 파일) | [繁體中文](README-ZH-TW.md)
 
 ---
 
@@ -651,7 +651,7 @@ carrymem tui
 | | 장점 | 결과 |
 |---|-----------|--------|
 | 💰 | 제로 LLM 섭취 | 과거 내부 스냅샷: 샘플 입력의 88%가 규칙 경로를 사용했지만 데이터셋은 버전 관리되지 않았습니다 |
-| ⚡ | P99 지연 시간 | 과거 내부 결과: 1.3ms; 현재 재현 가능한 benchmark: `pytest tests/test_performance_benchmark.py -k classify_and_remember -s` |
+| ⚡ | P99 지연 시간 | 실측 53.0ms(2026-11-08, 기본 설정); 재현 명령: `pytest tests/test_performance_benchmark.py -k classify_and_remember -s` |
 | 🔬 | Mem0 비교 | 과거 93x 비교는 현재 출시 선언이 아니며 재현 가능한 비교 harness는 제공되지 않습니다 |
 
 | 🪶 | 의존성 | **SQLite만** — 벡터 DB 불필요 |

@@ -373,7 +373,7 @@ class ReflectionManager:
             self._adapter.get_raw_connection()
             .execute(
                 "SELECT * FROM memory_reflection_runs WHERE "
-                + " AND ".join(conditions)
+                + " AND ".join(conditions)  # nosec B608 - fixed '?' predicates, values bound
                 + " ORDER BY started_at DESC LIMIT ?",
                 params,
             )
@@ -560,7 +560,7 @@ class ReflectionManager:
             self._adapter.get_raw_connection()
             .execute(
                 "SELECT * FROM memory_reflection_outputs WHERE "
-                + " AND ".join(conditions)
+                + " AND ".join(conditions)  # nosec B608 - fixed '?' predicates, values bound
                 + " ORDER BY created_at DESC LIMIT ?",
                 params,
             )

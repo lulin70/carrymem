@@ -295,7 +295,7 @@ class AsyncSQLiteAdapter:
                   AND m.namespace IN ({placeholders})
                   AND m.superseded_at IS NULL
                 ORDER BY rank
-                LIMIT ?""",
+                LIMIT ?""",  # nosec B608 - ? placeholders, values bound
             (query, *ns_list, limit),
         )
         rows = await cursor.fetchall()
@@ -394,10 +394,11 @@ class AsyncSQLiteAdapter:
         params.append(int(limit))
         try:
             cursor = await self._conn.execute(
-                """SELECT el.id, el.namespace, el.source_kind, el.source_id, el.source_snapshot_hash,
+                f"""SELECT el.id, el.namespace, el.source_kind, el.source_id, el.source_snapshot_hash,
                           el.target_kind, el.target_id, el.relation_type, el.support_weight, el.created_at
                    FROM memory_evidence_links el
-                   WHERE """ + " AND ".join(conditions) + " ORDER BY el.created_at LIMIT ?",
+                   WHERE {" AND ".join(conditions)}
+                   ORDER BY el.created_at LIMIT ?""",  # nosec B608 - fixed '?' predicates
                 params,
             )
             rows = await cursor.fetchall()
@@ -426,7 +427,7 @@ class AsyncSQLiteAdapter:
                           WHERE el2.namespace = el.namespace
                             AND el2.target_kind = el.target_kind
                             AND el2.target_id = el.target_id
-                      )""",
+                      )""",  # nosec B608 - ? placeholders, values bound
                 [namespace, *candidate_target_ids],
             )
             rows = await cursor.fetchall()

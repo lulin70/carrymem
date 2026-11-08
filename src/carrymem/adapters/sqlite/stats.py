@@ -164,14 +164,20 @@ class StatsManager:
 
         conn = self._conn_mgr.get_connection()
         if memory_type:
-            sql = f"SELECT * FROM memories {where_clause} ORDER BY importance_score DESC, created_at DESC LIMIT ?"
+            sql = (
+                f"SELECT * FROM memories {where_clause} "
+                "ORDER BY importance_score DESC, created_at DESC LIMIT ?"  # nosec B608 - fixed '?' predicates
+            )
             params.append(limit_per_type)
             rows = conn.execute(sql, params).fetchall()
             return {memory_type: [self._serializer.row_to_stored(r) for r in rows if self._serializer.row_to_stored(r)]}
 
         # Single-query aggregation: fetch all non-superseded memories ordered by
         # (type, importance_score DESC), then slice limit_per_type per type in Python.
-        sql = f"SELECT * FROM memories {where_clause} ORDER BY type, importance_score DESC, created_at DESC"
+        sql = (
+            f"SELECT * FROM memories {where_clause} "
+            "ORDER BY type, importance_score DESC, created_at DESC"  # nosec B608 - fixed '?' predicates
+        )
         rows = conn.execute(sql, params).fetchall()
 
         result: Dict[str, List[StoredMemory]] = {}
@@ -219,7 +225,10 @@ class StatsManager:
         where_clause = "WHERE " + " AND ".join(conditions)
 
         conn = self._conn_mgr.get_connection()
-        sql = f"SELECT * FROM memories {where_clause} ORDER BY created_at ASC LIMIT ?"
+        sql = (
+            f"SELECT * FROM memories {where_clause} "
+            "ORDER BY created_at ASC LIMIT ?"  # nosec B608 - fixed '?' predicates
+        )
         params.append(limit)
         rows = conn.execute(sql, params).fetchall()
         return [self._serializer.row_to_stored(r) for r in rows if self._serializer.row_to_stored(r)]

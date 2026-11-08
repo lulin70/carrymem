@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 P1 follow-up after the v0.12.0-alpha assessment.
 
+### Added
+
+- `scripts/check_i18n_docs.py` checks the four translated READMEs against the
+  English one: back link, canonical version, English-side link, and heading
+  drift. It runs as a blocking step in the CI lint job.
+
+### Changed
+
+- All 45 bandit B608 findings now carry `# nosec B608` with a per-site reason.
+  One B104 finding is annotated too. Bandit now reports 0 High and 0 Medium.
+- The translated READMEs quote the measured P99 (53.0 ms, 2026-11-08) instead
+  of the historical 1.3 ms claim.
+
 ### Fixed
 
 - MCP stdio server no longer blocks the stdin read loop while a tool runs.

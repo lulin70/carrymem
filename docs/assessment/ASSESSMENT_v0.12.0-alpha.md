@@ -12,10 +12,10 @@
 | 项目 | 结果 |
 |------|------|
 | 代码规模 | 168 个源文件，58,908 行；176 个测试文件 |
-| 全量回归（非 slow，2026-11-08 P1 修复后） | `5172 passed, 1 skipped, 77 deselected`，耗时 20 分 05 秒，exit 0 |
-| 覆盖率 | 83.27%（同一轮；CI 门槛 80%） |
+| 全量回归（非 slow，2026-11-08 P2 修复后） | `5172 passed, 1 skipped, 77 deselected`，耗时 21 分 34 秒，exit 0 |
+| 覆盖率 | 83.29%（同一轮；CI 门槛 80%） |
 | 静态门禁 | flake8 0 / black 0 / isort 0 / mypy 0（168 文件）/ radon 0 个 D+ |
-| 安全扫描 | bandit：0 High，45 Medium（全部为参数化 `IN (...)` 的 B608），64 Low；pip-audit：无已知漏洞 |
+| 安全扫描 | bandit：0 High，0 Medium（45 个 B608 已带理由标注），64 Low；pip-audit：无已知漏洞 |
 | 发布状态 | 旧 tag `v0.12.0-alpha` 失败并撤回。修复提交 `51277fd` 的 CI run `42387757587` **全绿**。Release run `42436293206` 全绿。`v0.12.0-alpha1`（`0.12.0a1`）已发布到 PyPI 与 GitHub Release |
 | 主要风险 | 向量检索开启时分类 P99 仍为 368 ms；宿主 LLM 只验证了两个 stdio 用例 |
 
@@ -204,10 +204,10 @@
 | 正确性 | 7.5 | 修复了 4 个 P0；alpha 曾带缺陷发布 |
 | 可维护性 | 8.0 | 静态门禁全绿，债少，复杂度受控 |
 | 性能 | 6.5 → 8.0 | P1 修复后，默认配置 P99 为 53–81 ms；开启向量检索为 368 ms |
-| 安全 | 8.0 | 0 High，依赖无漏洞；需处理 45 个 Medium 噪声 |
+| 安全 | 8.5 | 0 High，0 Medium（45 个 B608 已带理由标注），依赖无漏洞 |
 | 测试 | 8.5 | 5,167 个测试；新增真实 stdio 宿主 LLM 用例；缺界面验收 |
-| 文档 | 7.0 | 本轮修正；历史文档仍有旧数字 |
-| **加权总分** | **78 → 80（B）** | P1 已解决；待全量回归复评 |
+| 文档 | 7.5 | 本轮修正；新增 i18n 一致性门禁；历史文档仍有旧数字 |
+| **加权总分** | **80（B）** | P1、P2 已解决；待界面验收复评 |
 
 ---
 
@@ -224,9 +224,9 @@
 6. 把性能基准设为 CI 门禁。阈值用实测值加余量，不用历史宣传值。**已完成**。`ci.yml` 新增阻塞作业 `perf-gate`，运行低抖动的热路径基准（召回、批量写入、导出、图查询）。分类基准保留在 `benchmark.yml`（建议性）与 `nightly.yml`（失败即红）中运行。证据：提交 `fda30c5` 的 CI run `42451427643` 全绿，`Performance Gate (hot path)` 结论为 `success`。全量回归 `5172 passed, 1 skipped, 77 deselected`，覆盖率 83.27%。
 
 ### P2（工程卫生）
-7. 为 45 个 B608 加 `# nosec` 与理由。
-8. 多语言文档加一致性检查脚本。
-9. 清理 `docs/archive/` 之外残留的旧性能数字。
+7. 为 45 个 B608 加 `# nosec` 与理由。**已完成**。45 处全部标注，理由按站点写：占位符由列表长度生成、where 片段只含 `?` 谓词、表名为常量、列名来自白名单。同时标注 1 处 B104（主机名集合，非绑定地址）。bandit 结果：0 High，0 Medium，0 B608。
+8. 多语言文档加一致性检查脚本。**已完成**。新增 `scripts/check_i18n_docs.py`，接入 `ci.yml` lint 作业（阻塞）。检查项：文件存在且非空、回链 `../../README.md`、包含当前版本号、英文 README 有对应链接、标题数量漂移报警。脚本首次运行发现 `README-KO.md` 缺英文回链，已修复。
+9. 清理 `docs/archive/` 之外残留的旧性能数字。**已完成**。4 份 i18n README 的 "P99 1.3ms（历史）" 改为 "实测 53.0ms（2026-11-08，默认配置）" 并附复现命令。`docs/archive/` 内保留原值，作为历史记录。
 
 ---
 
@@ -252,6 +252,9 @@ python tests/benchmark_phase3_recall.py
 
 # 宿主 LLM 真实 stdio 端到端
 .venv/bin/python -m pytest tests/e2e/test_host_sampling_stdio.py -q --no-cov
+
+# 文档一致性
+python3 scripts/check_i18n_docs.py
 
 # CI 热路径性能门禁（本地复刻）
 CI=true .venv/bin/python -m pytest tests/test_performance_benchmark.py \

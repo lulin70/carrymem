@@ -414,11 +414,11 @@ class CRUDOperations:
                 conn.execute(
                     f"DELETE FROM memory_relations "
                     f"WHERE src_entity_id IN ({placeholders}) "
-                    f"OR dst_entity_id IN ({placeholders})",
+                    f"OR dst_entity_id IN ({placeholders})",  # nosec B608 - ? placeholders, values bound
                     params,
                 )
                 conn.execute(
-                    f"DELETE FROM memory_entities WHERE id IN ({placeholders})",
+                    f"DELETE FROM memory_entities WHERE id IN ({placeholders})",  # nosec B608 - ? placeholders
                     entity_ids,
                 )
 
