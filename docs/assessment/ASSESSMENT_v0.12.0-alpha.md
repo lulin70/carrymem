@@ -172,6 +172,7 @@
 - 版本提升到 `0.12.0a1`。提交 `53b24f9` 的 CI run `42433593654` 全绿。
 - Tag `v0.12.0a1` 触发 Release run `42436293206`：预发布测试、E2E、VSCode UI E2E、构建与发布全部成功。
 - PyPI 已有 `carrymem-0.12.0a1` 的 wheel 与 sdist。GitHub Release 已标记为 pre-release。
+- P1 修复提交 `fda30c5` 的 CI run `42451427643` 全绿。新增 `perf-gate` 作业通过。
 
 **待办**
 - 保留旧 tag `v0.12.0-alpha`，不要移动。
@@ -220,7 +221,7 @@
 ### P1（内测质量）
 4. 用真实支持 sampling 的客户端跑一次端到端：调用 `suggest_rules`，确认返回 `tier="llm_enhanced"`。客户端不支持时确认降级为规则结果。**已完成**。证据：`tests/e2e/test_host_sampling_stdio.py`。该测试启动真实 stdio 服务器进程，客户端应答 `sampling/createMessage`。两项用例通过：宿主应答时返回 `llm_enhanced`；宿主返回 -32601 时降级为 `rule_based`。修复内容：读循环改为按请求建任务，sampling Future 桥接到读循环，避免 30 秒超时。
 5. 测量 `classify_and_remember` 的 P99。区分"向量检索开/关"两组。若确认是 embedding 成本，改为按需启用。**已完成**。证据见第 4 节。默认关闭后 P99 为 53–81 ms。
-6. 把性能基准设为 CI 门禁。阈值用实测值加余量，不用历史宣传值。**已完成**。`ci.yml` 新增阻塞作业 `perf-gate`，运行低抖动的热路径基准（召回、批量写入、导出、图查询）。分类基准保留在 `benchmark.yml`（建议性）与 `nightly.yml`（失败即红）中运行。
+6. 把性能基准设为 CI 门禁。阈值用实测值加余量，不用历史宣传值。**已完成**。`ci.yml` 新增阻塞作业 `perf-gate`，运行低抖动的热路径基准（召回、批量写入、导出、图查询）。分类基准保留在 `benchmark.yml`（建议性）与 `nightly.yml`（失败即红）中运行。证据：提交 `fda30c5` 的 CI run `42451427643` 全绿，`Performance Gate (hot path)` 结论为 `success`。全量回归 `5172 passed, 1 skipped, 77 deselected`，覆盖率 83.27%。
 
 ### P2（工程卫生）
 7. 为 45 个 B608 加 `# nosec` 与理由。
