@@ -17,6 +17,9 @@ P1 follow-up after the v0.12.0-alpha assessment.
 
 ### Changed
 
+- The nightly notifier now closes resolved issues. A green run closes every
+  open `nightly-failure` issue with the run URL and the job results. A red run
+  creates an issue that lists the failed jobs.
 - All 45 bandit B608 findings now carry `# nosec B608` with a per-site reason.
   One B104 finding is annotated too. Bandit now reports 0 High and 0 Medium.
 - The translated READMEs quote the measured P99 (53.0 ms, 2026-11-08) instead
