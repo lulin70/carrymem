@@ -37,8 +37,9 @@ pytestmark = [pytest.mark.slow]
 
 # Deadlock guard for the threaded stress tests. A shared 2-vCPU CI runner
 # needs 2-4x longer than a dev machine for the same workload: the 300s guard
-# tripped at 309.9s in issue #65 while the run was healthy. 600s in CI still
-# catches a real deadlock, because a deadlocked join never finishes at all.
+# tripped at 309.9s in issue #65 while the run was healthy, and a 300s join
+# left one worker unfinished in the 2026-11-26 run. 600s in CI still catches a
+# real deadlock, because a deadlocked join never finishes at all.
 DEADLOCK_GUARD_SECONDS = 600 if os.environ.get("CI") == "true" else 300
 
 # ---------------------------------------------------------------------------
@@ -206,7 +207,7 @@ class TestMultiThreadConcurrentReadWrite:
                 t.start()
 
             for t in threads:
-                t.join(timeout=300)
+                t.join(timeout=DEADLOCK_GUARD_SECONDS)
 
             elapsed = time.time() - start
 
@@ -309,7 +310,7 @@ class TestMultiProcessConcurrentReadWrite:
                 p.start()
 
             for p in processes:
-                p.join(timeout=300)
+                p.join(timeout=DEADLOCK_GUARD_SECONDS)
 
             elapsed = time.time() - start
 
@@ -682,7 +683,7 @@ class TestSharedDbPathInstances:
                 t.start()
 
             for t in threads:
-                t.join(timeout=300)
+                t.join(timeout=DEADLOCK_GUARD_SECONDS)
 
             elapsed = time.time() - start
 

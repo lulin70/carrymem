@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -467,6 +468,17 @@ def _tune(
     conn.commit()
 
 
+def _key_identity(storage_key: str) -> str:
+    """Mask the second-resolution timestamp inside a storage key.
+
+    Keys look like ``cm_<ns>_<YYYYMMDDHHMMSS>_<hash8>``. Two twin databases
+    seeded back-to-back can land on different seconds, so the raw keys differ
+    even though the seeded memories are identical. CI run 45738685597 compared
+    ``..._015619_`` with ``..._015620_`` and failed.
+    """
+    return re.sub(r"_\d{14}_", "_<ts>_", storage_key)
+
+
 def _seed_decay_scenario(adapter):
     """Seed five memories covering every decay-gate outcome."""
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -569,22 +581,22 @@ class TestDecayReflectionParity:
 
             MemifyEngine(adapter=adapter_old).auto_decay()
             legacy_decayed = {
-                row["storage_key"]
+                _key_identity(row["storage_key"])
                 for row in adapter_old.get_raw_connection()
                 .execute("SELECT storage_key FROM memories WHERE json_extract(metadata, '$.decayed') = 1")
                 .fetchall()
             } - {
-                keys_old["decayed"]
+                _key_identity(keys_old["decayed"])
             }  # exclude the pre-seeded already-decayed memory
 
             result = adapter_new.reflect_decay("default", auto_apply=True)
             proposal_targets = {
-                p["target_id"]
+                _key_identity(p["target_id"])
                 for p in adapter_new.list_reflection_proposals("default", run_id=result["run_id"], status="applied")
             }
 
             assert proposal_targets == legacy_decayed, "对拍: both paths must select the same candidates"
-            assert keys_new["stale"] in proposal_targets
+            assert _key_identity(keys_new["stale"]) in proposal_targets
             # Effects intentionally differ (contract §6): legacy halves
             # importance, the proposal path sets an expiry — neither deletes.
             assert (

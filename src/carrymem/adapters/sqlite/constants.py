@@ -20,8 +20,9 @@ import os
 # The nightly slow suite raises this to 30s via CARRYMEM_SQLITE_BUSY_TIMEOUT_MS.
 # Nightly runs test_concurrent_access.py only: 5 threads on a shared 2-vCPU
 # runner hold the write lock much longer than a dev machine, and one 10s
-# expiry failed issue #64/#66. Slow tests join their threads with a 300s
-# window, so the 30s value cannot outlive the join there.
+# expiry failed issues #64/#66. The thread joins in that file use the same
+# CI-scaled window as its deadlock guard (600s in CI), so a 30s value cannot
+# outlive the join there.
 SQLITE_BUSY_TIMEOUT_MS = int(os.environ.get("CARRYMEM_SQLITE_BUSY_TIMEOUT_MS", "10000"))
 
 # WAL auto-checkpoint threshold in pages. The SQLite default (1000 pages,
