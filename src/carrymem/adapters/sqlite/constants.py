@@ -10,13 +10,19 @@ import os
 # Busy timeout in milliseconds for lock contention handling.
 # Sets how long SQLite waits when encountering a lock before returning
 # SQLITE_BUSY. Used in: PRAGMA busy_timeout=N
-# 10s, deliberately NOT higher: a single statement may legitimately block for
-# the full timeout, and e2e concurrency tests join their worker threads with
-# a 30s window — a 30s busy_timeout let one stalled statement outlive the
-# join, and fixture teardown then closed the connection under the leaked
-# thread (use-after-free segfault). Transient WAL read-side busy is absorbed
-# by the operation-level retry in core/_memory_crud._retry_on_busy instead.
-SQLITE_BUSY_TIMEOUT_MS = 10000
+# 10s, deliberately NOT higher by default: a single statement may legitimately
+# block for the full timeout, and e2e concurrency tests join their worker
+# threads with a 30s window — a 30s busy_timeout let one stalled statement
+# outlive the join, and fixture teardown then closed the connection under the
+# leaked thread (use-after-free segfault). Transient WAL read-side busy is
+# absorbed by the operation-level retry in core/_memory_crud._retry_on_busy.
+#
+# The nightly slow suite raises this to 30s via CARRYMEM_SQLITE_BUSY_TIMEOUT_MS.
+# Nightly runs test_concurrent_access.py only: 5 threads on a shared 2-vCPU
+# runner hold the write lock much longer than a dev machine, and one 10s
+# expiry failed issue #64/#66. Slow tests join their threads with a 300s
+# window, so the 30s value cannot outlive the join there.
+SQLITE_BUSY_TIMEOUT_MS = int(os.environ.get("CARRYMEM_SQLITE_BUSY_TIMEOUT_MS", "10000"))
 
 # WAL auto-checkpoint threshold in pages. The SQLite default (1000 pages,
 # ~4MB) is crossed every few writes when FTS + vector-blob writes inflate the

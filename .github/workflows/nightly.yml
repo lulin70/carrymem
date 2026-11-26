@@ -48,6 +48,11 @@ jobs:
       - name: Run slow tests
         env:
           CI: "true"
+          # Issues #64/#66: 5 threads on a shared 2-vCPU runner hold the SQLite
+          # write lock far longer than a dev machine, so the 10s busy_timeout
+          # expired mid-run. Slow tests join with a 300s window, so a 30s
+          # busy_timeout cannot outlive the join.
+          CARRYMEM_SQLITE_BUSY_TIMEOUT_MS: "30000"
         run: |
           set -o pipefail
           python -m pytest tests/ \

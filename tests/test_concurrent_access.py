@@ -35,6 +35,12 @@ from carrymem.adapters.base import MemoryEntry
 # Mark all tests in this file as slow (skipped in CI, run locally/nightly)
 pytestmark = [pytest.mark.slow]
 
+# Deadlock guard for the threaded stress tests. A shared 2-vCPU CI runner
+# needs 2-4x longer than a dev machine for the same workload: the 300s guard
+# tripped at 309.9s in issue #65 while the run was healthy. 600s in CI still
+# catches a real deadlock, because a deadlocked join never finishes at all.
+DEADLOCK_GUARD_SECONDS = 600 if os.environ.get("CI") == "true" else 300
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -230,7 +236,8 @@ class TestMultiThreadConcurrentReadWrite:
             # Verify test completed in reasonable time (no deadlock)
             # Note: CarryMem's _lock serializes operations, so concurrent
             # throughput is limited. 300s is generous to avoid false positives.
-            assert elapsed < 300, f"Test took {elapsed:.1f}s, possible deadlock"
+            guard_msg = f"Test took {elapsed:.1f}s, possible deadlock (guard {DEADLOCK_GUARD_SECONDS}s)"
+            assert elapsed < DEADLOCK_GUARD_SECONDS, guard_msg
 
             cm_verify.close()
         finally:
@@ -347,7 +354,8 @@ class TestMultiProcessConcurrentReadWrite:
             cm.close()
 
             # Verify no deadlock
-            assert elapsed < 300, f"Test took {elapsed:.1f}s, possible deadlock"
+            guard_msg = f"Test took {elapsed:.1f}s, possible deadlock (guard {DEADLOCK_GUARD_SECONDS}s)"
+            assert elapsed < DEADLOCK_GUARD_SECONDS, guard_msg
 
         finally:
             _cleanup_db(db_path)
@@ -710,7 +718,8 @@ class TestSharedDbPathInstances:
             cm_verify.close()
 
             # Verify no deadlock
-            assert elapsed < 300, f"Test took {elapsed:.1f}s, possible deadlock"
+            guard_msg = f"Test took {elapsed:.1f}s, possible deadlock (guard {DEADLOCK_GUARD_SECONDS}s)"
+            assert elapsed < DEADLOCK_GUARD_SECONDS, guard_msg
 
         finally:
             _cleanup_db(db_path)

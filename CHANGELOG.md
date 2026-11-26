@@ -27,6 +27,12 @@ P1 follow-up after the v0.12.0-alpha assessment.
 
 ### Fixed
 
+- The nightly slow suite no longer fails on a transient SQLite lock in
+  `test_concurrent_thread_read_write` (issues #64, #65, #66). The nightly job
+  sets `CARRYMEM_SQLITE_BUSY_TIMEOUT_MS=30000`; the default stays 10s so the
+  e2e tests that join threads after 30s keep their old behavior. The threaded
+  stress tests also use a 600s deadlock guard in CI instead of 300s. A real
+  deadlock still fails, because a deadlocked join never finishes.
 - MCP stdio server no longer blocks the stdin read loop while a tool runs.
   Each request now runs as a task, and `request_sampling` creates and awaits
   its future on the reader loop. Host sampling answers arrive before the
